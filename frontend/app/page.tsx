@@ -1,6 +1,13 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import dynamic from 'next/dynamic'
+import { useAuth } from './context/AuthContext'
+import { useSettings } from './context/SettingsContext'
+
+// Lazy-load modals so they don't bloat initial bundle
+const AuthModal    = dynamic(() => import('./components/AuthModal'),    { ssr: false })
+const SettingsPanel = dynamic(() => import('./components/SettingsPanel'), { ssr: false })
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -251,7 +258,6 @@ function StockSearch({ onSelect }: { onSelect: (symbol: string, name: string) =>
       ).slice(0, 8)
     : []
 
-  // Close on outside click
   useEffect(() => {
     const h = (e: MouseEvent) => {
       if (wrapRef.current && !wrapRef.current.contains(e.target as Node)) setOpen(false)
@@ -329,14 +335,12 @@ function StockDetailModal({
   inWatchlist: boolean
   tickerFull: boolean
 }) {
-  // Escape key to close
   useEffect(() => {
     const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
   }, [onClose])
 
-  // Prevent body scroll while modal is open
   useEffect(() => {
     document.body.style.overflow = 'hidden'
     return () => { document.body.style.overflow = '' }
@@ -348,7 +352,6 @@ function StockDetailModal({
     <>
       <div className="modal-backdrop" onClick={onClose} />
       <div className="stock-modal" role="dialog" aria-modal="true" aria-label={`${symbol} detail`}>
-        {/* ── Header ── */}
         <div className="stock-modal-header">
           <div className="stock-modal-title">
             <span className="stock-modal-symbol">{symbol}</span>
@@ -356,7 +359,12 @@ function StockDetailModal({
           </div>
 
           <div className="stock-modal-price-block">
-            {loading && <span className="stock-modal-loading">Loading…</span>}
+            {loading && (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+                <div className="shimmer" style={{ width: 120, height: 22, borderRadius: 4 }} />
+                <div className="shimmer" style={{ width: 80, height: 14, borderRadius: 4 }} />
+              </div>
+            )}
             {!loading && quote && (
               <>
                 <span className="stock-modal-price">
@@ -378,7 +386,6 @@ function StockDetailModal({
           <button className="modal-close-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>
 
-        {/* ── TradingView Chart ── */}
         <div className="stock-chart-wrap">
           <iframe
             src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}&interval=D&theme=dark&style=1&locale=en&toolbar_bg=%230f0f12&hide_top_toolbar=0&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&calendar=0&hideideas=1`}
@@ -391,7 +398,6 @@ function StockDetailModal({
           />
         </div>
 
-        {/* ── Key Stats ── */}
         {quote && (
           <div className="stock-stats">
             <div className="stock-stat">
@@ -413,7 +419,17 @@ function StockDetailModal({
           </div>
         )}
 
-        {/* ── Actions ── */}
+        {!quote && loading && (
+          <div className="stock-stats">
+            {[0,1,2,3].map(i => (
+              <div key={i} className="stock-stat">
+                <div className="shimmer" style={{ width: 50, height: 10, marginBottom: 6, borderRadius: 3 }} />
+                <div className="shimmer" style={{ width: 70, height: 16, borderRadius: 3 }} />
+              </div>
+            ))}
+          </div>
+        )}
+
         <div className="stock-actions">
           <button
             className={`stock-action-btn${inTicker ? ' stock-action-active' : ''}`}
@@ -441,11 +457,11 @@ function StockDetailModal({
 function TickerBar({
   tickerQuotes,
   customSymbols,
-  onRemoveCustom,
+  isLoading,
 }: {
   tickerQuotes: Record<string, Quote>
   customSymbols: string[]
-  onRemoveCustom: (sym: string) => void
+  isLoading: boolean
 }) {
   const defaultItems = Object.keys(tickerQuotes).length > 0
     ? TICKER_SYMBOLS
@@ -468,6 +484,12 @@ function TickerBar({
 
   return (
     <div className="ticker-bar">
+      {isLoading && Object.keys(tickerQuotes).length === 0 && (
+        <div className="connecting-banner" style={{ position: 'absolute', left: 0, right: 0, top: 0, bottom: 0, zIndex: 3, padding: '0 16px' }}>
+          <span className="connecting-dot" />
+          Connecting to live data…
+        </div>
+      )}
       <div className="ticker-track">
         {duped.map((item, i) => (
           <span key={i} className={`ticker-item${item.isCustom ? ' ticker-item-custom' : ''}`}>
@@ -576,15 +598,48 @@ function CalendarRow({ event }: { event: CalendarEvent }) {
   )
 }
 
+// ─── Shimmer Skeleton Rows ────────────────────────────────────────────────────
+
+function NewsSkeletons({ count = 20 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div key={i} className="news-row-skeleton" style={{ animationDelay: `${i * 0.05}s` }} />
+      ))}
+    </>
+  )
+}
+
+function SidebarSkeletons({ count = 4 }: { count?: number }) {
+  return (
+    <>
+      {Array.from({ length: count }).map((_, i) => (
+        <div
+          key={i}
+          className="mover-row-skeleton shimmer"
+          style={{ margin: '4px 14px', height: 27, animationDelay: `${i * 0.07}s` }}
+        />
+      ))}
+    </>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Home() {
+  const { user, token, loadWatchlistFromBackend, syncAddToWatchlist, syncRemoveFromWatchlist } = useAuth()
+  const { settings, openSettings, settingsOpen, closeSettings } = useSettings()
+
   const [clock, setClock] = useState('')
   const [isOffline, setIsOffline] = useState(false)
   const [activeCategory, setActiveCategory] = useState('All')
 
+  // Auth modal
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+
   // Ticker
   const [tickerQuotes, setTickerQuotes] = useState<Record<string, Quote>>({})
+  const [tickerLoading, setTickerLoading] = useState(true)
   const [customTickerSymbols, setCustomTickerSymbols] = useState<string[]>([])
 
   // Sidebar quotes
@@ -594,6 +649,7 @@ export default function Home() {
 
   // Watchlist
   const [watchlist, setWatchlist] = useState<string[]>([])
+  const [watchlistSyncing, setWatchlistSyncing] = useState(false)
 
   // Calendar
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
@@ -608,6 +664,9 @@ export default function Home() {
   const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null)
   const [stockQuote, setStockQuote] = useState<Quote | null>(null)
   const [loadingStockQuote, setLoadingStockQuote] = useState(false)
+
+  // Track if we already did the initial backend watchlist sync for this session
+  const didSyncWatchlist = useRef(false)
 
   // ── Clock ──────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -629,13 +688,39 @@ export default function Home() {
     return () => { window.removeEventListener('offline', off); window.removeEventListener('online', on) }
   }, [])
 
-  // ── Persist: watchlist ─────────────────────────────────────────────────────
+  // ── Persist: watchlist (localStorage) ─────────────────────────────────────
   useEffect(() => {
     try { const s = localStorage.getItem('cg_wl'); if (s) setWatchlist(JSON.parse(s)) } catch {}
   }, [])
+
   useEffect(() => {
     try { localStorage.setItem('cg_wl', JSON.stringify(watchlist)) } catch {}
   }, [watchlist])
+
+  // ── Backend watchlist sync on login ────────────────────────────────────────
+  useEffect(() => {
+    if (!token || didSyncWatchlist.current) return
+    didSyncWatchlist.current = true
+
+    const doSync = async () => {
+      setWatchlistSyncing(true)
+      const backendSymbols = await loadWatchlistFromBackend()
+      if (backendSymbols.length > 0) {
+        // Merge backend + localStorage — backend wins for conflicts
+        setWatchlist(prev => {
+          const merged = [...new Set([...backendSymbols, ...prev])]
+          return merged
+        })
+      }
+      setWatchlistSyncing(false)
+    }
+    doSync()
+  }, [token, loadWatchlistFromBackend])
+
+  // Reset sync flag on logout
+  useEffect(() => {
+    if (!token) didSyncWatchlist.current = false
+  }, [token])
 
   // ── Persist: custom ticker ─────────────────────────────────────────────────
   useEffect(() => {
@@ -645,7 +730,7 @@ export default function Home() {
     try { localStorage.setItem('cg_ticker', JSON.stringify(customTickerSymbols)) } catch {}
   }, [customTickerSymbols])
 
-  // ── Fetch ticker quotes (default + custom) ─────────────────────────────────
+  // ── Fetch ticker quotes ────────────────────────────────────────────────────
   const fetchTickerQuotes = useCallback(async (extra: string[] = []) => {
     if (isOffline) return
     try {
@@ -653,13 +738,16 @@ export default function Home() {
       const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${all.join(',')}`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const j = await res.json()
-      if (j.success && j.data) setTickerQuotes(j.data)
+      if (j.success && j.data) {
+        setTickerQuotes(j.data)
+        setTickerLoading(false)
+      }
     } catch (err) {
       console.warn('[TickerBar] fetch failed:', err)
+      setTickerLoading(false)
     }
   }, [isOffline])
 
-  // Re-fetch when custom symbols change
   useEffect(() => {
     fetchTickerQuotes(customTickerSymbols)
   }, [customTickerSymbols, fetchTickerQuotes])
@@ -757,7 +845,6 @@ export default function Home() {
     setStockQuote(null)
     setLoadingStockQuote(true)
     try {
-      // Check if we already have a cached quote
       const cached = tickerQuotes[symbol] || quotes[symbol]
       if (cached) {
         setStockQuote(cached)
@@ -792,10 +879,17 @@ export default function Home() {
     setCustomTickerSymbols(prev => prev.filter(s => s !== symbol))
   }
 
-  // ── Watchlist toggle ───────────────────────────────────────────────────────
-  const toggleWatch = (sym: string) => {
-    setWatchlist(w => w.includes(sym) ? w.filter(s => s !== sym) : [...w, sym])
-  }
+  // ── Watchlist toggle (with backend sync) ───────────────────────────────────
+  const toggleWatch = useCallback((sym: string) => {
+    const isAdding = !watchlist.includes(sym)
+    setWatchlist(w => isAdding ? [...w, sym] : w.filter(s => s !== sym))
+
+    // Sync to backend if logged in
+    if (token) {
+      if (isAdding) syncAddToWatchlist(sym)
+      else syncRemoveFromWatchlist(sym)
+    }
+  }, [watchlist, token, syncAddToWatchlist, syncRemoveFromWatchlist])
 
   // ── Category change ────────────────────────────────────────────────────────
   const handleCategory = (cat: string) => {
@@ -826,7 +920,7 @@ export default function Home() {
       <TickerBar
         tickerQuotes={tickerQuotes}
         customSymbols={customTickerSymbols}
-        onRemoveCustom={removeFromTicker}
+        isLoading={tickerLoading}
       />
 
       {/* ── Header ─────────────────────────────────────────────────────────── */}
@@ -862,7 +956,28 @@ export default function Home() {
             </span>
           )}
           <span className="live-time">{clock}</span>
-          <button className="login-btn">Sign In</button>
+
+          {/* Settings gear */}
+          <button
+            className="settings-gear-btn"
+            onClick={openSettings}
+            aria-label="Settings"
+            title="Settings"
+          >
+            ⚙
+          </button>
+
+          {/* Auth section */}
+          {user ? (
+            <span className="header-user-email" title={user.email}>
+              {user.email}
+            </span>
+          ) : (
+            <button className="login-btn" onClick={() => setAuthModalOpen(true)}>
+              Sign In
+            </button>
+          )}
+
           <button className="pro-btn">PRO</button>
         </div>
       </header>
@@ -885,7 +1000,6 @@ export default function Home() {
         ))}
         <div className="cat-tabs-spacer" />
 
-        {/* News symbol filter (hidden on mobile, replaced by search) */}
         <input
           type="text"
           className="symbol-search news-symbol-filter"
@@ -894,7 +1008,6 @@ export default function Home() {
           onChange={e => setNewsSymbolFilter(e.target.value)}
         />
 
-        {/* Stock Search — opens detail modal */}
         <StockSearch onSelect={(sym, name) => openStockDetail(sym, name)} />
       </div>
 
@@ -903,7 +1016,6 @@ export default function Home() {
 
         {/* Left: News/Calendar Feed (70%) */}
         <div className="news-feed">
-          {/* Feed header */}
           <div className="feed-header">
             <span className="feed-title">
               <span className="live-dot" />
@@ -922,7 +1034,6 @@ export default function Home() {
             )}
           </div>
 
-          {/* Column headers */}
           {!showCalendar && (
             <div className="feed-col-header" style={{
               display: 'grid',
@@ -940,7 +1051,6 @@ export default function Home() {
             </div>
           )}
 
-          {/* Calendar */}
           {showCalendar && (
             <>
               <div className="cal-header">
@@ -956,11 +1066,10 @@ export default function Home() {
             </>
           )}
 
-          {/* News */}
           {!showCalendar && (
             <div className="news-list">
               {loadingNews
-                ? Array.from({ length: 20 }).map((_, i) => <div key={i} className="news-row-skeleton" />)
+                ? <NewsSkeletons count={20} />
                 : newsError
                   ? (
                     <div className="feed-empty">
@@ -983,7 +1092,7 @@ export default function Home() {
           <div className="sidebar-section">
             <div className="sidebar-title">MARKET QUOTES</div>
             {loadingQuotes
-              ? Array.from({ length: 4 }).map((_, i) => <div key={i} className="mover-row-skeleton" style={{ margin: '4px 14px', height: 27 }} />)
+              ? <SidebarSkeletons count={4} />
               : quoteList.length > 0
                 ? quoteList.map(q => (
                   <MoverRow
@@ -1020,7 +1129,22 @@ export default function Home() {
 
           {/* Watchlist */}
           <div className="sidebar-section">
-            <div className="sidebar-title">★ WATCHLIST</div>
+            <div className="sidebar-title">
+              ★ WATCHLIST
+              {token && (
+                <span className={`watchlist-sync-badge${watchlistSyncing ? ' syncing' : ''}`} style={{ marginLeft: 6 }}>
+                  {watchlistSyncing ? '⟳ SYNCING' : '● SYNCED'}
+                </span>
+              )}
+              {!token && watchlist.length > 0 && (
+                <button
+                  onClick={() => setAuthModalOpen(true)}
+                  style={{ marginLeft: 6, fontSize: 9.5, color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}
+                >
+                  Sign in to sync
+                </button>
+              )}
+            </div>
             {watchlist.length === 0 ? (
               <div className="watchlist-empty">Click ★ on any symbol to track it</div>
             ) : (
@@ -1126,6 +1250,18 @@ export default function Home() {
           inWatchlist={watchlist.includes(selectedStock.symbol)}
           tickerFull={customTickerSymbols.length >= MAX_TICKER_CUSTOM}
         />
+      )}
+
+      {/* ── Auth Modal ─────────────────────────────────────────────────────── */}
+      {authModalOpen && (
+        <AuthModal
+          onClose={() => setAuthModalOpen(false)}
+        />
+      )}
+
+      {/* ── Settings Panel ─────────────────────────────────────────────────── */}
+      {settingsOpen && (
+        <SettingsPanel onClose={closeSettings} />
       )}
     </>
   )
