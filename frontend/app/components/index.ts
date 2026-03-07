@@ -69,3 +69,7 @@ export { default as WelcomeModal }        from './WelcomeModal'
 export { default as Breadcrumbs }         from './Breadcrumbs'
 export type { BreadcrumbItem }            from './Breadcrumbs'
 export { default as ToastContainer }      from './Toast'
+
+// Utility
+export { default as CopyButton }          from './CopyButton'
+export type { }                           from './CopyButton'
