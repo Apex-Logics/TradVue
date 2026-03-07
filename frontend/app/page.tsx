@@ -58,6 +58,19 @@ interface MarketStatus {
   source: string
 }
 
+interface CryptoCoin {
+  id: string
+  symbol: string
+  name: string
+  price: number
+  change24h: number
+  change7d: number
+  marketCap: number
+  volume24h: number
+  marketCapRank: number
+  image: string | null
+}
+
 interface NewsArticle {
   id: string
   title: string
@@ -586,6 +599,29 @@ function MoverRow({
   )
 }
 
+// ─── Crypto Coin Row ──────────────────────────────────────────────────────────
+
+function CryptoCoinRow({ coin }: { coin: CryptoCoin }) {
+  const isUp = coin.change24h >= 0
+  const fmtPrice = (p: number) => {
+    if (p >= 1000) return p.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })
+    if (p >= 1)    return p.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })
+    return p.toLocaleString('en-US', { minimumFractionDigits: 4, maximumFractionDigits: 4 })
+  }
+  return (
+    <div className="mover-row" style={{ cursor: 'default' }}>
+      <span className="mover-symbol" style={{ fontSize: 11 }}>
+        {coin.symbol}
+        <span style={{ color: '#404050', fontSize: 9, marginLeft: 3 }}>#{coin.marketCapRank}</span>
+      </span>
+      <span className="mover-price" style={{ fontSize: 11 }}>${fmtPrice(coin.price)}</span>
+      <span className={isUp ? 'mover-up' : 'mover-down'} style={{ fontSize: 11 }}>
+        {isUp ? '+' : ''}{coin.change24h.toFixed(2)}%
+      </span>
+    </div>
+  )
+}
+
 // ─── Calendar Row ─────────────────────────────────────────────────────────────
 
 function CalendarRow({ event }: { event: CalendarEvent }) {
@@ -688,6 +724,10 @@ export default function Home() {
   const [loadingNews, setLoadingNews] = useState(true)
   const [newsError, setNewsError] = useState<string | null>(null)
   const [newsSymbolFilter, setNewsSymbolFilter] = useState('')
+
+  // Crypto prices (CoinGecko)
+  const [cryptoCoins, setCryptoCoins] = useState<CryptoCoin[]>([])
+  const [cryptoExpanded, setCryptoExpanded] = useState(false)
 
   // Stock detail modal
   const [selectedStock, setSelectedStock] = useState<{ symbol: string; name: string } | null>(null)
@@ -807,6 +847,19 @@ export default function Home() {
     } catch {}
   }, [isOffline])
 
+  // ── Fetch crypto prices (CoinGecko) ───────────────────────────────────────
+  const fetchCryptoPrices = useCallback(async () => {
+    if (isOffline) return
+    try {
+      const res = await fetch(`${API_BASE}/api/crypto/prices?limit=10`)
+      if (!res.ok) throw new Error(`HTTP ${res.status}`)
+      const j = await res.json()
+      if (j.success && j.data) setCryptoCoins(j.data)
+    } catch (err) {
+      console.warn('[Crypto] fetch failed:', err)
+    }
+  }, [isOffline])
+
   // ── Fetch economic calendar ────────────────────────────────────────────────
   const fetchCalendar = useCallback(async () => {
     if (isOffline) return
@@ -855,6 +908,7 @@ export default function Home() {
     fetchStatus()
     fetchCalendar()
     fetchNews('All')
+    fetchCryptoPrices()
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
 
@@ -1272,6 +1326,32 @@ export default function Home() {
             </div>
           )}
 
+          {/* Crypto Prices (CoinGecko) */}
+          {cryptoCoins.length > 0 && (
+            <div className="sidebar-section">
+              <div className="sidebar-title" style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setCryptoExpanded(e => !e)}>
+                ₿ CRYPTO PRICES
+                <span style={{ marginLeft: 6, fontSize: 9, color: '#404050' }}>
+                  {cryptoExpanded ? '▲' : '▼'}
+                </span>
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: '#404050', fontWeight: 400 }}>
+                  CoinGecko
+                </span>
+              </div>
+              {(cryptoExpanded ? cryptoCoins : cryptoCoins.slice(0, 5)).map(coin => (
+                <CryptoCoinRow key={coin.id} coin={coin} />
+              ))}
+              {!cryptoExpanded && cryptoCoins.length > 5 && (
+                <button
+                  onClick={() => setCryptoExpanded(true)}
+                  style={{ fontSize: 10, color: 'var(--accent)', padding: '4px 14px', cursor: 'pointer', textAlign: 'left', width: '100%' }}
+                >
+                  + {cryptoCoins.length - 5} more coins
+                </button>
+              )}
+            </div>
+          )}
+
           {/* Watchlist */}
           <div className="sidebar-section">
             <div className="sidebar-title">
@@ -1382,7 +1462,7 @@ export default function Home() {
         <span>
           <strong style={{ color: '#a0a0b0' }}>ChartGenius</strong> — ApexLogics © 2025
         </span>
-        <span>Data: Finnhub · RSS Aggregation · Not financial advice</span>
+        <span>Data: Finnhub · CoinGecko · NewsAPI · RSS · Not financial advice</span>
         <span>
           {isOffline
             ? <span style={{ color: '#ff4560' }}>● OFFLINE</span>

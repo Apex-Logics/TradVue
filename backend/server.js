@@ -30,6 +30,7 @@ app.use('/api/feed/news', require('./routes/aggregatedNews'));    // RSS + NewsA
 app.use('/api/calendar', require('./routes/calendar'));           // Economic calendar
 app.use('/api/waitlist', require('./routes/waitlist'));           // Landing page waitlist
 app.use('/api/alerts', require('./routes/alerts'));               // Real-time market alerts + SSE
+app.use('/api/crypto', require('./routes/crypto'));               // CoinGecko crypto prices & trending
 
 // Health check
 app.get('/health', (req, res) => {
@@ -62,6 +63,7 @@ app.listen(PORT, () => {
   console.log(`📅 Calendar:     http://localhost:${PORT}/api/calendar/today`);
   console.log(`🚨 Alerts:       http://localhost:${PORT}/api/alerts`);
   console.log(`📡 Alert stream: http://localhost:${PORT}/api/alerts/live`);
+  console.log(`₿  Crypto:       http://localhost:${PORT}/api/crypto/snapshot`);
 
   // Start real-time alert poll loop (every 5 minutes)
   const alertService = require('./services/alertService');
