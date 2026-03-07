@@ -1,212 +1,124 @@
-# Launch Checklist - Trading Platform
+# ChartGenius Beta - Pre-Launch Checklist
 
-## Pre-Launch Readiness (30-60 Days Before)
-
-### LEGAL & COMPLIANCE ✓
-- [ ] **Terms of Service (ToS)**
-  - Define usage rules, liability limitations, dispute resolution
-  - Account termination conditions
-  - User responsibilities and prohibitions (no market manipulation, insider trading alerts)
-  - Template: Check Clearco, GitHub's legal templates, or hire fintech lawyer ($2-5K)
-  
-- [ ] **Privacy Policy**
-  - Data collection, storage, and retention policies
-  - GDPR/CCPA compliance (if serving EU/CA users)
-  - Third-party data sharing (payment processors, market data providers)
-  - User rights (access, deletion, portability)
-  - Template sources: Iubenda, TermsFeed, or legal counsel
-
-- [ ] **Risk Disclosures**
-  - Trading risks and volatility warnings
-  - Past performance disclaimer
-  - Leverage/margin risks (if applicable)
-  - Market hours and liquidity constraints
-  
-- [ ] **AML/KYC Compliance**
-  - Customer verification procedures
-  - Suspicious activity reporting requirements
-  - Age verification (must be 18+)
-  - Integration with KYC provider (Jumio, IDology, Onfido)
-  
-- [ ] **Securities/Regulatory Review**
-  - Confirm you're not offering unregistered securities
-  - Check if you need broker-dealer registration (varies by features)
-  - Consult with securities attorney if uncertain
-  
-- [ ] **Acceptable Use Policy**
-  - Prohibited activities (bots, APIs without permission, scalping restrictions if any)
-  - Consequences for violations
+**Launch Date Target:** TBD  
+**Current Status:** In Progress  
+**Last Updated:** 2026-03-06
 
 ---
 
-### TECHNICAL REQUIREMENTS ✓
+## 1. Technical
 
-- [ ] **Security & SSL/TLS**
-  - [ ] SSL certificate (Let's Encrypt free, or paid)
-  - [ ] HTTPS everywhere (no unencrypted data)
-  - [ ] TLS 1.2+ minimum
-  - [ ] HSTS headers enabled
-  - [ ] Security audit / penetration test ($5-15K)
-  
-- [ ] **Authentication & Data Protection**
-  - [ ] Two-factor authentication (2FA) support
-  - [ ] Password requirements (minimum 8 chars, complexity)
-  - [ ] Session timeout policies (15-30 min for inactive)
-  - [ ] Rate limiting on login attempts
-  - [ ] Encryption at rest for sensitive data (API keys, auth tokens)
-  
-- [ ] **Infrastructure & Uptime**
-  - [ ] Hosting provider (AWS, Azure, Heroku, DigitalOcean)
-  - [ ] 99.9% uptime SLA target
-  - [ ] CDN for static assets (CloudFlare, Akamai)
-  - [ ] DDoS protection enabled
-  - [ ] Disaster recovery / backup plan
-  
-- [ ] **Monitoring & Alerting**
-  - [ ] Uptime monitoring (UptimeRobot, Datadog, New Relic)
-  - [ ] Error tracking (Sentry, Rollbar)
-  - [ ] Performance metrics dashboard
-  - [ ] Alert thresholds for critical failures
-  - [ ] On-call rotation for first week post-launch
-  
-- [ ] **Backups & Data Recovery**
-  - [ ] Daily automated backups
-  - [ ] Backup verification (can you restore?)
-  - [ ] Backup retention (30 days minimum)
-  - [ ] Disaster recovery tested
-  
-- [ ] **API Security** (if offering API)
-  - [ ] Rate limiting per user/IP
-  - [ ] API key rotation mechanism
-  - [ ] OAuth2 / JWT implementation
-  - [ ] API documentation with security best practices
-  
-- [ ] **Payment Processing**
-  - [ ] PCI DSS compliance (use Stripe/Square, don't store cards)
-  - [ ] Webhook signatures verified
-  - [ ] Retry logic for failed transactions
-  - [ ] Clear transaction history for users
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| [ ] All features working | Bolt | Pending | Feature verification in progress |
+| [ ] Database backed up | Bolt | Pending | Backup strategy needed |
+| [ ] SSL configured | Bolt | Pending | Certificate procurement & installation |
+| [ ] Error monitoring set up | Bolt | Pending | Integration with monitoring service |
+| [ ] Performance tested | Bolt | Pending | Load testing & optimization |
+| [ ] Mobile responsive | Bolt | Pending | Mobile UI/UX verification |
+| [ ] Cross-browser tested | Bolt | Pending | Chrome, Firefox, Safari, Edge compatibility |
 
 ---
 
-### MARKETING & BRAND ✓
+## 2. Security
 
-- [ ] **Landing Page**
-  - [ ] Clear value proposition (what problem you solve)
-  - [ ] Screenshots / demo video
-  - [ ] Feature list with benefits (not just features)
-  - [ ] Pricing visible and clear
-  - [ ] CTA (sign up / waitlist)
-  - [ ] FAQ section
-  - [ ] Mobile responsive
-  
-- [ ] **Social Media Accounts**
-  - [ ] Twitter/X (for fintech community)
-  - [ ] LinkedIn (professional credibility)
-  - [ ] Discord/Telegram (community hub)
-  - [ ] All bios point to landing page
-  
-- [ ] **Email Infrastructure**
-  - [ ] Email provider (SendGrid, Mailgun, ConvertKit)
-  - [ ] Welcome email sequence drafted
-  - [ ] Password reset emails tested
-  - [ ] SPF/DKIM/DMARC configured
-  
-- [ ] **Status Page**
-  - [ ] Hosted at status.yourdomain.com
-  - [ ] Incidents logged publicly
-  - [ ] Maintenance windows announced 24h in advance
-  
-- [ ] **Documentation & Help**
-  - [ ] Knowledge base / FAQ
-  - [ ] Video tutorials for main features
-  - [ ] Support email/form (e.g., Zendesk, Intercom)
-  - [ ] Common issues troubleshooting guide
-  
-- [ ] **Analytics & Tracking**
-  - [ ] Google Analytics / Mixpanel set up
-  - [ ] User signup flow tracked
-  - [ ] Key conversion metrics identified
-  - [ ] Privacy-compliant tracking (no unnecessary PII)
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| [ ] Auth working | Bolt | Pending | Login/signup flow testing |
+| [ ] Rate limiting enabled | Bolt | Pending | API endpoint protection |
+| [ ] Input validation | Bolt | Pending | Server-side & client-side validation |
+| [ ] CORS configured | Bolt | Pending | Cross-origin request handling |
+| [ ] Secrets secured | Bolt | Pending | Environment variables & vault setup |
 
 ---
 
-### OPERATIONAL ✓
+## 3. Legal
 
-- [ ] **Customer Support Plan**
-  - [ ] Support email monitored
-  - [ ] Ticket system in place
-  - [ ] Response time SLA (e.g., 24h first response)
-  - [ ] Support team trained on FAQs
-  
-- [ ] **Incident Response Plan**
-  - [ ] On-call schedule for week 1
-  - [ ] Escalation procedures
-  - [ ] Communication template for downtime
-  - [ ] Post-incident review process
-  
-- [ ] **User Feedback Loop**
-  - [ ] Feedback form or survey
-  - [ ] Roadmap visibility (Canny, ProductBoard, or simple docs)
-  - [ ] Community Slack/Discord for power users
-  
-- [ ] **Testing & QA**
-  - [ ] Full end-to-end test suite
-  - [ ] Manual testing checklist (signup, login, core flows)
-  - [ ] Cross-browser testing (Chrome, Safari, Firefox, mobile)
-  - [ ] Accessibility audit (WCAG 2.1 AA minimum)
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| [ ] Terms of Service live | Erick | Pending | Legal review & finalization |
+| [ ] Privacy Policy live | Erick | Pending | GDPR/CCPA compliant |
+| [ ] Cookie consent | Erick | Pending | Consent banner implementation |
+| [ ] Disclaimers visible | Erick | Pending | Risk disclosures & disclaimers |
 
 ---
 
-### PRE-LAUNCH (1-2 Weeks Before)
+## 4. Marketing
 
-- [ ] **Final Security Review**
-  - [ ] Penetration testing results reviewed
-  - [ ] All secrets (API keys, credentials) in environment variables
-  - [ ] No hardcoded credentials in repo
-  
-- [ ] **Load Testing**
-  - [ ] Simulate expected user load
-  - [ ] Identify bottlenecks
-  - [ ] Scale infrastructure if needed
-  
-- [ ] **Soft Launch (Beta)**
-  - [ ] Invite 100-500 friendly users
-  - [ ] Collect feedback
-  - [ ] Monitor for critical bugs
-  - [ ] 5-7 day beta window
-  
-- [ ] **Communication Plan**
-  - [ ] Launch announcement drafted
-  - [ ] Press release (if applicable)
-  - [ ] Social posts pre-written and scheduled
-  - [ ] Email to waitlist ready
-  
-- [ ] **Team Prep**
-  - [ ] On-call rotation confirmed
-  - [ ] Support team briefed
-  - [ ] Communication channels (Slack for internal, support email for users)
-  - [ ] Runbooks for common issues
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| [ ] Landing page live | Erick | Pending | Marketing site deployment |
+| [ ] Email capture working | Zip | Pending | Waitlist & newsletter signup |
+| [ ] Social profiles created | Erick | Pending | Twitter, LinkedIn, Product Hunt, etc. |
+| [ ] Product Hunt prepared | Erick | Pending | Hunt page setup & timing |
+| [ ] Launch emails drafted | Zip | Pending | Welcome series & announcement emails |
 
 ---
 
-### LAUNCH DAY
+## 5. Operations
 
-- [ ] **Enable monitoring & alerting**
-- [ ] **Deploy to production**
-- [ ] **Smoke tests** (login, signup, core features work)
-- [ ] **Announce** (social, email, blog)
-- [ ] **Monitor metrics** (signups, errors, performance)
-- [ ] **Respond to feedback** in real-time
-- [ ] **Keep team available** for 24-48 hours
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| [ ] Support email set up | Erick | Pending | Support ticket system configured |
+| [ ] Monitoring dashboards | Bolt | Pending | Uptime, performance, error tracking |
+| [ ] Backup system running | Bolt | Pending | Automated daily/weekly backups |
+| [ ] On-call process | Erick | Pending | Incident response & escalation plan |
 
 ---
 
-## Success Metrics (First 30 Days)
+## 6. Content
 
-- Uptime: 99%+
-- Page load time: <2s
-- Signup conversion: track baseline for optimization
-- Support response time: <24 hours
-- Critical bugs: zero in week 1
+| Task | Owner | Status | Notes |
+|------|-------|--------|-------|
+| [ ] Help docs ready | Zip | Pending | Feature documentation & FAQs |
+| [ ] Onboarding flow tested | Zip | Pending | User journey & UX validation |
+| [ ] Email sequences configured | Zip | Pending | Automated onboarding emails |
 
+---
+
+## Summary
+
+**Total Items:** 28  
+**Completed:** 0  
+**In Progress:** 0  
+**Pending:** 28  
+**Blocked:** 0  
+
+### Owner Responsibilities
+
+- **Erick** (Business/Legal/Support): Legal compliance, marketing, customer support setup, on-call process
+- **Bolt** (Engineering): All technical infrastructure, security, monitoring, performance
+- **Zip** (Content/Marketing): Marketing copy, help documentation, email sequences, waitlist management
+
+---
+
+## Launch Readiness
+
+### Go/No-Go Criteria
+
+- [ ] All technical items complete and tested
+- [ ] All security items verified and approved
+- [ ] All legal items reviewed and live
+- [ ] All marketing materials ready
+- [ ] Operations processes documented and tested
+- [ ] Help docs complete and reviewed
+- [ ] Team agrees: **GO** for launch
+
+**Sign-off Required:** Erick (Product), Bolt (Engineering), Zip (Content)
+
+---
+
+## Notes & Dependencies
+
+- Database backup must be automated before launch
+- SSL certificate should be obtained early (48-72hr lead time)
+- Legal review should start immediately
+- Marketing materials need content finalization before social posting
+- Help docs should be drafted as features are completed
+- Performance testing should be done in production-like environment
+
+---
+
+**Document Version:** 1.0  
+**Maintained by:** Zip  
+**Last Review:** 2026-03-06
