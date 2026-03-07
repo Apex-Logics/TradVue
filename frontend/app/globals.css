@@ -1018,6 +1018,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 @media (max-width: 768px) {
 
+  /* ── Feed Header: remove sticky on mobile so it scrolls with the page ── */
+  .feed-header {
+    position: static;
+    top: unset;
+    z-index: unset;
+  }
+
   /* ── Ticker Bar ────────────────────────────────────────────────────────── */
   .ticker-item {
     padding: 0 12px;
