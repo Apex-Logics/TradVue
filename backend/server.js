@@ -28,6 +28,7 @@ app.use('/api/watchlist', require('./routes/watchlist'));
 app.use('/api/market-data', require('./routes/marketData'));      // Finnhub-backed real market data
 app.use('/api/feed/news', require('./routes/aggregatedNews'));    // RSS + NewsAPI aggregated feed
 app.use('/api/calendar', require('./routes/calendar'));           // Economic calendar
+app.use('/api/waitlist', require('./routes/waitlist'));           // Landing page waitlist
 app.use('/api/alerts', require('./routes/alerts'));               // Real-time market alerts + SSE
 
 // Health check
