@@ -4,570 +4,420 @@
 
 ChartGenius is a comprehensive trading intelligence platform that aggregates market data, financial news, and social sentiment into actionable insights. Track multiple asset classes, set intelligent alerts, and make data-driven trading decisions.
 
+[![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
+[![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
+[![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://typescriptlang.org)
+[![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com)
+[![Vercel](https://img.shields.io/badge/Deployed-Vercel-000?logo=vercel)](https://chartgenius.io)
+
 ---
 
-## Features
+## ✨ Features
 
 ### 🔄 Real-Time Market Data
 - Live price feeds for **stocks, forex, cryptocurrencies, and commodities**
-- Intraday charts with multiple timeframes
+- Intraday charts with multiple timeframes (1m, 5m, 1h, 1d, 1w)
 - 20+ years of historical data available
-- Top movers (gainers/losers) across markets
-- Advanced technical indicators (SMA, EMA, MACD, RSI, Bollinger Bands, etc.)
+- Top movers (gainers/losers) across all markets
+- Advanced technical indicators: SMA, EMA, MACD, RSI, Bollinger Bands, and more
 
 ### 📰 AI-Powered News Aggregation
-- Multi-source news collection (NewsAPI, RSS feeds, Reddit, Twitter)
-- **Automatic sentiment analysis** (-1 to 1 sentiment score)
-- **Impact scoring** (0-10) for news relevance to trading
+- Multi-source news collection (NewsAPI, RSS feeds, Reddit, financial wires)
+- **Automatic sentiment analysis** (−1 to +1 score)
+- **Impact scoring** (0–10) for news relevance to trading
 - AI-generated summaries for quick insights
 - Symbol-specific news feeds with relevance filtering
 
 ### 🎯 Smart Watchlist & Alerts
 - Create unlimited watchlists (Professional+ tier)
-- Price-based alerts with threshold configuration
+- Price-based alerts with custom threshold configuration
 - Volume spike detection
-- News impact alerts (when important news breaks)
-- Multi-channel notifications (email, push, in-app)
+- News impact alerts when important stories break
+- Multi-channel notifications: email, push, in-app
 
 ### 👥 Social Sentiment Analysis
 - Real-time social media mention tracking
-- Sentiment aggregation from multiple platforms
-- Influencer tracking (coming soon)
-- Community sentiment vs. price correlation
+- Sentiment aggregation across multiple platforms
+- Community sentiment vs. price correlation charts
 
-### 📅 Calendar Integration
-- Sync earnings announcements to your calendar
-- Economic events calendar
-- Automatic reminders for key dates
-- Custom event creation for trading setups
+### 📅 Economic Calendar
+- Earnings announcements with countdown timers
+- Macro economic events (Fed meetings, CPI, jobs reports)
+- Custom event reminders for trading setups
+- Calendar sync integration
+
+### ⌨️ Keyboard Shortcuts
+Power-user navigation — press `?` anywhere in the app to see the full shortlist:
+
+| Shortcut | Action |
+|----------|--------|
+| `G D` | Go to Dashboard |
+| `G W` | Go to Watchlist |
+| `G N` | Go to News |
+| `G C` | Go to Calendar |
+| `/` | Focus search |
+| `?` | Toggle shortcuts panel |
 
 ### 💼 Subscription Tiers
 
-#### Free Tier
-- 15-minute delayed data
-- 5 news articles per day
-- Basic watchlist (10 assets)
-- Email alerts only
-- Community features
-
-#### Professional Tier ($19/month)
-- ✅ Real-time data access
-- ✅ Unlimited news + AI summaries
-- ✅ Advanced watchlist (unlimited assets)
-- ✅ Push notifications
-- ✅ Social sentiment scores
-- ✅ Calendar integration
-
-#### Enterprise Tier ($99/month)
-- ✅ Everything in Professional
-- ✅ API access (1000 calls/hour)
-- ✅ Custom alert rules and patterns
-- ✅ Priority support
-- ✅ Advanced analytics dashboard
-- ✅ Data export (CSV, JSON)
-- ✅ Dedicated account manager
+| Feature | Free | Professional ($19/mo) | Enterprise ($99/mo) |
+|---------|------|----------------------|---------------------|
+| Market data | 15-min delayed | ✅ Real-time | ✅ Real-time |
+| News articles | 5/day | ✅ Unlimited + AI summaries | ✅ Unlimited |
+| Watchlist | 10 assets | ✅ Unlimited | ✅ Unlimited |
+| Notifications | Email only | ✅ Push + email | ✅ All channels |
+| Social sentiment | ❌ | ✅ | ✅ |
+| API access | ❌ | ❌ | ✅ 1000 calls/hr |
+| Data export | ❌ | ❌ | ✅ CSV / JSON |
+| Priority support | ❌ | ❌ | ✅ Dedicated manager |
 
 ---
 
-## Tech Stack
+## 🛠 Tech Stack
 
 ### Frontend
-- **Framework:** React 18 / Next.js 14
-- **Styling:** TailwindCSS + Shadcn/ui components
-- **State Management:** Zustand
-- **Real-time:** WebSocket integration for live price updates
-- **Charts:** Recharts for data visualization
+| Layer | Technology |
+|-------|-----------|
+| Framework | [Next.js 14](https://nextjs.org) (App Router) + React 18 |
+| Language | TypeScript 5 |
+| Styling | TailwindCSS + custom design tokens |
+| State | React Context + Zustand |
+| Charts | Recharts |
+| Real-time | WebSocket (live price feeds) |
+| Deployment | [Vercel](https://vercel.com) (region: `iad1`) |
 
 ### Backend
-- **Runtime:** Node.js (v18+)
-- **Framework:** Express.js
-- **Database:** PostgreSQL (primary) + Redis (cache & real-time)
-- **Authentication:** JWT with refresh tokens
-- **Job Queue:** Bull for background tasks
+| Layer | Technology |
+|-------|-----------|
+| Runtime | Node.js 18+ |
+| Framework | Express.js |
+| Database | PostgreSQL via [Supabase](https://supabase.com) |
+| Cache | Redis |
+| Auth | JWT with refresh tokens |
+| Job Queue | Bull (background tasks) |
+| Deployment | Railway |
 
-### External Services
-- **Market Data:** Alpha Vantage, FinnHub, Polygon.io, CoinGecko
-- **News:** NewsAPI, RSS feeds, Reddit API, Twitter API
-- **NLP/AI:** TextBlob for sentiment, Custom ML models for impact scoring
-- **Notifications:** SendGrid (email), Firebase Cloud Messaging (push)
-- **Hosting:** Docker + Kubernetes (production)
+### External APIs
+| Service | Purpose |
+|---------|---------|
+| [Finnhub](https://finnhub.io) | Real-time stock/forex quotes |
+| [CoinGecko](https://coingecko.com) | Cryptocurrency data (free tier) |
+| [Alpha Vantage](https://alphavantage.co) | Historical equity data |
+| [FRED](https://fred.stlouisfed.org) | Economic indicators |
+| [NewsAPI](https://newsapi.org) | Financial news aggregation |
+| RSS Feeds | Supplemental news sources |
 
 ---
 
-## Installation & Setup
+## 🚀 Quick Start
 
 ### Prerequisites
-- Node.js 18+ and npm/yarn
-- PostgreSQL 13+
-- Redis 6+
-- API keys for at least one market data provider
+- Node.js 18+ and npm
+- PostgreSQL 13+ (or a [Supabase](https://supabase.com) project)
+- API keys — see [Environment Variables](#-environment-variables) below
 
-### Backend Setup
+### 1. Clone & Install
 
 ```bash
-# Clone repository
-git clone https://github.com/apexlogics/chartgenius.git
-cd chartgenius/backend
+git clone https://github.com/ChartGenius/chartgenius.git
+cd chartgenius
+```
 
-# Install dependencies
+### 2. Backend Setup
+
+```bash
+cd backend
 npm install
-
-# Configure environment variables
-cp .env.example .env
-# Edit .env with your API keys and database credentials
-
-# Setup database
-npm run migrate
-
-# Start development server
-npm run dev
+cp .env.example .env      # fill in your keys
+npm run migrate           # deploy database schema
+npm run dev               # starts on http://localhost:3001
 ```
 
-#### Required Environment Variables
-```env
-# Database
-DATABASE_URL=postgresql://user:password@localhost:5432/chartgenius
-REDIS_URL=redis://localhost:6379
-
-# API Keys (at least one required)
-ALPHA_VANTAGE_KEY=your_key_here
-FINNHUB_TOKEN=your_token_here
-POLYGON_API_KEY=your_key_here
-COINGECKO_API_KEY=your_key_here (optional - free)
-
-# News APIs
-NEWSAPI_KEY=your_key_here
-TWITTER_API_TOKEN=your_token_here
-
-# Authentication
-JWT_SECRET=your_secret_key_here
-JWT_REFRESH_SECRET=your_refresh_secret_here
-JWT_EXPIRY=15m
-
-# Email
-SENDGRID_API_KEY=your_key_here
-
-# Environment
-NODE_ENV=development
-PORT=3001
-```
-
-### Frontend Setup
+### 3. Frontend Setup
 
 ```bash
-cd chartgenius/frontend
-
-# Install dependencies
+cd frontend
 npm install
-
-# Configure environment
-cp .env.example .env.local
-# Edit .env.local with API endpoint
-
-# Start development server
-npm run dev
+cp .env.example .env.local   # fill in API endpoint
+npm run dev                   # starts on http://localhost:3000
 ```
 
-#### Required Environment Variables
-```env
-NEXT_PUBLIC_API_URL=http://localhost:3001/api
-NEXT_PUBLIC_WS_URL=ws://localhost:3001
-```
+Open [http://localhost:3000](http://localhost:3000) — you should see the landing page.
 
-### Docker Deployment
+### 4. (Optional) Docker
 
 ```bash
-# Build and run with Docker Compose
+# Run everything with Docker Compose from the repo root
 docker-compose up -d
 
-# View logs
+# Stream logs
 docker-compose logs -f
 ```
 
 ---
 
-## API Endpoints
+## 🔑 Environment Variables
 
-### Base URL
+### Backend `.env`
+
+```env
+# ── Database ──────────────────────────────────────────────────────────────────
+DATABASE_URL=postgresql://user:password@localhost:5432/chartgenius
+REDIS_URL=redis://localhost:6379
+
+# ── Market Data (at least one required) ────────────────────────────────────────
+FINNHUB_TOKEN=your_token_here
+ALPHA_VANTAGE_KEY=your_key_here
+COINGECKO_API_KEY=optional_free_tier
+
+# ── News ────────────────────────────────────────────────────────────────────────
+NEWSAPI_KEY=your_key_here
+
+# ── Auth ────────────────────────────────────────────────────────────────────────
+JWT_SECRET=change_me_to_a_long_random_string
+JWT_REFRESH_SECRET=change_me_to_another_long_random_string
+JWT_EXPIRY=15m
+
+# ── Email ───────────────────────────────────────────────────────────────────────
+SENDGRID_API_KEY=your_key_here
+
+# ── App ─────────────────────────────────────────────────────────────────────────
+NODE_ENV=development
+PORT=3001
 ```
-http://localhost:3001/api
+
+### Frontend `.env.local`
+
+```env
+NEXT_PUBLIC_API_URL=http://localhost:3001/api
+NEXT_PUBLIC_WS_URL=ws://localhost:3001
 ```
+
+> ⚠️ Never commit `.env` files. They are gitignored by default.
+
+---
+
+## 📁 Project Structure
+
+```
+chartgenius/
+├── backend/
+│   ├── controllers/         # Request handlers
+│   ├── middleware/          # Auth, rate-limiting, error handling
+│   ├── models/              # Database models
+│   ├── routes/              # Express route definitions
+│   ├── services/            # Business logic (finnhub, rss, economic calendar)
+│   ├── tests/               # Test suites
+│   └── server.js            # Entry point
+├── database/
+│   └── schema.sql           # PostgreSQL schema (8 tables, 20 instruments seeded)
+├── docs/                    # 25+ guides, API specs, and templates
+├── frontend/
+│   ├── app/
+│   │   ├── changelog/       # Public changelog page (/changelog)
+│   │   ├── components/      # Shared UI components
+│   │   │   ├── Spinner.tsx       # SVG arc spinner (5 sizes × 5 variants)
+│   │   │   ├── PageLoader.tsx    # Full-viewport overlay for route transitions
+│   │   │   ├── Skeleton.tsx      # Shimmer placeholders (Text, Card, Table, Avatar)
+│   │   │   ├── KeyboardShortcuts.tsx  # In-app shortcut reference panel
+│   │   │   ├── AlertSystem.tsx   # Toast notification manager
+│   │   │   └── index.ts          # Barrel export with usage docs
+│   │   ├── context/         # Auth, Settings, Onboarding context providers
+│   │   ├── landing/         # Marketing landing page
+│   │   ├── legal/           # Privacy, Terms, Cookie, Disclaimer pages
+│   │   ├── status/          # System status page (/status)
+│   │   └── help/            # Help center
+│   ├── lib/                 # Utilities and API client
+│   ├── public/              # Static assets
+│   └── vercel.json          # Vercel deployment config
+├── CHANGELOG.md             # Public-facing release history
+└── README.md                # This file
+```
+
+---
+
+## 🧩 UI Components
+
+ChartGenius ships a small internal component library for consistent loading states:
+
+```tsx
+import Spinner from '@/app/components/Spinner'
+import PageLoader from '@/app/components/PageLoader'
+import Skeleton from '@/app/components/Skeleton'
+
+// Inline spinner — size: xs | sm | md | lg | xl
+// variant: primary | accent | gain | loss | muted
+<Spinner />
+<Spinner size="sm" variant="gain" />
+
+// Full-page loading overlay (route transitions, auth guards)
+if (!ready) return <PageLoader />
+if (loading) return <PageLoader minimal message="Fetching positions…" />
+
+// Skeleton placeholders
+<Skeleton.Text />
+<Skeleton.Text lines={3} width="80%" />
+<Skeleton.Card />
+<Skeleton.TableRow columns={6} rows={8} showHeader />
+<Skeleton.Avatar size={48} shape="square" withLabel />
+```
+
+All components are exported from `@/app/components/index.ts` for tree-shaking.
+
+---
+
+## 📡 API Reference
+
+Base URL: `http://localhost:3001/api`
 
 ### Authentication
 
-#### Register User
 ```
-POST /auth/register
-Content-Type: application/json
-
-{
-  "email": "trader@example.com",
-  "password": "SecurePassword123!",
-  "fullName": "John Trader"
-}
-
-Response:
-{
-  "id": "user_123",
-  "email": "trader@example.com",
-  "accessToken": "eyJhbGc...",
-  "refreshToken": "eyJhbGc...",
-  "subscriptionTier": "free"
-}
-```
-
-#### Login
-```
-POST /auth/login
-Content-Type: application/json
-
-{
-  "email": "trader@example.com",
-  "password": "SecurePassword123!"
-}
-```
-
-#### Refresh Token
-```
-POST /auth/refresh
-Content-Type: application/json
-
-{
-  "refreshToken": "eyJhbGc..."
-}
-```
-
-#### Get Profile
-```
-GET /auth/profile
-Authorization: Bearer {accessToken}
+POST /auth/register   — Create account
+POST /auth/login      — Get access + refresh tokens
+POST /auth/refresh    — Rotate access token
+GET  /auth/profile    — Get current user
 ```
 
 ### Market Data
 
-#### List Instruments
 ```
-GET /markets/instruments?type=stock&limit=20&offset=0
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "instruments": [
-    {
-      "id": 1,
-      "symbol": "AAPL",
-      "name": "Apple Inc.",
-      "type": "stock",
-      "exchange": "NASDAQ"
-    }
-  ],
-  "total": 15000,
-  "limit": 20,
-  "offset": 0
-}
-```
-
-#### Get Current Price
-```
-GET /markets/price/AAPL
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "symbol": "AAPL",
-  "price": 182.45,
-  "change": 2.15,
-  "changePercent": 1.19,
-  "volume": 45320000,
-  "timestamp": "2026-03-05T14:32:00Z",
-  "source": "finnhub"
-}
-```
-
-#### Get Price History
-```
-GET /markets/history/AAPL?interval=daily&start=2026-01-01&end=2026-03-05
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "symbol": "AAPL",
-  "interval": "daily",
-  "data": [
-    {
-      "timestamp": "2026-01-01",
-      "open": 180.50,
-      "high": 183.20,
-      "low": 179.80,
-      "close": 182.15,
-      "volume": 52340000
-    }
-  ]
-}
-```
-
-#### Get Top Movers
-```
+GET /markets/instruments?type=stock&limit=20
+GET /markets/price/:symbol
+GET /markets/history/:symbol?interval=daily&start=...&end=...
 GET /markets/movers?type=gainers&limit=10
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "movers": [
-    {
-      "symbol": "NVDA",
-      "name": "NVIDIA Corporation",
-      "price": 875.50,
-      "change": 45.25,
-      "changePercent": 5.45,
-      "volume": 32100000
-    }
-  ]
-}
 ```
 
-### News & Analysis
+### News & Sentiment
 
-#### Get Latest News
 ```
-GET /news?limit=20&offset=0&sort=published_at
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "articles": [
-    {
-      "id": "article_123",
-      "title": "Federal Reserve Signals Rate Cuts Ahead",
-      "summary": "The Fed chair indicated potential interest rate cuts...",
-      "content": "Full article content...",
-      "source": "Reuters",
-      "url": "https://...",
-      "publishedAt": "2026-03-05T12:00:00Z",
-      "sentimentScore": 0.65,
-      "impactScore": 8.5,
-      "relatedSymbols": ["SPY", "IWM", "UST"]
-    }
-  ],
-  "total": 2340,
-  "limit": 20,
-  "offset": 0
-}
-```
-
-#### Search News
-```
-GET /news/search?q=bitcoin+ethereum&symbols=BTC,ETH&limit=10
-Authorization: Bearer {accessToken}
-```
-
-#### Get Sentiment Analysis
-```
-GET /news/sentiment/AAPL?period=7d
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "symbol": "AAPL",
-  "period": "7d",
-  "sentimentScore": 0.58,
-  "articleCount": 145,
-  "positive": 95,
-  "neutral": 35,
-  "negative": 15,
-  "trend": "improving"
-}
-```
-
-#### Get High-Impact News
-```
-GET /news/impact?minScore=7.5&limit=5
-Authorization: Bearer {accessToken}
+GET /news?limit=20&sort=published_at
+GET /news/search?q=bitcoin&symbols=BTC,ETH
+GET /news/sentiment/:symbol?period=7d
+GET /news/impact?minScore=7.5
 ```
 
 ### Watchlist
 
-#### Get User Watchlist
 ```
-GET /watchlist
-Authorization: Bearer {accessToken}
-
-Response:
-{
-  "watchlists": [
-    {
-      "id": "wl_123",
-      "name": "Tech Stocks",
-      "items": [
-        {
-          "id": "wi_456",
-          "symbol": "AAPL",
-          "name": "Apple Inc.",
-          "alertThresholdUp": 200,
-          "alertThresholdDown": 150,
-          "currentPrice": 182.45
-        }
-      ],
-      "createdAt": "2026-02-15T10:30:00Z"
-    }
-  ]
-}
+GET    /watchlist
+POST   /watchlist/:id/items
+DELETE /watchlist/:id/items/:itemId
+PUT    /watchlist/:id/items/:itemId/alerts
 ```
 
-#### Add to Watchlist
-```
-POST /watchlist/{watchlistId}/items
-Authorization: Bearer {accessToken}
-Content-Type: application/json
-
-{
-  "symbol": "NVDA",
-  "alertThresholdUp": 1000,
-  "alertThresholdDown": 800
-}
-
-Response:
-{
-  "id": "wi_789",
-  "symbol": "NVDA",
-  "name": "NVIDIA Corporation",
-  "alertThresholdUp": 1000,
-  "alertThresholdDown": 800
-}
-```
-
-#### Remove from Watchlist
-```
-DELETE /watchlist/{watchlistId}/items/{itemId}
-Authorization: Bearer {accessToken}
-```
-
-#### Update Alert Thresholds
-```
-PUT /watchlist/{watchlistId}/items/{itemId}/alerts
-Authorization: Bearer {accessToken}
-Content-Type: application/json
-
-{
-  "alertThresholdUp": 1050,
-  "alertThresholdDown": 750
-}
-```
+Full API documentation is available in [`/docs`](./docs/).
 
 ---
 
-## Development
+## 🚢 Deployment
 
-### Project Structure
-```
-chartgenius/
-├── backend/
-│   ├── src/
-│   │   ├── services/        # Business logic
-│   │   ├── routes/          # API endpoints
-│   │   ├── models/          # Database models
-│   │   ├── middleware/      # Express middleware
-│   │   ├── utils/           # Utilities
-│   │   └── jobs/            # Background jobs
-│   ├── tests/               # Test suites
-│   └── migrations/          # Database migrations
-├── frontend/
-│   ├── app/                 # Next.js app router
-│   ├── components/          # React components
-│   ├── hooks/               # Custom hooks
-│   ├── lib/                 # Utilities
-│   ├── styles/              # CSS/TailwindCSS
-│   └── public/              # Static assets
-├── database/
-│   └── schema.sql           # Database schema
-└── docker-compose.yml       # Container orchestration
-```
+### Frontend — Vercel
 
-### Running Tests
+The frontend auto-deploys on push to `master` via Vercel's GitHub integration.
+
+**Manual deploy:**
 ```bash
-# Backend tests
-cd backend
-npm run test
-
-# Frontend tests
 cd frontend
-npm run test
+vercel --prod --yes
 ```
 
-### Building for Production
+Configuration lives in `frontend/vercel.json`:
+- Framework: Next.js
+- Region: `iad1` (US East)
+- Security headers: `X-Content-Type-Options`, `X-Frame-Options`, `X-XSS-Protection`
+
+### Backend — Railway
+
 ```bash
-# Backend
-npm run build
-npm start
-
-# Frontend
-npm run build
-npm start
+cd backend
+# Railway auto-deploys from the backend/ directory
+# See backend/railway.json for config
 ```
 
 ---
 
-## Contributing
+## 🧪 Running Tests
 
-We welcome contributions! Please follow these guidelines:
+```bash
+# Backend unit + integration tests
+cd backend && npm test
 
-1. Fork the repository
-2. Create a feature branch (`git checkout -b feature/AmazingFeature`)
-3. Commit changes (`git commit -m 'Add AmazingFeature'`)
-4. Push to branch (`git push origin feature/AmazingFeature`)
-5. Open a Pull Request
+# Frontend lint
+cd frontend && npm run lint
+```
 
-### Code Style
-- Use ESLint for JavaScript/TypeScript
-- Use Prettier for code formatting
-- Write tests for new features
-- Update documentation as needed
+New features follow **Test-Driven Development** — write failing tests first, then implement.
 
 ---
 
-## Roadmap
+## 📈 Roadmap
 
 ### Q1 2026
-- ✅ MVP launch with real-time data + news
-- ✅ Watchlist & basic alerts
-- 🔄 Google Calendar integration
+- ✅ Real-time market data pipeline
+- ✅ News aggregation + sentiment analysis
+- ✅ Watchlist & price alerts
+- ✅ System status page
+- ✅ Public changelog
+- ✅ Loading components & UX polish
+- ✅ Keyboard shortcuts for power users
+- 🔄 Calendar sync (Google / iCal)
 - 🔄 Mobile app (React Native)
 
 ### Q2 2026
 - Social sentiment dashboard
-- Advanced pattern recognition
-- API rate limit optimization
-- Community features (ideas sharing)
+- Advanced chart pattern recognition
+- Community idea sharing
+- Portfolio tracking
 
 ### Q3 2026
 - AI trading signals
 - Portfolio backtesting
 - Risk assessment tools
-- Institutional API access
+- Institutional API tier
 
 ---
 
-## License
+## 🤝 Contributing
+
+1. Fork the repo
+2. Create a feature branch: `git checkout -b feature/my-feature`
+3. Write tests first (TDD)
+4. Commit with clear messages: `git commit -m 'feat: add my feature'`
+5. Push and open a Pull Request
+
+### Code Style
+- ESLint + Prettier (config in repo root)
+- TypeScript strict mode
+- Conventional commits format
+
+---
+
+## 📚 Documentation
+
+| Resource | Link |
+|----------|------|
+| Full docs | [`/docs`](./docs/) |
+| API spec | [`/docs/api`](./docs/) |
+| Changelog | [`/CHANGELOG.md`](./CHANGELOG.md) |
+| Status page | https://chartgenius.io/status |
+| Support | support@chartgenius.io |
+| Discord | https://discord.gg/chartgenius |
+
+---
+
+## ⚖️ License
 
 ChartGenius is proprietary software. All rights reserved. Unauthorized use, distribution, or modification is prohibited.
 
 ---
 
-## Support
+## ⚠️ Disclaimer
 
-- **Documentation:** https://docs.chartgenius.io
-- **Email:** support@chartgenius.io
-- **Discord:** https://discord.gg/chartgenius
-- **Status Page:** https://status.chartgenius.io
+ChartGenius is for informational and educational purposes only. It is **not** financial advice. Always consult a qualified financial advisor before making investment decisions. Past performance does not guarantee future results.
 
 ---
 
-## Disclaimer
+**Made with ❤️ by [ApexLogics](https://apexlogics.dev)**
 
-ChartGenius is for informational and educational purposes only. It is not financial advice. Always consult with a qualified financial advisor before making investment decisions. Past performance does not guarantee future results. The creators and contributors are not liable for any losses incurred from using this platform.
-
----
-
-**Made with ❤️ by ApexLogics**
-
-*Last Updated: March 5, 2026*
+*Last updated: March 7, 2026*
