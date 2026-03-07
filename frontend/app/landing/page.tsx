@@ -1121,7 +1121,7 @@ export default function LandingPage() {
                 {/* Privacy */}
                 <p style={{ fontSize: '12px', color: 'var(--text-3)', textAlign: 'center', lineHeight: 1.5 }}>
                   Your email is safe with us. We'll never spam you or sell your data.{' '}
-                  <Link href="/privacy" style={{ color: 'var(--text-2)', textDecoration: 'underline' }}>Privacy policy</Link>
+                  <Link href="/legal/privacy" style={{ color: 'var(--text-2)', textDecoration: 'underline' }}>Privacy policy</Link>
                 </p>
               </form>
             )}
@@ -1233,9 +1233,10 @@ export default function LandingPage() {
                 </div>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {[
-                    { label: 'Terms of Service', href: '/terms' },
-                    { label: 'Privacy Policy', href: '/privacy' },
-                    { label: 'Disclaimer', href: '/disclaimer' },
+                    { label: 'Terms of Service', href: '/legal/terms' },
+                    { label: 'Privacy Policy',   href: '/legal/privacy' },
+                    { label: 'Cookie Policy',    href: '/legal/cookies' },
+                    { label: 'Disclaimer',       href: '/legal/disclaimer' },
                   ].map(l => (
                     <li key={l.label}>
                       <a href={l.href} style={{ fontSize: '14px', color: 'var(--text-2)', textDecoration: 'none', transition: 'color 0.15s' }}
