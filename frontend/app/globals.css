@@ -3028,3 +3028,106 @@ a.alert-row-title:hover {
   0%   { background-position:  200% 0; }
   100% { background-position: -200% 0; }
 }
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   TOAST NOTIFICATIONS
+───────────────────────────────────────────────────────────────────────────── */
+
+.toast-container {
+  position: fixed;
+  bottom: 20px;
+  right: 20px;
+  z-index: 9999;
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  align-items: flex-end;
+  pointer-events: none;
+}
+
+.toast {
+  pointer-events: all;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-width: 260px;
+  max-width: 380px;
+  padding: 11px 14px;
+  border-radius: 8px;
+  border: 1px solid var(--border);
+  background: var(--bg-3);
+  box-shadow: 0 4px 20px rgba(0,0,0,0.5);
+  font-size: 12.5px;
+  color: var(--text-0);
+  /* Slide-in from right */
+  transform: translateX(calc(100% + 24px));
+  opacity: 0;
+  transition: transform 0.28s cubic-bezier(0.22, 1, 0.36, 1),
+              opacity 0.25s ease;
+}
+
+.toast--visible {
+  transform: translateX(0);
+  opacity: 1;
+}
+
+/* Type variants */
+.toast--success { border-left: 3px solid var(--green); }
+.toast--error   { border-left: 3px solid var(--red); }
+.toast--warning { border-left: 3px solid var(--yellow); }
+.toast--info    { border-left: 3px solid var(--blue); }
+
+.toast__icon {
+  flex-shrink: 0;
+  width: 20px;
+  height: 20px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 50%;
+  font-size: 11px;
+  font-weight: 700;
+}
+
+.toast--success .toast__icon { background: var(--green-dim);  color: var(--green); }
+.toast--error   .toast__icon { background: var(--red-dim);    color: var(--red); }
+.toast--warning .toast__icon { background: rgba(240,165,0,.13); color: var(--yellow); }
+.toast--info    .toast__icon { background: var(--blue-dim);   color: var(--blue); }
+
+.toast__message {
+  flex: 1;
+  line-height: 1.4;
+  color: var(--text-0);
+}
+
+.toast__close {
+  flex-shrink: 0;
+  width: 18px;
+  height: 18px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  font-size: 15px;
+  line-height: 1;
+  color: var(--text-2);
+  transition: color 0.15s, background 0.15s;
+}
+
+.toast__close:hover {
+  color: var(--text-0);
+  background: var(--bg-4);
+}
+
+/* Stack spacing on mobile */
+@media (max-width: 480px) {
+  .toast-container {
+    bottom: 12px;
+    right: 12px;
+    left: 12px;
+    align-items: stretch;
+  }
+  .toast {
+    max-width: 100%;
+  }
+}

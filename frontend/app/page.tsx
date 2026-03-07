@@ -5,6 +5,7 @@ import dynamic from 'next/dynamic'
 import { useAuth } from './context/AuthContext'
 import { useSettings } from './context/SettingsContext'
 import { useOnboarding } from './context/OnboardingContext'
+import { useToast } from './context/ToastContext'
 import { trackWatchlistAdd, trackWatchlistRemove, trackStockSearch } from './utils/analytics'
 
 // Lazy-load modals so they don't bloat initial bundle
@@ -643,6 +644,7 @@ export default function Home() {
   const { user, token, loadWatchlistFromBackend, syncAddToWatchlist, syncRemoveFromWatchlist } = useAuth()
   const { settings, openSettings, settingsOpen, closeSettings } = useSettings()
   const { markChecklistItem } = useOnboarding()
+  const { showToast } = useToast()
 
   // Real-time alert system
   const {
@@ -837,8 +839,10 @@ export default function Home() {
       if (j.success) setNewsArticles(j.data || [])
       else throw new Error(j.error || 'API error')
     } catch (err) {
-      setNewsError(err instanceof Error ? err.message : 'Unknown error')
+      const msg = err instanceof Error ? err.message : 'Unknown error'
+      setNewsError(msg)
       setNewsArticles([])
+      showToast(`Failed to load feed: ${msg}`, 'error')
     } finally {
       setLoadingNews(false)
     }
@@ -935,6 +939,10 @@ export default function Home() {
     const isAdding = !watchlist.includes(sym)
     setWatchlist(w => isAdding ? [...w, sym] : w.filter(s => s !== sym))
 
+    // Toast feedback
+    if (isAdding) showToast(`${sym} added to watchlist`, 'success')
+    else showToast(`${sym} removed from watchlist`, 'info')
+
     // Track analytics
     if (isAdding) trackWatchlistAdd(sym)
     else trackWatchlistRemove(sym)
@@ -947,7 +955,7 @@ export default function Home() {
       if (isAdding) syncAddToWatchlist(sym)
       else syncRemoveFromWatchlist(sym)
     }
-  }, [watchlist, token, syncAddToWatchlist, syncRemoveFromWatchlist, markChecklistItem])
+  }, [watchlist, token, syncAddToWatchlist, syncRemoveFromWatchlist, markChecklistItem, showToast])
 
   // ── Category change ────────────────────────────────────────────────────────
   const handleCategory = (cat: string) => {
@@ -1144,7 +1152,7 @@ export default function Home() {
                 alerts={marketAlerts}
                 isConnected={alertConnected}
                 prefs={alertPrefs}
-                onUpdatePrefs={updateAlertPrefs}
+                onUpdatePrefs={(p) => { updateAlertPrefs(p); showToast('Alert preferences updated', 'success') }}
                 onMarkAllRead={markAlertsRead}
                 onDismiss={dismissAlert}
                 onRefresh={refreshAlerts}
@@ -1408,7 +1416,7 @@ export default function Home() {
 
       {/* ── Settings Panel ─────────────────────────────────────────────────── */}
       {settingsOpen && (
-        <SettingsPanel onClose={closeSettings} />
+        <SettingsPanel onClose={() => { closeSettings(); showToast('Settings saved', 'success') }} />
       )}
     </>
   )

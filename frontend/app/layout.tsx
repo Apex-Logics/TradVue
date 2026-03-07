@@ -4,8 +4,10 @@ import './globals.css'
 import { AuthProvider } from './context/AuthContext'
 import { SettingsProvider } from './context/SettingsContext'
 import { OnboardingProvider } from './context/OnboardingContext'
+import { ToastProvider } from './context/ToastContext'
 import OnboardingOverlay from './components/OnboardingOverlay'
 import CookieConsent from './components/CookieConsent'
+import ToastContainer from './components/Toast'
 
 export const metadata: Metadata = {
   title: 'ChartGenius — Real-Time Market Intelligence',
@@ -54,15 +56,18 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </>
         )}
 
-        <SettingsProvider>
-          <AuthProvider>
-            <OnboardingProvider>
-              {children}
-              <OnboardingOverlay />
-              <CookieConsent />
-            </OnboardingProvider>
-          </AuthProvider>
-        </SettingsProvider>
+        <ToastProvider>
+          <SettingsProvider>
+            <AuthProvider>
+              <OnboardingProvider>
+                {children}
+                <OnboardingOverlay />
+                <CookieConsent />
+              </OnboardingProvider>
+            </AuthProvider>
+          </SettingsProvider>
+          <ToastContainer />
+        </ToastProvider>
       </body>
     </html>
   )
