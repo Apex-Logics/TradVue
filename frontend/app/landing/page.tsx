@@ -375,12 +375,12 @@ export default function LandingPage() {
           }}>
             {/* Logo */}
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#4a9eff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-              </svg>
-              <span style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.02em' }}>
-                ChartGenius
-              </span>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-horizontal.png"
+                alt="ChartGenius"
+                style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+              />
               <span style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
                 color: '#4a9eff', background: 'rgba(74,158,255,0.1)',
@@ -451,6 +451,21 @@ export default function LandingPage() {
             }}>
               <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4a9eff', display: 'inline-block', animation: 'lp-pulse 2s ease-in-out infinite' }} />
               Beta now open — free Pro access for early users
+            </div>
+
+            {/* Hero logo with tagline */}
+            <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'center' }}>
+              {/* eslint-disable-next-line @next/next/no-img-element */}
+              <img
+                src="/logo-tagline.png"
+                alt="ChartGenius — AI Driven Alpha"
+                style={{
+                  height: 'clamp(100px, 18vw, 160px)',
+                  width: 'auto',
+                  objectFit: 'contain',
+                  filter: 'drop-shadow(0 0 32px rgba(74,158,255,0.25))',
+                }}
+              />
             </div>
 
             {/* H1 */}

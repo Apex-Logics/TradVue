@@ -1311,13 +1311,13 @@ export default function Home() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-left">
-          <span className="logo">
-            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5">
-              <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4" />
-              <path strokeLinecap="round" strokeLinejoin="round" d="M3 20h18" />
-            </svg>
-            ChartGenius
-          </span>
+          {/* eslint-disable-next-line @next/next/no-img-element */}
+          <img
+            src="/logo-horizontal.png"
+            alt="ChartGenius"
+            className="header-logo-img"
+            style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+          />
           <span className="logo-badge">BETA</span>
         </div>
 

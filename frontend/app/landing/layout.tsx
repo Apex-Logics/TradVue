@@ -1,6 +1,7 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
+  metadataBase: new URL('https://www.chartgenius.io'),
   // ── Title & Description ────────────────────────────────────────────────
   title: 'ChartGenius — Real-Time Market Intelligence for Active Traders',
   description:
@@ -28,10 +29,10 @@ export const metadata: Metadata = {
       'AI-powered news feeds, sentiment analysis, and smart alerts for traders who can\'t afford to miss a move.',
     images: [
       {
-        url: 'https://chartgenius.io/og-image-homepage.jpg',
-        width: 1200,
-        height: 630,
-        alt: 'ChartGenius — Real-Time Market Intelligence',
+        url: 'https://www.chartgenius.io/logo-tagline.png',
+        width: 1024,
+        height: 1024,
+        alt: 'ChartGenius — AI Driven Alpha',
       },
     ],
   },
@@ -43,7 +44,7 @@ export const metadata: Metadata = {
     creator: '@chartgenius',
     title: 'ChartGenius — Real-Time Market Intelligence for Active Traders',
     description: 'AI-powered news, sentiment analysis, and smart alerts. Free beta access.',
-    images: ['https://chartgenius.io/twitter-image.jpg'],
+    images: ['https://www.chartgenius.io/logo-tagline.png'],
   },
 
   // ── Robots ────────────────────────────────────────────────────────────
