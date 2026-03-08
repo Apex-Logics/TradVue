@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -24,20 +24,40 @@ const SECTORS = [
 interface Holding {
   id: string
   ticker: string
-  company: string
+  company: string         // auto-populated from API
   shares: number
   avgCost: number
-  sector: string
-  annualDividend: number // per share
-  totalDividendsReceived: number
-  // live data (not persisted)
-  currentPrice?: number
-  dayChange?: number
-  dayChangePct?: number
+  buyDate: string         // YYYY-MM-DD, required for dividend calculations
+  sector: string          // auto-populated from API
+  // Legacy / fallback (override if API unavailable)
+  annualDividend: number  // per share — from API
+  totalDividendsReceived: number // calculated from history
+}
+
+interface StockInfo {
+  symbol: string
+  companyName: string
+  sector?: string | null
+  industry?: string | null
+  logo?: string | null
+  exchange?: string | null
+  currency?: string | null
+  currentPrice?: number | null
+  previousClose?: number | null
+  dayChange?: number | null
+  dayChangePct?: number | null
+  '52WeekHigh'?: number | null
+  '52WeekLow'?: number | null
+  peRatio?: number | null
+  dividendPerShareAnnual?: number | null
+  dividendYield?: number | null
+  dividendGrowthRate5Y?: number | null
+  dividendHistory: { date: string; amount: number }[]
+  fetchedAt?: string
 }
 
 interface DividendCell {
-  // keyed as `${year}-${monthIndex}-${ticker}`
+  // keyed as `${year}-${monthIndex}-${ticker}` — manual overrides only
   [key: string]: number
 }
 
@@ -58,14 +78,6 @@ interface WatchlistItem {
   company: string
   targetPrice: number
   sector: string
-  // live data
-  currentPrice?: number
-  dayChange?: number
-  dayChangePct?: number
-  week52High?: number
-  week52Low?: number
-  peRatio?: number
-  dividendYield?: number
 }
 
 interface MonthlySnapshot {
@@ -96,7 +108,7 @@ function uid() {
 }
 
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
-const YEARS = [2024, 2025, 2026, 2027]
+const YEARS = [2019, 2020, 2021, 2022, 2023, 2024, 2025, 2026, 2027, 2028]
 
 const SECTOR_COLORS: Record<string, string> = {
   'Communication Services': '#4a9eff',
@@ -140,7 +152,6 @@ function BarChart({ data }: { data: { label: string; value: number }[] }) {
 
   return (
     <svg viewBox={`0 0 ${W} ${H + 30}`} style={{ width: '100%', height: 'auto', display: 'block' }}>
-      {/* Y gridlines */}
       {[0, 0.25, 0.5, 0.75, 1].map((t, i) => {
         const y = pad + (1 - t) * H
         return (
@@ -152,7 +163,6 @@ function BarChart({ data }: { data: { label: string; value: number }[] }) {
           </g>
         )
       })}
-      {/* Bars */}
       {data.map((d, i) => {
         const bh = (d.value / max) * H
         const x = pad + i * (barW + barGap)
@@ -251,7 +261,6 @@ function LineChart({ data }: { data: MonthlySnapshot[] }) {
           <stop offset="100%" stopColor="var(--accent)" stopOpacity="0" />
         </linearGradient>
       </defs>
-      {/* Grid */}
       {[0, 0.5, 1].map((t, i) => {
         const y = padT + (1 - t) * H
         return (
@@ -263,15 +272,11 @@ function LineChart({ data }: { data: MonthlySnapshot[] }) {
           </g>
         )
       })}
-      {/* Area */}
       <path d={areaPath} fill="url(#lineGrad)" />
-      {/* Line */}
       <polyline points={polyline} fill="none" stroke="var(--accent)" strokeWidth="1.5" />
-      {/* Points */}
       {pts.map((p, i) => (
         <circle key={i} cx={p.x} cy={p.y} r="3" fill="var(--accent)" stroke="var(--bg-1)" strokeWidth="1.5" />
       ))}
-      {/* X labels (show every 3rd) */}
       {pts.filter((_, i) => i % 3 === 0).map((p, i) => (
         <text key={i} x={p.x} y={padT + H + 20} textAnchor="middle" fontSize="8" fill="var(--text-3)">{p.date}</text>
       ))}
@@ -296,7 +301,7 @@ function KpiCard({ label, value, sub, color }: { label: string; value: string; s
   )
 }
 
-// ─── Add/Edit Modal ───────────────────────────────────────────────────────────
+// ─── Modal ────────────────────────────────────────────────────────────────────
 
 function Modal({ title, onClose, children }: { title: string; onClose: () => void; children: React.ReactNode }) {
   useEffect(() => {
@@ -317,7 +322,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
         background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10,
-        padding: 24, minWidth: 340, maxWidth: 500, width: '90%', zIndex: 1001,
+        padding: 24, minWidth: 340, maxWidth: 520, width: '90%', zIndex: 1001,
         maxHeight: '90vh', overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 18 }}>
@@ -330,7 +335,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
   )
 }
 
-// ─── Shared input style ───────────────────────────────────────────────────────
+// ─── Shared styles ────────────────────────────────────────────────────────────
 
 const inputStyle: React.CSSProperties = {
   width: '100%',
@@ -357,21 +362,22 @@ const labelStyle: React.CSSProperties = {
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'holdings' | 'dividends' | 'sold' | 'watchlist'>('dashboard')
 
-  // Holdings
+  // Core data (persisted)
   const [holdings, setHoldings] = useState<Holding[]>([])
-  const [dividendData, setDividendData] = useState<DividendCell>({})
+  const [dividendOverrides, setDividendOverrides] = useState<DividendCell>({}) // manual overrides only
   const [soldPositions, setSoldPositions] = useState<SoldPosition[]>([])
   const [watchlist, setWatchlist] = useState<WatchlistItem[]>([])
   const [snapshots, setSnapshots] = useState<MonthlySnapshot[]>([])
 
-  // Live prices
-  const [liveQuotes, setLiveQuotes] = useState<Record<string, { current: number; change: number; changePct: number; week52High?: number; week52Low?: number; peRatio?: number; dividendYield?: number }>>({})
+  // Live data from API (not persisted)
+  const [stockInfos, setStockInfos] = useState<Record<string, StockInfo>>({})
   const [loadingPrices, setLoadingPrices] = useState(false)
 
   // Load from localStorage
   useEffect(() => {
     setHoldings(loadLS('cg_portfolio_holdings', []))
-    setDividendData(loadLS('cg_portfolio_dividends', {}))
+    // backward compat: load old dividendData as overrides
+    setDividendOverrides(loadLS('cg_portfolio_dividends', {}))
     setSoldPositions(loadLS('cg_portfolio_sold', []))
     setWatchlist(loadLS('cg_portfolio_watchlist', []))
     setSnapshots(loadLS('cg_portfolio_snapshots', []))
@@ -379,97 +385,135 @@ export default function PortfolioPage() {
 
   // Save to localStorage
   useEffect(() => { saveLS('cg_portfolio_holdings', holdings) }, [holdings])
-  useEffect(() => { saveLS('cg_portfolio_dividends', dividendData) }, [dividendData])
+  useEffect(() => { saveLS('cg_portfolio_dividends', dividendOverrides) }, [dividendOverrides])
   useEffect(() => { saveLS('cg_portfolio_sold', soldPositions) }, [soldPositions])
   useEffect(() => { saveLS('cg_portfolio_watchlist', watchlist) }, [watchlist])
   useEffect(() => { saveLS('cg_portfolio_snapshots', snapshots) }, [snapshots])
 
-  // Fetch live prices for all tickers
-  const allTickers = [
+  // All unique tickers
+  const allTickers = useMemo(() => [
     ...new Set([
       ...holdings.map(h => h.ticker),
       ...watchlist.map(w => w.ticker),
     ]),
-  ]
+  ], [holdings, watchlist])
 
-  const fetchPrices = useCallback(async () => {
+  // Fetch stock info for all tickers
+  const fetchStockInfos = useCallback(async () => {
     if (allTickers.length === 0) return
     setLoadingPrices(true)
     try {
-      const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${allTickers.join(',')}`)
-      const j = await res.json()
-      if (j.success && j.data) {
-        setLiveQuotes(j.data)
+      // Stagger requests to avoid rate limits (100ms apart)
+      const results: Record<string, StockInfo> = {}
+      for (let i = 0; i < allTickers.length; i++) {
+        const sym = allTickers[i]
+        try {
+          const r = await fetch(`${API_BASE}/api/stock-info/${sym}`)
+          if (r.ok) {
+            const data = await r.json()
+            results[sym] = data
+          }
+        } catch {}
+        if (i < allTickers.length - 1) {
+          await new Promise(res => setTimeout(res, 120)) // rate limit buffer
+        }
       }
-    } catch {
-      // Try individual quotes
-      const results: typeof liveQuotes = {}
-      await Promise.all(
-        allTickers.map(async sym => {
-          try {
-            const r = await fetch(`${API_BASE}/api/market-data/quote?symbol=${sym}`)
-            const j = await r.json()
-            if (j.success && j.data) results[sym] = j.data
-          } catch {}
-        })
-      )
-      setLiveQuotes(results)
+      setStockInfos(prev => ({ ...prev, ...results }))
+    } catch (err) {
+      console.warn('[Portfolio] fetchStockInfos error:', err)
     } finally {
       setLoadingPrices(false)
     }
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [allTickers.join(',')])
+  }, [allTickers])
 
   useEffect(() => {
-    fetchPrices()
-  }, [fetchPrices])
+    fetchStockInfos()
+  }, [fetchStockInfos])
 
   // Auto-refresh every 60s
   useEffect(() => {
-    const t = setInterval(fetchPrices, 60_000)
+    const t = setInterval(fetchStockInfos, 60_000)
     return () => clearInterval(t)
-  }, [fetchPrices])
+  }, [fetchStockInfos])
 
-  // Monthly snapshot — record current value once per month
-  useEffect(() => {
-    if (holdings.length === 0) return
-    const totalMV = holdings.reduce((s, h) => {
-      const q = liveQuotes[h.ticker]
-      return s + h.shares * (q?.current ?? h.avgCost)
-    }, 0)
-    if (totalMV === 0) return
-    const now = new Date()
-    const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
-    setSnapshots(prev => {
-      const existing = prev.findIndex(s => s.date === key)
-      if (existing >= 0) {
-        const next = [...prev]
-        next[existing] = { date: key, value: totalMV }
-        return next
-      }
-      return [...prev, { date: key, value: totalMV }].sort((a, b) => a.date.localeCompare(b.date))
+  // Auto-calculated dividends from stock history + buy dates
+  const autoCalculatedDividends = useMemo<DividendCell>(() => {
+    const result: DividendCell = {}
+    holdings.forEach(h => {
+      const info = stockInfos[h.ticker]
+      if (!info?.dividendHistory?.length) return
+      const buyDate = h.buyDate ? new Date(h.buyDate) : null
+      info.dividendHistory.forEach(div => {
+        const divDate = new Date(div.date)
+        if (buyDate && divDate <= buyDate) return // only after purchase
+        const yr = divDate.getFullYear()
+        const mi = divDate.getMonth()
+        if (!YEARS.includes(yr)) return
+        const key = `${yr}-${mi}-${h.ticker}`
+        result[key] = parseFloat(((result[key] || 0) + div.amount * h.shares).toFixed(4))
+      })
     })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [liveQuotes])
+    return result
+  }, [holdings, stockInfos])
 
-  // ── Computed portfolio stats ──────────────────────────────────────────────
+  // Effective dividends = auto-calculated + manual overrides
+  const effectiveDividendData = useMemo<DividendCell>(() => {
+    const result = { ...autoCalculatedDividends }
+    Object.entries(dividendOverrides).forEach(([key, val]) => {
+      result[key] = val
+    })
+    return result
+  }, [autoCalculatedDividends, dividendOverrides])
 
-  const holdingsEnriched = holdings.map(h => {
-    const q = liveQuotes[h.ticker]
-    const currentPrice = q?.current ?? h.avgCost
+  // Helper: total dividends received for a holding (from history)
+  const getAutoTotalDividends = useCallback((h: Holding): number => {
+    const info = stockInfos[h.ticker]
+    if (!info?.dividendHistory?.length) return h.totalDividendsReceived || 0
+    const buyDate = h.buyDate ? new Date(h.buyDate) : null
+    return info.dividendHistory
+      .filter(div => !buyDate || new Date(div.date) > buyDate)
+      .reduce((sum, div) => sum + div.amount * h.shares, 0)
+  }, [stockInfos])
+
+  // Enrich holdings with live data
+  const holdingsEnriched = useMemo(() => holdings.map(h => {
+    const info = stockInfos[h.ticker]
+    const currentPrice = info?.currentPrice ?? h.avgCost
+    const annualDividend = info?.dividendPerShareAnnual ?? h.annualDividend
+    const totalDividendsReceived = getAutoTotalDividends(h)
     const costBasis = h.shares * h.avgCost
     const marketValue = h.shares * currentPrice
     const marketReturn = marketValue - costBasis
     const marketReturnPct = costBasis > 0 ? (marketReturn / costBasis) * 100 : 0
-    const totalReturn = marketReturn + h.totalDividendsReceived
+    const totalReturn = marketReturn + totalDividendsReceived
     const totalReturnPct = costBasis > 0 ? (totalReturn / costBasis) * 100 : 0
-    const dayGain = (q?.change ?? 0) * h.shares
-    const annualDivIncome = h.annualDividend * h.shares
-    const divYield = currentPrice > 0 ? (h.annualDividend / currentPrice) * 100 : 0
-    const yieldOnCost = h.avgCost > 0 ? (h.annualDividend / h.avgCost) * 100 : 0
-    return { ...h, currentPrice, costBasis, marketValue, marketReturn, marketReturnPct, totalReturn, totalReturnPct, dayGain, annualDivIncome, divYield, yieldOnCost }
-  })
+    const dayGain = (info?.dayChange ?? 0) * h.shares
+    const annualDivIncome = annualDividend * h.shares
+    const divYield = currentPrice > 0 ? (annualDividend / currentPrice) * 100 : 0
+    const yieldOnCost = h.avgCost > 0 ? (annualDividend / h.avgCost) * 100 : 0
+    const sector = info?.sector || h.sector || 'Other'
+    const company = info?.companyName || h.company || h.ticker
+    return {
+      ...h,
+      company,
+      sector,
+      annualDividend,
+      totalDividendsReceived,
+      currentPrice,
+      costBasis,
+      marketValue,
+      marketReturn,
+      marketReturnPct,
+      totalReturn,
+      totalReturnPct,
+      dayGain,
+      annualDivIncome,
+      divYield,
+      yieldOnCost,
+    }
+  }), [holdings, stockInfos, getAutoTotalDividends])
 
+  // Portfolio stats
   const totalCostBasis = holdingsEnriched.reduce((s, h) => s + h.costBasis, 0)
   const totalMarketValue = holdingsEnriched.reduce((s, h) => s + h.marketValue, 0)
   const totalMarketReturn = totalMarketValue - totalCostBasis
@@ -484,30 +528,52 @@ export default function PortfolioPage() {
   const yieldOnCostPortfolio = totalCostBasis > 0 ? (projAnnualIncome / totalCostBasis) * 100 : 0
 
   // Sector diversification
-  const sectorMap: Record<string, number> = {}
-  holdingsEnriched.forEach(h => {
-    const s = h.sector || 'Other'
-    sectorMap[s] = (sectorMap[s] || 0) + h.marketValue
-  })
-  const sectorData = Object.entries(sectorMap).map(([label, value]) => ({
-    label, value, color: SECTOR_COLORS[label] || '#888888',
-  }))
+  const sectorData = useMemo(() => {
+    const sectorMap: Record<string, number> = {}
+    holdingsEnriched.forEach(h => {
+      const s = h.sector || 'Other'
+      sectorMap[s] = (sectorMap[s] || 0) + h.marketValue
+    })
+    return Object.entries(sectorMap).map(([label, value]) => ({
+      label, value, color: SECTOR_COLORS[label] || '#888888',
+    }))
+  }, [holdingsEnriched])
 
-  // Annual dividend income by year (from dividendData)
+  // Annual dividend income by year (from effective dividends)
   const annualDivByYear: Record<number, number> = {}
   YEARS.forEach(yr => {
     annualDivByYear[yr] = 0
     holdings.forEach(h => {
       MONTHS.forEach((_, mi) => {
         const key = `${yr}-${mi}-${h.ticker}`
-        annualDivByYear[yr] += dividendData[key] || 0
+        annualDivByYear[yr] += effectiveDividendData[key] || 0
       })
     })
   })
-  const barChartData = YEARS.map(yr => ({ label: String(yr), value: annualDivByYear[yr] }))
+  const barChartData = YEARS.filter(yr => yr >= 2022).map(yr => ({
+    label: String(yr), value: annualDivByYear[yr],
+  }))
 
-  // ─── Tab Navigation ───────────────────────────────────────────────────────
+  // Monthly snapshot
+  useEffect(() => {
+    if (holdings.length === 0) return
+    const totalMV = holdingsEnriched.reduce((s, h) => s + h.marketValue, 0)
+    if (totalMV === 0) return
+    const now = new Date()
+    const key = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}`
+    setSnapshots(prev => {
+      const existing = prev.findIndex(s => s.date === key)
+      if (existing >= 0) {
+        const next = [...prev]
+        next[existing] = { date: key, value: totalMV }
+        return next
+      }
+      return [...prev, { date: key, value: totalMV }].sort((a, b) => a.date.localeCompare(b.date))
+    })
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [stockInfos])
 
+  // Tab navigation
   const tabs: { id: typeof activeTab; label: string }[] = [
     { id: 'dashboard', label: '📊 Dashboard' },
     { id: 'holdings', label: '📁 Holdings' },
@@ -518,7 +584,7 @@ export default function PortfolioPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font)' }}>
-      {/* ── Header ─────────────────────────────────────────────────────────── */}
+      {/* Header */}
       <header style={{
         background: 'var(--bg-1)',
         borderBottom: '1px solid var(--border)',
@@ -545,13 +611,12 @@ export default function PortfolioPage() {
           <span style={{ fontSize: 10, color: 'var(--text-3)' }}>↻ Updating prices…</span>
         )}
         <button
-          onClick={fetchPrices}
+          onClick={fetchStockInfos}
           style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}
         >
           ↻ Refresh
         </button>
 
-        {/* KPI strip */}
         {totalMarketValue > 0 && (
           <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
             <span style={{ color: 'var(--text-2)' }}>Value: <strong style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>{fmtDollar(totalMarketValue)}</strong></span>
@@ -562,7 +627,7 @@ export default function PortfolioPage() {
         )}
       </header>
 
-      {/* ── Tab Bar ────────────────────────────────────────────────────────── */}
+      {/* Tab bar */}
       <div style={{
         background: 'var(--bg-1)',
         borderBottom: '1px solid var(--border)',
@@ -591,7 +656,7 @@ export default function PortfolioPage() {
         ))}
       </div>
 
-      {/* ── Content ────────────────────────────────────────────────────────── */}
+      {/* Content */}
       <div style={{ padding: '20px', maxWidth: 1400, margin: '0 auto' }}>
 
         {activeTab === 'dashboard' && (
@@ -620,14 +685,18 @@ export default function PortfolioPage() {
             setHoldings={setHoldings}
             holdingsEnriched={holdingsEnriched}
             totalMarketValue={totalMarketValue}
+            stockInfos={stockInfos}
           />
         )}
 
         {activeTab === 'dividends' && (
           <DividendsTab
             holdings={holdings}
-            dividendData={dividendData}
-            setDividendData={setDividendData}
+            effectiveDividendData={effectiveDividendData}
+            autoCalculatedDividends={autoCalculatedDividends}
+            dividendOverrides={dividendOverrides}
+            setDividendOverrides={setDividendOverrides}
+            stockInfos={stockInfos}
           />
         )}
 
@@ -642,7 +711,7 @@ export default function PortfolioPage() {
           <WatchlistTab
             watchlist={watchlist}
             setWatchlist={setWatchlist}
-            liveQuotes={liveQuotes}
+            stockInfos={stockInfos}
           />
         )}
       </div>
@@ -677,69 +746,42 @@ function DashboardTab({
   }
 
   const kpis = [
-    { label: 'COST BASIS', value: fmtDollar(totalCostBasis), color: undefined },
-    { label: 'MARKET VALUE', value: fmtDollar(totalMarketValue), color: undefined },
-    {
-      label: 'MARKET RETURN',
-      value: `${fmtDollar(totalMarketReturn)}`,
-      sub: fmtPct(totalMarketReturnPct),
-      color: totalMarketReturn >= 0 ? 'var(--green)' : 'var(--red)',
-    },
-    {
-      label: 'TOTAL RETURN',
-      value: `${fmtDollar(totalReturn)}`,
-      sub: fmtPct(totalReturnPct),
-      color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)',
-    },
-    {
-      label: 'DAY GAIN',
-      value: `${fmtDollar(totalDayGain)}`,
-      sub: fmtPct(totalDayGainPct),
-      color: totalDayGain >= 0 ? 'var(--green)' : 'var(--red)',
-    },
+    { label: 'COST BASIS', value: fmtDollar(totalCostBasis) },
+    { label: 'MARKET VALUE', value: fmtDollar(totalMarketValue) },
+    { label: 'MARKET RETURN', value: fmtDollar(totalMarketReturn), sub: fmtPct(totalMarketReturnPct), color: totalMarketReturn >= 0 ? 'var(--green)' : 'var(--red)' },
+    { label: 'TOTAL RETURN', value: fmtDollar(totalReturn), sub: fmtPct(totalReturnPct), color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)' },
+    { label: 'DAY GAIN', value: fmtDollar(totalDayGain), sub: fmtPct(totalDayGainPct), color: totalDayGain >= 0 ? 'var(--green)' : 'var(--red)' },
     { label: 'DIVIDEND YIELD', value: `${divYieldPortfolio.toFixed(2)}%`, color: 'var(--yellow)' },
     { label: 'YIELD ON COST', value: `${yieldOnCostPortfolio.toFixed(2)}%`, color: 'var(--yellow)' },
-    { label: 'PROJ. ANNUAL INCOME', value: fmtDollar(projAnnualIncome), sub: `${fmtDollar(projAnnualIncome / 12)}/mo · ${fmtDollar(projAnnualIncome / 52)}/wk · ${fmtDollar(projAnnualIncome / 365)}/day`, color: 'var(--green)' },
+    {
+      label: 'PROJ. ANNUAL INCOME',
+      value: fmtDollar(projAnnualIncome),
+      sub: `${fmtDollar(projAnnualIncome / 12)}/mo · ${fmtDollar(projAnnualIncome / 52)}/wk · ${fmtDollar(projAnnualIncome / 365)}/day`,
+      color: 'var(--green)',
+    },
   ]
 
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
-      {/* KPIs */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
-        gap: 12,
-      }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
         {kpis.map((k, i) => (
           <KpiCard key={i} label={k.label} value={k.value} sub={k.sub} color={k.color} />
         ))}
       </div>
 
-      {/* Charts row */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-
-        {/* Annual Dividend Income */}
         <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>
-            ANNUAL DIVIDEND INCOME
-          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>ANNUAL DIVIDEND INCOME</div>
           <BarChart data={barChartData} />
         </div>
-
-        {/* Diversification */}
         <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>
-            SECTOR DIVERSIFICATION
-          </div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>SECTOR DIVERSIFICATION</div>
           <DonutChart data={sectorData} />
         </div>
       </div>
 
-      {/* Portfolio Growth */}
       <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>
-          PORTFOLIO GROWTH (MONTHLY SNAPSHOTS)
-        </div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>PORTFOLIO GROWTH (MONTHLY SNAPSHOTS)</div>
         <LineChart data={snapshots} />
       </div>
     </div>
@@ -755,48 +797,75 @@ type HoldingEnriched = Holding & {
 }
 
 function HoldingsTab({
-  holdings, setHoldings, holdingsEnriched, totalMarketValue,
+  holdings, setHoldings, holdingsEnriched, totalMarketValue, stockInfos,
 }: {
   holdings: Holding[]
   setHoldings: React.Dispatch<React.SetStateAction<Holding[]>>
   holdingsEnriched: HoldingEnriched[]
   totalMarketValue: number
+  stockInfos: Record<string, StockInfo>
 }) {
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
 
   const blankForm = {
-    ticker: '', company: '', shares: '', avgCost: '', sector: 'Other',
-    annualDividend: '', totalDividendsReceived: '',
+    ticker: '',
+    shares: '',
+    buyDate: new Date().toISOString().slice(0, 10),
+    avgCost: '',
   }
   const [form, setForm] = useState(blankForm)
   const [formError, setFormError] = useState('')
-  const [fetchingPrice, setFetchingPrice] = useState(false)
+  const [lookingUp, setLookingUp] = useState(false)
+  const [peekInfo, setPeekInfo] = useState<StockInfo | null>(null)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
-  const openAdd = () => { setForm(blankForm); setEditId(null); setFormError(''); setShowModal(true) }
+  const openAdd = () => {
+    setForm(blankForm)
+    setEditId(null)
+    setFormError('')
+    setPeekInfo(null)
+    setShowModal(true)
+  }
   const openEdit = (h: Holding) => {
     setForm({
-      ticker: h.ticker, company: h.company,
-      shares: String(h.shares), avgCost: String(h.avgCost), sector: h.sector,
-      annualDividend: String(h.annualDividend),
-      totalDividendsReceived: String(h.totalDividendsReceived),
+      ticker: h.ticker,
+      shares: String(h.shares),
+      buyDate: h.buyDate || '',
+      avgCost: String(h.avgCost),
     })
+    // Pre-fill peek from cached info
+    if (stockInfos[h.ticker]) setPeekInfo(stockInfos[h.ticker])
     setEditId(h.id)
     setFormError('')
     setShowModal(true)
   }
 
-  const autoFillPrice = async () => {
-    if (!form.ticker) return
-    setFetchingPrice(true)
-    try {
-      const r = await fetch(`${API_BASE}/api/market-data/quote?symbol=${form.ticker.toUpperCase()}`)
-      const j = await r.json()
-      if (j.success && j.data) {
-        setForm(f => ({ ...f, avgCost: String(j.data.current.toFixed(2)) }))
-      }
-    } catch {}
-    setFetchingPrice(false)
+  // Debounced ticker lookup
+  const handleTickerChange = (val: string) => {
+    const upper = val.toUpperCase()
+    setForm(f => ({ ...f, ticker: upper }))
+    setPeekInfo(null)
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (upper.length < 1) return
+    debounceRef.current = setTimeout(async () => {
+      setLookingUp(true)
+      try {
+        const r = await fetch(`${API_BASE}/api/stock-info/${upper}`)
+        if (r.ok) {
+          const data: StockInfo = await r.json()
+          setPeekInfo(data)
+          // Auto-fill avg cost with current price if empty
+          if (data.currentPrice) {
+            setForm(f => ({
+              ...f,
+              avgCost: f.avgCost || data.currentPrice!.toFixed(2),
+            }))
+          }
+        }
+      } catch {}
+      setLookingUp(false)
+    }, 600)
   }
 
   const handleSave = () => {
@@ -807,19 +876,29 @@ function HoldingsTab({
     if (isNaN(shares) || shares <= 0) { setFormError('Invalid shares'); return }
     const avgCost = parseFloat(form.avgCost)
     if (isNaN(avgCost) || avgCost <= 0) { setFormError('Invalid avg cost'); return }
+    if (!form.buyDate) { setFormError('Buy date required'); return }
 
+    const info = peekInfo || stockInfos[ticker]
     const entry: Holding = {
       id: editId || uid(),
       ticker,
-      company: form.company || ticker,
+      company: info?.companyName || ticker,
       shares,
       avgCost,
-      sector: form.sector,
-      annualDividend: parseFloat(form.annualDividend) || 0,
-      totalDividendsReceived: parseFloat(form.totalDividendsReceived) || 0,
+      buyDate: form.buyDate,
+      sector: info?.sector || 'Other',
+      annualDividend: info?.dividendPerShareAnnual || 0,
+      totalDividendsReceived: 0,
     }
 
+    // If editing, preserve existing company/sector if no new info
     if (editId) {
+      const existing = holdings.find(h => h.id === editId)
+      if (existing && !info) {
+        entry.company = existing.company
+        entry.sector = existing.sector
+        entry.annualDividend = existing.annualDividend
+      }
       setHoldings(prev => prev.map(h => h.id === editId ? entry : h))
     } else {
       setHoldings(prev => [...prev, entry])
@@ -860,7 +939,7 @@ function HoldingsTab({
         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 8 }}>
           <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
           <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8 }}>No positions yet</div>
-          <div style={{ fontSize: 12 }}>Click &ldquo;+ Add Position&rdquo; to add your first holding</div>
+          <div style={{ fontSize: 12 }}>Click &ldquo;+ Add Position&rdquo; — just enter ticker, shares, buy date &amp; avg cost. Everything else auto-fills!</div>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -868,6 +947,7 @@ function HoldingsTab({
             <thead>
               <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
                 <th style={{ ...colHdr, textAlign: 'left' }}>TICKER</th>
+                <th style={colHdr}>BUY DATE</th>
                 <th style={colHdr}>SHARES</th>
                 <th style={colHdr}>AVG COST</th>
                 <th style={colHdr}>PRICE</th>
@@ -889,17 +969,29 @@ function HoldingsTab({
             <tbody>
               {holdingsEnriched.map(h => {
                 const alloc = totalMarketValue > 0 ? (h.marketValue / totalMarketValue) * 100 : 0
+                const info = stockInfos[h.ticker]
                 return (
                   <tr key={h.id} style={{ background: 'var(--bg-1)' }}>
                     <td style={cellLeft}>
-                      <div style={{ fontWeight: 700, color: 'var(--text-0)' }}>{h.ticker}</div>
-                      <div style={{ fontSize: 9.5, color: 'var(--text-3)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.company}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {info?.logo && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={info.logo} alt="" style={{ width: 16, height: 16, borderRadius: 3, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 700, color: 'var(--text-0)' }}>{h.ticker}</div>
+                          <div style={{ fontSize: 9.5, color: 'var(--text-3)', maxWidth: 120, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{h.company}</div>
+                        </div>
+                      </div>
                     </td>
+                    <td style={{ ...cell, fontSize: 10, color: 'var(--text-2)' }}>{h.buyDate || '—'}</td>
                     <td style={cell}>{h.shares}</td>
                     <td style={cell}>${fmt(h.avgCost)}</td>
                     <td style={cell}>${fmt(h.currentPrice)}</td>
-                    <td style={{ ...cell, color: (h.dayGain ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmtDollar(h.dayGain)}
+                    <td style={{ ...cell, color: (info?.dayChange ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      {info?.dayChange != null ? (
+                        <>{fmtDollar(h.dayGain)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(info.dayChangePct ?? 0)}</span></>
+                      ) : '—'}
                     </td>
                     <td style={{ ...cell, color: h.marketReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>
                       {fmtDollar(h.marketReturn)}<br />
@@ -934,15 +1026,23 @@ function HoldingsTab({
 
       {showModal && (
         <Modal title={editId ? 'Edit Position' : 'Add Position'} onClose={() => setShowModal(false)}>
-          <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
+            {/* Required fields only */}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
-                <label style={labelStyle}>Ticker *</label>
-                <input style={inputStyle} value={form.ticker} onChange={e => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} placeholder="e.g. AAPL" />
-              </div>
-              <div>
-                <label style={labelStyle}>Company Name</label>
-                <input style={inputStyle} value={form.company} onChange={e => setForm(f => ({ ...f, company: e.target.value }))} placeholder="e.g. Apple Inc." />
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Ticker Symbol *</label>
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={{ ...inputStyle, paddingRight: lookingUp ? 30 : undefined }}
+                    value={form.ticker}
+                    onChange={e => handleTickerChange(e.target.value)}
+                    placeholder="e.g. AAPL"
+                    autoFocus
+                  />
+                  {lookingUp && (
+                    <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-3)' }}>↻</span>
+                  )}
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Shares *</label>
@@ -950,28 +1050,87 @@ function HoldingsTab({
               </div>
               <div>
                 <label style={labelStyle}>Avg Cost / Share *</label>
-                <div style={{ display: 'flex', gap: 4 }}>
-                  <input style={{ ...inputStyle, flex: 1 }} type="number" value={form.avgCost} onChange={e => setForm(f => ({ ...f, avgCost: e.target.value }))} placeholder="0.00" />
-                  <button onClick={autoFillPrice} disabled={fetchingPrice || !form.ticker} style={{ fontSize: 10, padding: '4px 8px', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--accent)', cursor: 'pointer', whiteSpace: 'nowrap' }}>
-                    {fetchingPrice ? '…' : 'Live'}
-                  </button>
+                <input style={inputStyle} type="number" value={form.avgCost} onChange={e => setForm(f => ({ ...f, avgCost: e.target.value }))} placeholder="0.00" />
+              </div>
+              <div style={{ gridColumn: '1 / -1' }}>
+                <label style={labelStyle}>Buy Date *</label>
+                <input style={{ ...inputStyle, colorScheme: 'dark' }} type="date" value={form.buyDate} onChange={e => setForm(f => ({ ...f, buyDate: e.target.value }))} />
+              </div>
+            </div>
+
+            {/* Stock info preview */}
+            {peekInfo && (
+              <div style={{
+                background: 'var(--bg-3)',
+                border: '1px solid var(--border)',
+                borderRadius: 6,
+                padding: '10px 12px',
+                fontSize: 11,
+              }}>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 8 }}>
+                  {peekInfo.logo && (
+                    // eslint-disable-next-line @next/next/no-img-element
+                    <img src={peekInfo.logo} alt="" style={{ width: 24, height: 24, borderRadius: 4, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                  )}
+                  <div>
+                    <div style={{ fontWeight: 700, color: 'var(--text-0)' }}>{peekInfo.companyName}</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{peekInfo.sector} · {peekInfo.exchange}</div>
+                  </div>
+                  <div style={{ marginLeft: 'auto', textAlign: 'right' }}>
+                    {peekInfo.currentPrice && (
+                      <div style={{ fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text-0)' }}>${fmt(peekInfo.currentPrice)}</div>
+                    )}
+                    {peekInfo.dayChangePct != null && (
+                      <div style={{ fontSize: 10, color: (peekInfo.dayChangePct ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                        {fmtPct(peekInfo.dayChangePct ?? 0)}
+                      </div>
+                    )}
+                  </div>
+                </div>
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, fontSize: 10 }}>
+                  {peekInfo['52WeekHigh'] && peekInfo['52WeekLow'] && (
+                    <div>
+                      <span style={{ color: 'var(--text-3)' }}>52W: </span>
+                      <span style={{ fontFamily: 'var(--mono)' }}>${fmt(peekInfo['52WeekLow']!)} – ${fmt(peekInfo['52WeekHigh']!)}</span>
+                    </div>
+                  )}
+                  {peekInfo.peRatio && (
+                    <div>
+                      <span style={{ color: 'var(--text-3)' }}>P/E: </span>
+                      <span style={{ fontFamily: 'var(--mono)' }}>{fmt(peekInfo.peRatio, 1)}</span>
+                    </div>
+                  )}
+                  {peekInfo.dividendYield != null && (
+                    <div>
+                      <span style={{ color: 'var(--text-3)' }}>Div Yield: </span>
+                      <span style={{ fontFamily: 'var(--mono)', color: 'var(--yellow)' }}>{fmt(peekInfo.dividendYield ?? 0, 2)}%</span>
+                    </div>
+                  )}
+                  {peekInfo.dividendPerShareAnnual != null && (
+                    <div>
+                      <span style={{ color: 'var(--text-3)' }}>Div/Sh: </span>
+                      <span style={{ fontFamily: 'var(--mono)', color: 'var(--green)' }}>${fmt(peekInfo.dividendPerShareAnnual ?? 0, 4)}</span>
+                    </div>
+                  )}
+                  {peekInfo.dividendGrowthRate5Y != null && (
+                    <div>
+                      <span style={{ color: 'var(--text-3)' }}>5Y DGR: </span>
+                      <span style={{ fontFamily: 'var(--mono)' }}>{fmtPct(peekInfo.dividendGrowthRate5Y ?? 0)}</span>
+                    </div>
+                  )}
+                  {peekInfo.dividendHistory?.length > 0 && (
+                    <div>
+                      <span style={{ color: 'var(--text-3)' }}>History: </span>
+                      <span style={{ fontFamily: 'var(--mono)' }}>{peekInfo.dividendHistory.length} payments</span>
+                    </div>
+                  )}
+                </div>
+                <div style={{ marginTop: 6, fontSize: 9.5, color: 'var(--text-3)', fontStyle: 'italic' }}>
+                  ✓ Company, sector, dividends will auto-populate
                 </div>
               </div>
-              <div>
-                <label style={labelStyle}>Annual Dividend / Share</label>
-                <input style={inputStyle} type="number" value={form.annualDividend} onChange={e => setForm(f => ({ ...f, annualDividend: e.target.value }))} placeholder="0.00" />
-              </div>
-              <div>
-                <label style={labelStyle}>Total Dividends Received</label>
-                <input style={inputStyle} type="number" value={form.totalDividendsReceived} onChange={e => setForm(f => ({ ...f, totalDividendsReceived: e.target.value }))} placeholder="0.00" />
-              </div>
-            </div>
-            <div>
-              <label style={labelStyle}>Sector</label>
-              <select style={inputStyle} value={form.sector} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}>
-                {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
+            )}
+
             {formError && <div style={{ fontSize: 11, color: 'var(--red)' }}>{formError}</div>}
             <button
               onClick={handleSave}
@@ -989,11 +1148,19 @@ function HoldingsTab({
 // ─── Tab 3: Dividends ─────────────────────────────────────────────────────────
 
 function DividendsTab({
-  holdings, dividendData, setDividendData,
+  holdings,
+  effectiveDividendData,
+  autoCalculatedDividends,
+  dividendOverrides,
+  setDividendOverrides,
+  stockInfos,
 }: {
   holdings: Holding[]
-  dividendData: DividendCell
-  setDividendData: React.Dispatch<React.SetStateAction<DividendCell>>
+  effectiveDividendData: DividendCell
+  autoCalculatedDividends: DividendCell
+  dividendOverrides: DividendCell
+  setDividendOverrides: React.Dispatch<React.SetStateAction<DividendCell>>
+  stockInfos: Record<string, StockInfo>
 }) {
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editVal, setEditVal] = useState('')
@@ -1005,16 +1172,24 @@ function DividendsTab({
 
   const startEdit = (key: string) => {
     setEditingKey(key)
-    setEditVal(String(dividendData[key] || ''))
+    setEditVal(String(effectiveDividendData[key] || ''))
   }
 
   const commitEdit = (key: string) => {
     const val = parseFloat(editVal)
-    setDividendData(prev => ({
+    setDividendOverrides(prev => ({
       ...prev,
       [key]: isNaN(val) ? 0 : val,
     }))
     setEditingKey(null)
+  }
+
+  const clearOverride = (key: string) => {
+    setDividendOverrides(prev => {
+      const next = { ...prev }
+      delete next[key]
+      return next
+    })
   }
 
   if (holdings.length === 0) {
@@ -1028,10 +1203,19 @@ function DividendsTab({
 
   const tickers = holdings.map(h => h.ticker)
 
-  // Projected annual income per ticker
+  // Projected annual income per ticker (from live data)
   const projectedByTicker: Record<string, number> = {}
   holdings.forEach(h => {
-    projectedByTicker[h.ticker] = h.annualDividend * h.shares
+    const info = stockInfos[h.ticker]
+    const divPerShare = info?.dividendPerShareAnnual ?? h.annualDividend
+    projectedByTicker[h.ticker] = divPerShare * h.shares
+  })
+
+  // Auto-calculated totals per ticker
+  const autoTotalByTicker: Record<string, number> = {}
+  tickers.forEach(tk => {
+    autoTotalByTicker[tk] = YEARS.reduce((s, yr) =>
+      s + MONTHS.reduce((ms, _, mi) => ms + (autoCalculatedDividends[`${yr}-${mi}-${tk}`] || 0), 0), 0)
   })
 
   const thStyle: React.CSSProperties = {
@@ -1044,29 +1228,64 @@ function DividendsTab({
     borderBottom: '1px solid var(--border-b)', cursor: 'pointer',
   }
 
+  // Show only years with data or current/future years
+  const currentYear = new Date().getFullYear()
+  const visibleYears = YEARS.filter(yr => {
+    const hasData = tickers.some(tk =>
+      MONTHS.some((_, mi) => (effectiveDividendData[`${yr}-${mi}-${tk}`] || 0) > 0)
+    )
+    return hasData || yr >= currentYear - 1
+  })
+
   return (
     <div>
-      {/* Projected vs Actual summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 20 }}>
+      {/* Summary cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 10, marginBottom: 16 }}>
         {tickers.map(ticker => {
+          const h = holdings.find(h => h.ticker === ticker)!
           const projected = projectedByTicker[ticker] || 0
-          const actual = YEARS.reduce((s, yr) =>
-            s + MONTHS.reduce((ms, _, mi) => ms + (dividendData[`${yr}-${mi}-${ticker}`] || 0), 0), 0)
+          const autoTotal = autoTotalByTicker[ticker] || 0
+          const info = stockInfos[ticker]
           return (
             <div key={ticker} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px' }}>
-              <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 4 }}>{ticker}</div>
-              <div style={{ fontSize: 10, color: 'var(--text-2)' }}>Proj: <span style={{ color: 'var(--yellow)', fontFamily: 'var(--mono)' }}>{fmtDollar(projected)}/yr</span></div>
-              <div style={{ fontSize: 10, color: 'var(--text-2)' }}>Actual: <span style={{ color: 'var(--green)', fontFamily: 'var(--mono)' }}>{fmtDollar(actual)}</span></div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 4 }}>
+                {info?.logo && (
+                  // eslint-disable-next-line @next/next/no-img-element
+                  <img src={info.logo} alt="" style={{ width: 16, height: 16, borderRadius: 2, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                )}
+                <span style={{ fontWeight: 700, fontSize: 13 }}>{ticker}</span>
+              </div>
+              {h.buyDate && (
+                <div style={{ fontSize: 9.5, color: 'var(--text-3)', marginBottom: 4 }}>Since {h.buyDate}</div>
+              )}
+              <div style={{ fontSize: 10, color: 'var(--text-2)' }}>Proj/yr: <span style={{ color: 'var(--yellow)', fontFamily: 'var(--mono)' }}>{fmtDollar(projected)}</span></div>
+              <div style={{ fontSize: 10, color: 'var(--text-2)' }}>Auto-calc: <span style={{ color: 'var(--green)', fontFamily: 'var(--mono)' }}>{fmtDollar(autoTotal)}</span></div>
+              {info?.dividendHistory?.length > 0 && (
+                <div style={{ fontSize: 9.5, color: 'var(--text-3)', marginTop: 2 }}>{info.dividendHistory.length} hist. payments</div>
+              )}
             </div>
           )
         })}
       </div>
 
+      {/* Legend */}
+      <div style={{ display: 'flex', gap: 16, fontSize: 10, color: 'var(--text-3)', marginBottom: 12 }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ width: 8, height: 8, background: 'var(--green)', borderRadius: 2, display: 'inline-block' }} />
+          Auto-calculated from dividend history
+        </span>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+          <span style={{ width: 8, height: 8, background: 'var(--yellow)', borderRadius: 2, display: 'inline-block' }} />
+          Manually overridden (click to reset)
+        </span>
+        <span style={{ color: 'var(--text-3)' }}>Click any cell to edit · Double-click override to clear</span>
+      </div>
+
       {/* Grid */}
       <div style={{ overflowX: 'auto' }}>
-        {YEARS.map(yr => {
+        {visibleYears.map(yr => {
           const yearTotal = tickers.reduce((s, tk) =>
-            s + MONTHS.reduce((ms, _, mi) => ms + (dividendData[`${yr}-${mi}-${tk}`] || 0), 0), 0)
+            s + MONTHS.reduce((ms, _, mi) => ms + (effectiveDividendData[`${yr}-${mi}-${tk}`] || 0), 0), 0)
 
           return (
             <div key={yr} style={{ marginBottom: 24 }}>
@@ -1084,7 +1303,7 @@ function DividendsTab({
                 </thead>
                 <tbody>
                   {MONTHS.map((month, mi) => {
-                    const rowTotal = tickers.reduce((s, tk) => s + (dividendData[`${yr}-${mi}-${tk}`] || 0), 0)
+                    const rowTotal = tickers.reduce((s, tk) => s + (effectiveDividendData[`${yr}-${mi}-${tk}`] || 0), 0)
                     return (
                       <tr key={mi} style={{ background: mi % 2 === 0 ? 'var(--bg-1)' : 'var(--bg-2)' }}>
                         <td style={{ ...tdStyle, textAlign: 'left', fontFamily: 'var(--font)', fontWeight: 500, color: 'var(--text-1)', position: 'sticky', left: 0, background: mi % 2 === 0 ? 'var(--bg-1)' : 'var(--bg-2)' }}>
@@ -1092,9 +1311,16 @@ function DividendsTab({
                         </td>
                         {tickers.map(tk => {
                           const key = `${yr}-${mi}-${tk}`
-                          const val = dividendData[key] || 0
+                          const val = effectiveDividendData[key] || 0
+                          const isAuto = !!autoCalculatedDividends[key] && !dividendOverrides[key]
+                          const isOverride = !!dividendOverrides[key]
                           return (
-                            <td key={tk} style={tdStyle} onClick={() => startEdit(key)}>
+                            <td
+                              key={tk}
+                              style={tdStyle}
+                              onClick={() => startEdit(key)}
+                              onDoubleClick={() => isOverride && clearOverride(key)}
+                            >
                               {editingKey === key ? (
                                 <input
                                   ref={inputRef}
@@ -1106,8 +1332,12 @@ function DividendsTab({
                                   style={{ width: 70, background: 'var(--bg-3)', border: '1px solid var(--accent)', borderRadius: 3, color: 'var(--text-0)', padding: '2px 4px', fontSize: 11, fontFamily: 'var(--mono)', textAlign: 'right' }}
                                 />
                               ) : (
-                                <span style={{ color: val > 0 ? 'var(--green)' : 'var(--text-3)' }}>
+                                <span style={{
+                                  color: isOverride ? 'var(--yellow)' : isAuto ? 'var(--green)' : 'var(--text-3)',
+                                  display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3,
+                                }}>
                                   {val > 0 ? `$${fmt(val)}` : '—'}
+                                  {isOverride && <span style={{ fontSize: 8, opacity: 0.7 }}>✎</span>}
                                 </span>
                               )}
                             </td>
@@ -1301,17 +1531,19 @@ function SoldTab({
 // ─── Tab 5: Watchlist ─────────────────────────────────────────────────────────
 
 function WatchlistTab({
-  watchlist, setWatchlist, liveQuotes,
+  watchlist, setWatchlist, stockInfos,
 }: {
   watchlist: WatchlistItem[]
   setWatchlist: React.Dispatch<React.SetStateAction<WatchlistItem[]>>
-  liveQuotes: Record<string, { current: number; change: number; changePct: number; week52High?: number; week52Low?: number; peRatio?: number; dividendYield?: number }>
+  stockInfos: Record<string, StockInfo>
 }) {
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
   const blank = { ticker: '', company: '', targetPrice: '', sector: 'Other' }
   const [form, setForm] = useState(blank)
   const [formError, setFormError] = useState('')
+  const [lookingUp, setLookingUp] = useState(false)
+  const debounceRef = useRef<ReturnType<typeof setTimeout> | null>(null)
 
   const openAdd = () => { setForm(blank); setEditId(null); setFormError(''); setShowModal(true) }
   const openEdit = (w: WatchlistItem) => {
@@ -1319,6 +1551,28 @@ function WatchlistTab({
     setEditId(w.id)
     setFormError('')
     setShowModal(true)
+  }
+
+  const handleTickerChange = (val: string) => {
+    const upper = val.toUpperCase()
+    setForm(f => ({ ...f, ticker: upper }))
+    if (debounceRef.current) clearTimeout(debounceRef.current)
+    if (upper.length < 1) return
+    debounceRef.current = setTimeout(async () => {
+      setLookingUp(true)
+      try {
+        const r = await fetch(`${API_BASE}/api/stock-info/${upper}`)
+        if (r.ok) {
+          const data: StockInfo = await r.json()
+          setForm(f => ({
+            ...f,
+            company: f.company || data.companyName || upper,
+            sector: data.sector || f.sector || 'Other',
+          }))
+        }
+      } catch {}
+      setLookingUp(false)
+    }, 600)
   }
 
   const handleSave = () => {
@@ -1376,14 +1630,22 @@ function WatchlistTab({
             </thead>
             <tbody>
               {watchlist.map(w => {
-                const q = liveQuotes[w.ticker]
-                const price = q?.current
+                const info = stockInfos[w.ticker]
+                const price = info?.currentPrice
                 const distPct = price && w.targetPrice ? ((w.targetPrice - price) / price) * 100 : null
                 return (
                   <tr key={w.id} style={{ background: 'var(--bg-1)' }}>
                     <td style={{ ...tdStyle, textAlign: 'left', fontFamily: 'var(--font)' }}>
-                      <div style={{ fontWeight: 700 }}>{w.ticker}</div>
-                      <div style={{ fontSize: 9.5, color: 'var(--text-3)' }}>{w.company}</div>
+                      <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                        {info?.logo && (
+                          // eslint-disable-next-line @next/next/no-img-element
+                          <img src={info.logo} alt="" style={{ width: 16, height: 16, borderRadius: 2, objectFit: 'contain' }} onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />
+                        )}
+                        <div>
+                          <div style={{ fontWeight: 700 }}>{w.ticker}</div>
+                          <div style={{ fontSize: 9.5, color: 'var(--text-3)' }}>{info?.companyName || w.company}</div>
+                        </div>
+                      </div>
                     </td>
                     <td style={tdStyle}>{price ? `$${fmt(price)}` : '—'}</td>
                     <td style={{ ...tdStyle, color: 'var(--yellow)' }}>
@@ -1392,15 +1654,17 @@ function WatchlistTab({
                     <td style={{ ...tdStyle, color: distPct !== null ? (distPct > 0 ? 'var(--green)' : 'var(--red)') : 'var(--text-3)' }}>
                       {distPct !== null ? fmtPct(distPct) : '—'}
                     </td>
-                    <td style={{ ...tdStyle, color: (q?.changePct ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {q ? `${fmtPct(q.changePct)}` : '—'}
+                    <td style={{ ...tdStyle, color: (info?.dayChangePct ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                      {info?.dayChangePct != null ? fmtPct(info.dayChangePct) : '—'}
                     </td>
                     <td style={{ ...tdStyle, fontSize: 10 }}>
-                      {q?.week52Low && q?.week52High ? `$${fmt(q.week52Low)} — $${fmt(q.week52High)}` : '—'}
+                      {info?.['52WeekLow'] && info?.['52WeekHigh']
+                        ? `$${fmt(info['52WeekLow']!)} — $${fmt(info['52WeekHigh']!)}`
+                        : '—'}
                     </td>
-                    <td style={{ ...tdStyle, textAlign: 'left', fontFamily: 'var(--font)', fontSize: 10 }}>{w.sector}</td>
-                    <td style={tdStyle}>{q?.peRatio ? fmt(q.peRatio, 1) : '—'}</td>
-                    <td style={{ ...tdStyle, color: 'var(--yellow)' }}>{q?.dividendYield ? `${fmt(q.dividendYield, 2)}%` : '—'}</td>
+                    <td style={{ ...tdStyle, textAlign: 'left', fontFamily: 'var(--font)', fontSize: 10 }}>{info?.sector || w.sector}</td>
+                    <td style={tdStyle}>{info?.peRatio ? fmt(info.peRatio, 1) : '—'}</td>
+                    <td style={{ ...tdStyle, color: 'var(--yellow)' }}>{info?.dividendYield ? `${fmt(info.dividendYield, 2)}%` : '—'}</td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4 }}>
                         <button onClick={() => openEdit(w)} style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
@@ -1419,9 +1683,19 @@ function WatchlistTab({
         <Modal title={editId ? 'Edit Watchlist Item' : 'Add to Watchlist'} onClose={() => setShowModal(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
-              <div>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Ticker *</label>
-                <input style={inputStyle} value={form.ticker} onChange={e => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} placeholder="e.g. AAPL" />
+                <div style={{ position: 'relative' }}>
+                  <input
+                    style={{ ...inputStyle, paddingRight: lookingUp ? 30 : undefined }}
+                    value={form.ticker}
+                    onChange={e => handleTickerChange(e.target.value)}
+                    placeholder="e.g. AAPL"
+                  />
+                  {lookingUp && (
+                    <span style={{ position: 'absolute', right: 8, top: '50%', transform: 'translateY(-50%)', fontSize: 10, color: 'var(--text-3)' }}>↻</span>
+                  )}
+                </div>
               </div>
               <div>
                 <label style={labelStyle}>Company</label>
@@ -1431,7 +1705,7 @@ function WatchlistTab({
                 <label style={labelStyle}>Target Buy Price</label>
                 <input style={inputStyle} type="number" value={form.targetPrice} onChange={e => setForm(f => ({ ...f, targetPrice: e.target.value }))} placeholder="0.00" />
               </div>
-              <div>
+              <div style={{ gridColumn: '1 / -1' }}>
                 <label style={labelStyle}>Sector</label>
                 <select style={inputStyle} value={form.sector} onChange={e => setForm(f => ({ ...f, sector: e.target.value }))}>
                   {SECTORS.map(s => <option key={s} value={s}>{s}</option>)}

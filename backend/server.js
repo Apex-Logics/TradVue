@@ -32,6 +32,7 @@ app.use('/api/waitlist', require('./routes/waitlist'));           // Landing pag
 app.use('/api/alerts', require('./routes/alerts'));               // Real-time market alerts + SSE
 app.use('/api/crypto', require('./routes/crypto'));               // CoinGecko crypto prices & trending
 app.use('/api/market-movers', require('./routes/marketMovers')); // High-impact news scanner
+app.use('/api/stock-info', require('./routes/stockInfo'));         // Comprehensive stock info (Finnhub + Yahoo)
 
 // Health check
 app.get('/health', (req, res) => {
