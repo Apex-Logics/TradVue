@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -9,219 +9,200 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 // Types
 // ─────────────────────────────────────────────────────────────────────────────
 
+type EventType = 'economic' | 'earnings' | 'speech' | 'holiday'
+type ImpactLevel = 'High' | 'Medium' | 'Low' | 'Holiday'
+type ViewMode = 'month' | 'week' | 'agenda'
+
 interface CalendarEvent {
   id: string
   title: string
-  currency: string
-  impact: number
-  impactLabel: string
-  datetime: string
-  actual: string | null
+  date: string
+  type: EventType
+  impact: ImpactLevel
+  country: string
   forecast: string | null
   previous: string | null
+  actual: string | null
   source: string
+  // Earnings-specific
+  symbol?: string
+  epsEstimate?: number | null
+  epsActual?: number | null
+  revenueEstimate?: number | null
+  revenueActual?: number | null
+  hour?: string
+  // Speech/link
   url?: string | null
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Constants
+// Constants & Helpers
 // ─────────────────────────────────────────────────────────────────────────────
 
-const CALENDAR_IMPACT_FILTERS = ['All', 'High', 'Medium', 'Low']
-const CALENDAR_CURRENCIES = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD', 'CHF', 'NZD']
-
-// ─────────────────────────────────────────────────────────────────────────────
-// Helpers
-// ─────────────────────────────────────────────────────────────────────────────
-
-function fmt(num: number, dec = 2): string {
-  return num.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+const IMPACT_COLORS: Record<string, string> = {
+  High: '#ff4560',
+  Medium: '#f0a500',
+  Low: '#00c06a',
+  Holiday: '#6366f1',
 }
 
-function fmtEventTime(dateStr: string): string {
+const TYPE_COLORS: Record<EventType, string> = {
+  economic: '#3b82f6',
+  earnings: '#8b5cf6',
+  speech: '#f59e0b',
+  holiday: '#6366f1',
+}
+
+const TYPE_ICONS: Record<EventType, string> = {
+  economic: '📈',
+  earnings: '📊',
+  speech: '🎤',
+  holiday: '🏛',
+}
+
+const COUNTRY_FLAGS: Record<string, string> = {
+  USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', JPY: '🇯🇵',
+  CAD: '🇨🇦', AUD: '🇦🇺', CHF: '🇨🇭', NZD: '🇳🇿',
+  CNY: '🇨🇳', CHN: '🇨🇳',
+}
+
+function fmtTime(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  } catch {
-    return dateStr
-  }
+  } catch { return '' }
 }
 
-function fmtEventDate(dateStr: string): string {
+function fmtDate(dateStr: string): string {
   try {
     return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  } catch {
-    return dateStr
-  }
+  } catch { return dateStr }
 }
 
-function getDayOfWeek(date: Date): number {
-  const day = date.getDay()
-  return day === 0 ? 6 : day - 1 // Convert Sunday=0 to Monday=0
+function fmtRevenue(val: number | null | undefined): string {
+  if (val == null) return '—'
+  if (val >= 1e9) return `$${(val / 1e9).toFixed(2)}B`
+  if (val >= 1e6) return `$${(val / 1e6).toFixed(1)}M`
+  return `$${val.toLocaleString()}`
 }
 
-function getDaysInMonth(year: number, month: number): number {
+function getDaysInMonth(year: number, month: number) {
   return new Date(year, month + 1, 0).getDate()
 }
 
-function getFirstDayOfMonth(year: number, month: number): number {
-  return getDayOfWeek(new Date(year, month, 1))
+function getFirstDayOfMonth(year: number, month: number) {
+  const day = new Date(year, month, 1).getDay()
+  return day === 0 ? 6 : day - 1 // Mon=0
+}
+
+function toDateKey(d: Date): string {
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, '0')}-${String(d.getDate()).padStart(2, '0')}`
+}
+
+function getEventDateKey(event: CalendarEvent): string {
+  try {
+    return new Date(event.date).toISOString().slice(0, 10)
+  } catch { return '' }
+}
+
+function beatsMiss(actual: string | null, forecast: string | null): 'beat' | 'miss' | null {
+  if (!actual || !forecast) return null
+  const a = parseFloat(actual.replace(/[^0-9.-]/g, ''))
+  const f = parseFloat(forecast.replace(/[^0-9.-]/g, ''))
+  if (isNaN(a) || isNaN(f)) return null
+  return a >= f ? 'beat' : 'miss'
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Month Calendar Grid Component
+// Impact Dot Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-interface MonthCalendarProps {
+function ImpactDot({ impact, type }: { impact: ImpactLevel; type: EventType }) {
+  const color = type === 'earnings' ? '#8b5cf6'
+    : type === 'speech' ? '#f59e0b'
+    : type === 'holiday' ? '#6366f1'
+    : IMPACT_COLORS[impact] || '#888'
+  return (
+    <span style={{
+      display: 'inline-block',
+      width: 8, height: 8,
+      borderRadius: '50%',
+      background: color,
+      flexShrink: 0,
+    }} />
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Month View Grid
+// ─────────────────────────────────────────────────────────────────────────────
+
+function MonthGrid({
+  year, month, eventsByDay, selectedDay, onSelectDay
+}: {
   year: number
   month: number
-  events: CalendarEvent[]
-  selectedDay: number | null
-  onSelectDay: (day: number) => void
-  filteredEvents: CalendarEvent[]
-}
-
-function MonthCalendar({
-  year,
-  month,
-  events,
-  selectedDay,
-  onSelectDay,
-  filteredEvents,
-}: MonthCalendarProps) {
+  eventsByDay: Map<string, CalendarEvent[]>
+  selectedDay: string | null
+  onSelectDay: (key: string) => void
+}) {
   const daysInMonth = getDaysInMonth(year, month)
   const firstDay = getFirstDayOfMonth(year, month)
-  const today = new Date()
-  const isCurrentMonth = today.getFullYear() === year && today.getMonth() === month
-  const todayDate = isCurrentMonth ? today.getDate() : null
+  const today = toDateKey(new Date())
 
-  // Create calendar grid
-  const days: (number | null)[] = []
-  for (let i = 0; i < firstDay; i++) days.push(null)
-  for (let i = 1; i <= daysInMonth; i++) days.push(i)
-
-  // Get events for a specific day
-  const getEventsForDay = (day: number): CalendarEvent[] => {
-    const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
-    return filteredEvents.filter(e => {
-      const eventDate = new Date(e.datetime).toISOString().split('T')[0]
-      return eventDate === dateStr
-    })
-  }
-
-  const getImpactColor = (impact: number): string => {
-    if (impact === 3) return '#ff4560' // High - red
-    if (impact === 2) return '#f0a500' // Medium - yellow
-    return '#00c06a' // Low - green
-  }
+  const cells: (number | null)[] = []
+  for (let i = 0; i < firstDay; i++) cells.push(null)
+  for (let i = 1; i <= daysInMonth; i++) cells.push(i)
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: 'var(--border)', padding: 1, borderRadius: 6, marginBottom: 24 }}>
-      {/* Day headers */}
-      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(day => (
-        <div
-          key={day}
-          style={{
-            padding: '8px 4px',
-            textAlign: 'center',
-            fontSize: 11,
-            fontWeight: 700,
-            letterSpacing: '0.08em',
-            color: 'var(--text-2)',
-            background: 'var(--bg-2)',
-            borderRadius: 4,
-          }}
-        >
-          {day}
-        </div>
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: 'var(--border)', borderRadius: 6 }}>
+      {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
+        <div key={d} style={{
+          padding: '7px 4px', textAlign: 'center', fontSize: 10, fontWeight: 700,
+          letterSpacing: '0.08em', color: 'var(--text-2)', background: 'var(--bg-2)',
+          borderRadius: 4,
+        }}>{d}</div>
       ))}
 
-      {/* Day cells */}
-      {days.map((day, idx) => {
-        const dayEvents = day ? getEventsForDay(day) : []
-        const isToday = day === todayDate
-        const isSelected = day === selectedDay
+      {cells.map((day, idx) => {
+        if (!day) return (
+          <div key={`e-${idx}`} style={{ minHeight: 80, background: 'var(--bg-1)', borderRadius: 4, opacity: 0.3 }} />
+        )
+
+        const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
+        const dayEvents = eventsByDay.get(key) || []
+        const isToday = key === today
+        const isSelected = key === selectedDay
+
+        // Show up to 3 dots grouped by type/impact
+        const dots = dayEvents.slice(0, 5)
 
         return (
           <div
-            key={idx}
-            onClick={() => day && onSelectDay(day)}
+            key={key}
+            onClick={() => onSelectDay(key)}
             style={{
-              minHeight: 100,
-              padding: 6,
-              background: isToday
-                ? 'var(--bg-3)'
-                : isSelected
-                ? 'var(--bg-4)'
-                : 'var(--bg-2)',
-              border: isToday ? '2px solid var(--accent)' : isSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+              minHeight: 80,
+              padding: '5px 5px 4px',
+              background: isToday ? 'rgba(59,130,246,0.12)' : isSelected ? 'rgba(59,130,246,0.07)' : 'var(--bg-2)',
+              border: isToday ? '1.5px solid var(--accent)' : isSelected ? '1px solid rgba(59,130,246,0.5)' : '1px solid transparent',
               borderRadius: 4,
-              cursor: day ? 'pointer' : 'default',
-              transition: 'all 0.15s',
+              cursor: 'pointer',
               display: 'flex',
               flexDirection: 'column',
-              opacity: day ? 1 : 0.3,
-              overflow: 'hidden',
-            }}
-            onMouseEnter={(e) => {
-              if (day && !isSelected && !isToday) {
-                (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-3)'
-              }
-            }}
-            onMouseLeave={(e) => {
-              if (day && !isSelected && !isToday) {
-                (e.currentTarget as HTMLDivElement).style.background = 'var(--bg-2)'
-              }
+              gap: 3,
+              transition: 'background 0.1s',
             }}
           >
-            {/* Day number */}
-            {day && (
-              <div style={{
-                fontSize: 12,
-                fontWeight: 700,
-                color: isToday ? 'var(--accent)' : 'var(--text-0)',
-                marginBottom: 4,
-              }}>
-                {day}
-              </div>
-            )}
-
-            {/* Events in day */}
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 2, flex: 1, overflow: 'hidden' }}>
-              {dayEvents.slice(0, 3).map(event => (
-                <div
-                  key={event.id}
-                  style={{
-                    fontSize: 9,
-                    padding: '2px 4px',
-                    borderRadius: 3,
-                    background: getImpactColor(event.impact),
-                    color: '#000',
-                    whiteSpace: 'nowrap',
-                    overflow: 'hidden',
-                    textOverflow: 'ellipsis',
-                    fontWeight: 600,
-                  }}
-                  title={event.title}
-                >
-                  {event.title}
-                </div>
-              ))}
-              {dayEvents.length > 3 && (
-                <div style={{ fontSize: 8.5, color: 'var(--text-3)', fontWeight: 500 }}>
-                  +{dayEvents.length - 3} more
-                </div>
-              )}
+            <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? 'var(--accent)' : 'var(--text-1)' }}>
+              {day}
             </div>
-
-            {/* Event count badge */}
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2 }}>
+              {dots.map(e => (
+                <ImpactDot key={e.id} impact={e.impact} type={e.type} />
+              ))}
+            </div>
             {dayEvents.length > 0 && (
-              <div style={{
-                fontSize: 9,
-                fontWeight: 700,
-                color: 'var(--accent)',
-                marginTop: 'auto',
-                paddingTop: 4,
-              }}>
+              <div style={{ fontSize: 8.5, color: 'var(--text-3)', marginTop: 'auto', fontWeight: 600 }}>
                 {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
               </div>
             )}
@@ -233,528 +214,785 @@ function MonthCalendar({
 }
 
 // ─────────────────────────────────────────────────────────────────────────────
-// Main Calendar Page Component
+// Week View Grid
 // ─────────────────────────────────────────────────────────────────────────────
+
+function WeekGrid({
+  weekStart, eventsByDay, onSelectDay
+}: {
+  weekStart: Date
+  eventsByDay: Map<string, CalendarEvent[]>
+  onSelectDay: (key: string) => void
+}) {
+  const days: Date[] = []
+  for (let i = 0; i < 7; i++) {
+    const d = new Date(weekStart)
+    d.setDate(d.getDate() + i)
+    days.push(d)
+  }
+  const today = toDateKey(new Date())
+
+  return (
+    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 16 }}>
+      {days.map(day => {
+        const key = toDateKey(day)
+        const dayEvents = eventsByDay.get(key) || []
+        const isToday = key === today
+
+        return (
+          <div
+            key={key}
+            onClick={() => onSelectDay(key)}
+            style={{
+              background: isToday ? 'rgba(59,130,246,0.12)' : 'var(--bg-2)',
+              border: isToday ? '1.5px solid var(--accent)' : '1px solid var(--border)',
+              borderRadius: 6, padding: 8, cursor: 'pointer', minHeight: 120,
+            }}
+          >
+            <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? 'var(--accent)' : 'var(--text-1)', marginBottom: 6 }}>
+              {day.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })}
+            </div>
+            <div style={{ display: 'flex', flexDirection: 'column', gap: 3 }}>
+              {dayEvents.slice(0, 4).map(e => (
+                <div key={e.id} style={{
+                  fontSize: 9, padding: '2px 4px', borderRadius: 3,
+                  background: e.type === 'earnings' ? 'rgba(139,92,246,0.2)'
+                    : e.type === 'speech' ? 'rgba(245,158,11,0.2)'
+                    : `${IMPACT_COLORS[e.impact]}22`,
+                  borderLeft: `2px solid ${e.type === 'earnings' ? '#8b5cf6'
+                    : e.type === 'speech' ? '#f59e0b'
+                    : IMPACT_COLORS[e.impact]}`,
+                  color: 'var(--text-0)',
+                  whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
+                  fontWeight: 500,
+                }} title={e.title}>
+                  {fmtTime(e.date)} {e.title}
+                </div>
+              ))}
+              {dayEvents.length > 4 && (
+                <div style={{ fontSize: 8.5, color: 'var(--text-3)' }}>+{dayEvents.length - 4} more</div>
+              )}
+            </div>
+          </div>
+        )
+      })}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Event Row Component
+// ─────────────────────────────────────────────────────────────────────────────
+
+function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolean }) {
+  const [expanded, setExpanded] = useState(false)
+  const bm = beatsMiss(event.actual, event.forecast)
+
+  return (
+    <div
+      style={{
+        borderBottom: '1px solid var(--border)',
+        cursor: 'pointer',
+      }}
+      onClick={() => setExpanded(e => !e)}
+    >
+      {/* Main row */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '56px 1fr 80px 70px 70px 70px',
+        alignItems: 'center',
+        gap: 8,
+        padding: '8px 12px',
+        fontSize: 12,
+      }}>
+        {/* Time */}
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)' }}>
+          {showDate ? fmtDate(event.date) : fmtTime(event.date)}
+        </div>
+
+        {/* Title + type icon */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
+          <span style={{ fontSize: 13 }}>{TYPE_ICONS[event.type]}</span>
+          <div style={{ minWidth: 0 }}>
+            <div style={{ fontWeight: 600, color: 'var(--text-0)', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
+              {event.title}
+            </div>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
+              <span style={{ fontSize: 10 }}>{COUNTRY_FLAGS[event.country] || '🌐'}</span>
+              <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600 }}>{event.country}</span>
+              <span style={{
+                fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 2,
+                background: `${IMPACT_COLORS[event.impact]}22`,
+                color: IMPACT_COLORS[event.impact],
+              }}>
+                {event.impact}
+              </span>
+            </div>
+          </div>
+        </div>
+
+        {/* Forecast */}
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-2)', textAlign: 'right' }}>
+          {event.type === 'earnings' && event.epsEstimate != null
+            ? `$${event.epsEstimate}`
+            : event.forecast || '—'}
+        </div>
+
+        {/* Previous */}
+        <div style={{ fontFamily: 'var(--mono)', fontSize: 11, color: 'var(--text-3)', textAlign: 'right' }}>
+          {event.previous || '—'}
+        </div>
+
+        {/* Actual */}
+        <div style={{
+          fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textAlign: 'right',
+          color: event.actual
+            ? bm === 'beat' ? '#00c06a'
+            : bm === 'miss' ? '#ff4560'
+            : 'var(--text-0)'
+            : 'var(--text-3)',
+        }}>
+          {event.type === 'earnings' && event.epsActual != null
+            ? `$${event.epsActual}`
+            : event.actual || '—'}
+          {bm && <span style={{ fontSize: 9, marginLeft: 3 }}>{bm === 'beat' ? '▲' : '▼'}</span>}
+        </div>
+
+        {/* Expand caret */}
+        <div style={{ fontSize: 10, color: 'var(--text-3)', textAlign: 'center' }}>
+          {expanded ? '▲' : '▼'}
+        </div>
+      </div>
+
+      {/* Expanded detail */}
+      {expanded && (
+        <div style={{
+          padding: '8px 12px 12px 56px',
+          background: 'var(--bg-1)',
+          borderTop: '1px solid var(--border)',
+          fontSize: 11,
+          color: 'var(--text-2)',
+        }}>
+          {event.type === 'earnings' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 8, marginBottom: 8 }}>
+              <div>
+                <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>EPS EST</div>
+                <div style={{ fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{event.epsEstimate != null ? `$${event.epsEstimate}` : '—'}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>EPS ACTUAL</div>
+                <div style={{ fontFamily: 'var(--mono)', color: bm === 'beat' ? '#00c06a' : bm === 'miss' ? '#ff4560' : 'var(--text-0)' }}>
+                  {event.epsActual != null ? `$${event.epsActual}` : '—'}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>REV EST</div>
+                <div style={{ fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{fmtRevenue(event.revenueEstimate)}</div>
+              </div>
+              <div>
+                <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>REV ACTUAL</div>
+                <div style={{ fontFamily: 'var(--mono)' }}>{fmtRevenue(event.revenueActual)}</div>
+              </div>
+            </div>
+          )}
+          {(event.type === 'speech' || event.type === 'economic') && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8, marginBottom: 8 }}>
+              {event.forecast && (
+                <div>
+                  <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>FORECAST</div>
+                  <div style={{ fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{event.forecast}</div>
+                </div>
+              )}
+              {event.previous && (
+                <div>
+                  <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>PREVIOUS</div>
+                  <div style={{ fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>{event.previous}</div>
+                </div>
+              )}
+              {event.actual && (
+                <div>
+                  <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>ACTUAL</div>
+                  <div style={{ fontFamily: 'var(--mono)', color: bm === 'beat' ? '#00c06a' : bm === 'miss' ? '#ff4560' : 'var(--text-0)' }}>{event.actual}</div>
+                </div>
+              )}
+            </div>
+          )}
+          <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap', fontSize: 10, color: 'var(--text-3)' }}>
+            <span>Source: {event.source}</span>
+            {event.url && (
+              <a href={event.url} target="_blank" rel="noopener" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                View →
+              </a>
+            )}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Agenda / List View
+// ─────────────────────────────────────────────────────────────────────────────
+
+function AgendaView({ events }: { events: CalendarEvent[] }) {
+  // Group by date
+  const groups = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    for (const e of events) {
+      const key = getEventDateKey(e)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(e)
+    }
+    return Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b))
+  }, [events])
+
+  if (groups.length === 0) {
+    return (
+      <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
+        No events match your filters
+      </div>
+    )
+  }
+
+  return (
+    <div>
+      {/* Column headers */}
+      <div style={{
+        display: 'grid',
+        gridTemplateColumns: '56px 1fr 80px 70px 70px 70px',
+        gap: 8,
+        padding: '6px 12px',
+        background: 'var(--bg-3)',
+        borderBottom: '1px solid var(--border)',
+        fontSize: 9,
+        fontWeight: 700,
+        letterSpacing: '0.08em',
+        color: 'var(--text-3)',
+      }}>
+        <div>TIME</div>
+        <div>EVENT</div>
+        <div style={{ textAlign: 'right' }}>FORECAST</div>
+        <div style={{ textAlign: 'right' }}>PREV</div>
+        <div style={{ textAlign: 'right' }}>ACTUAL</div>
+        <div />
+      </div>
+
+      {groups.map(([dateKey, dayEvents]) => (
+        <div key={dateKey}>
+          <div style={{
+            padding: '6px 12px',
+            background: 'var(--bg-3)',
+            borderBottom: '1px solid var(--border)',
+            borderTop: '1px solid var(--border)',
+            fontSize: 11,
+            fontWeight: 700,
+            color: 'var(--text-1)',
+          }}>
+            {new Date(dateKey + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric', year: 'numeric' })}
+            <span style={{ marginLeft: 8, fontSize: 10, color: 'var(--text-3)', fontWeight: 400 }}>
+              {dayEvents.length} event{dayEvents.length !== 1 ? 's' : ''}
+            </span>
+          </div>
+          {dayEvents.map(e => <EventRow key={e.id} event={e} />)}
+        </div>
+      ))}
+    </div>
+  )
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Calendar Page
+// ─────────────────────────────────────────────────────────────────────────────
+
+const TYPES: (EventType | 'all')[] = ['all', 'economic', 'earnings', 'speech', 'holiday']
+const IMPACTS = ['All', 'High', 'Medium', 'Low']
+const COUNTRIES = ['All', 'USD', 'EUR', 'GBP', 'JPY', 'CAD', 'AUD']
+const VIEWS: ViewMode[] = ['month', 'week', 'agenda']
 
 export default function CalendarPage() {
   const [currentDate, setCurrentDate] = useState(() => new Date())
   const [events, setEvents] = useState<CalendarEvent[]>([])
   const [loading, setLoading] = useState(true)
-  const [impactFilter, setImpactFilter] = useState('All')
-  const [currencyFilter, setCurrencyFilter] = useState('All')
-  const [selectedDay, setSelectedDay] = useState<number | null>(null)
   const [error, setError] = useState<string | null>(null)
+  const [view, setView] = useState<ViewMode>('month')
+  const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all')
+  const [impactFilter, setImpactFilter] = useState('All')
+  const [countryFilter, setCountryFilter] = useState('All')
+  const [search, setSearch] = useState('')
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
+  const [lastRefresh, setLastRefresh] = useState<Date | null>(null)
 
-  const year = currentDate.getFullYear()
-  const month = currentDate.getMonth()
+  // Compute date range for current view
+  const dateRange = useMemo(() => {
+    const y = currentDate.getFullYear()
+    const m = currentDate.getMonth()
+    if (view === 'month') {
+      const from = new Date(y, m, 1)
+      const to = new Date(y, m + 1, 0)
+      return {
+        from: toDateKey(from),
+        to: toDateKey(to),
+      }
+    } else if (view === 'week') {
+      // Start of current week (Mon)
+      const day = currentDate.getDay()
+      const diff = day === 0 ? -6 : 1 - day
+      const mon = new Date(currentDate)
+      mon.setDate(currentDate.getDate() + diff)
+      const sun = new Date(mon)
+      sun.setDate(mon.getDate() + 6)
+      return { from: toDateKey(mon), to: toDateKey(sun) }
+    } else {
+      // Agenda: next 60 days
+      const from = new Date()
+      const to = new Date(from.getTime() + 60 * 24 * 3600 * 1000)
+      return { from: toDateKey(from), to: toDateKey(to) }
+    }
+  }, [currentDate, view])
 
-  // Fetch events for the current month view (+ buffer for day transitions)
-  const fetchCalendarEvents = useCallback(async () => {
+  const fetchEvents = useCallback(async () => {
     setLoading(true)
     setError(null)
     try {
-      // Fetch a 60-day window centered on the current month
-      const res = await fetch(`${API_BASE}/api/calendar/upcoming?days=60&minImpact=1`)
+      const { from, to } = dateRange
+      const res = await fetch(`${API_BASE}/api/calendar/events?from=${from}&to=${to}&type=all`)
       if (!res.ok) throw new Error(`HTTP ${res.status}`)
       const j = await res.json()
-      if (j.success && j.data) {
-        setEvents(j.data)
+      if (j.success && j.events) {
+        setEvents(j.events)
+        setLastRefresh(new Date())
       } else {
-        throw new Error(j.error || 'Failed to fetch calendar')
+        throw new Error(j.error || 'Failed to fetch')
       }
     } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setError(`Failed to load calendar: ${msg}`)
+      setError(err instanceof Error ? err.message : 'Unknown error')
       setEvents([])
     } finally {
       setLoading(false)
     }
-  }, [])
+  }, [dateRange])
 
-  // Initial load
   useEffect(() => {
-    fetchCalendarEvents()
-  }, [fetchCalendarEvents])
+    fetchEvents()
+  }, [fetchEvents])
 
-  // Apply filters
-  const filteredEvents = events.filter(e => {
-    const matchImpact = impactFilter === 'All' || e.impactLabel === impactFilter
-    const matchCurrency = currencyFilter === 'All' || e.currency === currencyFilter
-    return matchImpact && matchCurrency
-  })
+  // Auto-refresh every 5 minutes
+  useEffect(() => {
+    const t = setInterval(fetchEvents, 5 * 60 * 1000)
+    return () => clearInterval(t)
+  }, [fetchEvents])
 
-  // Get events for the selected day
+  // Filter events
+  const filteredEvents = useMemo(() => {
+    return events.filter(e => {
+      if (typeFilter !== 'all' && e.type !== typeFilter) return false
+      if (impactFilter !== 'All' && e.impact !== impactFilter) return false
+      if (countryFilter !== 'All' && e.country !== countryFilter) return false
+      if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false
+      return true
+    })
+  }, [events, typeFilter, impactFilter, countryFilter, search])
+
+  // Group by day for calendar
+  const eventsByDay = useMemo(() => {
+    const map = new Map<string, CalendarEvent[]>()
+    for (const e of filteredEvents) {
+      const key = getEventDateKey(e)
+      if (!map.has(key)) map.set(key, [])
+      map.get(key)!.push(e)
+    }
+    return map
+  }, [filteredEvents])
+
+  // Stats
+  const stats = useMemo(() => ({
+    high: filteredEvents.filter(e => e.impact === 'High').length,
+    medium: filteredEvents.filter(e => e.impact === 'Medium').length,
+    low: filteredEvents.filter(e => e.impact === 'Low').length,
+    earnings: filteredEvents.filter(e => e.type === 'earnings').length,
+    speeches: filteredEvents.filter(e => e.type === 'speech').length,
+  }), [filteredEvents])
+
+  // Navigation
+  const goTo = (dir: -1 | 1) => {
+    const d = new Date(currentDate)
+    if (view === 'month') d.setMonth(d.getMonth() + dir)
+    else if (view === 'week') d.setDate(d.getDate() + dir * 7)
+    else d.setDate(d.getDate() + dir * 30)
+    setCurrentDate(d)
+    setSelectedDay(null)
+  }
+
+  const goToday = () => {
+    setCurrentDate(new Date())
+    setSelectedDay(toDateKey(new Date()))
+  }
+
+  const getWeekStart = () => {
+    const day = currentDate.getDay()
+    const diff = day === 0 ? -6 : 1 - day
+    const mon = new Date(currentDate)
+    mon.setDate(currentDate.getDate() + diff)
+    return mon
+  }
+
+  const periodLabel = () => {
+    const y = currentDate.getFullYear()
+    if (view === 'month') {
+      return currentDate.toLocaleString('en-US', { month: 'long', year: 'numeric' })
+    } else if (view === 'week') {
+      const mon = getWeekStart()
+      const sun = new Date(mon); sun.setDate(mon.getDate() + 6)
+      return `${mon.toLocaleDateString('en-US', { month: 'short', day: 'numeric' })} – ${sun.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })}`
+    }
+    return 'Next 60 Days'
+  }
+
+  // Selected day events
   const selectedDayEvents = selectedDay
-    ? filteredEvents.filter(e => {
-      const eventDate = new Date(e.datetime)
-      return (
-        eventDate.getFullYear() === year &&
-        eventDate.getMonth() === month &&
-        eventDate.getDate() === selectedDay
-      )
-    }).sort((a, b) => new Date(a.datetime).getTime() - new Date(b.datetime).getTime())
+    ? (eventsByDay.get(selectedDay) || []).sort((a, b) => new Date(a.date).getTime() - new Date(b.date).getTime())
     : []
 
-  // Navigate months
-  const goToPrevMonth = () => {
-    setCurrentDate(new Date(year, month - 1))
-    setSelectedDay(null)
-  }
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1))
-    setSelectedDay(null)
-  }
-
-  const goToToday = () => {
-    const today = new Date()
-    setCurrentDate(today)
-    setSelectedDay(today.getDate())
-  }
-
-  const monthName = currentDate.toLocaleString('en-US', { month: 'long' })
-
   return (
-    <div style={{
-      minHeight: '100vh',
-      background: 'var(--bg-0)',
-      color: 'var(--text-0)',
-      fontFamily: 'var(--font)',
-    }}>
-      {/* Header */}
+    <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font)' }}>
+
+      {/* ── Top Header ── */}
       <header style={{
-        height: 40,
-        background: 'var(--bg-1)',
-        borderBottom: '1px solid var(--border)',
-        display: 'flex',
-        alignItems: 'center',
-        padding: '0 16px',
-        gap: 16,
+        height: 44, background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
+        display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
       }}>
-        <Link
-          href="/"
-          style={{
-            display: 'flex',
-            alignItems: 'center',
-            gap: 8,
-            textDecoration: 'none',
-            color: 'var(--text-0)',
-            fontWeight: 700,
-            fontSize: 14,
-          }}
-        >
+        <Link href="/" style={{ textDecoration: 'none', color: 'var(--text-0)', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
           ← ChartGenius
         </Link>
-        <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Economic Calendar</span>
-        <button
-          onClick={goToToday}
-          style={{
-            marginLeft: 'auto',
-            fontSize: 11,
-            fontWeight: 600,
-            padding: '4px 10px',
-            borderRadius: 4,
-            background: 'var(--accent)',
-            color: '#fff',
-            cursor: 'pointer',
-            border: 'none',
-          }}
-        >
-          Today
-        </button>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📅 Economic Calendar</span>
+
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {lastRefresh && (
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+              Updated {lastRefresh.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
+            </span>
+          )}
+          <button onClick={fetchEvents} style={btnStyle('var(--bg-3)', 'var(--text-1)')}>
+            ↻ Refresh
+          </button>
+          <button onClick={goToday} style={btnStyle('var(--accent)', '#000')}>
+            Today
+          </button>
+        </div>
       </header>
 
-      {/* Main container */}
+      {/* ── Controls Bar ── */}
       <div style={{
-        display: 'grid',
-        gridTemplateColumns: '1fr 320px',
-        gap: 16,
-        padding: 16,
-        maxWidth: 1600,
-        margin: '0 auto',
+        padding: '10px 16px', background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
+        display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center',
       }}>
-        {/* Left: Calendar + Month Navigation */}
-        <div>
-          {/* Month navigation */}
-          <div style={{
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-            marginBottom: 16,
-            padding: '8px 12px',
-            background: 'var(--bg-2)',
-            borderRadius: 6,
-            border: '1px solid var(--border)',
-          }}>
-            <button
-              onClick={goToPrevMonth}
-              style={{
-                fontSize: 16,
-                cursor: 'pointer',
-                color: 'var(--accent)',
-                background: 'none',
-                border: 'none',
-                padding: '4px 8px',
-              }}
-            >
-              ←
-            </button>
-            <span style={{
-              fontSize: 16,
-              fontWeight: 700,
-              color: 'var(--text-0)',
-              minWidth: 200,
-              textAlign: 'center',
-            }}>
-              {monthName} {year}
-            </span>
-            <button
-              onClick={goToNextMonth}
-              style={{
-                fontSize: 16,
-                cursor: 'pointer',
-                color: 'var(--accent)',
-                background: 'none',
-                border: 'none',
-                padding: '4px 8px',
-              }}
-            >
-              →
-            </button>
-          </div>
-
-          {/* Filters */}
-          <div style={{ marginBottom: 16 }}>
-            <div style={{ marginBottom: 12 }}>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                color: 'var(--text-2)',
-                marginBottom: 6,
-              }}>
-                IMPACT LEVEL
-              </div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {CALENDAR_IMPACT_FILTERS.map(f => (
-                  <button
-                    key={f}
-                    onClick={() => setImpactFilter(f)}
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                      border: impactFilter === f ? '1px solid var(--accent)' : '1px solid var(--border)',
-                      background: impactFilter === f ? 'var(--accent)' : 'var(--bg-2)',
-                      color: impactFilter === f ? '#000' : 'var(--text-1)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {f}
-                  </button>
-                ))}
-              </div>
-            </div>
-
-            <div>
-              <div style={{
-                fontSize: 11,
-                fontWeight: 700,
-                letterSpacing: '0.08em',
-                color: 'var(--text-2)',
-                marginBottom: 6,
-              }}>
-                CURRENCY
-              </div>
-              <div style={{ display: 'flex', gap: 4, flexWrap: 'wrap' }}>
-                {CALENDAR_CURRENCIES.map(c => (
-                  <button
-                    key={c}
-                    onClick={() => setCurrencyFilter(c)}
-                    style={{
-                      fontSize: 11,
-                      fontWeight: 600,
-                      padding: '4px 8px',
-                      borderRadius: 4,
-                      border: currencyFilter === c ? '1px solid var(--accent)' : '1px solid var(--border)',
-                      background: currencyFilter === c ? 'var(--accent)' : 'var(--bg-2)',
-                      color: currencyFilter === c ? '#000' : 'var(--text-1)',
-                      cursor: 'pointer',
-                      transition: 'all 0.15s',
-                    }}
-                  >
-                    {c}
-                  </button>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Error message */}
-          {error && (
-            <div style={{
-              padding: 12,
-              background: 'rgba(255, 69, 96, 0.1)',
-              border: '1px solid var(--red)',
-              borderRadius: 6,
-              color: 'var(--red)',
-              fontSize: 12,
-              marginBottom: 16,
-            }}>
-              {error}
-              <button
-                onClick={fetchCalendarEvents}
-                style={{
-                  marginTop: 8,
-                  fontSize: 11,
-                  padding: '4px 8px',
-                  background: 'var(--red)',
-                  color: '#fff',
-                  borderRadius: 4,
-                  cursor: 'pointer',
-                  border: 'none',
-                  display: 'block',
-                }}
-              >
-                Retry
-              </button>
-            </div>
-          )}
-
-          {/* Loading state */}
-          {loading && (
-            <div style={{
-              padding: 40,
-              textAlign: 'center',
-              color: 'var(--text-3)',
-              fontSize: 13,
-            }}>
-              Loading calendar data…
-            </div>
-          )}
-
-          {/* Month calendar */}
-          {!loading && (
-            <MonthCalendar
-              year={year}
-              month={month}
-              events={events}
-              selectedDay={selectedDay}
-              onSelectDay={setSelectedDay}
-              filteredEvents={filteredEvents}
-            />
-          )}
-
-          {/* Stats */}
-          {!loading && filteredEvents.length > 0 && (
-            <div style={{
-              display: 'grid',
-              gridTemplateColumns: 'repeat(3, 1fr)',
-              gap: 8,
-              marginTop: 16,
-            }}>
-              {[
-                { label: 'HIGH', count: filteredEvents.filter(e => e.impact === 3).length, color: 'var(--red)' },
-                { label: 'MEDIUM', count: filteredEvents.filter(e => e.impact === 2).length, color: 'var(--yellow)' },
-                { label: 'LOW', count: filteredEvents.filter(e => e.impact === 1).length, color: 'var(--green)' },
-              ].map(s => (
-                <div
-                  key={s.label}
-                  style={{
-                    padding: '12px 8px',
-                    background: 'var(--bg-2)',
-                    border: '1px solid var(--border)',
-                    borderRadius: 6,
-                    textAlign: 'center',
-                  }}
-                >
-                  <div style={{ fontSize: 16, fontWeight: 700, color: s.color, fontFamily: 'var(--mono)' }}>
-                    {s.count}
-                  </div>
-                  <div style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.05em', marginTop: 2 }}>
-                    {s.label}
-                  </div>
-                </div>
-              ))}
-            </div>
-          )}
+        {/* Navigation */}
+        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <button onClick={() => goTo(-1)} style={navBtnStyle}>‹</button>
+          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 200, textAlign: 'center' }}>{periodLabel()}</span>
+          <button onClick={() => goTo(1)} style={navBtnStyle}>›</button>
         </div>
 
-        {/* Right: Event Details Panel */}
+        {/* View toggle */}
+        <div style={{ display: 'flex', gap: 2, background: 'var(--bg-2)', padding: 2, borderRadius: 6 }}>
+          {VIEWS.map(v => (
+            <button key={v} onClick={() => setView(v)} style={{
+              fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4,
+              background: view === v ? 'var(--accent)' : 'transparent',
+              color: view === v ? '#000' : 'var(--text-2)',
+              border: 'none', cursor: 'pointer',
+              textTransform: 'capitalize',
+            }}>{v}</button>
+          ))}
+        </div>
+
+        {/* Separator */}
+        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+
+        {/* Type filters */}
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          {TYPES.map(t => (
+            <button key={t} onClick={() => setTypeFilter(t)} style={{
+              fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+              border: typeFilter === t ? `1px solid ${t === 'all' ? 'var(--accent)' : TYPE_COLORS[t as EventType]}` : '1px solid var(--border)',
+              background: typeFilter === t ? (t === 'all' ? 'var(--accent)' : `${TYPE_COLORS[t as EventType]}22`) : 'var(--bg-2)',
+              color: typeFilter === t ? (t === 'all' ? '#000' : TYPE_COLORS[t as EventType]) : 'var(--text-2)',
+              cursor: 'pointer',
+            }}>
+              {t === 'all' ? 'All' : `${TYPE_ICONS[t as EventType]} ${t.charAt(0).toUpperCase() + t.slice(1)}`}
+            </button>
+          ))}
+        </div>
+
+        {/* Impact filters */}
+        <div style={{ display: 'flex', gap: 3 }}>
+          {IMPACTS.map(imp => (
+            <button key={imp} onClick={() => setImpactFilter(imp)} style={{
+              fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+              border: impactFilter === imp ? `1px solid ${imp === 'All' ? 'var(--accent)' : IMPACT_COLORS[imp]}` : '1px solid var(--border)',
+              background: impactFilter === imp ? (imp === 'All' ? 'var(--accent)' : `${IMPACT_COLORS[imp]}22`) : 'var(--bg-2)',
+              color: impactFilter === imp ? (imp === 'All' ? '#000' : IMPACT_COLORS[imp]) : 'var(--text-2)',
+              cursor: 'pointer',
+            }}>
+              {imp === 'All' ? 'All' : imp === 'High' ? '🔴 High' : imp === 'Medium' ? '🟡 Med' : '🟢 Low'}
+            </button>
+          ))}
+        </div>
+
+        {/* Country filters */}
+        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+          {COUNTRIES.map(c => (
+            <button key={c} onClick={() => setCountryFilter(c)} style={{
+              fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+              border: countryFilter === c ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: countryFilter === c ? 'var(--accent)' : 'var(--bg-2)',
+              color: countryFilter === c ? '#000' : 'var(--text-2)',
+              cursor: 'pointer',
+            }}>
+              {c === 'All' ? 'All' : `${COUNTRY_FLAGS[c] || ''} ${c}`}
+            </button>
+          ))}
+        </div>
+
+        {/* Search */}
+        <input
+          placeholder="Search events…"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          style={{
+            fontSize: 11, padding: '4px 10px', borderRadius: 4,
+            background: 'var(--bg-2)', border: '1px solid var(--border)',
+            color: 'var(--text-0)', outline: 'none', width: 160,
+          }}
+        />
+      </div>
+
+      {/* ── Stats bar ── */}
+      <div style={{
+        display: 'flex', gap: 16, padding: '6px 16px',
+        background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
+        fontSize: 11, color: 'var(--text-2)',
+      }}>
+        <span><span style={{ color: '#ff4560', fontWeight: 700 }}>{stats.high}</span> High</span>
+        <span><span style={{ color: '#f0a500', fontWeight: 700 }}>{stats.medium}</span> Medium</span>
+        <span><span style={{ color: '#00c06a', fontWeight: 700 }}>{stats.low}</span> Low</span>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <span><span style={{ color: '#8b5cf6', fontWeight: 700 }}>{stats.earnings}</span> Earnings</span>
+        <span><span style={{ color: '#f59e0b', fontWeight: 700 }}>{stats.speeches}</span> Speeches</span>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <span><span style={{ color: 'var(--text-0)', fontWeight: 700 }}>{filteredEvents.length}</span> total</span>
+      </div>
+
+      {/* ── Error ── */}
+      {error && (
+        <div style={{ margin: '12px 16px', padding: '10px 14px', background: 'rgba(255,69,96,0.1)', border: '1px solid #ff4560', borderRadius: 6, color: '#ff4560', fontSize: 12 }}>
+          {error} — <button onClick={fetchEvents} style={{ color: '#ff4560', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+        </div>
+      )}
+
+      {/* ── Main content ── */}
+      {loading ? (
+        <div style={{ padding: 60, textAlign: 'center', color: 'var(--text-3)', fontSize: 14 }}>
+          Loading calendar data…
+        </div>
+      ) : (
         <div style={{
-          background: 'var(--bg-2)',
-          border: '1px solid var(--border)',
-          borderRadius: 6,
-          display: 'flex',
-          flexDirection: 'column',
-          height: 'fit-content',
-          maxHeight: 'calc(100vh - 100px)',
-          overflow: 'hidden',
-          position: 'sticky',
-          top: 56,
+          display: 'grid',
+          gridTemplateColumns: selectedDay ? '1fr 320px' : '1fr',
+          gap: 0,
+          minHeight: 'calc(100vh - 160px)',
         }}>
-          {/* Panel header */}
-          <div style={{
-            padding: '12px 16px',
-            borderBottom: '1px solid var(--border)',
-            background: 'var(--bg-3)',
-          }}>
-            <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-0)', letterSpacing: '0.06em' }}>
-              {selectedDay ? `${monthName} ${selectedDay}, ${year}` : 'Select a day'}
-            </div>
-            <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
-              {selectedDay ? `${selectedDayEvents.length} event${selectedDayEvents.length !== 1 ? 's' : ''}` : 'No day selected'}
-            </div>
-          </div>
+          {/* Left / Main area */}
+          <div style={{ padding: 16, overflow: 'hidden' }}>
 
-          {/* Events list */}
-          <div style={{ flex: 1, overflowY: 'auto' }}>
-            {selectedDay && selectedDayEvents.length === 0 ? (
+            {view === 'month' && (
+              <MonthGrid
+                year={currentDate.getFullYear()}
+                month={currentDate.getMonth()}
+                eventsByDay={eventsByDay}
+                selectedDay={selectedDay}
+                onSelectDay={(key) => setSelectedDay(prev => prev === key ? null : key)}
+              />
+            )}
+
+            {view === 'week' && (
+              <WeekGrid
+                weekStart={getWeekStart()}
+                eventsByDay={eventsByDay}
+                onSelectDay={(key) => setSelectedDay(prev => prev === key ? null : key)}
+              />
+            )}
+
+            {/* Agenda / list view — always show below calendar, full list in agenda mode */}
+            {view === 'agenda' && (
               <div style={{
-                padding: 16,
-                color: 'var(--text-3)',
-                fontSize: 12,
-                textAlign: 'center',
+                background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden',
               }}>
-                No events for this day
+                <AgendaView events={filteredEvents} />
               </div>
-            ) : selectedDay && selectedDayEvents.length > 0 ? (
-              selectedDayEvents.map(event => {
-                const impactColor = event.impact === 3 ? 'var(--red)' : event.impact === 2 ? 'var(--yellow)' : 'var(--green)'
-                const impactEmoji = event.impact === 3 ? '🔴' : event.impact === 2 ? '🟡' : '🟢'
+            )}
 
-                return (
-                  <div
-                    key={event.id}
-                    style={{
-                      padding: 12,
-                      borderBottom: '1px solid var(--border)',
-                    }}
-                  >
-                    {/* Time */}
-                    <div style={{
-                      fontSize: 10,
-                      fontFamily: 'var(--mono)',
-                      color: 'var(--text-2)',
-                      marginBottom: 4,
-                    }}>
-                      {fmtEventTime(event.datetime)}
-                    </div>
-
-                    {/* Title + Impact */}
-                    <div style={{
-                      display: 'flex',
-                      alignItems: 'flex-start',
-                      gap: 6,
-                      marginBottom: 8,
-                    }}>
-                      <span style={{ fontSize: 13 }}>{impactEmoji}</span>
-                      <div style={{ flex: 1 }}>
-                        <div style={{
-                          fontSize: 12,
-                          fontWeight: 600,
-                          color: 'var(--text-0)',
-                          lineHeight: 1.3,
-                        }}>
-                          {event.title}
-                        </div>
-                        <div style={{
-                          fontSize: 10,
-                          color: impactColor,
-                          fontWeight: 600,
-                          marginTop: 2,
-                        }}>
-                          {event.impactLabel} Impact
-                        </div>
-                      </div>
-                    </div>
-
-                    {/* Currency badge */}
-                    <div style={{
-                      fontSize: 9,
-                      fontWeight: 700,
-                      letterSpacing: '0.06em',
-                      color: '#fff',
-                      background: 'var(--accent)',
-                      display: 'inline-block',
-                      padding: '2px 6px',
-                      borderRadius: 3,
-                      marginBottom: 8,
-                    }}>
-                      {event.currency}
-                    </div>
-
-                    {/* Values */}
-                    {(event.actual !== null || event.forecast || event.previous) && (
-                      <div style={{
-                        fontSize: 10,
-                        display: 'grid',
-                        gridTemplateColumns: '1fr 1fr',
-                        gap: 6,
-                        marginTop: 8,
-                        padding: '8px',
-                        background: 'var(--bg-1)',
-                        borderRadius: 4,
-                      }}>
-                        {event.actual !== null && (
-                          <div>
-                            <div style={{ color: 'var(--text-3)', fontSize: 9 }}>ACTUAL</div>
-                            <div style={{ color: 'var(--green)', fontFamily: 'var(--mono)', fontWeight: 600, marginTop: 2 }}>
-                              {event.actual}
-                            </div>
-                          </div>
-                        )}
-                        {event.forecast && (
-                          <div>
-                            <div style={{ color: 'var(--text-3)', fontSize: 9 }}>FORECAST</div>
-                            <div style={{ color: 'var(--blue)', fontFamily: 'var(--mono)', fontWeight: 600, marginTop: 2 }}>
-                              {event.forecast}
-                            </div>
-                          </div>
-                        )}
-                        {event.previous && (
-                          <div>
-                            <div style={{ color: 'var(--text-3)', fontSize: 9 }}>PREVIOUS</div>
-                            <div style={{ color: 'var(--text-2)', fontFamily: 'var(--mono)', fontWeight: 600, marginTop: 2 }}>
-                              {event.previous}
-                            </div>
-                          </div>
-                        )}
-                      </div>
-                    )}
-
-                    {/* Source */}
-                    <div style={{
-                      fontSize: 9,
-                      color: 'var(--text-3)',
-                      marginTop: 8,
-                      paddingTop: 8,
-                      borderTop: '1px solid var(--border)',
-                    }}>
-                      Source: {event.source}
-                    </div>
-                  </div>
-                )
-              })
-            ) : (
-              <div style={{
-                padding: 16,
-                color: 'var(--text-3)',
-                fontSize: 12,
-                textAlign: 'center',
-                display: 'flex',
-                alignItems: 'center',
-                justifyContent: 'center',
-                minHeight: 200,
-              }}>
-                Select a day to view events
+            {/* Below-calendar event list for month/week */}
+            {view !== 'agenda' && !selectedDay && (
+              <div style={{ marginTop: 16 }}>
+                <div style={{
+                  padding: '8px 12px', background: 'var(--bg-2)', border: '1px solid var(--border)',
+                  borderRadius: '6px 6px 0 0', fontSize: 11, fontWeight: 700, color: 'var(--text-1)',
+                  letterSpacing: '0.06em',
+                }}>
+                  UPCOMING EVENTS ({filteredEvents.slice(0, 30).length})
+                  <span style={{ marginLeft: 8, fontWeight: 400, color: 'var(--text-3)' }}>— click day to filter</span>
+                </div>
+                <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderTop: 'none', borderRadius: '0 0 6px 6px', overflow: 'hidden' }}>
+                  <AgendaView events={filteredEvents.slice(0, 30)} />
+                </div>
               </div>
             )}
           </div>
+
+          {/* Right: Day detail panel */}
+          {selectedDay && (
+            <div style={{
+              background: 'var(--bg-2)', borderLeft: '1px solid var(--border)',
+              display: 'flex', flexDirection: 'column',
+              position: 'sticky', top: 0, maxHeight: '100vh', overflow: 'hidden',
+            }}>
+              {/* Panel header */}
+              <div style={{
+                padding: '10px 14px', background: 'var(--bg-3)', borderBottom: '1px solid var(--border)',
+                display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+              }}>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-0)' }}>
+                    {new Date(selectedDay + 'T12:00:00').toLocaleDateString('en-US', { weekday: 'long', month: 'long', day: 'numeric' })}
+                  </div>
+                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                    {selectedDayEvents.length} event{selectedDayEvents.length !== 1 ? 's' : ''}
+                  </div>
+                </div>
+                <button onClick={() => setSelectedDay(null)} style={{
+                  background: 'none', border: 'none', color: 'var(--text-3)', cursor: 'pointer', fontSize: 16,
+                }}>✕</button>
+              </div>
+
+              {/* Events */}
+              <div style={{ flex: 1, overflowY: 'auto' }}>
+                {selectedDayEvents.length === 0 ? (
+                  <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
+                    No events for this day
+                  </div>
+                ) : (
+                  selectedDayEvents.map(event => (
+                    <div key={event.id} style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
+                      <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
+                        <span style={{ fontSize: 16 }}>{TYPE_ICONS[event.type]}</span>
+                        <div style={{ flex: 1, minWidth: 0 }}>
+                          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3 }}>
+                            {event.title}
+                          </div>
+                          <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 4 }}>
+                            <span style={{ fontSize: 10 }}>{COUNTRY_FLAGS[event.country] || '🌐'}</span>
+                            <span style={{ fontSize: 9, fontWeight: 700,
+                              color: IMPACT_COLORS[event.impact],
+                              background: `${IMPACT_COLORS[event.impact]}22`,
+                              padding: '1px 5px', borderRadius: 3,
+                            }}>{event.impact}</span>
+                            <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>
+                              {fmtTime(event.date)}
+                            </span>
+                          </div>
+
+                          {/* Values */}
+                          {(event.forecast || event.previous || event.actual || event.epsEstimate != null) && (
+                            <div style={{
+                              marginTop: 8, padding: 8, background: 'var(--bg-1)', borderRadius: 4,
+                              display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 6, fontSize: 10,
+                            }}>
+                              <div>
+                                <div style={{ fontSize: 8, color: 'var(--text-3)', marginBottom: 2 }}>
+                                  {event.type === 'earnings' ? 'EPS EST' : 'FORECAST'}
+                                </div>
+                                <div style={{ fontFamily: 'var(--mono)', color: 'var(--blue)', fontWeight: 600 }}>
+                                  {event.type === 'earnings' ? (event.epsEstimate != null ? `$${event.epsEstimate}` : '—') : (event.forecast || '—')}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 8, color: 'var(--text-3)', marginBottom: 2 }}>
+                                  {event.type === 'earnings' ? 'EPS ACT' : 'PREVIOUS'}
+                                </div>
+                                <div style={{ fontFamily: 'var(--mono)', color: 'var(--text-2)', fontWeight: 600 }}>
+                                  {event.type === 'earnings'
+                                    ? (event.epsActual != null ? `$${event.epsActual}` : '—')
+                                    : (event.previous || '—')}
+                                </div>
+                              </div>
+                              <div>
+                                <div style={{ fontSize: 8, color: 'var(--text-3)', marginBottom: 2 }}>ACTUAL</div>
+                                <div style={{
+                                  fontFamily: 'var(--mono)', fontWeight: 600,
+                                  color: event.actual
+                                    ? beatsMiss(event.actual, event.forecast) === 'beat' ? '#00c06a'
+                                    : beatsMiss(event.actual, event.forecast) === 'miss' ? '#ff4560'
+                                    : 'var(--text-0)'
+                                    : 'var(--text-3)',
+                                }}>
+                                  {event.actual || '—'}
+                                </div>
+                              </div>
+                            </div>
+                          )}
+
+                          {event.type === 'earnings' && (
+                            <div style={{ marginTop: 6, fontSize: 10, color: 'var(--text-3)' }}>
+                              Rev est: {fmtRevenue(event.revenueEstimate)} · Act: {fmtRevenue(event.revenueActual)}
+                            </div>
+                          )}
+                        </div>
+                      </div>
+                    </div>
+                  ))
+                )}
+              </div>
+            </div>
+          )}
         </div>
+      )}
+
+      {/* ── Legend ── */}
+      <div style={{
+        padding: '10px 16px', background: 'var(--bg-1)', borderTop: '1px solid var(--border)',
+        display: 'flex', gap: 16, flexWrap: 'wrap', fontSize: 10, color: 'var(--text-3)',
+        alignItems: 'center',
+      }}>
+        <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>LEGEND:</span>
+        {[
+          { label: '🔴 High Impact', color: '#ff4560' },
+          { label: '🟡 Medium Impact', color: '#f0a500' },
+          { label: '🟢 Low Impact', color: '#00c06a' },
+          { label: '📊 Earnings', color: '#8b5cf6' },
+          { label: '🎤 Speech', color: '#f59e0b' },
+          { label: '🏛 Holiday', color: '#6366f1' },
+        ].map(item => (
+          <span key={item.label} style={{ color: item.color, fontWeight: 600 }}>{item.label}</span>
+        ))}
       </div>
     </div>
   )
+}
+
+// ─── Style helpers ────────────────────────────────────────────────────────────
+
+function btnStyle(bg: string, color: string): React.CSSProperties {
+  return {
+    fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4,
+    background: bg, color, border: '1px solid var(--border)', cursor: 'pointer',
+  }
+}
+
+const navBtnStyle: React.CSSProperties = {
+  fontSize: 18, cursor: 'pointer', color: 'var(--accent)',
+  background: 'none', border: 'none', padding: '2px 8px',
+  lineHeight: 1,
 }

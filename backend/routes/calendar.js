@@ -1,14 +1,68 @@
 /**
  * Economic Calendar Routes
- * GET /api/calendar/upcoming         - Events for next N days
+ * GET /api/calendar/upcoming         - Events for next N days (legacy)
  * GET /api/calendar/today            - Today's events
  * GET /api/calendar/high-impact      - High-impact events only (impact=3)
  * GET /api/calendar/macro            - Macro indicator snapshot (FRED data)
+ * GET /api/calendar/events           - Comprehensive events (earnings + speeches + economic)
+ * GET /api/calendar/earnings         - Earnings-only events
  */
 
 const express = require('express');
 const router = express.Router();
 const economicCalendar = require('../services/economicCalendar');
+const calendarService = require('../services/calendarService');
+
+// ─── NEW: Comprehensive events endpoint ────────────────────────────────────
+
+// GET /api/calendar/events?from=YYYY-MM-DD&to=YYYY-MM-DD&type=all
+router.get('/events', async (req, res) => {
+  try {
+    const { from, to, type = 'all' } = req.query;
+
+    // Default: next 30 days if not specified
+    const now = new Date();
+    const fromStr = from || now.toISOString().slice(0, 10);
+    const toStr = to || new Date(now.getTime() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+    const events = await calendarService.getEvents({ from: fromStr, to: toStr, type });
+
+    res.json({
+      success: true,
+      count: events.length,
+      events,
+      filters: { from: fromStr, to: toStr, type },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Calendar] /events error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch calendar events' });
+  }
+});
+
+// GET /api/calendar/earnings?from=YYYY-MM-DD&to=YYYY-MM-DD
+router.get('/earnings', async (req, res) => {
+  try {
+    const { from, to } = req.query;
+
+    const now = new Date();
+    const fromStr = from || now.toISOString().slice(0, 10);
+    const toStr = to || new Date(now.getTime() + 30 * 24 * 3600 * 1000).toISOString().slice(0, 10);
+
+    const events = await calendarService.getEarnings({ from: fromStr, to: toStr });
+
+    res.json({
+      success: true,
+      count: events.length,
+      events,
+      filters: { from: fromStr, to: toStr },
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Calendar] /earnings error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch earnings events' });
+  }
+});
 
 // GET /api/calendar/upcoming?days=7&currencies=USD,EUR&minImpact=2
 router.get('/upcoming', async (req, res) => {
