@@ -27,8 +27,14 @@ async function getStockInfo(symbol) {
   return await cache.cacheAPICall(cacheKey, async () => {
     const apiKey = process.env.FINNHUB_API_KEY;
 
+    const yahooHeaders = {
+      'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
+      'Accept': 'application/json',
+    };
+
     // Fire all requests in parallel
-    const [finnhubProfileRes, finnhubMetricsRes, yahooRes] = await Promise.allSettled([
+    // Two Yahoo requests: 1d for current price/prevClose, 5y for dividend history
+    const [finnhubProfileRes, finnhubMetricsRes, yahooQuoteRes, yahooDivRes] = await Promise.allSettled([
       apiKey
         ? axios.get(`${FINNHUB_BASE}/stock/profile2`, {
             params: { symbol: upperSymbol, token: apiKey },
@@ -43,12 +49,17 @@ async function getStockInfo(symbol) {
           })
         : Promise.reject(new Error('No FINNHUB_API_KEY')),
 
+      // 1d range gives accurate previousClose
+      axios.get(`${YAHOO_BASE}/v8/finance/chart/${upperSymbol}`, {
+        params: { range: '1d', interval: '1d', events: 'div' },
+        headers: yahooHeaders,
+        timeout: 10000,
+      }),
+
+      // 5y range to get full dividend payment history
       axios.get(`${YAHOO_BASE}/v8/finance/chart/${upperSymbol}`, {
         params: { range: '5y', interval: '3mo', events: 'div' },
-        headers: {
-          'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-          'Accept': 'application/json',
-        },
+        headers: yahooHeaders,
         timeout: 10000,
       }),
     ]);
@@ -70,24 +81,37 @@ async function getStockInfo(symbol) {
       console.warn(`[StockInfo] Finnhub metrics failed for ${upperSymbol}:`, finnhubMetricsRes.reason?.message);
     }
 
-    // Parse Yahoo Finance
+    // Parse Yahoo Finance quote (1d)
     let currentPrice = null;
     let previousClose = null;
     let week52High = null;
     let week52Low = null;
-    let dividendHistory = [];
 
-    if (yahooRes.status === 'fulfilled') {
+    if (yahooQuoteRes.status === 'fulfilled') {
       try {
-        const result = yahooRes.value.data?.chart?.result?.[0];
+        const result = yahooQuoteRes.value.data?.chart?.result?.[0];
         if (result) {
           const meta = result.meta || {};
           currentPrice = meta.regularMarketPrice || null;
-          previousClose = meta.chartPreviousClose || meta.previousClose || null;
+          // chartPreviousClose on 1d range = the actual previous close
+          previousClose = meta.chartPreviousClose || null;
           week52High = meta.fiftyTwoWeekHigh || null;
           week52Low = meta.fiftyTwoWeekLow || null;
+        }
+      } catch (parseErr) {
+        console.warn(`[StockInfo] Yahoo quote parse error for ${upperSymbol}:`, parseErr.message);
+      }
+    } else {
+      console.warn(`[StockInfo] Yahoo quote failed for ${upperSymbol}:`, yahooQuoteRes.reason?.message);
+    }
 
-          // Extract dividend events
+    // Parse Yahoo Finance dividend history (5y)
+    let dividendHistory = [];
+
+    if (yahooDivRes.status === 'fulfilled') {
+      try {
+        const result = yahooDivRes.value.data?.chart?.result?.[0];
+        if (result) {
           const divEvents = result.events?.dividends || {};
           dividendHistory = Object.values(divEvents)
             .map(div => ({
@@ -97,10 +121,10 @@ async function getStockInfo(symbol) {
             .sort((a, b) => b.date.localeCompare(a.date)); // newest first
         }
       } catch (parseErr) {
-        console.warn(`[StockInfo] Yahoo parse error for ${upperSymbol}:`, parseErr.message);
+        console.warn(`[StockInfo] Yahoo div parse error for ${upperSymbol}:`, parseErr.message);
       }
     } else {
-      console.warn(`[StockInfo] Yahoo Finance failed for ${upperSymbol}:`, yahooRes.reason?.message);
+      console.warn(`[StockInfo] Yahoo div history failed for ${upperSymbol}:`, yahooDivRes.reason?.message);
     }
 
     // Fallback 52W from Finnhub metrics
