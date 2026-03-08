@@ -1864,9 +1864,7 @@ export default function Home() {
             document.querySelector('.col-news')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}>Analysis</button>
           <button className={`nav-item${activeNav === 'Calendar' ? ' active' : ''}`} onClick={() => {
-            setActiveNav('Calendar')
-            setShowAlerts(false)
-            document.querySelector('.col-calendar')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+            window.open('/calendar', '_blank')
           }}>Calendar</button>
           <button className={`nav-item${activeNav === 'Portfolio' ? ' active' : ''}`} onClick={() => {
             setActiveNav('Portfolio')
