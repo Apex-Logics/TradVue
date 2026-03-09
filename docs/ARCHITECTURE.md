@@ -776,7 +776,7 @@ RATE_LIMIT_ENTERPRISE=5000
 - Sentry (error tracking) — planned
 
 **Backend:**
-- `GET /health` endpoint returns `{ status: "OK", timestamp, service: "MarketPulse API" }`
+- `GET /health` endpoint returns `{ status: "OK", timestamp, service: "TradVue API" }`
 - Railway logs (stderr, stdout)
 - Database connection status logged on startup
 

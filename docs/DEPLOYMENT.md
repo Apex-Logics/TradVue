@@ -145,7 +145,7 @@ After both are deployed, test these endpoints:
 curl https://YOUR-RAILWAY-URL.up.railway.app/health
 
 # Expected:
-# {"status":"OK","timestamp":"...","service":"MarketPulse API"}
+# {"status":"OK","timestamp":"...","service":"TradVue API"}
 
 # 2. Real market data (AAPL quote)
 curl https://YOUR-RAILWAY-URL.up.railway.app/api/market-data/quote/AAPL

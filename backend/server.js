@@ -84,7 +84,7 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'MarketPulse API'
+    service: 'TradVue API'
   });
 });
 

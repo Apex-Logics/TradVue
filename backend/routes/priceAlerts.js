@@ -112,7 +112,7 @@ async function checkAndTriggerAlerts() {
       try {
         const resp = await fetch(
           `https://query2.finance.yahoo.com/v8/finance/chart/${symbol}?range=1d&interval=1d`,
-          { headers: { 'User-Agent': 'Mozilla/5.0 MarketPulse/1.0' }, signal: AbortSignal.timeout(5000) }
+          { headers: { 'User-Agent': 'Mozilla/5.0 TradVue/1.0' }, signal: AbortSignal.timeout(5000) }
         );
         if (resp.ok) {
           const data = await resp.json();

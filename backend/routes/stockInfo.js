@@ -56,7 +56,7 @@ router.get('/benchmark/:symbol', async (req, res) => {
 
     const url = `https://query2.finance.yahoo.com/v8/finance/chart/${encodeURIComponent(symbol)}?range=${range}&interval=1d`;
     const resp = await fetch(url, {
-      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; MarketPulse/1.0)' },
+      headers: { 'User-Agent': 'Mozilla/5.0 (compatible; TradVue/1.0)' },
       signal: AbortSignal.timeout(8000),
     });
 
