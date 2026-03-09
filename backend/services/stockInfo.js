@@ -56,9 +56,10 @@ async function getStockInfo(symbol) {
         timeout: 10000,
       }),
 
-      // 5y range to get full dividend payment history
+      // Use 2y range with 1mo interval — captures all monthly dividend payments
+      // (3mo interval misses months between quarters)
       axios.get(`${YAHOO_BASE}/v8/finance/chart/${upperSymbol}`, {
-        params: { range: '5y', interval: '3mo', events: 'div' },
+        params: { range: '5y', interval: '1mo', events: 'div' },
         headers: yahooHeaders,
         timeout: 10000,
       }),
@@ -131,7 +132,52 @@ async function getStockInfo(symbol) {
     if (!week52High && metrics['52WeekHigh']) week52High = metrics['52WeekHigh'];
     if (!week52Low && metrics['52WeekLow']) week52Low = metrics['52WeekLow'];
 
-    // Calculate 5Y dividend growth rate (CAGR)
+    // ─── Detect dividend frequency and compute accurate annual rate ──────────
+    // This is critical for monthly payers like TSLY, AMDY (YieldMax ETFs)
+    // and for brand-new ETFs that Finnhub metrics may show 0 for.
+
+    let detectedFrequency = 'quarterly'; // default
+    let computedAnnualDividend = null;   // per-share annual amount from history
+
+    if (dividendHistory.length >= 2) {
+      const now = new Date();
+      const oneYearAgo = new Date(now);
+      oneYearAgo.setFullYear(oneYearAgo.getFullYear() - 1);
+
+      // Payments in last 12 months
+      const recentPayments = dividendHistory.filter(d => new Date(d.date) >= oneYearAgo);
+
+      // Detect frequency based on count of payments per year
+      const payCount = recentPayments.length;
+      if (payCount >= 10) {
+        detectedFrequency = 'monthly';
+      } else if (payCount >= 3) {
+        detectedFrequency = 'quarterly';
+      } else if (payCount >= 2) {
+        detectedFrequency = 'semi-annual';
+      } else if (payCount >= 1) {
+        detectedFrequency = 'annual';
+      }
+
+      // Use actual sum of last 12 months as the annual dividend
+      // This is far more accurate than Finnhub's metrics for high-yield monthly ETFs
+      const recentAnnualSum = recentPayments.reduce((s, d) => s + d.amount, 0);
+
+      if (recentAnnualSum > 0) {
+        // If we have < 12 payments (new ETF), annualize based on frequency
+        let annualized = recentAnnualSum;
+        if (detectedFrequency === 'monthly' && payCount < 12) {
+          annualized = (recentAnnualSum / payCount) * 12;
+        } else if (detectedFrequency === 'quarterly' && payCount < 4) {
+          annualized = (recentAnnualSum / payCount) * 4;
+        } else if (detectedFrequency === 'semi-annual' && payCount < 2) {
+          annualized = recentAnnualSum * 2;
+        }
+        computedAnnualDividend = parseFloat(annualized.toFixed(6));
+      }
+    }
+
+    // ─── 5Y dividend growth rate (CAGR) ──────────────────────────────────────
     let dividendGrowthRate5Y = null;
     if (dividendHistory.length >= 4) {
       const now = new Date();
@@ -188,8 +234,15 @@ async function getStockInfo(symbol) {
       '52WeekHigh': week52High ? parseFloat(week52High.toFixed(4)) : null,
       '52WeekLow': week52Low ? parseFloat(week52Low.toFixed(4)) : null,
       peRatio: metrics.peBasicExclExtraTTM || metrics.peTTM || null,
-      dividendPerShareAnnual: metrics.dividendPerShareAnnual || null,
-      dividendYield: metrics.dividendYieldIndicatedAnnual || null,
+      // Use computed annual dividend from actual history if available — far more
+      // accurate for monthly payers (TSLY, AMDY) vs Finnhub metrics field.
+      dividendPerShareAnnual: computedAnnualDividend
+        || metrics.dividendPerShareAnnual
+        || null,
+      dividendYield: currentPrice && computedAnnualDividend
+        ? parseFloat(((computedAnnualDividend / currentPrice) * 100).toFixed(4))
+        : (metrics.dividendYieldIndicatedAnnual || null),
+      dividendFrequency: detectedFrequency,
       dividendGrowthRate5Y,
       dividendHistory,
       fetchedAt: new Date().toISOString(),
