@@ -11,10 +11,13 @@ const bcrypt = require('bcryptjs');
 const jwt = require('jsonwebtoken');
 const router = express.Router();
 const db = require('../services/db');
+const { strictLimiter } = require('../services/rateLimit');
 
 // ──────────────────────────────────────────
 // Helpers
 // ──────────────────────────────────────────
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
 function signToken(user) {
   return jwt.sign(
@@ -23,7 +26,7 @@ function signToken(user) {
       email: user.email,
       subscription_tier: user.subscription_tier,
     },
-    process.env.JWT_SECRET || 'fallback_secret',
+    process.env.JWT_SECRET,
     { expiresIn: process.env.JWT_EXPIRE || '24h' }
   );
 }
@@ -41,12 +44,18 @@ function sanitizeUser(user) {
 // ──────────────────────────────────────────
 // POST /api/auth/register
 // ──────────────────────────────────────────
-router.post('/register', async (req, res) => {
+router.post('/register', strictLimiter, async (req, res) => {
   try {
-    const { email, password, subscription_tier = 'free' } = req.body;
+    const { email: rawEmail, password, subscription_tier = 'free' } = req.body;
 
-    if (!email || !password) {
+    if (!rawEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const email = rawEmail.trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
     if (password.length < 8) {
@@ -56,7 +65,7 @@ router.post('/register', async (req, res) => {
     // Check if user exists
     const { rows: existing } = await db.query(
       'SELECT id FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [email]
     );
     if (existing.length > 0) {
       return res.status(409).json({ error: 'User already exists' });
@@ -70,7 +79,7 @@ router.post('/register', async (req, res) => {
       `INSERT INTO users (email, password_hash, subscription_tier, verified, created_at, updated_at)
        VALUES ($1, $2, $3, false, NOW(), NOW())
        RETURNING *`,
-      [email.toLowerCase(), password_hash, subscription_tier]
+      [email, password_hash, subscription_tier]
     );
 
     const user = rows[0];
@@ -90,26 +99,34 @@ router.post('/register', async (req, res) => {
 // ──────────────────────────────────────────
 // POST /api/auth/login
 // ──────────────────────────────────────────
-router.post('/login', async (req, res) => {
+router.post('/login', strictLimiter, async (req, res) => {
   try {
-    const { email, password } = req.body;
+    const { email: rawEmail, password } = req.body;
 
-    if (!email || !password) {
+    if (!rawEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const email = rawEmail.trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
     }
 
     const { rows } = await db.query(
       'SELECT * FROM users WHERE email = $1',
-      [email.toLowerCase()]
+      [email]
     );
 
     if (rows.length === 0) {
+      console.warn(`[Auth] Failed login attempt for ${email} from ${req.ip}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
     const user = rows[0];
     const isValid = await bcrypt.compare(password, user.password_hash);
     if (!isValid) {
+      console.warn(`[Auth] Failed login attempt for ${email} from ${req.ip}`);
       return res.status(401).json({ error: 'Invalid credentials' });
     }
 
@@ -161,7 +178,7 @@ function authenticateToken(req, res, next) {
     return res.status(401).json({ error: 'Access token required' });
   }
 
-  jwt.verify(token, process.env.JWT_SECRET || 'fallback_secret', (err, user) => {
+  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
     if (err) {
       return res.status(403).json({ error: 'Invalid or expired token' });
     }

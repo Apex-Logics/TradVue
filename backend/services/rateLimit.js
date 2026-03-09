@@ -30,14 +30,16 @@ const generalLimiter = rateLimit({
   legacyHeaders: false,
 });
 
-// Strict rate limiting for expensive operations
+// Strict rate limiting for auth endpoints (brute-force protection)
 const strictLimiter = rateLimit({
-  windowMs: 60 * 1000, // 1 minute
-  max: 10, // Only 10 requests per minute
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5, // Only 5 requests per 15 minutes per IP
   message: {
-    error: 'Rate limit exceeded. Please wait before making more requests.',
-    retryAfter: '1 minute'
-  }
+    error: 'Too many attempts. Please try again in 15 minutes.',
+    retryAfter: '15 minutes'
+  },
+  standardHeaders: true,
+  legacyHeaders: false,
 });
 
 /**
