@@ -6,8 +6,8 @@
  *
  * Tasks
  *   GET    /api/dashboard/tasks          — List user's tasks
- *   POST   /api/dashboard/tasks          — Create a task
- *   PUT    /api/dashboard/tasks/:id      — Update a task
+ *   POST   /api/dashboard/tasks          — Create a task (auto-logs activity)
+ *   PUT    /api/dashboard/tasks/:id      — Update a task (auto-logs on completion)
  *   DELETE /api/dashboard/tasks/:id      — Delete a task
  *   POST   /api/dashboard/tasks/sync     — Bulk upsert (localStorage migration)
  *
@@ -26,6 +26,20 @@
  * Settings
  *   GET    /api/dashboard/settings       — Get dashboard settings
  *   POST   /api/dashboard/settings       — Upsert dashboard settings
+ *
+ * Agents
+ *   GET    /api/dashboard/agents         — List agents (auto-seeds defaults)
+ *   PUT    /api/dashboard/agents/:name   — Update agent status/task/tokens
+ *
+ * Notifications
+ *   GET    /api/dashboard/notifications  — List notifications (?unread=true)
+ *   POST   /api/dashboard/notifications  — Create a notification
+ *   PUT    /api/dashboard/notifications/:id/read — Mark single as read
+ *   PUT    /api/dashboard/notifications/read-all — Mark all as read
+ *   DELETE /api/dashboard/notifications/:id — Delete a notification
+ *
+ * Stats
+ *   GET    /api/dashboard/stats          — Real counts (tasks, completed today, agents, notifs)
  */
 
 const express = require('express');
@@ -708,7 +722,7 @@ router.get('/stats', async (req, res) => {
       db.query(
         `SELECT COUNT(*) AS count FROM dashboard_tasks
          WHERE user_id = $1 AND status = 'done'
-         AND completed_at >= $2`,
+         AND completed_at != '' AND completed_at >= $2`,
         [userId, todayStart.toISOString()]
       ),
       db.query(

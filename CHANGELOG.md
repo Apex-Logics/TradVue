@@ -6,6 +6,20 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en-release.
 
 ---
 
+## [Unreleased]
+
+### 🤖 Dashboard Agent Integration
+- **Agent status tracking** — Real-time status (online/busy/offline), current task, tokens used, tasks completed today
+- **Notifications system** — Full CRUD with type badges (info/warning/success/error), mark read, mark all read
+- **Real dashboard stats** — Overview cards wired to actual DB counts (total tasks, completed today, active agents, unread notifications)
+- **Activity auto-logging** — Task create/complete automatically generates activity feed entries
+- **Migration 008** — `dashboard_agents` and `dashboard_notifications` tables
+- **API routes** — `/api/dashboard/agents`, `/api/dashboard/notifications`, `/api/dashboard/stats`
+- **Sidebar notification badge** — Unread count shown on 🔔 Notifications nav item
+- **Overview notifications widget** — Top 4 recent notifications in sidebar panel
+
+---
+
 ## [0.1.0-beta] - 2026-03-06
 
 ### 🎉 Major Features
