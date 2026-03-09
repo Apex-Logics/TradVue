@@ -683,6 +683,15 @@ export default function CalendarPage() {
         </div>
       </header>
 
+      {/* ── Calendar Data Disclaimer ── */}
+      <div style={{
+        padding: '8px 16px', background: 'rgba(100,200,220,0.1)', borderBottom: '1px solid rgba(100,200,220,0.3)',
+        fontSize: '10px', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 6,
+      }}>
+        <span style={{ fontSize: '12px' }}>ℹ️</span>
+        <span>Event data from third-party sources. May be delayed or incomplete. Always verify critical events with official sources.</span>
+      </div>
+
       {/* ── Controls Bar ── */}
       <div style={{
         padding: '10px 16px', background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',

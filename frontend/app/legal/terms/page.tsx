@@ -87,23 +87,39 @@ export default function TermsPage() {
         </p>
       </Section>
 
-      <Section id="disclaimers" title="6. Disclaimers & Limitations">
-        <SubSection title="6.1 Data Accuracy">
-          <p>While we strive for accuracy, ChartGenius does not guarantee that:</p>
+      <Section id="no-investment-advice" title="6. NO INVESTMENT ADVICE">
+        <p>
+          <strong>Nothing on this platform constitutes a solicitation, recommendation, or offer to buy or sell any securities.</strong>
+        </p>
+        <UL items={[
+          'ChartGenius does not provide personalized investment advice',
+          'ChartGenius does not make specific buy/sell recommendations',
+          'All content is for educational and informational purposes only',
+          'You are solely responsible for your investment decisions',
+          'You should consult with a qualified financial advisor before making trades',
+        ]} />
+      </Section>
+
+      <Section id="disclaimers" title="7. Disclaimers & Limitations">
+        <SubSection title="7.1 Data Accuracy">
+          <p>
+            <strong>While we strive for accuracy, we make no warranties about the completeness or reliability of any financial data displayed.</strong>
+          </p>
           <UL items={[
-            'Market data is real-time or error-free',
-            'Historical data is complete or accurate',
-            'Technical indicators are always reliable',
-            'Charts are free from technical errors',
+            'Market data may be real-time, delayed, or inaccurate',
+            'Historical data may be incomplete or contain errors',
+            'Technical indicators are mathematical tools, not guarantees',
+            'Charts may contain technical errors or display anomalies',
+            'Data may not reflect all relevant events (splits, dividends, etc.)',
           ]} />
         </SubSection>
-        <SubSection title="6.2 Third-Party Data">
+        <SubSection title="7.2 Third-Party Data">
           <p>
             ChartGenius uses data from external sources including exchanges, brokers, and market data providers.
             We are not responsible for their errors, delays, or inaccuracies.
           </p>
         </SubSection>
-        <SubSection title="6.3 Service Availability">
+        <SubSection title="7.3 Service Availability">
           <p>
             The Service is provided on an "as-is" basis without warranties of merchantability or fitness
             for a particular purpose. We do not guarantee:
@@ -115,24 +131,56 @@ export default function TermsPage() {
             'Specific performance levels',
           ]} />
         </SubSection>
+        <SubSection title="7.4 Tax Tools Disclaimer">
+          <p>
+            <strong>Tax estimation features are provided as convenience tools only. ChartGenius is not a tax preparation service and makes no guarantees about the accuracy of tax calculations.</strong>
+          </p>
+          <UL items={[
+            'Tax calculations are approximations based on provided data',
+            'Tax laws vary by jurisdiction and individual circumstances',
+            'Always consult a qualified tax professional (CPA or tax attorney) before making tax decisions',
+            'ChartGenius is not responsible for tax errors or missed deductions',
+            'Do NOT use ChartGenius calculations as your primary tax reporting method',
+          ]} />
+        </SubSection>
       </Section>
 
-      <Section id="liability" title="7. Limitation of Liability">
+      <Section id="user-responsibility" title="8. USER RESPONSIBILITY">
+        <p>
+          <strong>Users are responsible for verifying all financial data and calculations with their broker, accountant, or financial advisor.</strong>
+        </p>
+        <UL items={[
+          'Verify portfolio holdings, cost basis, and valuations with your broker statements',
+          'Confirm dividend payments and earnings dates through official sources',
+          'Validate all tax calculations with your tax professional',
+          'Review all market data through independent sources before trading',
+          'Do NOT rely solely on ChartGenius for critical financial decisions',
+          'You assume all risk associated with use of platform data and tools',
+        ]} />
+      </Section>
+
+      <Section id="liability" title="9. Limitation of Liability">
         <p><strong>TO THE MAXIMUM EXTENT PERMITTED BY LAW:</strong></p>
-        <p>ChartGenius and its owners, developers, and staff shall <strong>NOT</strong> be liable for:</p>
+        <p>
+          <strong>ChartGenius shall not be liable for any losses, damages, or claims arising from reliance on data, calculations, or analysis provided by the platform.</strong>
+        </p>
+        <p>Specifically, ChartGenius and its owners, developers, and staff shall <strong>NOT</strong> be liable for:</p>
         <UL items={[
           'Any trading losses, whether direct or indirect',
           'Loss of profits, revenue, or anticipated savings',
           'Loss of data or corruption of files',
+          'Tax liabilities or incorrect tax reporting',
           'Any consequential, incidental, special, or punitive damages',
           'Damages arising from interruptions, delays, or unavailability of the Service',
+          'Damages from third-party data providers',
+          'Damages from use of AI-generated analysis or recommendations',
         ]} />
         <p style={{ marginTop: '16px' }}>
           This limitation applies even if ChartGenius has been advised of the possibility of such damages.
         </p>
       </Section>
 
-      <Section id="risk" title="8. Assumption of Risk">
+      <Section id="risk" title="10. Assumption of Risk">
         <p>
           <strong>Using ChartGenius for any financial decision is entirely at your own risk.</strong> You acknowledge that:
         </p>
@@ -141,17 +189,19 @@ export default function TermsPage() {
           'Past performance does not guarantee future results',
           'Market conditions are unpredictable',
           'You may lose some or all of your investment',
+          'Portfolio calculations are estimates only and may not reflect actual P&L',
+          'Tax calculations are approximations and may not be accurate for your situation',
         ]} />
       </Section>
 
-      <Section id="modifications" title="9. Modification of Terms">
+      <Section id="modifications" title="11. Modification of Terms">
         <p>
           ChartGenius reserves the right to modify these Terms at any time. Continued use of the Service
           after changes constitute acceptance of the new terms.
         </p>
       </Section>
 
-      <Section id="termination" title="10. Termination">
+      <Section id="termination" title="12. Termination">
         <p>ChartGenius may terminate your account without notice if you:</p>
         <UL items={[
           'Violate these Terms',
@@ -161,14 +211,14 @@ export default function TermsPage() {
         ]} />
       </Section>
 
-      <Section id="law" title="11. Governing Law">
+      <Section id="law" title="13. Governing Law">
         <p>
           These Terms are governed by applicable law. Any disputes shall be resolved through
           binding arbitration rather than litigation.
         </p>
       </Section>
 
-      <Section id="contact" title="12. Contact">
+      <Section id="contact" title="14. Contact">
         <p>
           For questions about these Terms, contact:{' '}
           <a href="mailto:legal@chartgenius.io" style={{ color: '#4a9eff' }}>legal@chartgenius.io</a>

@@ -719,6 +719,14 @@ export default function PortfolioPage() {
         )}
       </header>
 
+      {/* Portfolio Disclaimer Banner */}
+      <div style={{ background: 'rgba(255,165,0,0.1)', borderBottom: '1px solid rgba(255,165,0,0.3)', padding: '10px 20px', fontSize: 11, color: 'var(--text-2)' }}>
+        <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+          <span style={{ fontSize: 13 }}>⚠️</span>
+          <span><strong>Portfolio calculations are estimates.</strong> Verify cost basis, dividends, and returns with your broker statements. Not financial or tax advice. <a href="/legal/disclaimer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Read full disclaimer</a>.</span>
+        </span>
+      </div>
+
       {/* Import from localStorage banner */}
       {showImportBanner && (
         <div style={{ background: 'rgba(90,100,220,0.15)', borderBottom: '1px solid var(--accent)', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12 }}>

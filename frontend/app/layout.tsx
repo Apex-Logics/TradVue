@@ -101,6 +101,22 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {children}
                 <OnboardingOverlay />
                 <CookieConsent />
+                {/* Global Footer Disclaimer */}
+                <footer style={{ 
+                  background: 'var(--bg-1)', 
+                  borderTop: '1px solid var(--border)',
+                  padding: '8px 16px',
+                  fontSize: '10px',
+                  color: 'var(--text-3)',
+                  textAlign: 'center',
+                }}>
+                  <span style={{ display: 'inline-block', marginTop: '4px' }}>
+                    ⚠️ Not financial advice. For informational purposes only.{' '}
+                    <a href="/legal/disclaimer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>
+                      Read disclaimer
+                    </a>
+                  </span>
+                </footer>
               </OnboardingProvider>
             </AuthProvider>
           </SettingsProvider>

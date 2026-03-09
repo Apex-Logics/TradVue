@@ -39,10 +39,13 @@ export default function PrivacyPage() {
           ]} />
           <p style={{ marginTop: '12px' }}><strong>Through Your Use of the Service:</strong></p>
           <UL items={[
-            'Watchlist data (stocks, cryptoassets, or other securities you track)',
+            'Portfolio holdings (stocks, cryptoassets, or other securities you own)',
+            'Portfolio data including shares, cost basis, and purchase dates',
+            'Watchlist data (securities you track)',
             'Charts and analysis you create or save',
             'Technical indicator settings and preferences',
             'Market alerts you set up',
+            'Tax planning and portfolio performance data',
             'Profile information you add voluntarily',
           ]} />
           <p style={{ marginTop: '12px' }}><strong>Communications:</strong></p>
@@ -155,7 +158,42 @@ export default function PrivacyPage() {
         </SubSection>
       </Section>
 
-      <Section id="security" title="5. Data Security">
+      <Section id="portfolio-data" title="5. PORTFOLIO DATA PRIVACY">
+        <p>
+          <strong>Your portfolio data is stored securely and is associated only with your account.</strong>
+        </p>
+        <SubSection title="5.1 Portfolio Holdings & Financial Data">
+          <UL items={[
+            'Portfolio data (holdings, transactions, cost basis) is encrypted and stored securely',
+            'Your portfolio is accessible only to you and ChartGenius staff (for support purposes only)',
+            'We do not share your portfolio holdings or financial data with third parties',
+            'We do not sell, rent, or license your portfolio data to advertisers or data brokers',
+          ]} />
+        </SubSection>
+
+        <SubSection title="5.2 Broker Integration & Third-Party Connections">
+          <p>
+            <strong>If you use broker integration features, we receive read-only data through secure third-party providers (e.g., Plaid) and never store your broker credentials.</strong>
+          </p>
+          <UL items={[
+            'Broker login credentials are transmitted directly to third-party providers; ChartGenius never stores them',
+            'We access only account-level data (holdings, transactions) for portfolio tracking',
+            'Broker integration is optional; you can manually enter portfolio data instead',
+            'Third-party integrations are subject to their own privacy policies',
+          ]} />
+        </SubSection>
+
+        <SubSection title="5.3 What We Don't Store">
+          <UL items={[
+            'Broker usernames or passwords',
+            'Bank account numbers or routing information',
+            'Credit card or payment details (handled by Stripe or similar)',
+            'Social Security numbers or tax IDs (never request these)',
+          ]} />
+        </SubSection>
+      </Section>
+
+      <Section id="security" title="6. Data Security">
         <p>ChartGenius implements industry-standard security measures:</p>
         <UL items={[
           'SSL/TLS encryption for data in transit',
@@ -170,16 +208,17 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section id="retention" title="6. Data Retention">
+      <Section id="retention" title="7. Data Retention">
         <UL items={[
           'Account Data: Kept while your account is active; deleted upon account termination (unless required for legal obligations)',
+          'Portfolio Data: Kept until you delete your account or holdings',
           'Usage Logs: Typically retained for 12 months',
           'Cookies: Session cookies deleted after logout; preference cookies retained for 1–2 years',
           'Deleted Content: May be retained in backups for up to 90 days',
         ]} />
       </Section>
 
-      <Section id="gdpr" title="7. GDPR Rights (EU & EEA Residents)">
+      <Section id="gdpr" title="8. GDPR Rights (EU & EEA Residents)">
         <p>If you are in the EU or EEA, you have the following rights under GDPR:</p>
         <UL items={[
           'Right of Access — Request a copy of all personal data we hold about you',
@@ -197,7 +236,7 @@ export default function PrivacyPage() {
         </InfoBox>
       </Section>
 
-      <Section id="ccpa" title="8. CCPA Rights (California Residents)">
+      <Section id="ccpa" title="9. CCPA Rights (California Residents)">
         <p>If you are a California resident, you have the following rights under CCPA:</p>
         <UL items={[
           'Right to Know — Request what personal information is collected and how it is used',
@@ -213,7 +252,7 @@ export default function PrivacyPage() {
         </InfoBox>
       </Section>
 
-      <Section id="cookies" title="9. Cookies & Tracking Technologies">
+      <Section id="cookies" title="10. Cookies & Tracking Technologies">
         <p>
           When you first visit ChartGenius, you will be presented with a cookie consent banner.
           You can accept all cookies, reject non-essential cookies, or customize your preferences.
@@ -225,28 +264,28 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section id="children" title="10. Children's Privacy">
+      <Section id="children" title="11. Children's Privacy">
         <p>
           ChartGenius is not directed to children under 13. We do not knowingly collect information from children.
           If we learn that a child under 13 has provided information, we will delete it immediately.
         </p>
       </Section>
 
-      <Section id="third-party" title="11. Third-Party Links">
+      <Section id="third-party" title="12. Third-Party Links">
         <p>
           ChartGenius may link to external websites. We are not responsible for their privacy practices.
           Please review their privacy policies before providing any information.
         </p>
       </Section>
 
-      <Section id="changes" title="12. Changes to This Policy">
+      <Section id="changes" title="13. Changes to This Policy">
         <p>
           ChartGenius may update this Privacy Policy periodically. We will notify you of material changes
           via email or prominent notice on the platform. Continued use after changes indicates acceptance.
         </p>
       </Section>
 
-      <Section id="international" title="13. International Data Transfers">
+      <Section id="international" title="14. International Data Transfers">
         <p>
           If you are outside the United States, your information may be transferred to, stored in,
           and processed in the US or other countries. By using ChartGenius, you consent to such transfers.
@@ -256,7 +295,7 @@ export default function PrivacyPage() {
         </p>
       </Section>
 
-      <Section id="contact" title="14. Contact & Complaints">
+      <Section id="contact" title="15. Contact & Complaints">
         <UL items={[
           'Privacy Questions: privacy@chartgenius.io',
           'Data Protection Officer: dpo@chartgenius.io',
