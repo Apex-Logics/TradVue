@@ -1,0 +1,28 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="520" height="120" viewBox="0 0 520 120">
+ <!-- Icon -->
+ <g transform="translate(16, 12)">
+ <rect width="96" height="96" rx="16" fill="#1a1a2e" stroke="#00ff88" stroke-width="1" stroke-opacity="0.3"/>
+ <g transform="scale(0.96)">
+ <line x1="48" y1="14" x2="48" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="58" y1="14" x2="58" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="68" y1="14" x2="68" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="78" y1="14" x2="78" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="88" y1="14" x2="88" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="38" y1="22" x2="94" y2="22" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="38" y1="34" x2="94" y2="34" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="38" y1="46" x2="94" y2="46" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="38" y1="58" x2="94" y2="58" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="38" y1="70" x2="94" y2="70" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <line x1="38" y1="82" x2="94" y2="82" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
+ <path d="M 8 18 L 88 18 M 26 18 L 26 82" fill="none" stroke="#ffffff" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M 38 50 L 46 48 L 56 74 L 72 30 L 88 10" fill="none" stroke="#00ff88" stroke-width="4" stroke-linecap="round" stroke-linejoin="round"/>
+ <path d="M 82 8 L 90 8 L 90 16" fill="none" stroke="#00ff88" stroke-width="3.5" stroke-linecap="round" stroke-linejoin="round"/>
+ </g>
+ </g>
+
+ <!-- Wordmark -->
+ <text x="130" y="68" font-family="Arial Black, Arial, Helvetica, sans-serif" font-weight="900" font-size="48" fill="#ffffff" letter-spacing="-1">Trad<tspan fill="#00ff88">Vue</tspan></text>
+ 
+ <!-- Tagline -->
+ <text x="132" y="90" font-family="Courier New, monospace" font-weight="700" font-size="10" fill="#00ff88" opacity="0.6" letter-spacing="4">AI DRIVEN ALPHA</text>
+</svg>

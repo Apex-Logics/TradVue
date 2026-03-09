@@ -1834,10 +1834,10 @@ export default function Home() {
         <div className="header-left">
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
-            src="/logo-horizontal.svg"
+            src="/logo-header.svg"
             alt="TradVue"
             className="header-logo-img"
-            style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+            style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
           />
           <span className="logo-badge">BETA</span>
         </div>

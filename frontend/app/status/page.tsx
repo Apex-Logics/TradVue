@@ -205,10 +205,12 @@ export default function StatusPage() {
       }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: '10px', marginBottom: '8px' }}>
           <a href="/landing" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
-            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a9eff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-              <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
-            </svg>
-            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0, #f0f0f2)', letterSpacing: '-0.02em' }}>TradVue</span>
+            {/* eslint-disable-next-line @next/next/no-img-element */}
+            <img
+              src="/logo-header.svg"
+              alt="TradVue"
+              style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
+            />
           </a>
           <span style={{ color: 'var(--text-3, #555)', fontSize: '14px' }}>/</span>
           <span style={{ fontSize: '14px', color: 'var(--text-2, #888)' }}>Status</span>

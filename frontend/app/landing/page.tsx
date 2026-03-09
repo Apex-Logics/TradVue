@@ -377,9 +377,9 @@ export default function LandingPage() {
             <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo-horizontal.svg"
+                src="/logo-header.svg"
                 alt="TradVue"
-                style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
+                style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
               />
               <span style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
@@ -457,7 +457,7 @@ export default function LandingPage() {
             <div style={{ marginBottom: '32px', display: 'flex', justifyContent: 'center' }}>
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
-                src="/logo-horizontal.svg"
+                src="/logo-header.svg"
                 alt="TradVue — AI Driven Alpha"
                 style={{
                   height: 'clamp(100px, 18vw, 160px)',

@@ -975,7 +975,7 @@ export default function PortfolioPage() {
         </Link>
         <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-horizontal.svg" alt="TradVue" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
+        <img src="/logo-header.svg" alt="TradVue" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.05em' }}>PORTFOLIO</span>
         {isLoggedIn && <span style={{ fontSize: 10, color: 'var(--green)', background: 'var(--green-dim)', padding: '2px 8px', borderRadius: 10 }}>☁ Cloud Sync</span>}
         {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <Link href="/login" style={{ color: 'var(--accent)' }}>Sign in to save</Link></span>}
