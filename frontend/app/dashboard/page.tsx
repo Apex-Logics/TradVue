@@ -1,14 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef, memo } from 'react'
+import { useState, useCallback, memo } from 'react'
 import Link from 'next/link'
-import {
-  IconSettings, IconChart, IconCalendar, IconClock, IconCheck,
-  IconClose, IconSearch, IconAlert, IconActivity, IconLock,
-  IconBarChart, IconPieChart, IconGrid, IconBriefcase, IconFlag,
-  IconZap, IconRefresh, IconBell, IconEye, IconArrowRight,
-  IconChevronDown, IconTrendingUp,
-} from '../components/Icons'
+import { IconClose, IconChevronDown } from '../components/Icons'
 import { useAuth } from '../context/AuthContext'
 import { useDashboardData, DEFAULT_TASKS, DEFAULT_ACTIVITY, DEFAULT_COMPANIES, DEFAULT_SETTINGS } from '../hooks/useDashboardData'
 import type { Task, ActivityItem, Company, DashboardSettings, TaskStatus, Priority, AgentName, AgentStatus, Notification } from '../lib/dashboardApi'

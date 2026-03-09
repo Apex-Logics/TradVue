@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback, useRef } from 'react'
+import { useState, useEffect, useCallback } from 'react'
 import Tooltip from '../components/Tooltip'
 import { ToolIcon, IconArrowLeft, IconTool } from '../components/Icons'
 

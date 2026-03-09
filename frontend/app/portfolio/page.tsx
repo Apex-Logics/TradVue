@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { IconArrowLeft, IconBriefcase, IconRefresh, IconAlert } from '../components/Icons'
+import { IconArrowLeft, IconAlert } from '../components/Icons'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
 
