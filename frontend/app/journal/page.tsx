@@ -1,0 +1,2157 @@
+'use client'
+
+import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import Link from 'next/link'
+import Tooltip from '../components/Tooltip'
+
+// ─── Types ────────────────────────────────────────────────────────────────────
+
+type AssetClass = 'Stock' | 'Option' | 'Futures' | 'Forex' | 'Crypto'
+type Direction = 'Long' | 'Short'
+
+interface OptionData {
+  strike: string
+  expiry: string
+  premium: string
+  contracts: string
+}
+
+interface ForexData {
+  lotSize: string
+  pips: string
+}
+
+interface Trade {
+  id: string
+  date: string
+  time: string
+  symbol: string
+  assetClass: AssetClass
+  direction: Direction
+  entryPrice: number
+  exitPrice: number
+  positionSize: number
+  stopLoss: number
+  takeProfit: number
+  commissions: number
+  pnl: number
+  rMultiple: number
+  pctGainLoss: number
+  holdMinutes: number
+  setupTag: string
+  mistakeTag: string
+  rating: number   // 1-5
+  notes: string
+  screenshot: string  // base64
+  optionData?: OptionData
+  forexData?: ForexData
+}
+
+interface Note {
+  id: string
+  title: string
+  content: string
+  template: string
+  createdAt: string
+  updatedAt: string
+}
+
+// ─── Constants ────────────────────────────────────────────────────────────────
+
+const SETUP_TAGS = [
+  'Breakout', 'Pullback', 'Reversal', 'Trend Follow', 'Gap Fill',
+  'VWAP Bounce', 'Support/Resistance', 'Momentum', 'Earnings Play',
+  'Scalp', 'Swing', 'News Catalyst', 'Technical Pattern', 'Custom'
+]
+
+const MISTAKE_TAGS = [
+  'None', 'FOMO', 'Oversize', 'Early Exit', 'Late Entry', 'Revenge Trade',
+  'No Stop Loss', 'Chasing', 'Held Too Long', 'Ignored Signal',
+  'Poor Risk/Reward', 'Overtrade', 'Custom'
+]
+
+const NOTE_TEMPLATES = {
+  'Daily Trading Plan': `# Daily Trading Plan — {{date}}
+
+## 📊 Market Outlook
+- Overall market bias: 
+- Key indices: SPY, QQQ, DIA levels to watch:
+- VIX level / volatility expectation:
+
+## 👀 Watchlist (Top 3-5)
+1. {{symbol}} — Setup: | Key level: | Entry trigger:
+2. 
+3. 
+
+## 🎯 Key Levels Today
+- Support: 
+- Resistance: 
+- Gap levels: 
+
+## ⚠️ Risk Limits
+- Max loss today (daily stop): $
+- Max trades per session: 
+- Max size per trade: 
+
+## 📝 Pre-Market Notes
+`,
+  'Weekly Recap': `# Weekly Recap — Week of {{date}}
+
+## 📈 Stats This Week
+- Total trades: 
+- Win rate: 
+- Gross P&L: 
+- Best trade: 
+- Worst trade: 
+
+## ✅ What Worked
+1. 
+2. 
+3. 
+
+## ❌ What Didn't Work
+1. 
+2. 
+3. 
+
+## 💡 Lessons Learned
+1. 
+2. 
+
+## 🎯 Goals for Next Week
+1. 
+2. 
+3. 
+`,
+  'Strategy Playbook': `# Strategy Playbook — {{name}}
+
+## 📋 Setup Name
+
+
+## 🎯 Entry Rules
+1. 
+2. 
+3. 
+
+## 🚪 Exit Rules
+- Take profit target: 
+- Stop loss: 
+- Time-based exit: 
+
+## ⚠️ Risk Rules
+- Max position size: 
+- Risk per trade: %
+- Max trades with this setup per day: 
+
+## 📊 Historical Performance
+- Win rate: %
+- Avg R-Multiple: 
+- Best market conditions: 
+
+## 📝 Notes & Tips
+`
+}
+
+const ASSET_CLASSES: AssetClass[] = ['Stock', 'Option', 'Futures', 'Forex', 'Crypto']
+
+// ─── Storage ──────────────────────────────────────────────────────────────────
+
+const TRADES_KEY = 'cg_journal_trades'
+const NOTES_KEY  = 'cg_journal_notes'
+
+function loadTrades(): Trade[] {
+  try {
+    const raw = localStorage.getItem(TRADES_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveTrades(trades: Trade[]) {
+  localStorage.setItem(TRADES_KEY, JSON.stringify(trades))
+}
+
+function loadNotes(): Note[] {
+  try {
+    const raw = localStorage.getItem(NOTES_KEY)
+    return raw ? JSON.parse(raw) : []
+  } catch { return [] }
+}
+
+function saveNotes(notes: Note[]) {
+  localStorage.setItem(NOTES_KEY, JSON.stringify(notes))
+}
+
+function uid() {
+  return Math.random().toString(36).slice(2) + Date.now().toString(36)
+}
+
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function fmt2(n: number) { return n.toFixed(2) }
+function fmtDollar(n: number) { return (n >= 0 ? '+$' : '-$') + Math.abs(n).toFixed(2) }
+function fmtPct(n: number) { return (n >= 0 ? '+' : '') + n.toFixed(2) + '%' }
+function fmtR(n: number) { return (n >= 0 ? '+' : '') + n.toFixed(2) + 'R' }
+
+function calcPnl(t: Partial<Trade>): number {
+  if (!t.entryPrice || !t.exitPrice || !t.positionSize) return 0
+  const raw = t.direction === 'Short'
+    ? (t.entryPrice - t.exitPrice) * t.positionSize
+    : (t.exitPrice - t.entryPrice) * t.positionSize
+  return raw - (t.commissions || 0)
+}
+
+function calcRMultiple(t: Partial<Trade>): number {
+  if (!t.entryPrice || !t.exitPrice || !t.stopLoss || !t.positionSize) return 0
+  const riskPerUnit = Math.abs(t.entryPrice - t.stopLoss)
+  if (riskPerUnit === 0) return 0
+  const rewardPerUnit = t.direction === 'Short'
+    ? t.entryPrice - t.exitPrice
+    : t.exitPrice - t.entryPrice
+  return rewardPerUnit / riskPerUnit
+}
+
+function calcPct(t: Partial<Trade>): number {
+  if (!t.entryPrice || !t.exitPrice) return 0
+  const pct = t.direction === 'Short'
+    ? (t.entryPrice - t.exitPrice) / t.entryPrice * 100
+    : (t.exitPrice - t.entryPrice) / t.entryPrice * 100
+  return pct
+}
+
+// ─── Design tokens ────────────────────────────────────────────────────────────
+
+const GREEN = '#10b981'
+const RED   = '#ef4444'
+const BLUE  = '#6366f1'
+const YELLOW = '#f59e0b'
+
+// ─── Reusable UI ─────────────────────────────────────────────────────────────
+
+function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
+  return (
+    <div style={{
+      background: 'var(--bg-2)',
+      border: '1px solid var(--border)',
+      borderRadius: 12,
+      padding: 20,
+      ...style,
+    }}>
+      {children}
+    </div>
+  )
+}
+
+function SectionHeader({ title, sub }: { title: string; sub?: string }) {
+  return (
+    <div style={{ marginBottom: 20 }}>
+      <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-0)' }}>{title}</h2>
+      {sub && <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{sub}</p>}
+    </div>
+  )
+}
+
+function KpiCard({ label, value, sub, color, tooltip, icon }: {
+  label: string; value: string; sub?: string; color?: string
+  tooltip: string; icon: string
+}) {
+  return (
+    <div style={{
+      background: 'var(--bg-2)',
+      border: '1px solid var(--border)',
+      borderRadius: 12,
+      padding: '16px 20px',
+      display: 'flex',
+      flexDirection: 'column',
+      gap: 6,
+      minWidth: 140,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        <span>{icon}</span>
+        <span>{label}</span>
+        <Tooltip text={tooltip} position="bottom" />
+      </div>
+      <div style={{ fontSize: 26, fontWeight: 800, color: color || 'var(--text-0)', fontFamily: 'var(--mono)' }}>{value}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{sub}</div>}
+    </div>
+  )
+}
+
+function FieldLabel({ label, tooltip }: { label: string; tooltip?: string }) {
+  return (
+    <label style={{
+      display: 'flex', alignItems: 'center', gap: 4,
+      fontSize: 11, fontWeight: 600, color: 'var(--text-2)',
+      marginBottom: 4, letterSpacing: '0.06em', textTransform: 'uppercase',
+    }}>
+      {label}
+      {tooltip && <Tooltip text={tooltip} position="right" />}
+    </label>
+  )
+}
+
+const inputSx: React.CSSProperties = {
+  width: '100%', boxSizing: 'border-box',
+  background: 'var(--bg-1)', border: '1px solid var(--border)',
+  borderRadius: 6, padding: '8px 10px',
+  color: 'var(--text-0)', fontSize: 13, fontFamily: 'var(--mono)',
+  outline: 'none',
+}
+
+// ─── Analytics helpers ────────────────────────────────────────────────────────
+
+function computeStats(trades: Trade[]) {
+  if (trades.length === 0) return null
+  const wins = trades.filter(t => t.pnl > 0)
+  const losses = trades.filter(t => t.pnl <= 0)
+  const totalPnl = trades.reduce((s, t) => s + t.pnl, 0)
+  const grossWins = wins.reduce((s, t) => s + t.pnl, 0)
+  const grossLosses = Math.abs(losses.reduce((s, t) => s + t.pnl, 0))
+  const profitFactor = grossLosses === 0 ? Infinity : grossWins / grossLosses
+  const winRate = wins.length / trades.length * 100
+  const avgWin = wins.length ? grossWins / wins.length : 0
+  const avgLoss = losses.length ? grossLosses / losses.length : 0
+  const expectancy = (winRate / 100) * avgWin - (1 - winRate / 100) * avgLoss
+  const avgR = trades.reduce((s, t) => s + t.rMultiple, 0) / trades.length
+
+  // Daily P&L
+  const byDay: Record<string, number> = {}
+  trades.forEach(t => {
+    byDay[t.date] = (byDay[t.date] || 0) + t.pnl
+  })
+  const dayPnls = Object.values(byDay)
+  const bestDay = Math.max(...dayPnls)
+  const worstDay = Math.min(...dayPnls)
+
+  // Streak
+  const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date))
+  let curStreak = 0, longestWin = 0, longestLoss = 0, curWin = 0, curLoss = 0
+  sorted.forEach(t => {
+    if (t.pnl > 0) { curWin++; curLoss = 0; longestWin = Math.max(longestWin, curWin) }
+    else            { curLoss++; curWin = 0; longestLoss = Math.max(longestLoss, curLoss) }
+  })
+  const last = sorted[sorted.length - 1]
+  curStreak = last?.pnl > 0 ? curWin : -curLoss
+
+  return {
+    totalTrades: trades.length,
+    wins: wins.length,
+    losses: losses.length,
+    winRate,
+    totalPnl,
+    grossWins,
+    grossLosses,
+    profitFactor,
+    avgWin,
+    avgLoss,
+    expectancy,
+    avgR,
+    bestDay,
+    worstDay,
+    byDay,
+    curStreak,
+    longestWin,
+    longestLoss,
+  }
+}
+
+// ─── SVG Charts ───────────────────────────────────────────────────────────────
+
+function CumulativePnlChart({ trades }: { trades: Trade[] }) {
+  const sorted = useMemo(() => [...trades].sort((a, b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time)), [trades])
+  const points = useMemo(() => {
+    let cum = 0
+    return sorted.map(t => { cum += t.pnl; return cum })
+  }, [sorted])
+
+  if (points.length < 2) return (
+    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-2)', fontSize: 13 }}>
+      Add at least 2 trades to see your equity curve 📈
+    </div>
+  )
+
+  const W = 500, H = 140
+  const min = Math.min(0, ...points), max = Math.max(0, ...points)
+  const range = max - min || 1
+  const xs = points.map((_, i) => (i / (points.length - 1)) * W)
+  const ys = points.map(p => H - ((p - min) / range) * H)
+  const zeroY = H - ((0 - min) / range) * H
+
+  const path = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ')
+  const area = `${path} L${W},${H} L0,${H} Z`
+  const lastY = ys[ys.length - 1]
+  const lastPnl = points[points.length - 1]
+  const color = lastPnl >= 0 ? GREEN : RED
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 20}`} style={{ width: '100%', maxHeight: 160 }}>
+      {/* Zero line */}
+      <line x1={0} y1={zeroY} x2={W} y2={zeroY} stroke="rgba(255,255,255,0.1)" strokeWidth={1} strokeDasharray="4 4" />
+      {/* Area fill */}
+      <defs>
+        <linearGradient id="pnlGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={color} stopOpacity={0.3} />
+          <stop offset="100%" stopColor={color} stopOpacity={0.01} />
+        </linearGradient>
+      </defs>
+      <path d={area} fill="url(#pnlGrad)" />
+      <path d={path} fill="none" stroke={color} strokeWidth={2} strokeLinejoin="round" />
+      {/* Last value */}
+      <circle cx={xs[xs.length - 1]} cy={lastY} r={4} fill={color} />
+      <text x={W - 4} y={lastY - 8} textAnchor="end" fill={color} fontSize={10} fontFamily="var(--mono)">
+        {fmtDollar(lastPnl)}
+      </text>
+    </svg>
+  )
+}
+
+function DailyPnlBar({ trades }: { trades: Trade[] }) {
+  const byDay = useMemo(() => {
+    const map: Record<string, number> = {}
+    trades.forEach(t => { map[t.date] = (map[t.date] || 0) + t.pnl })
+    return Object.entries(map).sort((a, b) => a[0].localeCompare(b[0])).slice(-20)
+  }, [trades])
+
+  if (byDay.length === 0) return (
+    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-2)', fontSize: 13 }}>No data yet</div>
+  )
+
+  const W = 500, H = 100
+  const vals = byDay.map(d => d[1])
+  const max = Math.max(...vals.map(Math.abs), 1)
+  const bw = W / byDay.length * 0.7
+  const gap = W / byDay.length * 0.3
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H + 20}`} style={{ width: '100%', maxHeight: 130 }}>
+      <line x1={0} y1={H / 2} x2={W} y2={H / 2} stroke="rgba(255,255,255,0.1)" strokeWidth={1} />
+      {byDay.map(([date, pnl], i) => {
+        const x = i * (W / byDay.length) + gap / 2
+        const barH = (Math.abs(pnl) / max) * (H / 2 - 4)
+        const y = pnl >= 0 ? H / 2 - barH : H / 2
+        return (
+          <g key={date}>
+            <rect x={x} y={y} width={bw} height={barH} fill={pnl >= 0 ? GREEN : RED} rx={2} opacity={0.85} />
+          </g>
+        )
+      })}
+    </svg>
+  )
+}
+
+function WinRatePie({ wins, total }: { wins: number; total: number }) {
+  if (total === 0) return <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-2)', fontSize: 13 }}>No trades yet</div>
+  const pct = wins / total
+  const r = 44, cx = 60, cy = 60
+  const angle = pct * 2 * Math.PI
+  const x = cx + r * Math.sin(angle)
+  const y = cy - r * Math.cos(angle)
+  const large = pct > 0.5 ? 1 : 0
+  const slice = `M ${cx} ${cy} L ${cx} ${cy - r} A ${r} ${r} 0 ${large} 1 ${x} ${y} Z`
+
+  return (
+    <svg viewBox="0 0 120 120" style={{ width: 120, height: 120 }}>
+      <circle cx={cx} cy={cy} r={r} fill={RED} opacity={0.7} />
+      {pct > 0 && <path d={slice} fill={GREEN} opacity={0.9} />}
+      <circle cx={cx} cy={cy} r={28} fill="var(--bg-2)" />
+      <text x={cx} y={cy - 6} textAnchor="middle" fill="var(--text-0)" fontSize={13} fontWeight={700}>
+        {(pct * 100).toFixed(0)}%
+      </text>
+      <text x={cx} y={cy + 8} textAnchor="middle" fill="var(--text-2)" fontSize={9}>Win Rate</text>
+    </svg>
+  )
+}
+
+function BarChart({ data, title, formatVal }: {
+  data: { label: string; value: number }[]
+  title: string
+  formatVal?: (n: number) => string
+}) {
+  if (data.length === 0) return <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-2)', fontSize: 12 }}>No data</div>
+  const max = Math.max(...data.map(d => Math.abs(d.value)), 1)
+  return (
+    <div>
+      <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{title}</div>
+      {data.map(d => (
+        <div key={d.label} style={{ marginBottom: 8 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, color: 'var(--text-2)', marginBottom: 2 }}>
+            <span>{d.label}</span>
+            <span style={{ color: d.value >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>
+              {formatVal ? formatVal(d.value) : fmtDollar(d.value)}
+            </span>
+          </div>
+          <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 8, overflow: 'hidden' }}>
+            <div style={{
+              height: '100%',
+              width: `${(Math.abs(d.value) / max) * 100}%`,
+              background: d.value >= 0 ? GREEN : RED,
+              borderRadius: 4,
+              transition: 'width 0.3s',
+            }} />
+          </div>
+        </div>
+      ))}
+    </div>
+  )
+}
+
+function DrawdownChart({ trades }: { trades: Trade[] }) {
+  const { equity, drawdown } = useMemo(() => {
+    const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date))
+    let cum = 0, peak = 0
+    const equity: number[] = []
+    const drawdown: number[] = []
+    sorted.forEach(t => {
+      cum += t.pnl
+      equity.push(cum)
+      if (cum > peak) peak = cum
+      drawdown.push(peak > 0 ? ((cum - peak) / peak) * 100 : 0)
+    })
+    return { equity, drawdown }
+  }, [trades])
+
+  if (equity.length < 2) return (
+    <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-2)', fontSize: 13 }}>
+      Add more trades to see drawdown analysis
+    </div>
+  )
+
+  const W = 500, H = 120
+  const minEq = Math.min(...equity), maxEq = Math.max(...equity, 1)
+  const xs = equity.map((_, i) => (i / (equity.length - 1)) * W)
+  const eqYs = equity.map(v => H * 0.6 - ((v - minEq) / (maxEq - minEq + 1)) * (H * 0.55))
+  const ddMin = Math.min(...drawdown)
+  const ddYs = drawdown.map(v => H * 0.65 + ((v - ddMin) / (Math.abs(ddMin) + 1)) * (H * 0.3))
+
+  const eqPath = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${eqYs[i]}`).join(' ')
+  const ddPath = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ddYs[i]}`).join(' ')
+  const ddArea = `${ddPath} L${W},${H} L0,${H} Z`
+
+  return (
+    <svg viewBox={`0 0 ${W} ${H}`} style={{ width: '100%', maxHeight: 140 }}>
+      <defs>
+        <linearGradient id="ddGrad" x1="0" y1="0" x2="0" y2="1">
+          <stop offset="0%" stopColor={RED} stopOpacity={0.4} />
+          <stop offset="100%" stopColor={RED} stopOpacity={0.05} />
+        </linearGradient>
+      </defs>
+      <path d={ddArea} fill="url(#ddGrad)" />
+      <path d={ddPath} fill="none" stroke={RED} strokeWidth={1} strokeOpacity={0.6} />
+      <path d={eqPath} fill="none" stroke={GREEN} strokeWidth={2} strokeLinejoin="round" />
+      <text x={4} y={12} fill={GREEN} fontSize={9}>Equity</text>
+      <text x={4} y={H - 4} fill={RED} fontSize={9} opacity={0.8}>Drawdown %</text>
+    </svg>
+  )
+}
+
+// ─── Tab 1: Dashboard ─────────────────────────────────────────────────────────
+
+function TabDashboard({ trades }: { trades: Trade[] }) {
+  const stats = useMemo(() => computeStats(trades), [trades])
+
+  const byAsset = useMemo(() => {
+    const map: Record<string, number> = {}
+    trades.forEach(t => { map[t.assetClass] = (map[t.assetClass] || 0) + t.pnl })
+    return Object.entries(map).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value)
+  }, [trades])
+
+  const bySetup = useMemo(() => {
+    const map: Record<string, number> = {}
+    trades.forEach(t => { if (t.setupTag) map[t.setupTag] = (map[t.setupTag] || 0) + t.pnl })
+    return Object.entries(map).map(([label, value]) => ({ label, value })).sort((a, b) => b.value - a.value).slice(0, 8)
+  }, [trades])
+
+  if (trades.length === 0) return (
+    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
+      <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>No trades yet</h3>
+      <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Head to the Trade Log tab to log your first trade!</p>
+    </div>
+  )
+
+  return (
+    <div>
+      <SectionHeader
+        title="Dashboard"
+        sub="Your trading performance at a glance. All metrics update automatically as you log trades."
+      />
+
+      {/* KPI Cards */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
+        <KpiCard icon="📊" label="Total Trades" value={String(stats!.totalTrades)} tooltip="Total number of trades you have logged." />
+        <KpiCard icon="🎯" label="Win Rate" value={`${stats!.winRate.toFixed(1)}%`}
+          color={stats!.winRate >= 50 ? GREEN : RED}
+          sub={`${stats!.wins}W / ${stats!.losses}L`}
+          tooltip="Percentage of trades that were profitable. Most profitable traders maintain 40-60% win rate — it's about how much you win vs lose, not just how often." />
+        <KpiCard icon="💰" label="Total P&L" value={fmtDollar(stats!.totalPnl)}
+          color={stats!.totalPnl >= 0 ? GREEN : RED}
+          tooltip="Your total net profit or loss across all logged trades, after commissions." />
+        <KpiCard icon="📈" label="Avg Win" value={`$${stats!.avgWin.toFixed(2)}`}
+          color={GREEN}
+          tooltip="Average dollar amount you make on winning trades. Higher is better — aim to make at least 2x your average loss." />
+        <KpiCard icon="📉" label="Avg Loss" value={`$${stats!.avgLoss.toFixed(2)}`}
+          color={RED}
+          tooltip="Average dollar amount you lose on losing trades. Keep this small relative to your avg win." />
+        <KpiCard icon="⚡" label="Profit Factor" value={stats!.profitFactor === Infinity ? '∞' : fmt2(stats!.profitFactor)}
+          color={stats!.profitFactor >= 1.5 ? GREEN : stats!.profitFactor >= 1 ? YELLOW : RED}
+          tooltip="Gross profits ÷ gross losses. Above 1.0 = profitable overall. Above 1.5 = good. Above 2.0 = excellent. Below 1.0 = losing money." />
+        <KpiCard icon="🔢" label="Avg R-Multiple" value={fmtR(stats!.avgR)}
+          color={stats!.avgR >= 0 ? GREEN : RED}
+          tooltip="Reward achieved relative to risk taken on average. 2R means you made 2x your risk. Aim for 1R+ average to be consistently profitable." />
+        <KpiCard icon="🧮" label="Expectancy" value={fmtDollar(stats!.expectancy)}
+          color={stats!.expectancy >= 0 ? GREEN : RED}
+          tooltip="Average $ you expect per trade based on your win rate and avg win/loss. Positive = you have a statistical edge. Negative = losing strategy." />
+        <KpiCard icon="🌟" label="Best Day" value={fmtDollar(stats!.bestDay)}
+          color={GREEN}
+          tooltip="Your single best day of trading P&L (all trades on that day combined)." />
+        <KpiCard icon="💔" label="Worst Day" value={fmtDollar(stats!.worstDay)}
+          color={RED}
+          tooltip="Your single worst day of trading P&L. Use this to set daily stop-loss limits." />
+        <KpiCard icon="🔥" label="Streak"
+          value={stats!.curStreak > 0 ? `${stats!.curStreak}W` : `${Math.abs(stats!.curStreak)}L`}
+          color={stats!.curStreak > 0 ? GREEN : RED}
+          sub={`Best: ${stats!.longestWin}W / ${stats!.longestLoss}L`}
+          tooltip="Your current win or loss streak. Best win streak and best loss streak ever recorded." />
+      </div>
+
+      {/* Charts Row 1 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📈 Cumulative P&L Curve</span>
+            <Tooltip text="Shows how your total profit/loss has grown (or shrunk) over time. An upward-sloping curve means you're consistently growing your account." position="right" />
+          </div>
+          <CumulativePnlChart trades={trades} />
+        </Card>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📊 Daily P&L (Last 20 Days)</span>
+            <Tooltip text="Green bars = profitable days, Red bars = losing days. Taller bars = bigger gains/losses. Aim for more green than red!" position="right" />
+          </div>
+          <DailyPnlBar trades={trades} />
+        </Card>
+      </div>
+
+      {/* Charts Row 2 */}
+      <div style={{ display: 'grid', gridTemplateColumns: '120px 1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center' }}>
+          <WinRatePie wins={stats!.wins} total={stats!.totalTrades} />
+          <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 10, color: 'var(--text-2)' }}>
+            <span style={{ color: GREEN }}>● Wins</span>
+            <span style={{ color: RED }}>● Losses</span>
+          </div>
+        </Card>
+        <Card>
+          <BarChart data={byAsset} title="P&L by Asset Class" />
+        </Card>
+        <Card>
+          <BarChart data={bySetup} title="P&L by Setup Tag" />
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab 2: Trade Log ─────────────────────────────────────────────────────────
+
+const EMPTY_FORM = {
+  date: new Date().toISOString().slice(0, 10),
+  time: new Date().toTimeString().slice(0, 5),
+  symbol: '',
+  assetClass: 'Stock' as AssetClass,
+  direction: 'Long' as Direction,
+  entryPrice: '',
+  exitPrice: '',
+  positionSize: '',
+  stopLoss: '',
+  takeProfit: '',
+  commissions: '0',
+  setupTag: '',
+  mistakeTag: 'None',
+  rating: 3,
+  notes: '',
+  screenshot: '',
+  // Option fields
+  strike: '', expiry: '', premium: '', contracts: '',
+  // Forex fields
+  lotSize: '', pips: '',
+}
+
+function StarRating({ value, onChange }: { value: number; onChange: (v: number) => void }) {
+  return (
+    <div style={{ display: 'flex', gap: 4 }}>
+      {[1, 2, 3, 4, 5].map(n => (
+        <button
+          key={n}
+          onClick={() => onChange(n)}
+          style={{
+            background: 'none', border: 'none', cursor: 'pointer',
+            fontSize: 22, color: n <= value ? YELLOW : 'var(--border)',
+            padding: 0, lineHeight: 1,
+          }}
+        >★</button>
+      ))}
+    </div>
+  )
+}
+
+function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Trade[]) => void }) {
+  const [showForm, setShowForm] = useState(false)
+  const [form, setForm] = useState({ ...EMPTY_FORM })
+  const [expandedId, setExpandedId] = useState<string | null>(null)
+  const [filterAsset, setFilterAsset] = useState('All')
+  const [filterDir, setFilterDir] = useState('All')
+  const [filterWL, setFilterWL] = useState('All')
+  const [filterSymbol, setFilterSymbol] = useState('')
+  const [filterSetup, setFilterSetup] = useState('All')
+  const [sortCol, setSortCol] = useState<string>('date')
+  const [sortAsc, setSortAsc] = useState(false)
+
+  const set = (k: string) => (v: string | number) => setForm(f => ({ ...f, [k]: v }))
+
+  // Auto-calc preview
+  const preview = useMemo(() => {
+    const partial: Partial<Trade> = {
+      direction: form.direction,
+      entryPrice: parseFloat(form.entryPrice) || 0,
+      exitPrice: parseFloat(form.exitPrice) || 0,
+      positionSize: parseFloat(form.positionSize) || 0,
+      stopLoss: parseFloat(form.stopLoss) || 0,
+      commissions: parseFloat(form.commissions) || 0,
+    }
+    return {
+      pnl: calcPnl(partial),
+      rMultiple: calcRMultiple(partial),
+      pct: calcPct(partial),
+    }
+  }, [form])
+
+  const handleScreenshot = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const file = e.target.files?.[0]
+    if (!file) return
+    const reader = new FileReader()
+    reader.onload = () => set('screenshot')(reader.result as string)
+    reader.readAsDataURL(file)
+  }
+
+  const submitTrade = () => {
+    const entry = parseFloat(form.entryPrice)
+    const exit  = parseFloat(form.exitPrice)
+    const size  = parseFloat(form.positionSize)
+    if (!form.symbol || !entry || !exit || !size) {
+      alert('Please fill in Symbol, Entry Price, Exit Price, and Position Size.')
+      return
+    }
+    const partial: Partial<Trade> = {
+      direction: form.direction,
+      entryPrice: entry, exitPrice: exit, positionSize: size,
+      stopLoss: parseFloat(form.stopLoss) || 0,
+      commissions: parseFloat(form.commissions) || 0,
+    }
+    const trade: Trade = {
+      id: uid(),
+      date: form.date,
+      time: form.time,
+      symbol: form.symbol.toUpperCase(),
+      assetClass: form.assetClass,
+      direction: form.direction,
+      entryPrice: entry,
+      exitPrice: exit,
+      positionSize: size,
+      stopLoss: parseFloat(form.stopLoss) || 0,
+      takeProfit: parseFloat(form.takeProfit) || 0,
+      commissions: parseFloat(form.commissions) || 0,
+      pnl: calcPnl(partial),
+      rMultiple: calcRMultiple(partial),
+      pctGainLoss: calcPct(partial),
+      holdMinutes: 0,
+      setupTag: form.setupTag,
+      mistakeTag: form.mistakeTag,
+      rating: form.rating,
+      notes: form.notes,
+      screenshot: form.screenshot,
+      ...(form.assetClass === 'Option' ? {
+        optionData: { strike: form.strike, expiry: form.expiry, premium: form.premium, contracts: form.contracts }
+      } : {}),
+      ...(form.assetClass === 'Forex' ? {
+        forexData: { lotSize: form.lotSize, pips: form.pips }
+      } : {}),
+    }
+    const updated = [trade, ...trades]
+    setTrades(updated)
+    saveTrades(updated)
+    setForm({ ...EMPTY_FORM, date: form.date })
+    setShowForm(false)
+  }
+
+  const deleteTrade = (id: string) => {
+    if (!confirm('Delete this trade?')) return
+    const updated = trades.filter(t => t.id !== id)
+    setTrades(updated)
+    saveTrades(updated)
+  }
+
+  // Filter + sort
+  const filtered = useMemo(() => {
+    let list = trades
+    if (filterAsset !== 'All') list = list.filter(t => t.assetClass === filterAsset)
+    if (filterDir !== 'All') list = list.filter(t => t.direction === filterDir)
+    if (filterWL === 'Win') list = list.filter(t => t.pnl > 0)
+    if (filterWL === 'Loss') list = list.filter(t => t.pnl <= 0)
+    if (filterSymbol) list = list.filter(t => t.symbol.includes(filterSymbol.toUpperCase()))
+    if (filterSetup !== 'All') list = list.filter(t => t.setupTag === filterSetup)
+    const dir = sortAsc ? 1 : -1
+    return [...list].sort((a, b) => {
+      if (sortCol === 'date') return dir * (a.date + a.time).localeCompare(b.date + b.time)
+      if (sortCol === 'pnl') return dir * (a.pnl - b.pnl)
+      if (sortCol === 'rMultiple') return dir * (a.rMultiple - b.rMultiple)
+      if (sortCol === 'symbol') return dir * a.symbol.localeCompare(b.symbol)
+      return 0
+    })
+  }, [trades, filterAsset, filterDir, filterWL, filterSymbol, filterSetup, sortCol, sortAsc])
+
+  const toggleSort = (col: string) => {
+    if (sortCol === col) setSortAsc(a => !a)
+    else { setSortCol(col); setSortAsc(false) }
+  }
+
+  const thStyle: React.CSSProperties = {
+    padding: '8px 12px', fontSize: 11, fontWeight: 600,
+    color: 'var(--text-2)', textAlign: 'left', cursor: 'pointer',
+    textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--border)',
+    userSelect: 'none', whiteSpace: 'nowrap',
+  }
+
+  return (
+    <div>
+      <SectionHeader
+        title="Trade Log"
+        sub="Record every trade you make — even the bad ones! Honest logging is how you find patterns and improve."
+      />
+
+      {/* Action bar */}
+      <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
+        <button
+          onClick={() => setShowForm(f => !f)}
+          style={{
+            background: BLUE, border: 'none', borderRadius: 8, padding: '10px 20px',
+            color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+          }}
+        >
+          {showForm ? '✕ Cancel' : '+ Log Trade'}
+        </button>
+        <div style={{ fontSize: 12, color: 'var(--text-2)', alignSelf: 'center' }}>
+          {filtered.length} of {trades.length} trades shown
+        </div>
+      </div>
+
+      {/* Add Trade Form */}
+      {showForm && (
+        <Card style={{ marginBottom: 24, borderColor: BLUE + '44' }}>
+          <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-0)', marginBottom: 16 }}>
+            📝 Log a New Trade
+          </div>
+
+          {/* Row 1: Core fields */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
+            <div>
+              <FieldLabel label="Date" tooltip="The date you entered this trade." />
+              <input type="date" value={form.date} onChange={e => set('date')(e.target.value)} style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Time" tooltip="The time you entered the trade. Helps identify best/worst trading hours." />
+              <input type="time" value={form.time} onChange={e => set('time')(e.target.value)} style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Symbol" tooltip="The ticker symbol — e.g. AAPL, TSLA, EUR/USD, BTC. Use the exchange symbol." />
+              <input type="text" value={form.symbol} onChange={e => set('symbol')(e.target.value.toUpperCase())} placeholder="e.g. AAPL" style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Asset Class" tooltip="Type of instrument. Each has different characteristics — stocks trade shares, options trade contracts, forex trades lots." />
+              <select value={form.assetClass} onChange={e => set('assetClass')(e.target.value)} style={inputSx}>
+                {ASSET_CLASSES.map(a => <option key={a} value={a}>{a}</option>)}
+              </select>
+            </div>
+            <div>
+              <FieldLabel label="Direction" tooltip="Long = you bought expecting price to go UP. Short = you sold/shorted expecting price to go DOWN." />
+              <select value={form.direction} onChange={e => set('direction')(e.target.value)} style={inputSx}>
+                <option value="Long">Long (Buy — betting price rises)</option>
+                <option value="Short">Short (Sell — betting price falls)</option>
+              </select>
+            </div>
+          </div>
+
+          {/* Row 2: Price fields */}
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
+            <div>
+              <FieldLabel label="Entry Price" tooltip="The price you bought/shorted at. Be exact — this is your cost basis." />
+              <input type="number" value={form.entryPrice} onChange={e => set('entryPrice')(e.target.value)} placeholder="e.g. 150.00" step="any" style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Exit Price" tooltip="The price you sold/covered at. P&L is calculated from entry to exit." />
+              <input type="number" value={form.exitPrice} onChange={e => set('exitPrice')(e.target.value)} placeholder="e.g. 157.50" step="any" style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Position Size" tooltip="Number of shares (stocks), contracts (options/futures), lots (forex), or coins (crypto). Used to calculate total P&L." />
+              <input type="number" value={form.positionSize} onChange={e => set('positionSize')(e.target.value)} placeholder="e.g. 100" step="any" style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Stop Loss" tooltip="The price where you would have exited to limit losses. Used to calculate R-Multiple — your risk on this trade." />
+              <input type="number" value={form.stopLoss} onChange={e => set('stopLoss')(e.target.value)} placeholder="e.g. 145.00" step="any" style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Take Profit" tooltip="Your original profit target. Compare to where you actually exited — helps identify if you're cutting winners short." />
+              <input type="number" value={form.takeProfit} onChange={e => set('takeProfit')(e.target.value)} placeholder="e.g. 165.00" step="any" style={inputSx} />
+            </div>
+            <div>
+              <FieldLabel label="Commissions / Fees" tooltip="Total broker commissions and fees for this round-trip (entry + exit). Deducted from your P&L automatically." />
+              <input type="number" value={form.commissions} onChange={e => set('commissions')(e.target.value)} placeholder="e.g. 1.00" step="any" style={inputSx} />
+            </div>
+          </div>
+
+          {/* Asset-specific fields */}
+          {form.assetClass === 'Option' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 12 }}>
+              <div style={{ gridColumn: '1 / -1', fontSize: 11, color: BLUE, fontWeight: 600, textTransform: 'uppercase' }}>📋 Option Details</div>
+              <div>
+                <FieldLabel label="Strike Price" tooltip="The price at which you have the right to buy (call) or sell (put). This is the key price level your option is based on." />
+                <input type="number" value={form.strike} onChange={e => set('strike')(e.target.value)} placeholder="e.g. 150.00" step="any" style={inputSx} />
+              </div>
+              <div>
+                <FieldLabel label="Expiry Date" tooltip="The date the option contract expires. After this date, the option is worthless if out of the money." />
+                <input type="date" value={form.expiry} onChange={e => set('expiry')(e.target.value)} style={inputSx} />
+              </div>
+              <div>
+                <FieldLabel label="Premium Paid" tooltip="Cost per share of the option. Since each contract = 100 shares, multiply premium × 100 × contracts for total cost." />
+                <input type="number" value={form.premium} onChange={e => set('premium')(e.target.value)} placeholder="e.g. 3.50" step="0.01" style={inputSx} />
+              </div>
+              <div>
+                <FieldLabel label="Contracts" tooltip="Number of option contracts. 1 contract controls 100 shares. Max risk = premium × 100 × contracts." />
+                <input type="number" value={form.contracts} onChange={e => set('contracts')(e.target.value)} placeholder="e.g. 2" step="1" style={inputSx} />
+              </div>
+            </div>
+          )}
+
+          {form.assetClass === 'Forex' && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 12 }}>
+              <div style={{ gridColumn: '1 / -1', fontSize: 11, color: BLUE, fontWeight: 600, textTransform: 'uppercase' }}>💱 Forex Details</div>
+              <div>
+                <FieldLabel label="Lot Size" tooltip="Standard lot = 100,000 units. Mini lot = 10,000. Micro lot = 1,000. Larger lots = more risk and reward per pip." />
+                <input type="number" value={form.lotSize} onChange={e => set('lotSize')(e.target.value)} placeholder="e.g. 0.1 (mini lot)" step="0.01" style={inputSx} />
+              </div>
+              <div>
+                <FieldLabel label="Pips Gained/Lost" tooltip="A pip is the smallest price move in forex. For EUR/USD: 1 pip = 0.0001. For USD/JPY: 1 pip = 0.01." />
+                <input type="number" value={form.pips} onChange={e => set('pips')(e.target.value)} placeholder="e.g. 35 (positive = profit)" step="0.1" style={inputSx} />
+              </div>
+            </div>
+          )}
+
+          {/* Tags & Rating */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, marginBottom: 12 }}>
+            <div>
+              <FieldLabel label="Setup Tag" tooltip="What type of trading setup was this? E.g. 'Breakout' means you entered after price broke a key level. Tracking setups helps find what works for you." />
+              <select value={form.setupTag} onChange={e => set('setupTag')(e.target.value)} style={inputSx}>
+                <option value="">— Select Setup —</option>
+                {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
+              </select>
+            </div>
+            <div>
+              <FieldLabel label="Mistake Tag" tooltip="Did you make a mistake? E.g. 'FOMO' = entered because of fear of missing out, not a real signal. Honest tagging accelerates improvement." />
+              <select value={form.mistakeTag} onChange={e => set('mistakeTag')(e.target.value)} style={inputSx}>
+                {MISTAKE_TAGS.map(m => <option key={m} value={m}>{m}</option>)}
+              </select>
+            </div>
+            <div>
+              <FieldLabel label="Rating" tooltip="How well did you execute this trade? 5 stars = followed your plan perfectly. 1 star = broke all your rules. Rate execution, not outcome." />
+              <StarRating value={form.rating} onChange={v => set('rating')(v)} />
+            </div>
+          </div>
+
+          {/* Notes */}
+          <div style={{ marginBottom: 12 }}>
+            <FieldLabel label="Trade Notes" tooltip="Write your reasoning, what you saw, what happened, and lessons learned. Future you will thank present you!" />
+            <textarea
+              value={form.notes}
+              onChange={e => set('notes')(e.target.value)}
+              placeholder="e.g. Entered AAPL breakout above $150 resistance on high volume. Stop below $145. Target $165. Thesis: earnings catalyst + sector rotation."
+              rows={3}
+              style={{ ...inputSx, resize: 'vertical', fontFamily: 'inherit' }}
+            />
+          </div>
+
+          {/* Screenshot */}
+          <div style={{ marginBottom: 16 }}>
+            <FieldLabel label="Chart Screenshot" tooltip="Upload a screenshot of the chart at the time of your trade. Visual evidence helps you review your decisions later." />
+            <input type="file" accept="image/*" onChange={handleScreenshot} style={{ fontSize: 12, color: 'var(--text-2)' }} />
+            {form.screenshot && (
+              <img src={form.screenshot} alt="screenshot" style={{ maxWidth: 200, maxHeight: 120, marginTop: 8, borderRadius: 6, border: '1px solid var(--border)' }} />
+            )}
+          </div>
+
+          {/* Auto-calc preview */}
+          <Card style={{ background: 'var(--bg-1)', marginBottom: 16, borderColor: preview.pnl >= 0 ? GREEN + '44' : RED + '44' }}>
+            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Auto-Calculated Preview</div>
+            <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-2)' }}>P&L</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: preview.pnl >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>
+                  {fmtDollar(preview.pnl)}
+                </div>
+              </div>
+              <div>
+                <div style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-2)' }}>
+                  R-Multiple
+                  <Tooltip text="R-Multiple shows your reward relative to risk. 1R = you made exactly what you risked. 2R = you made double your risk. This is the most important metric for professional traders." position="top" />
+                </div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: preview.rMultiple >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>
+                  {fmtR(preview.rMultiple)}
+                </div>
+              </div>
+              <div>
+                <div style={{ fontSize: 10, color: 'var(--text-2)' }}>% Gain/Loss</div>
+                <div style={{ fontSize: 18, fontWeight: 700, color: preview.pct >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>
+                  {fmtPct(preview.pct)}
+                </div>
+              </div>
+            </div>
+          </Card>
+
+          <button
+            onClick={submitTrade}
+            style={{
+              background: GREEN, border: 'none', borderRadius: 8, padding: '10px 28px',
+              color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+            }}
+          >
+            ✓ Save Trade
+          </button>
+        </Card>
+      )}
+
+      {/* Filters */}
+      <Card style={{ marginBottom: 16, padding: 12 }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600 }}>🔍 FILTER:</span>
+          <input
+            type="text" placeholder="Symbol..." value={filterSymbol}
+            onChange={e => setFilterSymbol(e.target.value)}
+            style={{ ...inputSx, width: 100 }}
+          />
+          <select value={filterAsset} onChange={e => setFilterAsset(e.target.value)} style={{ ...inputSx, width: 110 }}>
+            <option value="All">All Assets</option>
+            {ASSET_CLASSES.map(a => <option key={a} value={a}>{a}</option>)}
+          </select>
+          <select value={filterDir} onChange={e => setFilterDir(e.target.value)} style={{ ...inputSx, width: 100 }}>
+            <option value="All">Both Dirs</option>
+            <option value="Long">Long</option>
+            <option value="Short">Short</option>
+          </select>
+          <select value={filterWL} onChange={e => setFilterWL(e.target.value)} style={{ ...inputSx, width: 100 }}>
+            <option value="All">All</option>
+            <option value="Win">Wins only</option>
+            <option value="Loss">Losses only</option>
+          </select>
+          <select value={filterSetup} onChange={e => setFilterSetup(e.target.value)} style={{ ...inputSx, width: 130 }}>
+            <option value="All">All Setups</option>
+            {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
+          </select>
+          <button
+            onClick={() => { setFilterAsset('All'); setFilterDir('All'); setFilterWL('All'); setFilterSymbol(''); setFilterSetup('All') }}
+            style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}
+          >
+            Clear
+          </button>
+        </div>
+      </Card>
+
+      {/* Trade Table */}
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-2)', fontSize: 13 }}>
+          No trades match your filters. Try adjusting them above.
+        </div>
+      ) : (
+        <div style={{ overflowX: 'auto' }}>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr>
+                {[
+                  { key: 'date', label: 'Date' },
+                  { key: 'symbol', label: 'Symbol' },
+                  { key: 'dir', label: 'Dir' },
+                  { key: 'asset', label: 'Asset' },
+                  { key: 'entry', label: 'Entry' },
+                  { key: 'exit', label: 'Exit' },
+                  { key: 'size', label: 'Size' },
+                  { key: 'pnl', label: 'P&L' },
+                  { key: 'rMultiple', label: 'R' },
+                  { key: 'tags', label: 'Setup' },
+                  { key: 'rating', label: '⭐' },
+                  { key: 'actions', label: '' },
+                ].map(col => (
+                  <th
+                    key={col.key}
+                    style={thStyle}
+                    onClick={() => ['date', 'symbol', 'pnl', 'rMultiple'].includes(col.key) ? toggleSort(col.key) : undefined}
+                  >
+                    {col.label}
+                    {sortCol === col.key ? (sortAsc ? ' ▲' : ' ▼') : ''}
+                  </th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {filtered.map(t => (
+                <>
+                  <tr
+                    key={t.id}
+                    onClick={() => setExpandedId(expandedId === t.id ? null : t.id)}
+                    style={{
+                      background: expandedId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)',
+                      borderBottom: '1px solid var(--border)',
+                      cursor: 'pointer',
+                      transition: 'background 0.15s',
+                    }}
+                    onMouseEnter={e => (e.currentTarget.style.background = 'rgba(99,102,241,0.12)')}
+                    onMouseLeave={e => (e.currentTarget.style.background = expandedId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)')}
+                  >
+                    <td style={{ padding: '10px 12px' }}>{t.date}</td>
+                    <td style={{ padding: '10px 12px', fontWeight: 700, fontFamily: 'var(--mono)', color: BLUE }}>{t.symbol}</td>
+                    <td style={{ padding: '10px 12px', color: t.direction === 'Long' ? GREEN : RED }}>{t.direction}</td>
+                    <td style={{ padding: '10px 12px', color: 'var(--text-2)' }}>{t.assetClass}</td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>${fmt2(t.entryPrice)}</td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>${fmt2(t.exitPrice)}</td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{t.positionSize}</td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? GREEN : RED }}>
+                      {fmtDollar(t.pnl)}
+                    </td>
+                    <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: t.rMultiple >= 0 ? GREEN : RED }}>
+                      {fmtR(t.rMultiple)}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      {t.setupTag && (
+                        <span style={{ background: 'rgba(99,102,241,0.15)', color: BLUE, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
+                          {t.setupTag}
+                        </span>
+                      )}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
+                    </td>
+                    <td style={{ padding: '10px 12px' }}>
+                      <button
+                        onClick={e => { e.stopPropagation(); deleteTrade(t.id) }}
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: RED, fontSize: 14, padding: 2 }}
+                      >✕</button>
+                    </td>
+                  </tr>
+                  {expandedId === t.id && (
+                    <tr key={t.id + '-exp'}>
+                      <td colSpan={12} style={{ padding: '16px 24px', background: 'var(--bg-1)', borderBottom: '2px solid var(--border)' }}>
+                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Trade Details</div>
+                            <div style={{ fontSize: 12, lineHeight: 2 }}>
+                              <div>Stop Loss: <span style={{ fontFamily: 'var(--mono)', color: RED }}>${fmt2(t.stopLoss)}</span></div>
+                              <div>Take Profit: <span style={{ fontFamily: 'var(--mono)', color: GREEN }}>${fmt2(t.takeProfit)}</span></div>
+                              <div>Commissions: <span style={{ fontFamily: 'var(--mono)' }}>${fmt2(t.commissions)}</span></div>
+                              <div>% Gain/Loss: <span style={{ fontFamily: 'var(--mono)', color: t.pctGainLoss >= 0 ? GREEN : RED }}>{fmtPct(t.pctGainLoss)}</span></div>
+                              {t.mistakeTag && t.mistakeTag !== 'None' && (
+                                <div>Mistake: <span style={{ color: YELLOW }}>{t.mistakeTag}</span></div>
+                              )}
+                              {t.time && <div>Time: <span style={{ fontFamily: 'var(--mono)' }}>{t.time}</span></div>}
+                            </div>
+                          </div>
+                          <div>
+                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Notes</div>
+                            <div style={{ fontSize: 12, color: 'var(--text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
+                              {t.notes || <span style={{ color: 'var(--text-2)', fontStyle: 'italic' }}>No notes recorded</span>}
+                            </div>
+                          </div>
+                          <div>
+                            {t.screenshot && (
+                              <>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Chart Screenshot</div>
+                                <img src={t.screenshot} alt="trade screenshot" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 6, border: '1px solid var(--border)' }} />
+                              </>
+                            )}
+                            {t.optionData && (
+                              <>
+                                <div style={{ fontSize: 11, fontWeight: 600, color: BLUE, marginTop: t.screenshot ? 12 : 0, marginBottom: 6, textTransform: 'uppercase' }}>Option Details</div>
+                                <div style={{ fontSize: 12, lineHeight: 2 }}>
+                                  <div>Strike: ${t.optionData.strike}</div>
+                                  <div>Expiry: {t.optionData.expiry}</div>
+                                  <div>Premium: ${t.optionData.premium}</div>
+                                  <div>Contracts: {t.optionData.contracts}</div>
+                                </div>
+                              </>
+                            )}
+                          </div>
+                        </div>
+                      </td>
+                    </tr>
+                  )}
+                </>
+              ))}
+            </tbody>
+          </table>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ─── Tab 3: Calendar ──────────────────────────────────────────────────────────
+
+function TabCalendar({ trades }: { trades: Trade[] }) {
+  const today = new Date()
+  const [year, setYear] = useState(today.getFullYear())
+  const [month, setMonth] = useState(today.getMonth()) // 0-indexed
+  const [selectedDay, setSelectedDay] = useState<string | null>(null)
+
+  const byDay = useMemo(() => {
+    const map: Record<string, { pnl: number; trades: Trade[] }> = {}
+    trades.forEach(t => {
+      if (!map[t.date]) map[t.date] = { pnl: 0, trades: [] }
+      map[t.date].pnl += t.pnl
+      map[t.date].trades.push(t)
+    })
+    return map
+  }, [trades])
+
+  const daysInMonth = new Date(year, month + 1, 0).getDate()
+  const firstDow = new Date(year, month, 1).getDay()
+  const days: (number | null)[] = Array(firstDow).fill(null)
+  for (let d = 1; d <= daysInMonth; d++) days.push(d)
+
+  const maxPnl = Math.max(...Object.values(byDay).map(d => Math.abs(d.pnl)), 1)
+
+  const monthName = new Date(year, month, 1).toLocaleString('default', { month: 'long' })
+
+  // Weekly summary
+  const weeklyPnl = useMemo(() => {
+    const weeks: Record<number, number> = {}
+    trades.forEach(t => {
+      const d = new Date(t.date)
+      if (d.getFullYear() === year && d.getMonth() === month) {
+        const dayOfMonth = d.getDate()
+        const dow = (firstDow + dayOfMonth - 1) % 7
+        const week = Math.floor((firstDow + dayOfMonth - 1) / 7)
+        weeks[week] = (weeks[week] || 0) + t.pnl
+      }
+    })
+    return Object.entries(weeks).sort((a, b) => +a[0] - +b[0]).map(([w, pnl]) => ({ week: +w + 1, pnl }))
+  }, [trades, year, month, firstDow])
+
+  const monthPnl = useMemo(() =>
+    trades.filter(t => {
+      const d = new Date(t.date)
+      return d.getFullYear() === year && d.getMonth() === month
+    }).reduce((s, t) => s + t.pnl, 0),
+    [trades, year, month]
+  )
+
+  const selectedTrades = selectedDay ? (byDay[selectedDay]?.trades || []) : []
+
+  return (
+    <div>
+      <SectionHeader
+        title="Calendar"
+        sub="See your trading performance by day. Green = profitable, Red = losing. Click any day to see the trades."
+      />
+
+      {/* Month navigator */}
+      <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
+        <button onClick={() => { if (month === 0) { setMonth(11); setYear(y => y - 1) } else setMonth(m => m - 1) }}
+          style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', color: 'var(--text-0)', cursor: 'pointer', fontSize: 14 }}>
+          ‹
+        </button>
+        <span style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-0)', minWidth: 160, textAlign: 'center' }}>
+          {monthName} {year}
+        </span>
+        <button onClick={() => { if (month === 11) { setMonth(0); setYear(y => y + 1) } else setMonth(m => m + 1) }}
+          style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', color: 'var(--text-0)', cursor: 'pointer', fontSize: 14 }}>
+          ›
+        </button>
+        <div style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: monthPnl >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>
+          Month: {fmtDollar(monthPnl)}
+        </div>
+      </div>
+
+      {/* Grid */}
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4, marginBottom: 20 }}>
+        {['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat'].map(d => (
+          <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', padding: '4px 0', textTransform: 'uppercase' }}>
+            {d}
+          </div>
+        ))}
+        {days.map((d, i) => {
+          if (d === null) return <div key={`null-${i}`} />
+          const dateStr = `${year}-${String(month + 1).padStart(2, '0')}-${String(d).padStart(2, '0')}`
+          const dayData = byDay[dateStr]
+          const isToday = dateStr === today.toISOString().slice(0, 10)
+          const isSelected = selectedDay === dateStr
+
+          let bg = 'var(--bg-2)'
+          let borderColor = 'var(--border)'
+          if (dayData) {
+            const intensity = Math.min(Math.abs(dayData.pnl) / maxPnl, 1) * 0.7 + 0.15
+            bg = dayData.pnl >= 0 ? `rgba(16,185,129,${intensity})` : `rgba(239,68,68,${intensity})`
+            borderColor = dayData.pnl >= 0 ? GREEN + '66' : RED + '66'
+          }
+          if (isSelected) borderColor = BLUE
+
+          return (
+            <div
+              key={dateStr}
+              onClick={() => setSelectedDay(isSelected ? null : dateStr)}
+              style={{
+                background: bg,
+                border: `2px solid ${borderColor}`,
+                borderRadius: 8,
+                padding: '8px 4px',
+                minHeight: 60,
+                cursor: dayData ? 'pointer' : 'default',
+                display: 'flex',
+                flexDirection: 'column',
+                alignItems: 'center',
+                transition: 'border-color 0.15s',
+                boxShadow: isToday ? `0 0 0 2px ${BLUE}` : undefined,
+              }}
+            >
+              <div style={{ fontSize: 11, fontWeight: isToday ? 800 : 500, color: isToday ? BLUE : 'var(--text-0)' }}>{d}</div>
+              {dayData && (
+                <>
+                  <div style={{ fontSize: 9, color: dayData.pnl >= 0 ? '#fff' : '#fff', fontFamily: 'var(--mono)', marginTop: 2, fontWeight: 700 }}>
+                    {dayData.pnl >= 0 ? '+' : ''}{Math.round(dayData.pnl)}
+                  </div>
+                  <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.7)', marginTop: 1 }}>
+                    {dayData.trades.length}t
+                  </div>
+                </>
+              )}
+            </div>
+          )
+        })}
+      </div>
+
+      {/* Day popup */}
+      {selectedDay && selectedTrades.length > 0 && (
+        <Card style={{ marginBottom: 16, borderColor: byDay[selectedDay].pnl >= 0 ? GREEN + '44' : RED + '44' }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)' }}>
+              📅 {new Date(selectedDay + 'T12:00:00').toLocaleDateString('default', { weekday: 'long', month: 'long', day: 'numeric' })}
+            </div>
+            <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--mono)', color: byDay[selectedDay].pnl >= 0 ? GREEN : RED }}>
+              {fmtDollar(byDay[selectedDay].pnl)}
+            </div>
+          </div>
+          <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+            <thead>
+              <tr style={{ borderBottom: '1px solid var(--border)' }}>
+                {['Symbol', 'Direction', 'Entry', 'Exit', 'P&L', 'R-Mult', 'Setup'].map(h => (
+                  <th key={h} style={{ padding: '4px 8px', textAlign: 'left', color: 'var(--text-2)', fontWeight: 600, fontSize: 10, textTransform: 'uppercase' }}>{h}</th>
+                ))}
+              </tr>
+            </thead>
+            <tbody>
+              {selectedTrades.map(t => (
+                <tr key={t.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                  <td style={{ padding: '8px', fontWeight: 700, color: BLUE }}>{t.symbol}</td>
+                  <td style={{ padding: '8px', color: t.direction === 'Long' ? GREEN : RED }}>{t.direction}</td>
+                  <td style={{ padding: '8px', fontFamily: 'var(--mono)' }}>${fmt2(t.entryPrice)}</td>
+                  <td style={{ padding: '8px', fontFamily: 'var(--mono)' }}>${fmt2(t.exitPrice)}</td>
+                  <td style={{ padding: '8px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? GREEN : RED }}>{fmtDollar(t.pnl)}</td>
+                  <td style={{ padding: '8px', fontFamily: 'var(--mono)', color: t.rMultiple >= 0 ? GREEN : RED }}>{fmtR(t.rMultiple)}</td>
+                  <td style={{ padding: '8px', color: 'var(--text-2)' }}>{t.setupTag || '—'}</td>
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </Card>
+      )}
+
+      {/* Weekly summary */}
+      {weeklyPnl.length > 0 && (
+        <Card>
+          <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-2)', marginBottom: 12, textTransform: 'uppercase' }}>
+            Weekly Summary — {monthName} {year}
+          </div>
+          <div style={{ display: 'flex', gap: 12, flexWrap: 'wrap' }}>
+            {weeklyPnl.map(w => (
+              <div key={w.week} style={{
+                background: 'var(--bg-1)', borderRadius: 8, padding: '10px 16px',
+                border: `1px solid ${w.pnl >= 0 ? GREEN + '44' : RED + '44'}`,
+              }}>
+                <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4 }}>Week {w.week}</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: w.pnl >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>
+                  {fmtDollar(w.pnl)}
+                </div>
+              </div>
+            ))}
+          </div>
+        </Card>
+      )}
+    </div>
+  )
+}
+
+// ─── Tab 4: Analytics ─────────────────────────────────────────────────────────
+
+function TabAnalytics({ trades }: { trades: Trade[] }) {
+  const stats = useMemo(() => computeStats(trades), [trades])
+
+  const byDow = useMemo(() => {
+    const days = ['Sunday', 'Monday', 'Tuesday', 'Wednesday', 'Thursday', 'Friday', 'Saturday']
+    const map: Record<number, { sum: number; count: number }> = {}
+    trades.forEach(t => {
+      const dow = new Date(t.date + 'T12:00:00').getDay()
+      if (!map[dow]) map[dow] = { sum: 0, count: 0 }
+      map[dow].sum += t.pnl
+      map[dow].count++
+    })
+    return [1, 2, 3, 4, 5].map(dow => ({
+      label: days[dow].slice(0, 3),
+      value: map[dow] ? map[dow].sum / map[dow].count : 0,
+    }))
+  }, [trades])
+
+  const byHour = useMemo(() => {
+    const map: Record<number, { sum: number; count: number }> = {}
+    trades.forEach(t => {
+      if (!t.time) return
+      const hour = parseInt(t.time.slice(0, 2))
+      if (!map[hour]) map[hour] = { sum: 0, count: 0 }
+      map[hour].sum += t.pnl
+      map[hour].count++
+    })
+    return Object.entries(map).sort((a, b) => +a[0] - +b[0]).map(([h, d]) => ({
+      label: `${h}:00`,
+      value: d.sum / d.count,
+    }))
+  }, [trades])
+
+  const bySetup = useMemo(() => {
+    const map: Record<string, { sum: number; count: number; wins: number }> = {}
+    trades.forEach(t => {
+      const key = t.setupTag || 'Untagged'
+      if (!map[key]) map[key] = { sum: 0, count: 0, wins: 0 }
+      map[key].sum += t.pnl
+      map[key].count++
+      if (t.pnl > 0) map[key].wins++
+    })
+    return Object.entries(map).sort((a, b) => b[1].sum - a[1].sum).map(([label, d]) => ({
+      label, value: d.sum,
+      winRate: (d.wins / d.count * 100).toFixed(0) + '%',
+      count: d.count,
+    }))
+  }, [trades])
+
+  const byDirection = useMemo(() => {
+    const map: Record<string, { sum: number; count: number; wins: number }> = {}
+    trades.forEach(t => {
+      if (!map[t.direction]) map[t.direction] = { sum: 0, count: 0, wins: 0 }
+      map[t.direction].sum += t.pnl
+      map[t.direction].count++
+      if (t.pnl > 0) map[t.direction].wins++
+    })
+    return Object.entries(map).map(([label, d]) => ({ label, value: d.sum }))
+  }, [trades])
+
+  // Histogram
+  const histogram = useMemo(() => {
+    if (trades.length === 0) return []
+    const vals = trades.map(t => t.pnl)
+    const min = Math.min(...vals), max = Math.max(...vals)
+    const range = max - min || 1
+    const bins = 8
+    const binSize = range / bins
+    const counts = Array(bins).fill(0)
+    vals.forEach(v => {
+      const i = Math.min(Math.floor((v - min) / binSize), bins - 1)
+      counts[i]++
+    })
+    return counts.map((count, i) => ({
+      label: `$${Math.round(min + i * binSize)}`,
+      value: count,
+      isWin: min + (i + 0.5) * binSize >= 0,
+    }))
+  }, [trades])
+
+  if (trades.length < 3) return (
+    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+      <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
+      <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>Need more trades</h3>
+      <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Log at least 3 trades to unlock analytics insights.</p>
+    </div>
+  )
+
+  const maxHist = Math.max(...histogram.map(h => h.value), 1)
+
+  return (
+    <div>
+      <SectionHeader
+        title="Analytics"
+        sub="Deep dive into your trading patterns. Find what works, eliminate what doesn't."
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📅 Avg P&L by Day of Week</span>
+            <Tooltip text="Which day of the week is most profitable for you on average? Some traders are better on Mondays (trend continuation), others on Fridays (position squaring). Use this to optimize your schedule." position="right" />
+          </div>
+          <BarChart data={byDow} title="" />
+        </Card>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🕐 Avg P&L by Hour</span>
+            <Tooltip text="Best and worst trading hours. Many traders find the first hour (9-10 AM) and last hour (3-4 PM) most volatile. The lunch hour (12-1 PM) is often slow." position="right" />
+          </div>
+          {byHour.length > 0 ? <BarChart data={byHour} title="" /> : <div style={{ color: 'var(--text-2)', fontSize: 12 }}>Log trades with timestamps to see this.</div>}
+        </Card>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🎯 Performance by Setup</span>
+            <Tooltip text="Which setups are actually making you money? Double down on profitable setups, reduce or eliminate losing ones. This is how you refine your edge." position="right" />
+          </div>
+          {bySetup.map(s => (
+            <div key={s.label} style={{ marginBottom: 10 }}>
+              <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                <span style={{ color: 'var(--text-1)' }}>{s.label} <span style={{ color: 'var(--text-2)', fontSize: 10 }}>({s.count}t, {s.winRate} WR)</span></span>
+                <span style={{ fontFamily: 'var(--mono)', color: s.value >= 0 ? GREEN : RED }}>{fmtDollar(s.value)}</span>
+              </div>
+              <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                <div style={{ height: '100%', width: `${(Math.abs(s.value) / Math.max(...bySetup.map(x => Math.abs(x.value)), 1)) * 100}%`, background: s.value >= 0 ? GREEN : RED, borderRadius: 4 }} />
+              </div>
+            </div>
+          ))}
+        </Card>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>↕️ Long vs Short</span>
+            <Tooltip text="Are you better as a Long (buyer) or Short (seller)? Some traders are naturally better at one direction. Focus on your edge." position="right" />
+          </div>
+          <BarChart data={byDirection} title="" />
+
+          <div style={{ marginTop: 20 }}>
+            <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+              <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🔥 Streak Analysis</span>
+              <Tooltip text="Streaks reveal psychological patterns. Long losing streaks may indicate you're breaking rules when frustrated. Long winning streaks often precede overconfidence." position="right" />
+            </div>
+            {stats && (
+              <div style={{ display: 'flex', gap: 16 }}>
+                <div style={{ flex: 1, background: 'var(--bg-1)', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4 }}>Best Win Streak</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: GREEN }}>🔥 {stats.longestWin}</div>
+                </div>
+                <div style={{ flex: 1, background: 'var(--bg-1)', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4 }}>Worst Loss Streak</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: RED }}>💀 {stats.longestLoss}</div>
+                </div>
+                <div style={{ flex: 1, background: 'var(--bg-1)', borderRadius: 8, padding: 12, textAlign: 'center' }}>
+                  <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4 }}>Current Streak</div>
+                  <div style={{ fontSize: 24, fontWeight: 800, color: stats.curStreak > 0 ? GREEN : RED }}>
+                    {stats.curStreak > 0 ? `+${stats.curStreak}` : stats.curStreak}
+                  </div>
+                </div>
+              </div>
+            )}
+          </div>
+        </Card>
+      </div>
+
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📉 Drawdown Chart</span>
+            <Tooltip text="The equity curve (green) shows cumulative P&L. The red shading shows drawdown — how far you've fallen from peak equity. Deep drawdowns are psychologically difficult. Aim to keep max drawdown under 10-20% of account." position="right" />
+          </div>
+          <DrawdownChart trades={trades} />
+        </Card>
+        <Card>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📊 Win/Loss Distribution</span>
+            <Tooltip text="A histogram showing the distribution of your trade outcomes. Ideal: most wins cluster on the right (big wins), most losses cluster near zero (small losses). This is 'letting winners run, cutting losers short'." position="right" />
+          </div>
+          <svg viewBox={`0 0 500 100`} style={{ width: '100%', maxHeight: 120 }}>
+            {histogram.map((h, i) => {
+              const x = i * (500 / histogram.length) + 4
+              const bw = (500 / histogram.length) - 8
+              const barH = (h.value / maxHist) * 80
+              return (
+                <g key={i}>
+                  <rect x={x} y={100 - barH} width={bw} height={barH} fill={h.isWin ? GREEN : RED} opacity={0.8} rx={2} />
+                  <text x={x + bw / 2} y={98} textAnchor="middle" fill="var(--text-2)" fontSize={7}>{h.label}</text>
+                </g>
+              )
+            })}
+          </svg>
+        </Card>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab 5: Notebook ──────────────────────────────────────────────────────────
+
+function RichTextEditor({ value, onChange }: { value: string; onChange: (v: string) => void }) {
+  const ref = useRef<HTMLTextAreaElement>(null)
+
+  const insertMarkdown = (prefix: string, suffix = '') => {
+    const el = ref.current
+    if (!el) return
+    const start = el.selectionStart, end = el.selectionEnd
+    const selected = value.slice(start, end)
+    const newVal = value.slice(0, start) + prefix + selected + suffix + value.slice(end)
+    onChange(newVal)
+    setTimeout(() => {
+      el.selectionStart = start + prefix.length
+      el.selectionEnd = start + prefix.length + selected.length
+      el.focus()
+    }, 0)
+  }
+
+  return (
+    <div>
+      <div style={{ display: 'flex', gap: 6, marginBottom: 6, flexWrap: 'wrap' }}>
+        {[
+          { label: 'B', action: () => insertMarkdown('**', '**'), title: 'Bold' },
+          { label: 'I', action: () => insertMarkdown('*', '*'), title: 'Italic' },
+          { label: '•', action: () => insertMarkdown('\n- '), title: 'Bullet list' },
+          { label: '1.', action: () => insertMarkdown('\n1. '), title: 'Numbered list' },
+          { label: '#', action: () => insertMarkdown('\n## '), title: 'Heading' },
+          { label: '---', action: () => insertMarkdown('\n---\n'), title: 'Divider' },
+        ].map(btn => (
+          <button
+            key={btn.label}
+            onClick={btn.action}
+            title={btn.title}
+            style={{
+              background: 'var(--bg-1)', border: '1px solid var(--border)',
+              borderRadius: 4, padding: '4px 10px', color: 'var(--text-0)',
+              cursor: 'pointer', fontSize: 12, fontWeight: btn.label === 'B' ? 700 : 400,
+              fontStyle: btn.label === 'I' ? 'italic' : 'normal',
+            }}
+          >
+            {btn.label}
+          </button>
+        ))}
+      </div>
+      <textarea
+        ref={ref}
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        rows={16}
+        style={{ ...inputSx, resize: 'vertical', fontFamily: 'var(--mono)', fontSize: 12, lineHeight: 1.7 }}
+        placeholder="Start writing... Use the toolbar above for formatting."
+      />
+    </div>
+  )
+}
+
+function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[]) => void }) {
+  const [selectedId, setSelectedId] = useState<string | null>(null)
+  const [editing, setEditing] = useState(false)
+  const [title, setTitle] = useState('')
+  const [content, setContent] = useState('')
+  const [showTemplates, setShowTemplates] = useState(false)
+
+  const today = new Date().toISOString().slice(0, 10)
+
+  const selectNote = (note: Note) => {
+    setSelectedId(note.id)
+    setTitle(note.title)
+    setContent(note.content)
+    setEditing(false)
+  }
+
+  const newNote = (templateKey?: keyof typeof NOTE_TEMPLATES) => {
+    const content = templateKey
+      ? NOTE_TEMPLATES[templateKey].replace('{{date}}', today).replace('{{name}}', 'My Strategy')
+      : ''
+    const note: Note = {
+      id: uid(),
+      title: templateKey || 'Untitled Note',
+      content,
+      template: templateKey || 'blank',
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString(),
+    }
+    const updated = [note, ...notes]
+    setNotes(updated)
+    saveNotes(updated)
+    selectNote(note)
+    setEditing(true)
+    setShowTemplates(false)
+  }
+
+  const saveNote = () => {
+    if (!selectedId) return
+    const updated = notes.map(n => n.id === selectedId
+      ? { ...n, title, content, updatedAt: new Date().toISOString() }
+      : n
+    )
+    setNotes(updated)
+    saveNotes(updated)
+    setEditing(false)
+  }
+
+  const deleteNote = (id: string) => {
+    if (!confirm('Delete this note?')) return
+    const updated = notes.filter(n => n.id !== id)
+    setNotes(updated)
+    saveNotes(updated)
+    if (selectedId === id) { setSelectedId(null); setTitle(''); setContent('') }
+  }
+
+  const selected = notes.find(n => n.id === selectedId)
+
+  return (
+    <div>
+      <SectionHeader
+        title="Notebook"
+        sub="Your trading plan workspace. Use templates to build trading plans, strategy playbooks, and weekly recaps."
+      />
+
+      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16 }}>
+        {/* Sidebar */}
+        <div>
+          <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <button
+              onClick={() => setShowTemplates(t => !t)}
+              style={{ flex: 1, background: BLUE, border: 'none', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+            >
+              + New Note
+            </button>
+          </div>
+
+          {showTemplates && (
+            <Card style={{ marginBottom: 12, padding: 12 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Templates</div>
+              {(Object.keys(NOTE_TEMPLATES) as Array<keyof typeof NOTE_TEMPLATES>).map(key => (
+                <button
+                  key={key}
+                  onClick={() => newNote(key)}
+                  style={{
+                    display: 'block', width: '100%', textAlign: 'left',
+                    background: 'var(--bg-1)', border: '1px solid var(--border)',
+                    borderRadius: 6, padding: '8px 10px', color: 'var(--text-0)',
+                    fontSize: 12, cursor: 'pointer', marginBottom: 6,
+                  }}
+                >
+                  {key === 'Daily Trading Plan' && '🌅 '}
+                  {key === 'Weekly Recap' && '📊 '}
+                  {key === 'Strategy Playbook' && '📋 '}
+                  {key}
+                </button>
+              ))}
+              <button
+                onClick={() => newNote()}
+                style={{
+                  display: 'block', width: '100%', textAlign: 'left',
+                  background: 'var(--bg-1)', border: '1px solid var(--border)',
+                  borderRadius: 6, padding: '8px 10px', color: 'var(--text-2)',
+                  fontSize: 12, cursor: 'pointer',
+                }}
+              >
+                📄 Blank Note
+              </button>
+            </Card>
+          )}
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
+            {notes.length === 0 && (
+              <div style={{ fontSize: 12, color: 'var(--text-2)', textAlign: 'center', padding: 20 }}>
+                No notes yet. Click "+ New Note" to start.
+              </div>
+            )}
+            {notes.map(note => (
+              <div
+                key={note.id}
+                onClick={() => selectNote(note)}
+                style={{
+                  background: selectedId === note.id ? 'rgba(99,102,241,0.15)' : 'var(--bg-2)',
+                  border: `1px solid ${selectedId === note.id ? BLUE + '66' : 'var(--border)'}`,
+                  borderRadius: 8, padding: '10px 12px', cursor: 'pointer',
+                  display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start',
+                }}
+              >
+                <div>
+                  <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-0)', marginBottom: 2 }}>{note.title}</div>
+                  <div style={{ fontSize: 10, color: 'var(--text-2)' }}>{note.updatedAt.slice(0, 10)}</div>
+                </div>
+                <button
+                  onClick={e => { e.stopPropagation(); deleteNote(note.id) }}
+                  style={{ background: 'none', border: 'none', color: 'var(--text-2)', cursor: 'pointer', fontSize: 12, padding: 2 }}
+                >✕</button>
+              </div>
+            ))}
+          </div>
+        </div>
+
+        {/* Editor */}
+        <div>
+          {!selectedId ? (
+            <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-2)' }}>
+              <div style={{ fontSize: 40, marginBottom: 12 }}>📓</div>
+              <div>Select a note or create a new one</div>
+            </div>
+          ) : (
+            <Card>
+              {editing ? (
+                <>
+                  <input
+                    type="text"
+                    value={title}
+                    onChange={e => setTitle(e.target.value)}
+                    style={{ ...inputSx, fontSize: 18, fontWeight: 700, marginBottom: 12, fontFamily: 'inherit' }}
+                    placeholder="Note title..."
+                  />
+                  <RichTextEditor value={content} onChange={setContent} />
+                  <div style={{ display: 'flex', gap: 8, marginTop: 12 }}>
+                    <button onClick={saveNote} style={{ background: GREEN, border: 'none', borderRadius: 8, padding: '8px 20px', color: '#fff', fontSize: 13, fontWeight: 600, cursor: 'pointer' }}>
+                      ✓ Save
+                    </button>
+                    <button onClick={() => { setEditing(false); if (selected) { setTitle(selected.title); setContent(selected.content) } }}
+                      style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 20px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer' }}>
+                      Cancel
+                    </button>
+                  </div>
+                </>
+              ) : (
+                <>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
+                    <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700, color: 'var(--text-0)' }}>{selected?.title}</h2>
+                    <div style={{ display: 'flex', gap: 8 }}>
+                      <button onClick={() => setEditing(true)} style={{ background: BLUE, border: 'none', borderRadius: 8, padding: '6px 16px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+                        ✎ Edit
+                      </button>
+                    </div>
+                  </div>
+                  <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 16 }}>
+                    Last updated: {selected?.updatedAt.slice(0, 16).replace('T', ' ')}
+                  </div>
+                  <pre style={{ whiteSpace: 'pre-wrap', fontFamily: 'inherit', fontSize: 13, lineHeight: 1.8, color: 'var(--text-1)', margin: 0 }}>
+                    {selected?.content || <span style={{ color: 'var(--text-2)', fontStyle: 'italic' }}>Empty note. Click Edit to start writing.</span>}
+                  </pre>
+                </>
+              )}
+            </Card>
+          )}
+        </div>
+      </div>
+    </div>
+  )
+}
+
+// ─── Tab 6: Reports ───────────────────────────────────────────────────────────
+
+function TabReports({ trades }: { trades: Trade[] }) {
+  const [fromDate, setFromDate] = useState(() => {
+    const d = new Date(); d.setDate(d.getDate() - 30)
+    return d.toISOString().slice(0, 10)
+  })
+  const [toDate, setToDate] = useState(new Date().toISOString().slice(0, 10))
+
+  const filtered = useMemo(() =>
+    trades.filter(t => t.date >= fromDate && t.date <= toDate),
+    [trades, fromDate, toDate]
+  )
+
+  const stats = useMemo(() => computeStats(filtered), [filtered])
+
+  const topWins = useMemo(() => [...filtered].sort((a, b) => b.pnl - a.pnl).slice(0, 5), [filtered])
+  const topLosses = useMemo(() => [...filtered].sort((a, b) => a.pnl - b.pnl).slice(0, 5), [filtered])
+
+  const setupRanking = useMemo(() => {
+    const map: Record<string, { pnl: number; count: number; wins: number }> = {}
+    filtered.forEach(t => {
+      const key = t.setupTag || 'Untagged'
+      if (!map[key]) map[key] = { pnl: 0, count: 0, wins: 0 }
+      map[key].pnl += t.pnl
+      map[key].count++
+      if (t.pnl > 0) map[key].wins++
+    })
+    return Object.entries(map).sort((a, b) => b[1].pnl - a[1].pnl)
+  }, [filtered])
+
+  const mistakeFreq = useMemo(() => {
+    const map: Record<string, number> = {}
+    filtered.forEach(t => {
+      if (t.mistakeTag && t.mistakeTag !== 'None') {
+        map[t.mistakeTag] = (map[t.mistakeTag] || 0) + 1
+      }
+    })
+    return Object.entries(map).sort((a, b) => b[1] - a[1])
+  }, [filtered])
+
+  const exportCSV = () => {
+    const headers = ['Date', 'Time', 'Symbol', 'Asset', 'Direction', 'Entry', 'Exit', 'Size', 'PnL', 'RMultiple', 'PctGL', 'Setup', 'Mistake', 'Rating', 'Notes']
+    const rows = filtered.map(t => [
+      t.date, t.time, t.symbol, t.assetClass, t.direction,
+      t.entryPrice, t.exitPrice, t.positionSize, t.pnl, t.rMultiple,
+      t.pctGainLoss, t.setupTag, t.mistakeTag, t.rating,
+      `"${(t.notes || '').replace(/"/g, '""')}"`
+    ])
+    const csv = [headers, ...rows].map(r => r.join(',')).join('\n')
+    const blob = new Blob([csv], { type: 'text/csv' })
+    const url = URL.createObjectURL(blob)
+    const a = document.createElement('a'); a.href = url; a.download = `journal-${fromDate}-${toDate}.csv`; a.click()
+  }
+
+  return (
+    <div>
+      <SectionHeader
+        title="Reports"
+        sub="Analyze your performance over any time period. Export data to CSV for deeper analysis."
+      />
+
+      {/* Date range */}
+      <Card style={{ marginBottom: 20 }}>
+        <div style={{ display: 'flex', gap: 16, alignItems: 'center', flexWrap: 'wrap' }}>
+          <div>
+            <FieldLabel label="From Date" tooltip="Start of the report period." />
+            <input type="date" value={fromDate} onChange={e => setFromDate(e.target.value)} style={{ ...inputSx, width: 160 }} />
+          </div>
+          <div>
+            <FieldLabel label="To Date" tooltip="End of the report period." />
+            <input type="date" value={toDate} onChange={e => setToDate(e.target.value)} style={{ ...inputSx, width: 160 }} />
+          </div>
+          {[
+            { label: '7D', days: 7 }, { label: '30D', days: 30 },
+            { label: '90D', days: 90 }, { label: 'YTD', days: -1 },
+          ].map(p => (
+            <button
+              key={p.label}
+              onClick={() => {
+                const to = new Date()
+                const from = new Date()
+                if (p.days === -1) from.setMonth(0, 1)
+                else from.setDate(from.getDate() - p.days)
+                setFromDate(from.toISOString().slice(0, 10))
+                setToDate(to.toISOString().slice(0, 10))
+              }}
+              style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '8px 14px', color: 'var(--text-0)', cursor: 'pointer', fontSize: 12, fontWeight: 600 }}
+            >
+              {p.label}
+            </button>
+          ))}
+          <button onClick={exportCSV} style={{ background: GREEN, border: 'none', borderRadius: 8, padding: '8px 16px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer', marginLeft: 'auto' }}>
+            📥 Export CSV
+          </button>
+        </div>
+      </Card>
+
+      {filtered.length === 0 ? (
+        <div style={{ textAlign: 'center', padding: '40px 20px', color: 'var(--text-2)' }}>
+          No trades in this date range.
+        </div>
+      ) : (
+        <>
+          {/* Summary KPIs */}
+          {stats && (
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 20 }}>
+              <KpiCard icon="📊" label="Trades" value={String(stats.totalTrades)} tooltip="Total trades in period." />
+              <KpiCard icon="🎯" label="Win Rate" value={`${stats.winRate.toFixed(1)}%`} color={stats.winRate >= 50 ? GREEN : RED} tooltip="Win rate for this period." />
+              <KpiCard icon="💰" label="Net P&L" value={fmtDollar(stats.totalPnl)} color={stats.totalPnl >= 0 ? GREEN : RED} tooltip="Net profit/loss for the period." />
+              <KpiCard icon="⚡" label="Profit Factor" value={stats.profitFactor === Infinity ? '∞' : fmt2(stats.profitFactor)} color={stats.profitFactor >= 1 ? GREEN : RED} tooltip="Gross profits ÷ gross losses." />
+              <KpiCard icon="🔢" label="Avg R" value={fmtR(stats.avgR)} color={stats.avgR >= 0 ? GREEN : RED} tooltip="Average R-Multiple for the period." />
+              <KpiCard icon="🧮" label="Expectancy" value={fmtDollar(stats.expectancy)} color={stats.expectancy >= 0 ? GREEN : RED} tooltip="Average $ per trade." />
+            </div>
+          )}
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
+            {/* Top 5 wins */}
+            <Card>
+              <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, marginBottom: 12 }}>🏆 Top 5 Best Trades</div>
+              {topWins.map((t, i) => (
+                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-2)', fontSize: 11, marginRight: 6 }}>#{i + 1}</span>
+                    <span style={{ fontWeight: 700, color: BLUE }}>{t.symbol}</span>
+                    <span style={{ color: 'var(--text-2)', fontSize: 11, marginLeft: 6 }}>{t.date}</span>
+                    {t.setupTag && <span style={{ color: 'var(--text-2)', fontSize: 10, marginLeft: 6 }}>({t.setupTag})</span>}
+                  </div>
+                  <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: GREEN }}>{fmtDollar(t.pnl)}</span>
+                </div>
+              ))}
+            </Card>
+
+            {/* Top 5 losses */}
+            <Card>
+              <div style={{ fontSize: 13, fontWeight: 700, color: RED, marginBottom: 12 }}>💀 Top 5 Worst Trades</div>
+              {topLosses.map((t, i) => (
+                <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
+                  <div>
+                    <span style={{ color: 'var(--text-2)', fontSize: 11, marginRight: 6 }}>#{i + 1}</span>
+                    <span style={{ fontWeight: 700, color: BLUE }}>{t.symbol}</span>
+                    <span style={{ color: 'var(--text-2)', fontSize: 11, marginLeft: 6 }}>{t.date}</span>
+                    {t.setupTag && <span style={{ color: 'var(--text-2)', fontSize: 10, marginLeft: 6 }}>({t.setupTag})</span>}
+                  </div>
+                  <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: RED }}>{fmtDollar(t.pnl)}</span>
+                </div>
+              ))}
+            </Card>
+          </div>
+
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+            {/* Setup ranking */}
+            <Card>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 12 }}>
+                🎯 Setup Performance Ranking
+                <Tooltip text="Rank your setups by total P&L. Focus your trading on the top setups and consider eliminating the worst performers." position="right" />
+              </div>
+              {setupRanking.length === 0 ? <div style={{ color: 'var(--text-2)', fontSize: 12 }}>No setups tagged.</div> : (
+                <table style={{ width: '100%', fontSize: 12, borderCollapse: 'collapse' }}>
+                  <thead>
+                    <tr>
+                      {['Setup', 'Trades', 'Win%', 'Net P&L'].map(h => (
+                        <th key={h} style={{ textAlign: 'left', padding: '4px 8px', fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', borderBottom: '1px solid var(--border)' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {setupRanking.map(([setup, d]) => (
+                      <tr key={setup} style={{ borderBottom: '1px solid var(--border)' }}>
+                        <td style={{ padding: '8px' }}>{setup}</td>
+                        <td style={{ padding: '8px', color: 'var(--text-2)' }}>{d.count}</td>
+                        <td style={{ padding: '8px', color: 'var(--text-2)' }}>{(d.wins / d.count * 100).toFixed(0)}%</td>
+                        <td style={{ padding: '8px', fontFamily: 'var(--mono)', fontWeight: 700, color: d.pnl >= 0 ? GREEN : RED }}>{fmtDollar(d.pnl)}</td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              )}
+            </Card>
+
+            {/* Mistake analysis */}
+            <Card>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 12 }}>
+                ⚠️ Mistake Frequency Analysis
+                <Tooltip text="Your most common trading mistakes. The #1 mistake is what to fix first. Eliminating your top mistake often has the biggest impact on profitability." position="right" />
+              </div>
+              {mistakeFreq.length === 0 ? (
+                <div style={{ color: GREEN, fontSize: 12 }}>✅ No mistakes tagged — or all tagged as "None". Be honest and tag your mistakes to improve!</div>
+              ) : (
+                mistakeFreq.map(([mistake, count]) => (
+                  <div key={mistake} style={{ marginBottom: 10 }}>
+                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 12, marginBottom: 3 }}>
+                      <span style={{ color: 'var(--text-1)' }}>{mistake}</span>
+                      <span style={{ color: YELLOW, fontFamily: 'var(--mono)' }}>{count}×</span>
+                    </div>
+                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 6, overflow: 'hidden' }}>
+                      <div style={{ height: '100%', width: `${(count / mistakeFreq[0][1]) * 100}%`, background: YELLOW, borderRadius: 4 }} />
+                    </div>
+                  </div>
+                ))
+              )}
+            </Card>
+          </div>
+        </>
+      )}
+    </div>
+  )
+}
+
+// ─── Main Page ────────────────────────────────────────────────────────────────
+
+const TABS = [
+  { id: 'dashboard', label: '📊 Dashboard' },
+  { id: 'log',       label: '📋 Trade Log' },
+  { id: 'calendar',  label: '📅 Calendar' },
+  { id: 'analytics', label: '🔬 Analytics' },
+  { id: 'notebook',  label: '📓 Notebook' },
+  { id: 'reports',   label: '📈 Reports' },
+]
+
+export default function JournalPage() {
+  const [activeTab, setActiveTab] = useState('dashboard')
+  const [trades, setTrades] = useState<Trade[]>([])
+  const [notes, setNotes] = useState<Note[]>([])
+
+  useEffect(() => {
+    setTrades(loadTrades())
+    setNotes(loadNotes())
+  }, [])
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+      {/* Header */}
+      <div style={{
+        borderBottom: '1px solid var(--border)',
+        padding: '16px 24px',
+        display: 'flex',
+        alignItems: 'center',
+        gap: 16,
+        background: 'var(--bg-2)',
+        position: 'sticky',
+        top: 0,
+        zIndex: 100,
+      }}>
+        <Link href="/" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: 13 }}>← Back</Link>
+        <div>
+          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-0)' }}>
+            📒 Trading Journal
+          </div>
+          <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+            Track, analyze, and improve your trading — all in one place
+          </div>
+        </div>
+        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+          <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+            {trades.length} trades logged
+          </div>
+        </div>
+      </div>
+
+      {/* Tab Bar */}
+      <div style={{
+        borderBottom: '1px solid var(--border)',
+        background: 'var(--bg-2)',
+        padding: '0 24px',
+        display: 'flex',
+        gap: 0,
+        overflowX: 'auto',
+      }}>
+        {TABS.map(tab => (
+          <button
+            key={tab.id}
+            onClick={() => setActiveTab(tab.id)}
+            style={{
+              background: 'none',
+              border: 'none',
+              borderBottom: `2px solid ${activeTab === tab.id ? BLUE : 'transparent'}`,
+              padding: '14px 20px',
+              color: activeTab === tab.id ? BLUE : 'var(--text-2)',
+              fontSize: 13,
+              fontWeight: activeTab === tab.id ? 700 : 400,
+              cursor: 'pointer',
+              whiteSpace: 'nowrap',
+              transition: 'color 0.15s, border-color 0.15s',
+            }}
+          >
+            {tab.label}
+          </button>
+        ))}
+      </div>
+
+      {/* Content */}
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
+        {activeTab === 'dashboard' && <TabDashboard trades={trades} />}
+        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} />}
+        {activeTab === 'calendar'  && <TabCalendar  trades={trades} />}
+        {activeTab === 'analytics' && <TabAnalytics trades={trades} />}
+        {activeTab === 'notebook'  && <TabNotebook  notes={notes}   setNotes={setNotes} />}
+        {activeTab === 'reports'   && <TabReports   trades={trades} />}
+      </div>
+
+      {/* Footer note */}
+      <div style={{ textAlign: 'center', padding: '20px 24px 40px', fontSize: 11, color: 'var(--text-2)', borderTop: '1px solid var(--border)' }}>
+        💾 Data saved locally in your browser. Sign in to sync across devices.
+        {' '}<span style={{ color: BLUE }}>TODO: Supabase sync</span>
+      </div>
+    </div>
+  )
+}

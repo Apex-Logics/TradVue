@@ -689,6 +689,7 @@ const TOOL_CATALOG = [
   { id: 'lotsize', category: 'Forex', icon: '📦', title: 'Lot Size Calculator', desc: 'Determine the right position size for forex trades.' },
   { id: 'compound', category: 'Universal', icon: '📈', title: 'Compound Interest Calculator', desc: 'See how your investments grow over time with compounding.' },
   { id: 'fibonacci', category: 'Universal', icon: '🌀', title: 'Fibonacci Retracement', desc: 'Calculate key support/resistance levels using Fibonacci ratios.' },
+  { id: 'journal', category: 'Universal', icon: '📒', title: 'Trading Journal', desc: 'Log trades, track performance, analyze patterns. A complete journal with dashboard, calendar & analytics.', href: '/journal' },
 ]
 
 export default function ToolsPage() {
@@ -774,7 +775,7 @@ export default function ToolsPage() {
                   }}
                   onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#6366f1'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)' }}
                   onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.transform = 'none' }}
-                  onClick={() => setActiveTool(tool.id)}
+                  onClick={() => { if ((tool as any).href) window.location.href = (tool as any).href; else setActiveTool(tool.id) }}
                 >
                   <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
                     <span style={{ fontSize: 26 }}>{tool.icon}</span>

@@ -1866,6 +1866,7 @@ export default function Home() {
           }}>Calendar</button>
           <a href="/portfolio" className={`nav-item${activeNav === 'Portfolio' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Portfolio</a>
           <a href="/tools" className={`nav-item${activeNav === 'Tools' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Tools</a>
+          <a href="/journal" className={`nav-item${activeNav === 'Journal' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Journal</a>
         </nav>
 
         <div className="header-right">
