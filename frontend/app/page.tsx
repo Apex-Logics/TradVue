@@ -735,7 +735,7 @@ function TickerBar({
             transform: 'translateY(-50%)',
             zIndex: 10,
             fontSize: 13,
-            color: '#606070',
+            color: 'var(--text-2)',
             cursor: 'pointer',
             padding: '2px 5px',
             borderRadius: 3,
@@ -933,7 +933,7 @@ function CryptoCoinRow({ coin }: { coin: CryptoCoin }) {
     <div className="mover-row" style={{ cursor: 'default' }}>
       <span className="mover-symbol" style={{ fontSize: 11 }}>
         {coin.symbol}
-        <span style={{ color: '#404050', fontSize: 9, marginLeft: 3 }}>#{coin.marketCapRank}</span>
+        <span style={{ color: 'var(--text-3)', fontSize: 9, marginLeft: 3 }}>#{coin.marketCapRank}</span>
       </span>
       <span className="mover-price" style={{ fontSize: 11 }}>${fmtPrice(coin.price)}</span>
       <span className={isUp ? 'mover-up' : 'mover-down'} style={{ fontSize: 11 }}>
@@ -985,7 +985,7 @@ function EconomicCalendar({ events, loading }: EcalProps) {
       {/* Header */}
       <div className="ecal-header">
         <span className="ecal-title">
-          <span style={{ color: '#f0a500' }}>📅</span>
+          <span style={{ color: 'var(--yellow)' }}>◈</span>
           ECONOMIC CALENDAR
         </span>
 
@@ -1997,10 +1997,10 @@ export default function Home() {
             <div className="sidebar-section">
               <div className="sidebar-title" style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setCryptoExpanded(e => !e)}>
                 ₿ CRYPTO PRICES
-                <span style={{ marginLeft: 6, fontSize: 9, color: '#404050' }}>
+                <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-3)' }}>
                   {cryptoExpanded ? '▲' : '▼'}
                 </span>
-                <span style={{ marginLeft: 'auto', fontSize: 9, color: '#404050', fontWeight: 400 }}>
+                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--text-3)', fontWeight: 400 }}>
                   CoinGecko
                 </span>
               </div>
@@ -2062,7 +2062,7 @@ export default function Home() {
                           {fmtPct(quotes[sym].changePct)}
                         </span>
                       </>
-                    : <span className="mover-price" style={{ color: '#404050' }}>—</span>
+                    : <span className="mover-price" style={{ color: 'var(--text-3)' }}>—</span>
                   }
                   <button
                     onClick={e => { e.stopPropagation(); toggleWatch(sym) }}
@@ -2099,7 +2099,7 @@ export default function Home() {
                   </span>
                 ))}
               </div>
-              <div style={{ fontSize: 10, color: '#404050', padding: '2px 14px 6px', textAlign: 'right' }}>
+              <div style={{ fontSize: 10, color: 'var(--text-3)', padding: '2px 14px 6px', textAlign: 'right' }}>
                 {customTickerSymbols.length}/{MAX_TICKER_CUSTOM}
               </div>
             </div>
@@ -2155,7 +2155,7 @@ export default function Home() {
                 <span className="live-dot" />
                 LIVE NEWS FEED
               </span>
-              <span style={{ fontSize: 10.5, color: '#404050', marginLeft: 12 }}>
+              <span style={{ fontSize: 10.5, color: 'var(--text-3)', marginLeft: 12 }}>
                 {hasRealTickerData ? '● LIVE DATA' : '○ SIMULATED'}
               </span>
               <span className="feed-count">{newsArticles.length} articles</span>
@@ -2170,11 +2170,11 @@ export default function Home() {
               gridTemplateColumns: '36px 80px 1fr auto auto',
               gap: '0 8px',
               padding: '4px 14px',
-              borderBottom: '1px solid #1c1c24',
+              borderBottom: '1px solid var(--border-b)',
               background: '#0f0f12',
             }}>
               {['AGO', 'SOURCE', 'HEADLINE', '', 'SYMS'].map((h, i) => (
-                <span key={i} style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', color: '#404050', textAlign: i === 0 ? 'right' : 'left' }}>
+                <span key={i} style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-3)', textAlign: i === 0 ? 'right' : 'left' }}>
                   {h}
                 </span>
               ))}
@@ -2233,7 +2233,7 @@ export default function Home() {
               onClick={() => setPortfolioCollapsed(c => !c)}
             >
               <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>📈 PORTFOLIO</span>
-              <span style={{ fontSize: 11, color: '#606070' }}>{portfolioCollapsed ? '▼ Show' : '▲ Hide'}</span>
+              <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{portfolioCollapsed ? '▼ Show' : '▲ Hide'}</span>
             </div>
             {!portfolioCollapsed && (
               <PortfolioPanel quotes={{ ...quotes, ...tickerQuotes }} onOpenStock={openStockDetail} />

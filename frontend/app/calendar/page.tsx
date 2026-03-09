@@ -1,7 +1,8 @@
 'use client'
 
-import { useState, useEffect, useCallback, useMemo } from 'react'
+import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
+import { IconTrendingUp, IconChart, IconMic, IconFlag, IconCalendar, IconArrowLeft } from '../components/Icons'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -40,24 +41,24 @@ interface CalendarEvent {
 // ─────────────────────────────────────────────────────────────────────────────
 
 const IMPACT_COLORS: Record<string, string> = {
-  High: '#ff4560',
-  Medium: '#f0a500',
-  Low: '#00c06a',
-  Holiday: '#6366f1',
+  High: 'var(--red)',
+  Medium: 'var(--yellow)',
+  Low: 'var(--green)',
+  Holiday: 'var(--purple)',
 }
 
 const TYPE_COLORS: Record<EventType, string> = {
-  economic: '#3b82f6',
-  earnings: '#8b5cf6',
-  speech: '#f59e0b',
-  holiday: '#6366f1',
+  economic: 'var(--blue)',
+  earnings: 'var(--purple)',
+  speech: 'var(--yellow)',
+  holiday: 'var(--purple)',
 }
 
-const TYPE_ICONS: Record<EventType, string> = {
-  economic: '📈',
-  earnings: '📊',
-  speech: '🎤',
-  holiday: '🏛',
+const TYPE_ICON_COMPONENTS: Record<EventType, React.FC<{size?: number}>> = {
+  economic: ({ size = 12 }) => <IconTrendingUp size={size} />,
+  earnings: ({ size = 12 }) => <IconChart size={size} />,
+  speech:   ({ size = 12 }) => <IconMic size={size} />,
+  holiday:  ({ size = 12 }) => <IconFlag size={size} />,
 }
 
 const COUNTRY_FLAGS: Record<string, string> = {
@@ -117,9 +118,9 @@ function beatsMiss(actual: string | null, forecast: string | null): 'beat' | 'mi
 // ─────────────────────────────────────────────────────────────────────────────
 
 function ImpactDot({ impact, type }: { impact: ImpactLevel; type: EventType }) {
-  const color = type === 'earnings' ? '#8b5cf6'
-    : type === 'speech' ? '#f59e0b'
-    : type === 'holiday' ? '#6366f1'
+  const color = type === 'earnings' ? 'var(--purple)'
+    : type === 'speech' ? 'var(--yellow)'
+    : type === 'holiday' ? 'var(--purple)'
     : IMPACT_COLORS[impact] || '#888'
   return (
     <span style={{
@@ -183,7 +184,7 @@ function MonthGrid({
             style={{
               minHeight: 80,
               padding: '5px 5px 4px',
-              background: isToday ? 'rgba(59,130,246,0.12)' : isSelected ? 'rgba(59,130,246,0.07)' : 'var(--bg-2)',
+              background: isToday ? 'rgba(74,158,255,0.12)' : isSelected ? 'rgba(74,158,255,0.07)' : 'var(--bg-2)',
               border: isToday ? '1.5px solid var(--accent)' : isSelected ? '1px solid rgba(59,130,246,0.5)' : '1px solid transparent',
               borderRadius: 4,
               cursor: 'pointer',
@@ -244,7 +245,7 @@ function WeekGrid({
             key={key}
             onClick={() => onSelectDay(key)}
             style={{
-              background: isToday ? 'rgba(59,130,246,0.12)' : 'var(--bg-2)',
+              background: isToday ? 'rgba(74,158,255,0.12)' : 'var(--bg-2)',
               border: isToday ? '1.5px solid var(--accent)' : '1px solid var(--border)',
               borderRadius: 6, padding: 8, cursor: 'pointer', minHeight: 120,
             }}
@@ -256,11 +257,11 @@ function WeekGrid({
               {dayEvents.slice(0, 4).map(e => (
                 <div key={e.id} style={{
                   fontSize: 9, padding: '2px 4px', borderRadius: 3,
-                  background: e.type === 'earnings' ? 'rgba(139,92,246,0.2)'
+                  background: e.type === 'earnings' ? 'rgba(74,158,255,0.15)'
                     : e.type === 'speech' ? 'rgba(245,158,11,0.2)'
                     : `${IMPACT_COLORS[e.impact]}22`,
-                  borderLeft: `2px solid ${e.type === 'earnings' ? '#8b5cf6'
-                    : e.type === 'speech' ? '#f59e0b'
+                  borderLeft: `2px solid ${e.type === 'earnings' ? 'var(--purple)'
+                    : e.type === 'speech' ? 'var(--yellow)'
                     : IMPACT_COLORS[e.impact]}`,
                   color: 'var(--text-0)',
                   whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis',
@@ -312,7 +313,7 @@ function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolea
 
         {/* Title + type icon */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, minWidth: 0 }}>
-          <span style={{ fontSize: 13 }}>{TYPE_ICONS[event.type]}</span>
+          <span style={{ color: TYPE_COLORS[event.type] }}>{React.createElement(TYPE_ICON_COMPONENTS[event.type], { size: 14 })}</span>
           <div style={{ minWidth: 0 }}>
             <div style={{ fontWeight: 600, color: 'var(--text-0)', fontSize: 12, whiteSpace: 'nowrap', overflow: 'hidden', textOverflow: 'ellipsis' }}>
               {event.title}
@@ -347,8 +348,8 @@ function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolea
         <div style={{
           fontFamily: 'var(--mono)', fontSize: 11, fontWeight: 700, textAlign: 'right',
           color: event.actual
-            ? bm === 'beat' ? '#00c06a'
-            : bm === 'miss' ? '#ff4560'
+            ? bm === 'beat' ? 'var(--green)'
+            : bm === 'miss' ? 'var(--red)'
             : 'var(--text-0)'
             : 'var(--text-3)',
         }}>
@@ -381,7 +382,7 @@ function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolea
               </div>
               <div>
                 <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>EPS ACTUAL</div>
-                <div style={{ fontFamily: 'var(--mono)', color: bm === 'beat' ? '#00c06a' : bm === 'miss' ? '#ff4560' : 'var(--text-0)' }}>
+                <div style={{ fontFamily: 'var(--mono)', color: bm === 'beat' ? 'var(--green)' : bm === 'miss' ? 'var(--red)' : 'var(--text-0)' }}>
                   {event.epsActual != null ? `$${event.epsActual}` : '—'}
                 </div>
               </div>
@@ -412,7 +413,7 @@ function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolea
               {event.actual && (
                 <div>
                   <div style={{ fontSize: 9, color: 'var(--text-3)', marginBottom: 2 }}>ACTUAL</div>
-                  <div style={{ fontFamily: 'var(--mono)', color: bm === 'beat' ? '#00c06a' : bm === 'miss' ? '#ff4560' : 'var(--text-0)' }}>{event.actual}</div>
+                  <div style={{ fontFamily: 'var(--mono)', color: bm === 'beat' ? 'var(--green)' : bm === 'miss' ? 'var(--red)' : 'var(--text-0)' }}>{event.actual}</div>
                 </div>
               )}
             </div>
@@ -658,15 +659,16 @@ export default function CalendarPage() {
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font)' }}>
 
       {/* ── Top Header ── */}
-      <header style={{
-        height: 44, background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
-        display: 'flex', alignItems: 'center', padding: '0 16px', gap: 12,
-      }}>
-        <Link href="/" style={{ textDecoration: 'none', color: 'var(--text-0)', fontWeight: 700, fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-          ← ChartGenius
+      <header className="page-header">
+        <Link href="/" className="back-link">
+          <IconArrowLeft size={16} />
+          ChartGenius
         </Link>
         <span style={{ color: 'var(--border)' }}>|</span>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📅 Economic Calendar</span>
+        <div className="page-header-title">
+          <span style={{ color: 'var(--accent)' }}><IconCalendar size={18} /></span>
+          Economic Calendar
+        </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           {lastRefresh && (
@@ -685,10 +687,10 @@ export default function CalendarPage() {
 
       {/* ── Calendar Data Disclaimer ── */}
       <div style={{
-        padding: '8px 16px', background: 'rgba(100,200,220,0.1)', borderBottom: '1px solid rgba(100,200,220,0.3)',
+        padding: '8px 16px', background: 'var(--accent-dim)', borderBottom: '1px solid rgba(74,158,255,0.2)',
         fontSize: '10px', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 6,
       }}>
-        <span style={{ fontSize: '12px' }}>ℹ️</span>
+        <span style={{ color: 'var(--accent)', display: 'flex' }}><IconArrowLeft size={12} style={{ display: 'none' }} /></span>
         <span>Event data from third-party sources. May be delayed or incomplete. Always verify critical events with official sources.</span>
       </div>
 
@@ -730,7 +732,7 @@ export default function CalendarPage() {
               color: typeFilter === t ? (t === 'all' ? '#000' : TYPE_COLORS[t as EventType]) : 'var(--text-2)',
               cursor: 'pointer',
             }}>
-              {t === 'all' ? 'All' : `${TYPE_ICONS[t as EventType]} ${t.charAt(0).toUpperCase() + t.slice(1)}`}
+              {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
         </div>
@@ -784,20 +786,20 @@ export default function CalendarPage() {
         background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
         fontSize: 11, color: 'var(--text-2)',
       }}>
-        <span><span style={{ color: '#ff4560', fontWeight: 700 }}>{stats.high}</span> High</span>
-        <span><span style={{ color: '#f0a500', fontWeight: 700 }}>{stats.medium}</span> Medium</span>
-        <span><span style={{ color: '#00c06a', fontWeight: 700 }}>{stats.low}</span> Low</span>
+        <span><span style={{ color: 'var(--red)', fontWeight: 700 }}>{stats.high}</span> High</span>
+        <span><span style={{ color: 'var(--yellow)', fontWeight: 700 }}>{stats.medium}</span> Medium</span>
+        <span><span style={{ color: 'var(--green)', fontWeight: 700 }}>{stats.low}</span> Low</span>
         <span style={{ color: 'var(--border)' }}>|</span>
-        <span><span style={{ color: '#8b5cf6', fontWeight: 700 }}>{stats.earnings}</span> Earnings</span>
-        <span><span style={{ color: '#f59e0b', fontWeight: 700 }}>{stats.speeches}</span> Speeches</span>
+        <span><span style={{ color: 'var(--purple)', fontWeight: 700 }}>{stats.earnings}</span> Earnings</span>
+        <span><span style={{ color: 'var(--yellow)', fontWeight: 700 }}>{stats.speeches}</span> Speeches</span>
         <span style={{ color: 'var(--border)' }}>|</span>
         <span><span style={{ color: 'var(--text-0)', fontWeight: 700 }}>{filteredEvents.length}</span> total</span>
       </div>
 
       {/* ── Error ── */}
       {error && (
-        <div style={{ margin: '12px 16px', padding: '10px 14px', background: 'rgba(255,69,96,0.1)', border: '1px solid #ff4560', borderRadius: 6, color: '#ff4560', fontSize: 12 }}>
-          {error} — <button onClick={fetchEvents} style={{ color: '#ff4560', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+        <div style={{ margin: '12px 16px', padding: '10px 14px', background: 'var(--red-dim)', border: '1px solid rgba(255,69,96,0.4)', borderRadius: 'var(--card-radius)', color: 'var(--red)', fontSize: 12 }}>
+          {error} — <button onClick={fetchEvents} style={{ color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
         </div>
       )}
 
@@ -896,7 +898,7 @@ export default function CalendarPage() {
                   selectedDayEvents.map(event => (
                     <div key={event.id} style={{ padding: '10px 14px', borderBottom: '1px solid var(--border)' }}>
                       <div style={{ display: 'flex', alignItems: 'flex-start', gap: 8 }}>
-                        <span style={{ fontSize: 16 }}>{TYPE_ICONS[event.type]}</span>
+                        <span style={{ color: TYPE_COLORS[event.type] }}>{React.createElement(TYPE_ICON_COMPONENTS[event.type], { size: 14 })}</span>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3 }}>
                             {event.title}

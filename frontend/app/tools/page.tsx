@@ -2,6 +2,7 @@
 
 import { useState, useEffect, useCallback, useRef } from 'react'
 import Tooltip from '../components/Tooltip'
+import { ToolIcon, IconArrowLeft, IconTool } from '../components/Icons'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -13,7 +14,7 @@ function InputField({ label, tooltip, value, onChange, placeholder, type = 'numb
 }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+      <label className="ds-label">
         {label}
         {tooltip && <Tooltip text={tooltip} position="right" />}
       </label>
@@ -24,13 +25,8 @@ function InputField({ label, tooltip, value, onChange, placeholder, type = 'numb
         step={step || 'any'}
         onChange={e => onChange(e.target.value)}
         placeholder={placeholder}
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          background: 'var(--bg-1)', border: '1px solid var(--border)',
-          borderRadius: 6, padding: '8px 10px',
-          color: 'var(--text-0)', fontSize: 13, fontFamily: 'var(--mono)',
-          outline: 'none',
-        }}
+        className="ds-input"
+        style={{ fontFamily: 'var(--mono)' }}
       />
     </div>
   )
@@ -42,20 +38,14 @@ function SelectField({ label, tooltip, value, onChange, options }: {
 }) {
   return (
     <div style={{ marginBottom: 12 }}>
-      <label style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase' }}>
+      <label className="ds-label">
         {label}
         {tooltip && <Tooltip text={tooltip} position="right" />}
       </label>
       <select
         value={value}
         onChange={e => onChange(e.target.value)}
-        style={{
-          width: '100%', boxSizing: 'border-box',
-          background: 'var(--bg-1)', border: '1px solid var(--border)',
-          borderRadius: 6, padding: '8px 10px',
-          color: 'var(--text-0)', fontSize: 13,
-          outline: 'none', cursor: 'pointer',
-        }}
+        className="ds-select"
       >
         {options.map(o => <option key={o.value} value={o.value}>{o.label}</option>)}
       </select>
@@ -77,20 +67,22 @@ function ResultRow({ label, value, color, tooltip }: { label: string; value: str
 
 function Card({ children, style }: { children: React.ReactNode; style?: React.CSSProperties }) {
   return (
-    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, ...style }}>
+    <div className="ds-card" style={style}>
       {children}
     </div>
   )
 }
 
-function SectionTitle({ icon, title, desc }: { icon: string; title: string; desc: string }) {
+function SectionTitle({ toolId, title, desc }: { toolId: string; title: string; desc: string }) {
   return (
     <div style={{ marginBottom: 20 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-        <span style={{ fontSize: 22 }}>{icon}</span>
-        <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700, color: 'var(--text-0)' }}>{title}</h2>
+        <span style={{ color: 'var(--accent)', flexShrink: 0 }}>
+          <ToolIcon id={toolId} size={22} />
+        </span>
+        <h2 className="section-title" style={{ fontSize: 18, margin: 0 }}>{title}</h2>
       </div>
-      <p style={{ margin: 0, fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{desc}</p>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.5 }}>{desc}</p>
     </div>
   )
 }
@@ -119,7 +111,7 @@ function PositionSizeCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="📐"
+        toolId="position"
         title="Position Size Calculator"
         desc="Determine how many shares to buy based on how much you're willing to risk on a trade. Never risk more than 1–2% of your account on any single trade."
       />
@@ -141,7 +133,7 @@ function PositionSizeCalc() {
           </div>
         </div>
       </div>
-      <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+      <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
         💡 Example: Account $25,000 | Risk 2% | Entry $150 | Stop $145 → Buy <strong>100 shares</strong> ($500 at risk)
       </div>
     </Card>
@@ -170,7 +162,7 @@ function RiskRewardCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="⚖️"
+        toolId="riskreward"
         title="Risk/Reward Calculator"
         desc="Calculate the ratio between potential profit and potential loss. A good trade has at least a 1:2 risk/reward — meaning you risk $1 to make $2."
       />
@@ -255,7 +247,7 @@ function OptionsPLCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="📊"
+        toolId="optionspl"
         title="Options Profit/Loss Calculator"
         desc="Calculate your potential profit or loss on an options trade. Options give you the right (but not the obligation) to buy or sell a stock at a specific price."
       />
@@ -283,7 +275,7 @@ function OptionsPLCalc() {
               <polyline
                 points={points.map((p, i) => `${i * (200 / 19)},${chartH - ((p.pnl - minPnl) / range) * chartH}`).join(' ')}
                 fill="none"
-                stroke="#6366f1"
+                stroke="var(--accent)"
                 strokeWidth="2"
               />
               {/* Zero line */}
@@ -356,7 +348,7 @@ function OptionsGreeksCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="🔢"
+        toolId="greeks"
         title="Options Greeks Calculator"
         desc="Calculate the sensitivity metrics (Greeks) of an options contract using the Black-Scholes model. Greeks help you understand how an option's price will change."
       />
@@ -378,7 +370,7 @@ function OptionsGreeksCalc() {
             <ResultRow label="Theta (Θ)" value={`${fmt(greeks.theta, 4)}/day`} color="var(--red)" tooltip="Time decay — how much value the option loses each day. Options lose value as expiration approaches. Negative for buyers, positive for sellers." />
             <ResultRow label="Vega (V)" value={`${fmt(greeks.vega, 4)} per 1% IV`} tooltip="How much the option price changes per 1% change in implied volatility. High vega means the option is very sensitive to volatility changes." />
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
             💡 Black-Scholes assumes constant volatility and European-style exercise. Real prices may differ.
           </div>
         </div>
@@ -424,7 +416,7 @@ function PipCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="💱"
+        toolId="pip"
         title="Pip Calculator (Forex)"
         desc="Calculate the value of a pip for any forex pair and lot size. A pip is the smallest standard price move in currency trading — usually 0.0001 for most pairs."
       />
@@ -453,7 +445,7 @@ function PipCalc() {
           </div>
         </div>
       </div>
-      <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+      <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
         💡 A pip is 0.0001 for EUR/USD. If EUR/USD moves from 1.1000 to 1.1010, that&apos;s 10 pips. With 1 standard lot, that&apos;s $100 profit or loss.
       </div>
     </Card>
@@ -483,7 +475,7 @@ function LotSizeCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="📦"
+        toolId="lotsize"
         title="Lot Size Calculator (Forex)"
         desc="Calculate the correct lot size for your trade based on your account size and risk tolerance. Always know your lot size BEFORE entering a trade."
       />
@@ -502,7 +494,7 @@ function LotSizeCalc() {
             <ResultRow label="Mini Lots" value={fmt(miniLots, 2)} color="var(--accent)" tooltip="Mini lot = 10,000 units. 1/10th of a standard lot. Good for medium accounts." />
             <ResultRow label="Micro Lots" value={fmt(microLots, 1)} tooltip="Micro lot = 1,000 units. 1/100th of a standard lot. Best for beginners and small accounts." />
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
             💡 Standard = 100,000 units | Mini = 10,000 | Micro = 1,000. Start with micro lots while learning.
           </div>
         </div>
@@ -549,7 +541,7 @@ function CompoundCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="📈"
+        toolId="compound"
         title="Compound Interest Calculator"
         desc="See how your money grows over time with compound interest — 'the eighth wonder of the world'. The earlier you start, the more powerful it becomes."
       />
@@ -574,8 +566,8 @@ function CompoundCalc() {
             <svg width="100%" height="80" viewBox="0 0 200 80" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="compGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.4" />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#4a9eff" stopOpacity="0.4" />
+                  <stop offset="100%" stopColor="#4a9eff" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <polygon
@@ -588,7 +580,7 @@ function CompoundCalc() {
               />
               <polyline
                 points={chartData.map((d, i) => `${i * (200 / (chartData.length - 1 || 1))},${80 - (d.value / maxVal) * 76}`).join(' ')}
-                fill="none" stroke="#6366f1" strokeWidth="2"
+                fill="none" stroke="var(--accent)" strokeWidth="2"
               />
             </svg>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>
@@ -634,7 +626,7 @@ function FibonacciCalc() {
   return (
     <Card>
       <SectionTitle
-        icon="🌀"
+        toolId="fibonacci"
         title="Fibonacci Retracement Calculator"
         desc="Calculate key Fibonacci levels — mathematical ratios that often act as support and resistance areas where price may pause or reverse. Used by technical traders worldwide."
       />
@@ -643,7 +635,7 @@ function FibonacciCalc() {
           <InputField label="Swing High Price" tooltip="The highest price in the recent move or swing. This is the top of the range you're measuring." value={high} onChange={setHigh} placeholder="e.g. 200.00" />
           <InputField label="Swing Low Price" tooltip="The lowest price in the recent move or swing. This is the bottom of the range you're measuring." value={low} onChange={setLow} placeholder="e.g. 150.00" />
           <SelectField label="Trend Direction" tooltip="Uptrend: price moved UP and may pull back to these levels. Downtrend: price moved DOWN and may bounce to these levels." value={direction} onChange={setDirection} options={[{ value: 'up', label: '⬆️ Uptrend (retracing down from high)' }, { value: 'down', label: '⬇️ Downtrend (bouncing up from low)' }]} />
-          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
             💡 The 61.8% level (Golden Ratio) is considered the most significant. Price often respects the 38.2% and 61.8% levels strongly.
           </div>
         </div>
@@ -730,7 +722,7 @@ function StockScreener() {
 
   return (
     <Card>
-      <SectionTitle icon="🔍" title="Stock Screener" desc="Filter thousands of stocks to find ones matching your exact criteria. Set ranges for valuation, dividends, and price to discover investment opportunities." />
+      <SectionTitle toolId="screener" title="Stock Screener" desc="Filter thousands of stocks to find ones matching your exact criteria. Set ranges for valuation, dividends, and price to discover investment opportunities." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>What is a screener?</span>
         <Tooltip text="A stock screener filters thousands of stocks to find ones matching your criteria. Like using search filters when shopping online — but for investments." position="right" />
@@ -743,7 +735,7 @@ function StockScreener() {
         <InputField label="Max Price ($)" tooltip="Filter out expensive stocks above this price. Useful if you have a limited budget per share." value={maxPrice} onChange={setMaxPrice} placeholder="e.g. 500" />
         <SelectField label="Sector" tooltip="Industry sector helps group similar companies. Technology companies behave differently from Energy or Healthcare stocks." value={sector} onChange={setSector} options={SECTORS.map(s => ({ value: s, label: s }))} />
       </div>
-      <button onClick={runScreener} disabled={loading} style={{ padding: '10px 24px', background: 'rgba(99,102,241,0.25)', border: '1px solid rgba(99,102,241,0.5)', borderRadius: 8, color: '#818cf8', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
+      <button onClick={runScreener} disabled={loading} style={{ padding: '10px 24px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.4)', borderRadius: 8, color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
         {loading ? '⏳ Scanning...' : '🔍 Run Screener'}
       </button>
       {error && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>⚠️ {error}</div>}
@@ -768,7 +760,7 @@ function StockScreener() {
                   <tr key={s.symbol} onClick={() => window.open(`/stock/${s.symbol}`, '_blank')} style={{ borderBottom: '1px solid var(--border)', cursor: 'pointer' }}
                     onMouseEnter={e => (e.currentTarget as HTMLTableRowElement).style.background = 'var(--bg-3)'}
                     onMouseLeave={e => (e.currentTarget as HTMLTableRowElement).style.background = 'transparent'}>
-                    <td style={{ padding: '7px 10px', fontWeight: 700, color: '#818cf8', fontFamily: 'var(--mono)' }}>{s.symbol}</td>
+                    <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{s.symbol}</td>
                     <td style={{ padding: '7px 10px', color: 'var(--text-1)' }}>{s.name}</td>
                     <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)' }}>${s.price?.toFixed(2) ?? '—'}</td>
                     <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)' }}>{s.pe != null ? s.pe.toFixed(1) : '—'}</td>
@@ -838,14 +830,14 @@ function EarningsCalendar() {
 
   return (
     <Card>
-      <SectionTitle icon="📅" title="Earnings Calendar" desc="See which companies are reporting earnings this week or next. Earnings announcements often cause big stock price moves." />
+      <SectionTitle toolId="earnings" title="Earnings Calendar" desc="See which companies are reporting earnings this week or next. Earnings announcements often cause big stock price moves." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>What is an earnings report?</span>
         <Tooltip text="Every quarter, public companies report their financial results. BMO = Before Market Open (report released before 9:30 AM ET). AMC = After Market Close (after 4 PM ET). Big surprises cause big price moves." position="right" />
       </div>
       <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
         {[['thisWeek', 'This Week'], ['nextWeek', 'Next Week']].map(([v, l]) => (
-          <button key={v} onClick={() => setPeriod(v)} style={{ padding: '5px 14px', borderRadius: 16, fontSize: 12, cursor: 'pointer', border: '1px solid ' + (period === v ? '#6366f1' : 'var(--border)'), background: period === v ? 'rgba(99,102,241,0.2)' : 'transparent', color: period === v ? '#818cf8' : 'var(--text-2)' }}>{l}</button>
+          <button key={v} onClick={() => setPeriod(v)} style={{ padding: '5px 14px', borderRadius: 16, fontSize: 12, cursor: 'pointer', border: '1px solid ' + (period === v ? 'var(--accent)' : 'var(--border)'), background: period === v ? 'var(--accent-dim)' : 'transparent', color: period === v ? 'var(--accent)' : 'var(--text-2)' }}>{l}</button>
         ))}
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search symbol..." style={{ flex: 1, minWidth: 120, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-0)', fontSize: 12, outline: 'none' }} />
         <button onClick={fetchEarnings} style={{ padding: '5px 12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}>↻ Refresh</button>
@@ -870,7 +862,7 @@ function EarningsCalendar() {
                 {filtered.map((e, i) => (
                   <tr key={i} style={{ borderBottom: '1px solid var(--border)' }}>
                     <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)', color: 'var(--text-2)', fontSize: 11 }}>{e.date}</td>
-                    <td style={{ padding: '7px 10px', fontWeight: 700, color: '#818cf8', fontFamily: 'var(--mono)' }}>{e.symbol}</td>
+                    <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--accent)', fontFamily: 'var(--mono)' }}>{e.symbol}</td>
                     <td style={{ padding: '7px 10px', color: 'var(--text-1)', maxWidth: 150, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{e.name || e.symbol}</td>
                     <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)' }}>{e.epsEstimate != null ? '$' + e.epsEstimate?.toFixed(2) : '—'}</td>
                     <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)' }}>{fmtRevenue(e.revenueEstimate)}</td>
@@ -886,7 +878,7 @@ function EarningsCalendar() {
           )}
         </div>
       )}
-      <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+      <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
         💡 <strong>BMO</strong> = Before Market Open (pre-9:30 AM ET) | <strong>AMC</strong> = After Market Close (post-4 PM ET). Options traders often avoid holding positions through earnings due to volatility risk.
       </div>
     </Card>
@@ -946,7 +938,7 @@ function MarketHeatmap() {
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 8 }}>
-        <SectionTitle icon="🗺️" title="Market Heatmap" desc="Visual overview of major stocks grouped by sector. Color shows daily performance." />
+        <SectionTitle toolId="heatmap" title="Market Heatmap" desc="Visual overview of major stocks grouped by sector. Color shows daily performance." />
         <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
           {lastUpdated && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Updated {lastUpdated}</span>}
           <button onClick={fetchHeatmap} style={{ padding: '4px 10px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}>↻</button>
@@ -1040,7 +1032,7 @@ function FearGreedIndex() {
 
   return (
     <Card>
-      <SectionTitle icon="😱" title="Crypto Fear & Greed Index" desc="Measures overall crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed)." />
+      <SectionTitle toolId="feargreed" title="Crypto Fear & Greed Index" desc="Measures overall crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed)." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Why does this matter?</span>
         <Tooltip text="Measures market sentiment. Extreme Fear (0-25) can signal buying opportunities — others are panicking. Extreme Greed (75-100) may signal overvaluation — everyone is euphoric. Made famous by Warren Buffett: 'Be fearful when others are greedy and greedy when others are fearful.'" position="right" />
@@ -1163,7 +1155,7 @@ function GasFeeTracker() {
   return (
     <Card>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-        <SectionTitle icon="⛽" title="Ethereum Gas Fee Tracker" desc="Real-time Ethereum network transaction costs in Gwei and USD." />
+        <SectionTitle toolId="gas" title="Ethereum Gas Fee Tracker" desc="Real-time Ethereum network transaction costs in Gwei and USD." />
         <button onClick={fetchGas} style={{ padding: '4px 10px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 5, color: 'var(--text-2)', fontSize: 11, cursor: 'pointer', flexShrink: 0 }}>↻</button>
       </div>
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
@@ -1178,7 +1170,7 @@ function GasFeeTracker() {
             {[
               { label: '🐢 Slow', key: 'slow', desc: '~5-10 min', color: '#60a5fa' },
               { label: '⚡ Standard', key: 'standard', desc: '~1-3 min', color: '#a78bfa' },
-              { label: '🚀 Fast', key: 'fast', desc: '~15-30 sec', color: '#f472b6' },
+              { label: 'Fast', key: 'fast', desc: '~15-30 sec', color: 'var(--yellow)' },
             ].map(({ label, key, desc, color }) => {
               const d = gasData.prices[key]
               return (
@@ -1216,7 +1208,7 @@ function GasFeeTracker() {
               </tbody>
             </table>
           </div>
-          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
             💡 1 Gwei = 0.000000001 ETH. ETH price used: ~${gasData.ethPrice.toLocaleString()}. Gas prices update every 30 seconds.
           </div>
         </>
@@ -1272,7 +1264,7 @@ function StakingRewards() {
 
   return (
     <Card>
-      <SectionTitle icon="🥩" title="Staking Rewards Calculator" desc="Calculate how much you can earn by staking your crypto. Staking is like earning interest — but for helping secure a blockchain network." />
+      <SectionTitle toolId="staking" title="Staking Rewards Calculator" desc="Calculate how much you can earn by staking your crypto. Staking is like earning interest — but for helping secure a blockchain network." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>What is staking?</span>
         <Tooltip text="Staking locks your crypto to help secure the network. In return, you earn rewards (similar to interest). APY = Annual Percentage Yield. Compound = reinvesting rewards to earn even more over time." position="right" />
@@ -1289,7 +1281,7 @@ function StakingRewards() {
               <Tooltip text="Compound = reinvest your rewards automatically. Your rewards earn rewards too! Simple = just calculate basic interest without reinvesting." position="right" />
             </label>
           </div>
-          <div style={{ background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px', fontSize: 11, color: 'var(--text-3)' }}>
+          <div style={{ background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px', fontSize: 11, color: 'var(--text-3)' }}>
             📊 {amountN} {coin} ≈ <strong style={{ color: 'var(--text-1)' }}>${(principal).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong> at ~${price.toLocaleString()}/{coin}
           </div>
         </div>
@@ -1364,7 +1356,7 @@ function ForexSessionTimer() {
 
   return (
     <Card>
-      <SectionTitle icon="🕐" title="Forex Session Timer" desc="Forex trades 24 hours a day, 5 days a week. The market is most active when major sessions overlap." />
+      <SectionTitle toolId="sessions" title="Forex Session Timer" desc="Forex trades 24 hours a day, 5 days a week. The market is most active when major sessions overlap." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Why do sessions matter?</span>
         <Tooltip text="Forex trades 24/5. The most volatile and liquid periods are when major sessions overlap. The London/NY overlap (8 AM - 12 PM ET) is the highest volume period — best for tight spreads and big moves." position="right" />
@@ -1485,7 +1477,7 @@ function CurrencyStrengthMeter() {
 
   return (
     <Card>
-      <SectionTitle icon="💪" title="Currency Strength Meter" desc="See which major currencies are currently strong or weak relative to USD. Strong currencies are gaining value; weak ones are losing." />
+      <SectionTitle toolId="strength" title="Currency Strength Meter" desc="See which major currencies are currently strong or weak relative to USD. Strong currencies are gaining value; weak ones are losing." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>How to use this?</span>
         <Tooltip text="Shows which currencies are gaining or losing value relative to others. Strategy: trade strong vs weak pairs. E.g., if GBP is strongest and JPY is weakest, consider buying GBP/JPY." position="right" />
@@ -1518,7 +1510,7 @@ function CurrencyStrengthMeter() {
             ))}
           </div>
           {lastUpdated && <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Rates updated: {lastUpdated} · Source: open.er-api.com</div>}
-          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
             💡 Strength is relative to USD exchange rates. A trader looking for trend trades would buy the #1 currency against the #8 currency.
           </div>
         </>
@@ -1550,7 +1542,7 @@ function CorrelationMatrix() {
 
   const getColor = (val: number | null) => {
     if (val === null || val === undefined) return 'var(--bg-3)'
-    if (val === 1) return 'rgba(99,102,241,0.6)'
+    if (val === 1) return 'rgba(74,158,255,0.6)'
     if (val > 0.7) return 'rgba(34,197,94,0.7)'
     if (val > 0.3) return 'rgba(34,197,94,0.35)'
     if (val > -0.3) return 'rgba(148,163,184,0.2)'
@@ -1566,7 +1558,7 @@ function CorrelationMatrix() {
 
   return (
     <Card>
-      <SectionTitle icon="🔗" title="Correlation Matrix" desc="See how major assets move in relation to each other. Use this for portfolio diversification — uncorrelated assets reduce overall risk." />
+      <SectionTitle toolId="correlation" title="Correlation Matrix" desc="See how major assets move in relation to each other. Use this for portfolio diversification — uncorrelated assets reduce overall risk." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>How to read this?</span>
         <Tooltip text="Correlation shows how assets move together. +1.0 = always move together. -1.0 = always move opposite. 0 = no relationship. Green = positive correlation, Red = negative. Diversification works best with low/negative correlations." position="right" />
@@ -1610,7 +1602,7 @@ function CorrelationMatrix() {
               </span>
             ))}
           </div>
-          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'rgba(99,102,241,0.08)', borderRadius: 6, padding: '8px 12px' }}>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
             💡 Data: {matrix.dataSource === 'live' ? 'Live 90-day returns' : 'Historical average estimates'} · {matrix.period} period. Add uncorrelated assets to your portfolio to reduce risk.
           </div>
         </>
@@ -1658,7 +1650,7 @@ function ProfitTargetCalc() {
 
   return (
     <Card>
-      <SectionTitle icon="🎯" title="Profit Target Calculator" desc="Set realistic profit goals based on your account size, trading frequency, and edge. Most traders fail because they set unrealistic targets." />
+      <SectionTitle toolId="profit" title="Profit Target Calculator" desc="Set realistic profit goals based on your account size, trading frequency, and edge. Most traders fail because they set unrealistic targets." />
       <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Why set profit targets?</span>
         <Tooltip text="Helps set realistic profit goals based on your account size and trading frequency. Without targets, traders often overtrade chasing gains. Professional traders aim for 1-3% monthly, compounded over years." position="right" />
@@ -1706,8 +1698,8 @@ function ProfitTargetCalc() {
             <svg width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none">
               <defs>
                 <linearGradient id="projGrad" x1="0" y1="0" x2="0" y2="1">
-                  <stop offset="0%" stopColor="#6366f1" stopOpacity="0.5" />
-                  <stop offset="100%" stopColor="#6366f1" stopOpacity="0" />
+                  <stop offset="0%" stopColor="#4a9eff" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#4a9eff" stopOpacity="0" />
                 </linearGradient>
               </defs>
               <polygon
@@ -1715,7 +1707,7 @@ function ProfitTargetCalc() {
                 fill="url(#projGrad)" />
               <polyline
                 points={projectionData.map((d, i) => `${i * (300 / monthsN)},${100 - ((d.value - acct) / (maxValue - acct || 1)) * 95}`).join(' ')}
-                fill="none" stroke="#6366f1" strokeWidth="2" />
+                fill="none" stroke="var(--accent)" strokeWidth="2" />
             </svg>
             <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>
               <span>Now: ${acct.toLocaleString()}</span>
@@ -1734,26 +1726,26 @@ const TOOL_CATEGORIES = ['All', 'Stocks', 'Options', 'Forex', 'Crypto', 'Univers
 
 const TOOL_CATALOG = [
   // ── Phase 1 Tools ──
-  { id: 'position',    category: 'Stocks',   icon: '📐', title: 'Position Size Calculator',      desc: 'Calculate how many shares to buy based on your risk tolerance.' },
-  { id: 'riskreward',  category: 'Stocks',   icon: '⚖️', title: 'Risk/Reward Calculator',         desc: 'Evaluate trade setups by comparing potential profit vs loss.' },
-  { id: 'optionspl',   category: 'Options',  icon: '📊', title: 'Options P&L Calculator',         desc: 'Calculate profit/loss and break-even for options trades.' },
-  { id: 'greeks',      category: 'Options',  icon: '🔢', title: 'Options Greeks Calculator',      desc: 'Get Delta, Gamma, Theta, Vega using Black-Scholes model.' },
-  { id: 'pip',         category: 'Forex',    icon: '💱', title: 'Pip Calculator',                 desc: 'Find the dollar value of each pip for any forex pair.' },
-  { id: 'lotsize',     category: 'Forex',    icon: '📦', title: 'Lot Size Calculator',            desc: 'Determine the right position size for forex trades.' },
-  { id: 'compound',    category: 'Universal',icon: '📈', title: 'Compound Interest Calculator',   desc: 'See how your investments grow over time with compounding.' },
-  { id: 'fibonacci',   category: 'Universal',icon: '🌀', title: 'Fibonacci Retracement',          desc: 'Calculate key support/resistance levels using Fibonacci ratios.' },
-  { id: 'journal',     category: 'Universal',icon: '📒', title: 'Trading Journal',                desc: 'Log trades, track performance, analyze patterns. Complete journal with analytics.', href: '/journal' },
+  { id: 'position',    category: 'Stocks',   title: 'Position Size Calculator',      desc: 'Calculate how many shares to buy based on your risk tolerance.' },
+  { id: 'riskreward',  category: 'Stocks',   title: 'Risk/Reward Calculator',         desc: 'Evaluate trade setups by comparing potential profit vs loss.' },
+  { id: 'optionspl',   category: 'Options',  title: 'Options P&L Calculator',         desc: 'Calculate profit/loss and break-even for options trades.' },
+  { id: 'greeks',      category: 'Options',  title: 'Options Greeks Calculator',      desc: 'Get Delta, Gamma, Theta, Vega using Black-Scholes model.' },
+  { id: 'pip',         category: 'Forex',    title: 'Pip Calculator',                 desc: 'Find the dollar value of each pip for any forex pair.' },
+  { id: 'lotsize',     category: 'Forex',    title: 'Lot Size Calculator',            desc: 'Determine the right position size for forex trades.' },
+  { id: 'compound',    category: 'Universal',title: 'Compound Interest Calculator',   desc: 'See how your investments grow over time with compounding.' },
+  { id: 'fibonacci',   category: 'Universal',title: 'Fibonacci Retracement',          desc: 'Calculate key support/resistance levels using Fibonacci ratios.' },
+  { id: 'journal',     category: 'Universal',title: 'Trading Journal',                desc: 'Log trades, track performance, analyze patterns. Complete journal with analytics.', href: '/journal' },
   // ── Phase 2 Tools ──
-  { id: 'screener',    category: 'Stocks',   icon: '🔍', title: 'Stock Screener',                 desc: 'Filter stocks by P/E, dividend yield, sector, market cap, and price. Find your next investment.' },
-  { id: 'earnings',    category: 'Stocks',   icon: '📅', title: 'Earnings Calendar',              desc: "See which companies report earnings this week or next. BMO/AMC timing, EPS & revenue estimates." },
-  { id: 'heatmap',     category: 'Stocks',   icon: '🗺️', title: 'Market Heatmap',                desc: 'Visual overview of S&P 500 sectors. Green = up, red = down. Spot market trends instantly.' },
-  { id: 'feargreed',   category: 'Crypto',   icon: '😱', title: 'Fear & Greed Index',             desc: "Measure crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed). 30-day history." },
-  { id: 'gas',         category: 'Crypto',   icon: '⛽', title: 'Gas Fee Tracker',                desc: 'Live Ethereum gas prices in Gwei and USD. Slow/Standard/Fast tiers for common tx types.' },
-  { id: 'staking',     category: 'Crypto',   icon: '🥩', title: 'Staking Rewards Calculator',     desc: 'Calculate daily, weekly, monthly, and yearly staking rewards for ETH, SOL, ADA, DOT, and more.' },
-  { id: 'sessions',    category: 'Forex',    icon: '🕐', title: 'Forex Session Timer',            desc: 'Live countdown to Sydney, Tokyo, London, and New York open/close. Highlights peak overlap periods.' },
-  { id: 'strength',    category: 'Forex',    icon: '💪', title: 'Currency Strength Meter',        desc: 'Rank USD, EUR, GBP, JPY, CHF, AUD, CAD, NZD by relative strength. Find the best pairs to trade.' },
-  { id: 'correlation', category: 'Universal',icon: '🔗', title: 'Correlation Matrix',             desc: 'See how SPY, QQQ, BTC, ETH, Gold, Oil correlate. Build a diversified, uncorrelated portfolio.' },
-  { id: 'profit',      category: 'Universal',icon: '🎯', title: 'Profit Target Calculator',       desc: 'Set daily/weekly/monthly dollar targets. Calculate required win rate and project account growth.' },
+  { id: 'screener',    category: 'Stocks',   title: 'Stock Screener',                 desc: 'Filter stocks by P/E, dividend yield, sector, market cap, and price. Find your next investment.' },
+  { id: 'earnings',    category: 'Stocks',   title: 'Earnings Calendar',              desc: "See which companies report earnings this week or next. BMO/AMC timing, EPS & revenue estimates." },
+  { id: 'heatmap',     category: 'Stocks',   title: 'Market Heatmap',                 desc: 'Visual overview of S&P 500 sectors. Green = up, red = down. Spot market trends instantly.' },
+  { id: 'feargreed',   category: 'Crypto',   title: 'Fear & Greed Index',             desc: "Measure crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed). 30-day history." },
+  { id: 'gas',         category: 'Crypto',   title: 'Gas Fee Tracker',                desc: 'Live Ethereum gas prices in Gwei and USD. Slow/Standard/Fast tiers for common tx types.' },
+  { id: 'staking',     category: 'Crypto',   title: 'Staking Rewards Calculator',     desc: 'Calculate daily, weekly, monthly, and yearly staking rewards for ETH, SOL, ADA, DOT, and more.' },
+  { id: 'sessions',    category: 'Forex',    title: 'Forex Session Timer',            desc: 'Live countdown to Sydney, Tokyo, London, and New York open/close. Highlights peak overlap periods.' },
+  { id: 'strength',    category: 'Forex',    title: 'Currency Strength Meter',        desc: 'Rank USD, EUR, GBP, JPY, CHF, AUD, CAD, NZD by relative strength. Find the best pairs to trade.' },
+  { id: 'correlation', category: 'Universal',title: 'Correlation Matrix',             desc: 'See how SPY, QQQ, BTC, ETH, Gold, Oil correlate. Build a diversified, uncorrelated portfolio.' },
+  { id: 'profit',      category: 'Universal',title: 'Profit Target Calculator',       desc: 'Set daily/weekly/monthly dollar targets. Calculate required win rate and projects account growth.' },
 ]
 
 export default function ToolsPage() {
@@ -1789,35 +1781,45 @@ export default function ToolsPage() {
   }
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-1)', color: 'var(--text-0)', padding: '0 0 60px' }}>
-      {/* Header */}
-      <div style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)', padding: '16px 24px', display: 'flex', alignItems: 'center', gap: 16 }}>
-        <a href="/" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: 13 }}>← Back</a>
-        <div style={{ fontSize: 18, fontWeight: 700, color: 'var(--text-0)' }}>🛠️ Trading Tools</div>
-        <div style={{ fontSize: 12, color: 'var(--text-3)', marginLeft: 4 }}>Professional calculators for traders of all levels</div>
+    <div style={{ minHeight: '100vh', background: 'var(--bg-1)', color: 'var(--text-0)', paddingBottom: 60 }}>
+      {/* Page header */}
+      <div className="page-header">
+        <a href="/" className="back-link">
+          <IconArrowLeft size={16} />
+          Back
+        </a>
+        <div className="page-header-title">
+          <span style={{ color: 'var(--accent)' }}><IconTool size={18} /></span>
+          Trading Tools
+        </div>
+        <div className="page-header-desc">Professional calculators for traders of all levels</div>
       </div>
 
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px 24px' }}>
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
 
         {activeTool ? (
           // Tool view
           <div>
             <button
               onClick={() => setActiveTool(null)}
-              style={{ background: 'transparent', border: '1px solid var(--border)', color: 'var(--text-2)', borderRadius: 6, padding: '6px 14px', cursor: 'pointer', fontSize: 12, marginBottom: 20 }}
+              className="btn btn-secondary btn-sm"
+              style={{ marginBottom: 20, gap: 6 }}
             >
-              ← Back to Tools
+              <IconArrowLeft size={14} />
+              Back to Tools
             </button>
             {renderTool()}
           </div>
         ) : (
           // Hub view
           <div>
-            {/* Intro */}
-            <div style={{ marginBottom: 24, padding: '16px 20px', background: 'rgba(99,102,241,0.08)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10 }}>
+            {/* Intro banner */}
+            <div style={{ marginBottom: 24, padding: '16px 20px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.2)', borderRadius: 'var(--card-radius)' }}>
               <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>Professional Trading Calculators</div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.6 }}>
-                All tools update in real-time as you type. Every field has a <span style={{ display: 'inline-flex', alignItems: 'center', gap: 2 }}>ℹ️ tooltip <Tooltip text="Hover over the ? icon next to any label to learn what that field means. We explain everything in plain English!" position="right" /></span> to explain what it means. No financial jargon without explanation.
+              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                All tools update in real-time as you type. Every field has a{' '}
+                <Tooltip text="Hover over the ? icon next to any label to learn what that field means. We explain everything in plain English!" position="right" />
+                {' '}tooltip to explain what it means. No financial jargon without explanation.
               </div>
             </div>
 
@@ -1827,13 +1829,8 @@ export default function ToolsPage() {
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
-                  style={{
-                    padding: '6px 16px', borderRadius: 20, fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    border: '1px solid ' + (activeCategory === cat ? '#6366f1' : 'var(--border)'),
-                    background: activeCategory === cat ? 'rgba(99,102,241,0.2)' : 'transparent',
-                    color: activeCategory === cat ? '#818cf8' : 'var(--text-2)',
-                    transition: 'all 0.15s',
-                  }}
+                  className={'btn btn-sm' + (activeCategory === cat ? ' btn-accent' : ' btn-secondary')}
+                  style={{ borderRadius: 20 }}
                 >{cat}</button>
               ))}
             </div>
@@ -1843,32 +1840,48 @@ export default function ToolsPage() {
               {filteredTools.map(tool => (
                 <div
                   key={tool.id}
+                  className="ds-card"
                   style={{
-                    background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 20,
                     display: 'flex', flexDirection: 'column', gap: 12,
-                    transition: 'border-color 0.15s, transform 0.15s',
+                    transition: 'border-color var(--transition), box-shadow var(--transition), transform var(--transition)',
                     cursor: 'pointer',
                   }}
-                  onMouseEnter={e => { (e.currentTarget as HTMLDivElement).style.borderColor = '#6366f1'; (e.currentTarget as HTMLDivElement).style.transform = 'translateY(-2px)' }}
-                  onMouseLeave={e => { (e.currentTarget as HTMLDivElement).style.borderColor = 'var(--border)'; (e.currentTarget as HTMLDivElement).style.transform = 'none' }}
+                  onMouseEnter={e => {
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.borderColor = 'var(--accent)'
+                    el.style.transform = 'translateY(-2px)'
+                    el.style.boxShadow = '0 4px 16px rgba(74,158,255,0.12)'
+                  }}
+                  onMouseLeave={e => {
+                    const el = e.currentTarget as HTMLDivElement
+                    el.style.borderColor = 'var(--border)'
+                    el.style.transform = 'none'
+                    el.style.boxShadow = 'var(--card-shadow)'
+                  }}
                   onClick={() => { if ((tool as any).href) window.location.href = (tool as any).href; else setActiveTool(tool.id) }}
                 >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-                    <span style={{ fontSize: 26 }}>{tool.icon}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
+                    <div style={{
+                      width: 40, height: 40, borderRadius: 10,
+                      background: 'var(--accent-dim)',
+                      border: '1px solid rgba(74,158,255,0.15)',
+                      display: 'flex', alignItems: 'center', justifyContent: 'center',
+                      color: 'var(--accent)', flexShrink: 0,
+                    }}>
+                      <ToolIcon id={tool.id} size={20} />
+                    </div>
                     <div>
-                      <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)' }}>{tool.title}</div>
-                      <div style={{ fontSize: 10, color: 'var(--accent)', background: 'rgba(99,102,241,0.15)', padding: '1px 6px', borderRadius: 4, display: 'inline-block', marginTop: 2 }}>{tool.category}</div>
+                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3 }}>{tool.title}</div>
+                      <span className="tag tag-blue" style={{ marginTop: 3 }}>{tool.category}</span>
                     </div>
                   </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{tool.desc}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, flex: 1 }}>{tool.desc}</div>
                   <button
-                    style={{
-                      alignSelf: 'flex-start', padding: '6px 16px', background: 'rgba(99,102,241,0.2)',
-                      border: '1px solid rgba(99,102,241,0.4)', borderRadius: 6, color: '#818cf8',
-                      fontSize: 12, fontWeight: 600, cursor: 'pointer',
-                    }}
+                    className="btn btn-secondary btn-sm"
+                    style={{ alignSelf: 'flex-start' }}
+                    onClick={e => { e.stopPropagation(); if ((tool as any).href) window.location.href = (tool as any).href; else setActiveTool(tool.id) }}
                   >
-                    Open →
+                    Open
                   </button>
                 </div>
               ))}

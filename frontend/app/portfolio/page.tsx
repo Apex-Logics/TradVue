@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import { IconArrowLeft, IconBriefcase, IconRefresh, IconAlert } from '../components/Icons'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
 
@@ -356,7 +357,7 @@ function LineChart({ data }: { data: MonthlySnapshot[] }) {
 
 function KpiCard({ label, value, sub, color, tooltip }: { label: string; value: string; sub?: string; color?: string; tooltip?: string }) {
   return (
-    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: '12px 14px' }}>
       <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', marginBottom: 6, display: 'flex', alignItems: 'center', gap: 2 }}>
         {label}
         {tooltip && <Tooltip text={tooltip} position="bottom" />}
@@ -379,7 +380,7 @@ function Modal({ title, onClose, children }: { title: string; onClose: () => voi
       <div onClick={onClose} style={{ position: 'fixed', inset: 0, background: 'rgba(0,0,0,0.65)', zIndex: 1000 }} />
       <div style={{
         position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%,-50%)',
-        background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10,
+        background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)',
         padding: 24, minWidth: 340, maxWidth: 560, width: '90%', zIndex: 1001,
         maxHeight: '92vh', overflowY: 'auto',
       }}>
@@ -897,18 +898,19 @@ export default function PortfolioPage() {
         background: 'var(--bg-1)', borderBottom: '1px solid var(--border)', padding: '0 20px',
         display: 'flex', alignItems: 'center', gap: 16, height: 52, position: 'sticky', top: 0, zIndex: 100,
       }}>
-        <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: 8, color: 'var(--text-2)', fontSize: 12, textDecoration: 'none' }}>
-          ← Back
+        <Link href="/" className="back-link">
+          <IconArrowLeft size={16} />
+          Back
         </Link>
         <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
         {/* eslint-disable-next-line @next/next/no-img-element */}
         <img src="/logo-horizontal.png" alt="ChartGenius" style={{ height: 28, width: 'auto', objectFit: 'contain' }} />
         <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.05em' }}>PORTFOLIO</span>
-        {isLoggedIn && <span style={{ fontSize: 10, color: 'var(--green)', background: 'rgba(0,192,106,0.12)', padding: '2px 8px', borderRadius: 10 }}>☁ Cloud Sync</span>}
+        {isLoggedIn && <span style={{ fontSize: 10, color: 'var(--green)', background: 'var(--green-dim)', padding: '2px 8px', borderRadius: 10 }}>☁ Cloud Sync</span>}
         {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <Link href="/login" style={{ color: 'var(--accent)' }}>Sign in to save</Link></span>}
         <div style={{ flex: 1 }} />
         {loadingPrices && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>↻ Updating prices…</span>}
-        <button onClick={fetchStockInfos} style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>
+        <button onClick={fetchStockInfos} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>
           ↻ Refresh
         </button>
         {totalMarketValue > 0 && (
@@ -920,9 +922,9 @@ export default function PortfolioPage() {
       </header>
 
       {/* Portfolio Disclaimer Banner */}
-      <div style={{ background: 'rgba(255,165,0,0.1)', borderBottom: '1px solid rgba(255,165,0,0.3)', padding: '10px 20px', fontSize: 11, color: 'var(--text-2)' }}>
+      <div style={{ background: 'var(--yellow-dim)', borderBottom: '1px solid rgba(240,165,0,0.25)', padding: '10px 20px', fontSize: 11, color: 'var(--text-2)' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <span style={{ fontSize: 13 }}>⚠️</span>
+          <span style={{ color: "var(--yellow)", display: "flex" }}><IconAlert size={14} /></span>
           <span><strong>Portfolio calculations are estimates.</strong> Verify cost basis, dividends, and returns with your broker statements. Not financial or tax advice. <a href="/legal/disclaimer" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Read full disclaimer</a>.</span>
         </span>
       </div>
@@ -3031,7 +3033,7 @@ function AllocationTargetsSection({ holdingsEnriched, totalMarketValue, portfoli
       <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
           <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🎯 ALLOCATION TARGETS</div>
-          <button onClick={startEdit} style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>Set Targets</button>
+          <button onClick={startEdit} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>Set Targets</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Set target allocation percentages by sector to track rebalancing needs.</div>
       </div>
@@ -3045,7 +3047,7 @@ function AllocationTargetsSection({ holdingsEnriched, totalMarketValue, portfoli
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🎯 ALLOCATION TARGETS</div>
         {!editing ? (
-          <button onClick={startEdit} style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>Edit Targets</button>
+          <button onClick={startEdit} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>Edit Targets</button>
         ) : (
           <div style={{ display: 'flex', gap: 8 }}>
             <button onClick={saveTargets} style={{ fontSize: 11, color: '#fff', cursor: 'pointer', padding: '4px 10px', border: 'none', borderRadius: 4, background: 'var(--accent)' }}>Save</button>
@@ -3311,7 +3313,7 @@ function AIAnalysisSection({ holdingsEnriched, totalMarketValue, projAnnualIncom
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🤖 AI PORTFOLIO ANALYSIS</div>
-        <button onClick={() => setExpanded(!expanded)} style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>
+        <button onClick={() => setExpanded(!expanded)} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>
           {expanded ? 'Collapse ↑' : 'View Analysis ↓'}
         </button>
       </div>
@@ -3396,7 +3398,7 @@ function WhatIfSection({ holdingsEnriched, totalMarketValue, projAnnualIncome, s
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🔮 WHAT-IF SCENARIOS</div>
-        <button onClick={() => setExpanded(!expanded)} style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '4px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>
+        <button onClick={() => setExpanded(!expanded)} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>
           {expanded ? 'Collapse ↑' : 'Try Scenario ↓'}
         </button>
       </div>

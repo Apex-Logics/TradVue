@@ -6,7 +6,7 @@ interface TooltipProps {
   text: string
   /** 'top' | 'bottom' | 'left' | 'right' — default 'top' */
   position?: 'top' | 'bottom' | 'left' | 'right'
-  /** Override the trigger element (default: ℹ️ circle) */
+  /** Override the trigger element (default: ? circle) */
   children?: React.ReactNode
 }
 
@@ -31,16 +31,16 @@ export default function Tooltip({ text, position = 'top', children }: TooltipPro
   const popoverStyle: React.CSSProperties = {
     position: 'absolute',
     zIndex: 9999,
-    background: '#1e2030',
-    border: '1px solid rgba(99,102,241,0.4)',
+    background: 'var(--bg-3)',
+    border: '1px solid var(--border)',
     borderRadius: 8,
     padding: '8px 12px',
     fontSize: 12,
-    color: 'var(--text-1, #e2e8f0)',
+    color: 'var(--text-1)',
     lineHeight: 1.5,
     width: 240,
     maxWidth: '80vw',
-    boxShadow: '0 8px 24px rgba(0,0,0,0.5)',
+    boxShadow: '0 8px 24px rgba(0,0,0,0.45)',
     pointerEvents: 'none',
     whiteSpace: 'normal',
     ...(position === 'top'    ? { bottom: 'calc(100% + 8px)', left: '50%', transform: 'translateX(-50%)' } : {}),
@@ -65,9 +65,9 @@ export default function Tooltip({ text, position = 'top', children }: TooltipPro
           width: 15,
           height: 15,
           borderRadius: '50%',
-          background: 'rgba(99,102,241,0.2)',
-          border: '1px solid rgba(99,102,241,0.4)',
-          color: '#818cf8',
+          background: 'var(--accent-dim)',
+          border: '1px solid rgba(74,158,255,0.3)',
+          color: 'var(--accent)',
           fontSize: 9,
           fontWeight: 700,
           cursor: 'help',

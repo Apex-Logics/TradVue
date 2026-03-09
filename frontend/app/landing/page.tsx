@@ -187,7 +187,7 @@ function StatCounter({ value, label, suffix = '' }: { value: number; label: stri
         fontSize: 'clamp(2rem, 5vw, 3rem)',
         fontWeight: 800,
         letterSpacing: '-0.03em',
-        background: 'linear-gradient(135deg, #4a9eff 0%, #a78bfa 100%)',
+        background: 'linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%)',
         WebkitBackgroundClip: 'text',
         WebkitTextFillColor: 'transparent',
         backgroundClip: 'text',
@@ -212,37 +212,37 @@ const features = [
     icon: <IconNews />,
     title: 'Real-Time News Feed',
     desc: 'Market-moving news filtered by relevance and sector. Curated, not cluttered — only what moves your watchlist.',
-    color: '#4a9eff',
+    color: 'var(--blue)',
   },
   {
     icon: <IconRobot />,
     title: 'AI Sentiment Analysis',
     desc: 'Know what the market is thinking before it moves. Social signals, news tone, and institutional positioning — live.',
-    color: '#a78bfa',
+    color: 'var(--purple)',
   },
   {
     icon: <IconBell />,
     title: 'Smart Custom Alerts',
     desc: 'Price, volume, sentiment, and news triggers tailored to your strategy. Not your phone blowing up with noise.',
-    color: '#f59e0b',
+    color: 'var(--yellow)',
   },
   {
     icon: <IconEye />,
     title: 'Watchlist Tracking',
     desc: 'One dashboard, complete clarity. Monitor all your positions in real time with correlations and institutional flow.',
-    color: '#10b981',
+    color: 'var(--green)',
   },
   {
     icon: <IconCalendar />,
     title: 'Economic Calendar',
     desc: 'Economic releases, earnings dates, Fed announcements — with live market impact analysis as they happen.',
-    color: '#ef4444',
+    color: 'var(--red)',
   },
   {
     icon: <IconChart />,
     title: 'Chart + Context',
     desc: "Charts don't tell the full story. Real-time news and sentiment pinned to price action — see the why behind every move.",
-    color: '#f97316',
+    color: 'var(--yellow)',
   },
 ]
 
@@ -383,7 +383,7 @@ export default function LandingPage() {
               />
               <span style={{
                 fontSize: '9px', fontWeight: 700, letterSpacing: '0.1em',
-                color: '#4a9eff', background: 'rgba(74,158,255,0.1)',
+                color: 'var(--blue)', background: 'var(--blue-dim)',
                 border: '1px solid rgba(74,158,255,0.25)', padding: '2px 6px', borderRadius: '4px',
               }}>BETA</span>
             </Link>
@@ -410,7 +410,7 @@ export default function LandingPage() {
               onClick={scrollToSignup}
               style={{
                 fontSize: '13px', fontWeight: 600, padding: '9px 20px',
-                background: 'linear-gradient(135deg, #4a9eff 0%, #6366f1 100%)',
+                background: 'linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%)',
                 color: '#fff', border: 'none', borderRadius: '8px', cursor: 'pointer',
                 boxShadow: '0 0 20px rgba(99,102,241,0.3)',
                 transition: 'opacity 0.15s, transform 0.1s',
@@ -447,9 +447,9 @@ export default function LandingPage() {
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.2)',
               borderRadius: '100px', padding: '6px 14px', marginBottom: '32px',
-              fontSize: '12px', color: '#4a9eff', fontWeight: 600, letterSpacing: '0.02em',
+              fontSize: '12px', color: 'var(--blue)', fontWeight: 600, letterSpacing: '0.02em',
             }}>
-              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: '#4a9eff', display: 'inline-block', animation: 'lp-pulse 2s ease-in-out infinite' }} />
+              <span style={{ width: '6px', height: '6px', borderRadius: '50%', background: 'var(--blue)', display: 'inline-block', animation: 'lp-pulse 2s ease-in-out infinite' }} />
               Beta now open — free Pro access for early users
             </div>
 
@@ -479,7 +479,7 @@ export default function LandingPage() {
             }}>
               Real-Time Market Intelligence.{' '}
               <span style={{
-                background: 'linear-gradient(135deg, #4a9eff 0%, #a78bfa 100%)',
+                background: 'linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%)',
                 WebkitBackgroundClip: 'text',
                 WebkitTextFillColor: 'transparent',
                 backgroundClip: 'text',
@@ -505,7 +505,7 @@ export default function LandingPage() {
                 style={{
                   display: 'inline-flex', alignItems: 'center', gap: '8px',
                   fontSize: '15px', fontWeight: 700, padding: '14px 32px',
-                  background: 'linear-gradient(135deg, #4a9eff 0%, #6366f1 100%)',
+                  background: 'linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%)',
                   color: '#fff', border: 'none', borderRadius: '10px', cursor: 'pointer',
                   boxShadow: '0 0 40px rgba(99,102,241,0.25)',
                   transition: 'all 0.2s',
@@ -583,19 +583,19 @@ export default function LandingPage() {
                   number: '01',
                   title: 'Information Overload',
                   desc: "You're drowning in data. Market news, earnings calls, SEC filings, social signals. Which ones matter? Right now?",
-                  color: '#ef4444',
+                  color: 'var(--red)',
                 },
                 {
                   number: '02',
                   title: 'The Speed Gap',
                   desc: 'Professional traders get institutional feeds. You get Twitter. By the time retail attention hits, the alpha is gone.',
-                  color: '#f59e0b',
+                  color: 'var(--yellow)',
                 },
                 {
                   number: '03',
                   title: 'Emotion vs. Edge',
                   desc: "You feel the market moving but can't quantify sentiment fast enough. Is this a real reversal or noise?",
-                  color: '#a78bfa',
+                  color: 'var(--purple)',
                 },
               ].map(item => (
                 <div key={item.number} style={{
@@ -734,7 +734,7 @@ export default function LandingPage() {
                   background: 'var(--bg-2)', border: '1px solid var(--border)',
                   borderRadius: '10px', padding: '16px 20px',
                 }}>
-                  <span style={{ color: '#10b981', flexShrink: 0, marginTop: '1px' }}><IconCheck /></span>
+                  <span style={{ color: 'var(--green)', flexShrink: 0, marginTop: '1px' }}><IconCheck /></span>
                   <span style={{ fontSize: '14px', color: 'var(--text-1)', lineHeight: 1.5 }}>{item}</span>
                 </div>
               ))}
@@ -765,7 +765,7 @@ export default function LandingPage() {
                   <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                     <div style={{
                       width: '36px', height: '36px', borderRadius: '50%',
-                      background: 'linear-gradient(135deg, #4a9eff, #a78bfa)',
+                      background: 'linear-gradient(135deg, var(--blue), var(--purple))',
                       display: 'flex', alignItems: 'center', justifyContent: 'center',
                       fontSize: '14px', fontWeight: 700, color: '#fff', flexShrink: 0,
                     }}>
@@ -834,7 +834,7 @@ export default function LandingPage() {
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, marginBottom: '28px' }}>
                   {pricingFree.map(item => (
                     <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-1)' }}>
-                      <span style={{ color: '#10b981', flexShrink: 0 }}><IconCheck /></span>
+                      <span style={{ color: 'var(--green)', flexShrink: 0 }}><IconCheck /></span>
                       {item}
                     </li>
                   ))}
@@ -874,7 +874,7 @@ export default function LandingPage() {
                 </div>
 
                 <div style={{ marginBottom: '24px' }}>
-                  <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: '#4a9eff', textTransform: 'uppercase', marginBottom: '8px' }}>
+                  <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--blue)', textTransform: 'uppercase', marginBottom: '8px' }}>
                     ChartGenius Pro
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
@@ -885,9 +885,9 @@ export default function LandingPage() {
                   </div>
                   <div style={{
                     fontSize: '12px', marginTop: '6px',
-                    background: 'rgba(74,158,255,0.1)', border: '1px solid rgba(74,158,255,0.2)',
+                    background: 'var(--blue-dim)', border: '1px solid rgba(74,158,255,0.2)',
                     borderRadius: '6px', padding: '4px 10px', display: 'inline-block',
-                    color: '#4a9eff', fontWeight: 600,
+                    color: 'var(--blue)', fontWeight: 600,
                   }}>
                     🎁 Free during beta
                   </div>
@@ -896,7 +896,7 @@ export default function LandingPage() {
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, marginBottom: '28px' }}>
                   {pricingPro.map(item => (
                     <li key={item} style={{ display: 'flex', alignItems: 'center', gap: '10px', fontSize: '14px', color: 'var(--text-1)' }}>
-                      <span style={{ color: '#4a9eff', flexShrink: 0 }}><IconCheck /></span>
+                      <span style={{ color: 'var(--blue)', flexShrink: 0 }}><IconCheck /></span>
                       {item}
                     </li>
                   ))}
@@ -907,7 +907,7 @@ export default function LandingPage() {
                   style={{
                     width: '100%', padding: '13px', borderRadius: '8px',
                     border: 'none',
-                    background: 'linear-gradient(135deg, #4a9eff 0%, #6366f1 100%)',
+                    background: 'linear-gradient(135deg, var(--blue) 0%, var(--purple) 100%)',
                     color: '#fff', fontSize: '14px', fontWeight: 700, cursor: 'pointer',
                     boxShadow: '0 0 20px rgba(99,102,241,0.3)',
                     transition: 'opacity 0.15s, transform 0.1s',
@@ -951,7 +951,7 @@ export default function LandingPage() {
                 borderRadius: '12px', padding: '32px', textAlign: 'center',
               }}>
                 <div style={{ fontSize: '40px', marginBottom: '16px' }}>✓</div>
-                <h3 style={{ fontSize: '20px', fontWeight: 700, color: '#10b981', marginBottom: '10px' }}>
+                <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--green)', marginBottom: '10px' }}>
                   Check your email.
                 </h3>
                 <p style={{ fontSize: '14px', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '20px' }}>
@@ -960,7 +960,7 @@ export default function LandingPage() {
                 <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
                   In the meantime:{' '}
                   <a href="https://t.me/chartgenius" target="_blank" rel="noopener noreferrer"
-                    style={{ color: '#4a9eff', fontWeight: 600, textDecoration: 'none' }}>
+                    style={{ color: 'var(--blue)', fontWeight: 600, textDecoration: 'none' }}>
                     Join our Telegram community
                   </a>{' '}
                   to chat with other traders.
@@ -1096,7 +1096,7 @@ export default function LandingPage() {
                   <div style={{
                     background: 'rgba(239,68,68,0.08)', border: '1px solid rgba(239,68,68,0.25)',
                     borderRadius: '8px', padding: '10px 14px',
-                    fontSize: '13px', color: '#ef4444',
+                    fontSize: '13px', color: 'var(--red)',
                   }}>
                     {errorMsg || 'Something went wrong. Please try again.'}
                   </div>

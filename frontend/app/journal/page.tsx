@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
+import { IconChart, IconArrowLeft } from '../components/Icons'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -220,10 +221,10 @@ function calcPct(t: Partial<Trade>): number {
 
 // ─── Design tokens ────────────────────────────────────────────────────────────
 
-const GREEN = '#10b981'
-const RED   = '#ef4444'
-const BLUE  = '#6366f1'
-const YELLOW = '#f59e0b'
+const GREEN = 'var(--green)'
+const RED   = 'var(--red)'
+const BLUE  = 'var(--blue)'
+const YELLOW = 'var(--yellow)'
 
 // ─── Reusable UI ─────────────────────────────────────────────────────────────
 
@@ -265,8 +266,7 @@ function KpiCard({ label, value, sub, color, tooltip, icon }: {
       gap: 6,
       minWidth: 140,
     }}>
-      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 12, color: 'var(--text-2)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
-        <span>{icon}</span>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, fontSize: 11, color: 'var(--text-2)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>
         <span>{label}</span>
         <Tooltip text={tooltip} position="bottom" />
       </div>
@@ -292,7 +292,7 @@ function FieldLabel({ label, tooltip }: { label: string; tooltip?: string }) {
 const inputSx: React.CSSProperties = {
   width: '100%', boxSizing: 'border-box',
   background: 'var(--bg-1)', border: '1px solid var(--border)',
-  borderRadius: 6, padding: '8px 10px',
+  borderRadius: 8, padding: '10px 14px',
   color: 'var(--text-0)', fontSize: 13, fontFamily: 'var(--mono)',
   outline: 'none',
 }
@@ -365,7 +365,7 @@ function CumulativePnlChart({ trades }: { trades: Trade[] }) {
 
   if (points.length < 2) return (
     <div style={{ textAlign: 'center', padding: 40, color: 'var(--text-2)', fontSize: 13 }}>
-      Add at least 2 trades to see your equity curve 📈
+      Add at least 2 trades to see your equity curve
     </div>
   )
 
@@ -833,8 +833,8 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
         <button
           onClick={() => setShowForm(f => !f)}
           style={{
-            background: BLUE, border: 'none', borderRadius: 8, padding: '10px 20px',
-            color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
+            background: 'var(--accent)', border: 'none', borderRadius: 'var(--btn-radius)', padding: '10px 20px',
+            color: '#0a0a0c', fontSize: 13, fontWeight: 700, cursor: 'pointer',
           }}
         >
           {showForm ? '✕ Cancel' : '+ Log Trade'}
@@ -1018,8 +1018,8 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
           <button
             onClick={submitTrade}
             style={{
-              background: GREEN, border: 'none', borderRadius: 8, padding: '10px 28px',
-              color: '#fff', fontSize: 14, fontWeight: 700, cursor: 'pointer',
+              background: 'var(--green)', border: 'none', borderRadius: 'var(--btn-radius)', padding: '10px 28px',
+              color: '#0a0a0c', fontSize: 14, fontWeight: 700, cursor: 'pointer',
             }}
           >
             ✓ Save Trade
@@ -1128,7 +1128,7 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
                     </td>
                     <td style={{ padding: '10px 12px' }}>
                       {t.setupTag && (
-                        <span style={{ background: 'rgba(99,102,241,0.15)', color: BLUE, borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
+                        <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
                           {t.setupTag}
                         </span>
                       )}
@@ -1478,7 +1478,7 @@ function TabAnalytics({ trades }: { trades: Trade[] }) {
 
   if (trades.length < 3) return (
     <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-      <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
+      <div style={{ color: 'var(--text-3)', marginBottom: 16, display: 'flex', justifyContent: 'center' }}><IconChart size={48} /></div>
       <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>Need more trades</h3>
       <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Log at least 3 trades to unlock analytics insights.</p>
     </div>
@@ -1721,7 +1721,7 @@ function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[])
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
             <button
               onClick={() => setShowTemplates(t => !t)}
-              style={{ flex: 1, background: BLUE, border: 'none', borderRadius: 8, padding: '8px 12px', color: '#fff', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
+              style={{ flex: 1, background: 'var(--accent)', border: 'none', borderRadius: 'var(--btn-radius)', padding: '8px 12px', color: '#0a0a0c', fontSize: 12, fontWeight: 600, cursor: 'pointer' }}
             >
               + New Note
             </button>
@@ -2090,7 +2090,7 @@ export default function JournalPage() {
         top: 0,
         zIndex: 100,
       }}>
-        <Link href="/" style={{ color: 'var(--text-2)', textDecoration: 'none', fontSize: 13 }}>← Back</Link>
+        <Link href="/" className="back-link"><IconArrowLeft size={16} />Back</Link>
         <div>
           <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-0)' }}>
             📒 Trading Journal
