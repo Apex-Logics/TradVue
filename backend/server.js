@@ -37,8 +37,8 @@ const allowedOrigins = [
   'https://tradvue.io',
   'https://www.tradvue.com',
   'https://tradvue.com',
-  'https://www.chartgenius.io', // legacy — kept during transition
-  'https://chartgenius.io',     // legacy — kept during transition
+  'https://www.tradvue.com', // tradvue.com domains
+  'https://tradvue.com',     // tradvue.com domains
 ];
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');

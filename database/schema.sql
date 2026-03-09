@@ -1,12 +1,12 @@
 -- ================================================================
--- ChartGenius Database Schema
+-- TradVue Database Schema
 -- PostgreSQL 15+
--- Run: psql -U postgres -d chartgenius -f schema.sql
+-- Run: psql -U postgres -d tradvue -f schema.sql
 -- ================================================================
 
 -- Create database (run separately as superuser if needed)
--- CREATE DATABASE chartgenius;
--- \c chartgenius
+-- CREATE DATABASE tradvue;
+-- \c tradvue
 
 -- Extensions
 CREATE EXTENSION IF NOT EXISTS "pgcrypto";

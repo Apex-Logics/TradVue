@@ -157,8 +157,8 @@ const ASSET_CLASSES: AssetClass[] = ['Stock', 'Option', 'Futures', 'Forex', 'Cry
 
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
-const TRADES_KEY = 'cg_journal_trades' // cg_ = legacy prefix from ChartGenius era; kept to avoid breaking existing user data
-const NOTES_KEY  = 'cg_journal_notes'  // cg_ = legacy prefix from ChartGenius era; kept to avoid breaking existing user data
+const TRADES_KEY = 'cg_journal_trades' // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
+const NOTES_KEY  = 'cg_journal_notes'  // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
 
 function loadTrades(): Trade[] {
   try {

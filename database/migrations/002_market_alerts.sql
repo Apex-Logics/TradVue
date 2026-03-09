@@ -1,6 +1,6 @@
 -- ────────────────────────────────────────────────────────────────
 -- Migration 002: Market Alerts System
--- ChartGenius - Real-Time Alert Infrastructure
+-- TradVue - Real-Time Alert Infrastructure
 -- ────────────────────────────────────────────────────────────────
 
 -- Market-moving alerts table

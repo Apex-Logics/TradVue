@@ -64,7 +64,7 @@ const DEFAULT_STATE: OnboardingState = {
   },
 }
 
-const STORAGE_KEY = 'cg_onboarding' // cg_ = legacy prefix from ChartGenius era; kept to avoid breaking existing user data
+const STORAGE_KEY = 'cg_onboarding' // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
 
 function loadState(): OnboardingState {
   if (typeof window === 'undefined') return DEFAULT_STATE

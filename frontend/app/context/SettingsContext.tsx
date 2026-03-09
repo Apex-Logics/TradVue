@@ -50,7 +50,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   // ── Load from localStorage ────────────────────────────────────────────────
   useEffect(() => {
     try {
-      const stored = localStorage.getItem('cg_settings') // cg_ = legacy prefix from ChartGenius era; kept to avoid breaking existing user data
+      const stored = localStorage.getItem('cg_settings') // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
       if (stored) {
         const parsed = JSON.parse(stored) as Partial<Settings>
         setSettings(prev => ({ ...prev, ...parsed }))
