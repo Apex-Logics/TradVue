@@ -73,6 +73,7 @@ app.use('/api/market-movers', require('./routes/marketMovers')); // High-impact 
 app.use('/api/stock-info', require('./routes/stockInfo'));         // Comprehensive stock info (Finnhub + Yahoo)
 app.use('/api/portfolio', require('./routes/portfolio'));           // Portfolio persistence (Supabase)
 app.use('/api/alerts/price', require('./routes/priceAlerts'));      // User price alerts
+app.use('/api/tools', require('./routes/tools'));                   // Trading tools (screener, fear-greed, gas, correlation)
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
