@@ -51,9 +51,9 @@ app.use(cors({
 // ── Request logging ───────────────────────────────────────────────────────────
 app.use(morgan('combined'));
 
-// ── Body parsing with size limit (10 kb) ─────────────────────────────────────
-app.use(express.json({ limit: '10kb' }));
-app.use(express.urlencoded({ extended: true, limit: '10kb' }));
+// ── Body parsing with size limit ──────────────────────────────────────────────
+app.use(express.json({ limit: '50kb' }));
+app.use(express.urlencoded({ extended: true, limit: '50kb' }));
 
 // ── Global rate limiting ──────────────────────────────────────────────────────
 app.use(generalLimiter);
@@ -77,6 +77,8 @@ app.use('/api/portfolio', require('./routes/portfolio'));           // Portfolio
 app.use('/api/alerts/price', require('./routes/priceAlerts'));      // User price alerts
 app.use('/api/tools', require('./routes/tools'));                   // Trading tools (screener, fear-greed, gas, correlation)
 app.use('/api/dashboard', require('./routes/dashboard'));             // CEO dashboard persistence (tasks, activity, companies, settings)
+app.use('/api/stocks', require('./routes/stocks'));                     // Analyst ratings + stock scoring
+app.use('/api/journal', require('./routes/journal'));                   // Journal CSV import & trade management
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
