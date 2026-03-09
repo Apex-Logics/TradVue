@@ -3,7 +3,11 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
-import { IconChart, IconArrowLeft } from '../components/Icons'
+import { IconChart, IconArrowLeft, IconUpload, IconDownload } from '../components/Icons'
+import ImportModal from './ImportModal'
+import AdvancedReports from './AdvancedReports'
+import { TagPicker, TagFilterBar, TagChip, loadCustomTags, saveCustomTags, type TagDefinition } from './TagManager'
+import { ExportButton, ImportBackupModal } from './ExportImport'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -46,6 +50,10 @@ interface Trade {
   screenshot: string  // base64
   optionData?: OptionData
   forexData?: ForexData
+  // Multi-tag support (Phase 1 upgrade)
+  tags_setup_types?: string[]
+  tags_mistakes?: string[]
+  tags_strategies?: string[]
 }
 
 interface Note {
@@ -694,7 +702,10 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   )
 }
 
-function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Trade[]) => void }) {
+function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
+  trades: Trade[]; setTrades: (t: Trade[]) => void
+  customTags: TagDefinition[]; onAddCustomTag: (tag: TagDefinition) => void
+}) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [expandedId, setExpandedId] = useState<string | null>(null)
@@ -705,6 +716,12 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
   const [filterSetup, setFilterSetup] = useState('All')
   const [sortCol, setSortCol] = useState<string>('date')
   const [sortAsc, setSortAsc] = useState(false)
+  // Multi-tag state for form
+  const [formSetupTypes, setFormSetupTypes] = useState<string[]>([])
+  const [formMistakes, setFormMistakes] = useState<string[]>([])
+  const [formStrategies, setFormStrategies] = useState<string[]>([])
+  // Tag filters
+  const [tagFilters, setTagFilters] = useState({ setup_types: [] as string[], mistakes: [] as string[], strategies: [] as string[] })
 
   const set = (k: string) => (v: string | number) => setForm(f => ({ ...f, [k]: v }))
 
@@ -775,11 +792,17 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
       ...(form.assetClass === 'Forex' ? {
         forexData: { lotSize: form.lotSize, pips: form.pips }
       } : {}),
+      tags_setup_types: formSetupTypes,
+      tags_mistakes: formMistakes,
+      tags_strategies: formStrategies,
     }
     const updated = [trade, ...trades]
     setTrades(updated)
     saveTrades(updated)
     setForm({ ...EMPTY_FORM, date: form.date })
+    setFormSetupTypes([])
+    setFormMistakes([])
+    setFormStrategies([])
     setShowForm(false)
   }
 
@@ -799,6 +822,25 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
     if (filterWL === 'Loss') list = list.filter(t => t.pnl <= 0)
     if (filterSymbol) list = list.filter(t => t.symbol.includes(filterSymbol.toUpperCase()))
     if (filterSetup !== 'All') list = list.filter(t => t.setupTag === filterSetup)
+    // Tag-based filters
+    if (tagFilters.setup_types.length > 0) {
+      list = list.filter(t => {
+        const tags = t.tags_setup_types || (t.setupTag ? [t.setupTag] : [])
+        return tagFilters.setup_types.some(f => tags.includes(f))
+      })
+    }
+    if (tagFilters.mistakes.length > 0) {
+      list = list.filter(t => {
+        const tags = t.tags_mistakes || (t.mistakeTag && t.mistakeTag !== 'None' ? [t.mistakeTag] : [])
+        return tagFilters.mistakes.some(f => tags.includes(f))
+      })
+    }
+    if (tagFilters.strategies.length > 0) {
+      list = list.filter(t => {
+        const tags = t.tags_strategies || []
+        return tagFilters.strategies.some(f => tags.includes(f))
+      })
+    }
     const dir = sortAsc ? 1 : -1
     return [...list].sort((a, b) => {
       if (sortCol === 'date') return dir * (a.date + a.time).localeCompare(b.date + b.time)
@@ -807,7 +849,7 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
       if (sortCol === 'symbol') return dir * a.symbol.localeCompare(b.symbol)
       return 0
     })
-  }, [trades, filterAsset, filterDir, filterWL, filterSymbol, filterSetup, sortCol, sortAsc])
+  }, [trades, filterAsset, filterDir, filterWL, filterSymbol, filterSetup, tagFilters, sortCol, sortAsc])
 
   const toggleSort = (col: string) => {
     if (sortCol === col) setSortAsc(a => !a)
@@ -945,21 +987,29 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
             </div>
           )}
 
-          {/* Tags & Rating */}
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr auto', gap: 12, marginBottom: 12 }}>
-            <div>
-              <FieldLabel label="Setup Tag" tooltip="What type of trading setup was this? E.g. 'Breakout' means you entered after price broke a key level. Tracking setups helps find what works for you." />
-              <select value={form.setupTag} onChange={e => set('setupTag')(e.target.value)} style={inputSx}>
-                <option value="">— Select Setup —</option>
-                {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
-              </select>
-            </div>
-            <div>
-              <FieldLabel label="Mistake Tag" tooltip="Did you make a mistake? E.g. 'FOMO' = entered because of fear of missing out, not a real signal. Honest tagging accelerates improvement." />
-              <select value={form.mistakeTag} onChange={e => set('mistakeTag')(e.target.value)} style={inputSx}>
-                {MISTAKE_TAGS.map(m => <option key={m} value={m}>{m}</option>)}
-              </select>
-            </div>
+          {/* Tags & Rating — Multi-select */}
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, marginBottom: 12 }}>
+            <TagPicker
+              category="setup_type"
+              selected={formSetupTypes}
+              onChange={setFormSetupTypes}
+              customTags={customTags}
+              onAddCustomTag={onAddCustomTag}
+            />
+            <TagPicker
+              category="mistake"
+              selected={formMistakes}
+              onChange={setFormMistakes}
+              customTags={customTags}
+              onAddCustomTag={onAddCustomTag}
+            />
+            <TagPicker
+              category="strategy"
+              selected={formStrategies}
+              onChange={setFormStrategies}
+              customTags={customTags}
+              onAddCustomTag={onAddCustomTag}
+            />
             <div>
               <FieldLabel label="Rating" tooltip="How well did you execute this trade? 5 stars = followed your plan perfectly. 1 star = broke all your rules. Rate execution, not outcome." />
               <StarRating value={form.rating} onChange={v => set('rating')(v)} />
@@ -1029,7 +1079,7 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
 
       {/* Filters */}
       <Card style={{ marginBottom: 16, padding: 12 }}>
-        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center' }}>
+        <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', alignItems: 'center', marginBottom: 8 }}>
           <span style={{ fontSize: 11, color: 'var(--text-2)', fontWeight: 600 }}>🔍 FILTER:</span>
           <input
             type="text" placeholder="Symbol..." value={filterSymbol}
@@ -1055,12 +1105,13 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
             {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
           <button
-            onClick={() => { setFilterAsset('All'); setFilterDir('All'); setFilterWL('All'); setFilterSymbol(''); setFilterSetup('All') }}
+            onClick={() => { setFilterAsset('All'); setFilterDir('All'); setFilterWL('All'); setFilterSymbol(''); setFilterSetup('All'); setTagFilters({ setup_types: [], mistakes: [], strategies: [] }) }}
             style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}
           >
             Clear
           </button>
         </div>
+        <TagFilterBar customTags={customTags} activeFilters={tagFilters} onChange={setTagFilters} />
       </Card>
 
       {/* Trade Table */}
@@ -1127,11 +1178,14 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
                       {fmtR(t.rMultiple)}
                     </td>
                     <td style={{ padding: '10px 12px' }}>
-                      {t.setupTag && (
-                        <span style={{ background: 'var(--accent-dim)', color: 'var(--accent)', borderRadius: 4, padding: '2px 6px', fontSize: 10 }}>
-                          {t.setupTag}
-                        </span>
-                      )}
+                      <div style={{ display: 'flex', gap: 2, flexWrap: 'wrap' }}>
+                        {(t.tags_setup_types || (t.setupTag ? [t.setupTag] : [])).map(tag => (
+                          <TagChip key={tag} tag={{ name: tag, color: '#6366f1', category: 'setup_type', id: '', isPreset: true }} size="small" />
+                        ))}
+                        {(t.tags_strategies || []).map(tag => (
+                          <TagChip key={tag} tag={{ name: tag, color: '#10b981', category: 'strategy', id: '', isPreset: true }} size="small" />
+                        ))}
+                      </div>
                     </td>
                     <td style={{ padding: '10px 12px' }}>
                       {'★'.repeat(t.rating)}{'☆'.repeat(5 - t.rating)}
@@ -1154,8 +1208,20 @@ function TabTradeLog({ trades, setTrades }: { trades: Trade[]; setTrades: (t: Tr
                               <div>Take Profit: <span style={{ fontFamily: 'var(--mono)', color: GREEN }}>${fmt2(t.takeProfit)}</span></div>
                               <div>Commissions: <span style={{ fontFamily: 'var(--mono)' }}>${fmt2(t.commissions)}</span></div>
                               <div>% Gain/Loss: <span style={{ fontFamily: 'var(--mono)', color: t.pctGainLoss >= 0 ? GREEN : RED }}>{fmtPct(t.pctGainLoss)}</span></div>
-                              {t.mistakeTag && t.mistakeTag !== 'None' && (
-                                <div>Mistake: <span style={{ color: YELLOW }}>{t.mistakeTag}</span></div>
+                              {/* Multi-tags */}
+                              {(t.tags_mistakes?.length ? t.tags_mistakes : (t.mistakeTag && t.mistakeTag !== 'None' ? [t.mistakeTag] : [])).length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                  Mistakes: {(t.tags_mistakes?.length ? t.tags_mistakes : [t.mistakeTag]).filter(Boolean).filter(m => m !== 'None').map(m => (
+                                    <TagChip key={m!} tag={{ name: m!, color: '#f59e0b', category: 'mistake', id: '', isPreset: true }} size="small" />
+                                  ))}
+                                </div>
+                              )}
+                              {(t.tags_strategies || []).length > 0 && (
+                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
+                                  Strategy: {t.tags_strategies!.map(s => (
+                                    <TagChip key={s} tag={{ name: s, color: '#10b981', category: 'strategy', id: '', isPreset: true }} size="small" />
+                                  ))}
+                                </div>
                               )}
                               {t.time && <div>Time: <span style={{ fontFamily: 'var(--mono)' }}>{t.time}</span></div>}
                             </div>
@@ -2064,17 +2130,68 @@ const TABS = [
   { id: 'analytics', label: '🔬 Analytics' },
   { id: 'notebook',  label: '📓 Notebook' },
   { id: 'reports',   label: '📈 Reports' },
+  { id: 'advanced',  label: '🧠 Advanced' },
 ]
 
 export default function JournalPage() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [trades, setTrades] = useState<Trade[]>([])
   const [notes, setNotes] = useState<Note[]>([])
+  const [showImportModal, setShowImportModal] = useState(false)
+  const [showBackupImport, setShowBackupImport] = useState(false)
+  const [customTags, setCustomTags] = useState<TagDefinition[]>([])
 
   useEffect(() => {
     setTrades(loadTrades())
     setNotes(loadNotes())
+    setCustomTags(loadCustomTags())
   }, [])
+
+  const handleImportTrades = (importedTrades: Record<string, unknown>[]) => {
+    const newTrades: Trade[] = importedTrades.map(t => ({
+      date: String(t.date || ''),
+      time: String(t.time || ''),
+      symbol: String(t.symbol || ''),
+      assetClass: (String(t.assetClass || 'Stock')) as AssetClass,
+      direction: (String(t.direction || 'Long')) as Direction,
+      entryPrice: Number(t.entryPrice) || 0,
+      exitPrice: Number(t.exitPrice) || 0,
+      positionSize: Number(t.positionSize) || 0,
+      stopLoss: Number(t.stopLoss) || 0,
+      takeProfit: Number(t.takeProfit) || 0,
+      commissions: Number(t.commissions) || 0,
+      pnl: Number(t.pnl) || 0,
+      rMultiple: Number(t.rMultiple) || 0,
+      pctGainLoss: Number(t.pctGainLoss) || 0,
+      holdMinutes: Number(t.holdMinutes) || 0,
+      setupTag: String(t.setupTag || ''),
+      mistakeTag: String(t.mistakeTag || 'None'),
+      rating: Number(t.rating) || 3,
+      notes: String(t.notes || 'Imported from CSV'),
+      screenshot: '',
+      id: uid(),
+      tags_setup_types: (t.tags_setup_types as string[]) || [],
+      tags_mistakes: (t.tags_mistakes as string[]) || [],
+      tags_strategies: (t.tags_strategies as string[]) || [],
+    }))
+    const updated = [...newTrades, ...trades]
+    setTrades(updated)
+    saveTrades(updated)
+    setShowImportModal(false)
+  }
+
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const handleBackupRestore = (data: any) => {
+    if (data.trades) setTrades(data.trades as Trade[])
+    if (data.notes) setNotes(data.notes as Note[])
+    setCustomTags(loadCustomTags())
+  }
+
+  const handleAddCustomTag = (tag: TagDefinition) => {
+    const updated = [...customTags, tag]
+    setCustomTags(updated)
+    saveCustomTags(updated)
+  }
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
@@ -2103,6 +2220,23 @@ export default function JournalPage() {
           <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
             {trades.length} trades logged
           </div>
+          <button onClick={() => setShowImportModal(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'var(--bg-1)', border: '1px solid var(--border)',
+            borderRadius: 'var(--btn-radius)', padding: '7px 12px',
+            color: 'var(--text-0)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>
+            <IconUpload size={14} /> Import CSV
+          </button>
+          <ExportButton trades={trades} notes={notes} variant="journal" />
+          <button onClick={() => setShowBackupImport(true)} style={{
+            display: 'flex', alignItems: 'center', gap: 5,
+            background: 'var(--bg-1)', border: '1px solid var(--border)',
+            borderRadius: 'var(--btn-radius)', padding: '7px 12px',
+            color: 'var(--text-0)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
+          }}>
+            💾 Backup
+          </button>
         </div>
       </div>
 
@@ -2140,18 +2274,26 @@ export default function JournalPage() {
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
         {activeTab === 'dashboard' && <TabDashboard trades={trades} />}
-        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} />}
+        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} customTags={customTags} onAddCustomTag={handleAddCustomTag} />}
         {activeTab === 'calendar'  && <TabCalendar  trades={trades} />}
         {activeTab === 'analytics' && <TabAnalytics trades={trades} />}
         {activeTab === 'notebook'  && <TabNotebook  notes={notes}   setNotes={setNotes} />}
         {activeTab === 'reports'   && <TabReports   trades={trades} />}
+        {activeTab === 'advanced'  && <AdvancedReports trades={trades} />}
       </div>
 
       {/* Footer note */}
       <div style={{ textAlign: 'center', padding: '20px 24px 40px', fontSize: 11, color: 'var(--text-2)', borderTop: '1px solid var(--border)' }}>
-        💾 Data saved locally in your browser. Sign in to sync across devices.
-        {' '}<span style={{ color: BLUE }}>TODO: Supabase sync</span>
+        💾 Data saved locally in your browser. Export anytime — your data is yours.
       </div>
+
+      {/* Modals */}
+      {showImportModal && (
+        <ImportModal onClose={() => setShowImportModal(false)} onImport={handleImportTrades} />
+      )}
+      {showBackupImport && (
+        <ImportBackupModal onClose={() => setShowBackupImport(false)} onRestore={handleBackupRestore} />
+      )}
     </div>
   )
 }
