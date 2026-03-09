@@ -79,6 +79,7 @@ app.use('/api/stock-info', require('./routes/stockInfo'));         // Comprehens
 app.use('/api/portfolio', require('./routes/portfolio'));           // Portfolio persistence (Supabase)
 app.use('/api/alerts/price', require('./routes/priceAlerts'));      // User price alerts
 app.use('/api/tools', require('./routes/tools'));                   // Trading tools (screener, fear-greed, gas, correlation)
+app.use('/api/dashboard', require('./routes/dashboard'));             // CEO dashboard persistence (tasks, activity, companies, settings)
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {
