@@ -1,27 +1,27 @@
 # Disclaimer
 
-**ChartGenius**
+**TradVue**
 
 Last Updated: March 6, 2026
 
 ## ⚠️ IMPORTANT LEGAL NOTICE
 
-Read this disclaimer carefully before using ChartGenius. Your use of the platform constitutes acceptance of all terms outlined below.
+Read this disclaimer carefully before using TradVue. Your use of the platform constitutes acceptance of all terms outlined below.
 
 ---
 
 ## 1. NOT FINANCIAL ADVICE
 
-**ChartGenius is NOT a financial advisor and does NOT provide investment, trading, or financial advice.**
+**TradVue is NOT a financial advisor and does NOT provide investment, trading, or financial advice.**
 
-Nothing on ChartGenius—including charts, analysis, indicators, alerts, or any other content—should be construed as:
+Nothing on TradVue—including charts, analysis, indicators, alerts, or any other content—should be construed as:
 - A recommendation to buy, sell, or hold any security
 - An offer to provide financial or investment advice
 - A solicitation to invest in any particular asset or strategy
 - Personalized financial guidance based on your situation
 - Professional investment management services
 
-ChartGenius is a **research and visualization tool only**. All decisions to buy, sell, or trade securities must be made independently by you, preferably with guidance from a qualified financial advisor.
+TradVue is a **research and visualization tool only**. All decisions to buy, sell, or trade securities must be made independently by you, preferably with guidance from a qualified financial advisor.
 
 **If you need financial advice, consult with a licensed financial advisor, broker, or investment professional.**
 
@@ -29,7 +29,7 @@ ChartGenius is a **research and visualization tool only**. All decisions to buy,
 
 ## 2. NO WARRANTIES
 
-ChartGenius is provided "AS-IS" without any warranties, express or implied.
+TradVue is provided "AS-IS" without any warranties, express or implied.
 
 We make no guarantees regarding:
 
@@ -63,7 +63,7 @@ We make no guarantees regarding:
 
 ## 3. THIRD-PARTY DATA SOURCES
 
-ChartGenius uses market data from external sources, including:
+TradVue uses market data from external sources, including:
 - Stock exchanges and market data providers
 - Cryptocurrency exchanges
 - Financial data aggregators
@@ -84,7 +84,7 @@ We do not control, audit, or guarantee the accuracy of third-party data. Always 
 ## 4. MARKET DATA LIMITATIONS
 
 ### 4.1 Real-Time vs. Delayed Data
-- ChartGenius may display delayed data (15-20 minutes behind live market)
+- TradVue may display delayed data (15-20 minutes behind live market)
 - During market hours, delays are common
 - Do NOT use delayed data for time-sensitive trading decisions
 - For live trading, use your broker's official platform
@@ -130,7 +130,7 @@ We do not control, audit, or guarantee the accuracy of third-party data. Always 
 
 ## 6. NO PERSONALIZATION
 
-ChartGenius does NOT:
+TradVue does NOT:
 - Know your financial situation, goals, or risk tolerance
 - Consider your income, assets, or liabilities
 - Assess your investment experience or knowledge
@@ -143,7 +143,7 @@ ChartGenius does NOT:
 
 ## 7. PROHIBITED USES
 
-By using ChartGenius, you acknowledge that you will NOT:
+By using TradVue, you acknowledge that you will NOT:
 
 ### 7.1 Securities Law Violations
 - Use the platform to engage in insider trading
@@ -170,7 +170,7 @@ By using ChartGenius, you acknowledge that you will NOT:
 
 **TO THE MAXIMUM EXTENT PERMITTED BY LAW:**
 
-ChartGenius shall NOT be liable for ANY losses, damages, or costs, including:
+TradVue shall NOT be liable for ANY losses, damages, or costs, including:
 
 - Trading losses (even if caused by incorrect data)
 - Lost profits, revenue, or anticipated savings
@@ -181,7 +181,7 @@ ChartGenius shall NOT be liable for ANY losses, damages, or costs, including:
 - Damages from service interruptions
 - Damages from third-party services
 
-**This applies even if ChartGenius was advised of the possibility of such damages.**
+**This applies even if TradVue was advised of the possibility of such damages.**
 
 **Your sole remedy is discontinuing use of the Service.**
 
@@ -189,45 +189,45 @@ ChartGenius shall NOT be liable for ANY losses, damages, or costs, including:
 
 ## 9. JURISDICTIONAL LIMITATIONS
 
-ChartGenius may not be available or legal in all jurisdictions. You are responsible for:
-- Determining if ChartGenius is legal in your country/state
+TradVue may not be available or legal in all jurisdictions. You are responsible for:
+- Determining if TradVue is legal in your country/state
 - Complying with all local investment and trading regulations
 - Understanding tax implications of your trades
 - Obtaining necessary licenses or permissions
 - Filing required regulatory documents
 
-ChartGenius cannot be held responsible for your violations of local law.
+TradVue cannot be held responsible for your violations of local law.
 
 ---
 
 ## 10. ASSUMPTION OF RISK
 
-**By using ChartGenius, you acknowledge and accept that:**
+**By using TradVue, you acknowledge and accept that:**
 
 - ✓ Trading and investing involve substantial risk of loss
-- ✓ You may lose money using information or tools from ChartGenius
+- ✓ You may lose money using information or tools from TradVue
 - ✓ You are making your own trading decisions
 - ✓ You understand the risks involved
 - ✓ You have read and accepted this disclaimer
-- ✓ You will not hold ChartGenius liable for trading losses
+- ✓ You will not hold TradVue liable for trading losses
 
 ---
 
 ## 11. RELIANCE ON CONTENT
 
-**ChartGenius does not guarantee the accuracy or completeness of any content.** Before making any investment decision:
+**TradVue does not guarantee the accuracy or completeness of any content.** Before making any investment decision:
 
 1. ✓ Verify data through official sources (exchanges, company filings, etc.)
 2. ✓ Consult with qualified financial professionals
 3. ✓ Conduct your own independent research
-4. ✓ Do NOT rely solely on information from ChartGenius
+4. ✓ Do NOT rely solely on information from TradVue
 5. ✓ Understand that errors or delays may occur
 
 ---
 
 ## 12. CHANGES TO DISCLAIMER
 
-ChartGenius may update this disclaimer at any time. Your continued use of the platform after changes constitutes acceptance of the revised disclaimer.
+TradVue may update this disclaimer at any time. Your continued use of the platform after changes constitutes acceptance of the revised disclaimer.
 
 ---
 
@@ -235,30 +235,30 @@ ChartGenius may update this disclaimer at any time. Your continued use of the pl
 
 **Questions about this disclaimer?**
 
-Email: legal@chartgenius.com
+Email: legal@tradvue.com
 
 **Reporting Data Errors:**
 
-Email: support@chartgenius.com with "Data Error" in the subject line.
+Email: support@tradvue.com with "Data Error" in the subject line.
 
 ---
 
 ## 14. FULL AGREEMENT
 
-This disclaimer, combined with our Terms of Service and Privacy Policy, constitutes the complete agreement between you and ChartGenius regarding the use of the platform.
+This disclaimer, combined with our Terms of Service and Privacy Policy, constitutes the complete agreement between you and TradVue regarding the use of the platform.
 
 ---
 
 **ACKNOWLEDGMENT**
 
-**By using ChartGenius, you certify that:**
+**By using TradVue, you certify that:**
 
 1. You have read this entire disclaimer
 2. You understand the risks of trading and investing
-3. You understand that ChartGenius provides no financial advice
+3. You understand that TradVue provides no financial advice
 4. You acknowledge that data may be inaccurate or delayed
 5. You accept all limitations and disclaimers
-6. You will not hold ChartGenius liable for any losses
+6. You will not hold TradVue liable for any losses
 
 ---
 
@@ -270,4 +270,4 @@ This disclaimer, combined with our Terms of Service and Privacy Policy, constitu
 
 **FOR PROFESSIONAL INVESTORS & FINANCIAL ADVISORS:**
 
-If you are a licensed financial professional and wish to use ChartGenius in a professional capacity, contact legal@chartgenius.com to discuss licensing options and compliance requirements.
+If you are a licensed financial professional and wish to use TradVue in a professional capacity, contact legal@tradvue.com to discuss licensing options and compliance requirements.

@@ -1,14 +1,14 @@
 # Privacy Policy
 
-**ChartGenius**
+**TradVue**
 
 Last Updated: March 6, 2026
 
 ## 1. Introduction
 
-ChartGenius ("Company," "we," "us," "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.
+TradVue ("Company," "we," "us," "our") is committed to protecting your privacy. This Privacy Policy explains how we collect, use, disclose, and safeguard your information when you use our platform.
 
-Please read this policy carefully. If you do not agree with our practices, please do not use ChartGenius.
+Please read this policy carefully. If you do not agree with our practices, please do not use TradVue.
 
 ## 2. Information We Collect
 
@@ -63,7 +63,7 @@ We use collected information for:
 - Troubleshooting and technical support
 
 ### Analytics & Improvement
-- Understanding how users interact with ChartGenius
+- Understanding how users interact with TradVue
 - Identifying trends and improving user experience
 - Measuring platform performance
 - Conducting A/B testing
@@ -78,7 +78,7 @@ We use collected information for:
 - Complying with legal obligations
 - Enforcing our Terms of Service
 - Preventing fraud, abuse, or illegal activity
-- Protecting the rights, property, and safety of ChartGenius, users, and the public
+- Protecting the rights, property, and safety of TradVue, users, and the public
 
 ### Marketing (with consent)
 - Sending promotional emails about new features
@@ -107,14 +107,14 @@ We may disclose information when required by law:
 - Compliance with financial regulations
 
 ### 4.3 Business Transfers
-If ChartGenius is acquired, merged, or its assets sold, your information may be transferred as part of that transaction. We will notify you of any such change.
+If TradVue is acquired, merged, or its assets sold, your information may be transferred as part of that transaction. We will notify you of any such change.
 
 ### 4.4 Aggregated Data
 We may share anonymized, aggregated data (e.g., "70% of users track tech stocks") for industry analysis without identifying individuals.
 
 ## 5. Data Security
 
-ChartGenius implements industry-standard security measures:
+TradVue implements industry-standard security measures:
 - SSL/TLS encryption for data in transit
 - AES-256 encryption for sensitive data at rest
 - Secure password hashing (bcrypt)
@@ -158,7 +158,7 @@ You can object to our processing of your data for marketing or analytics.
 ### Right to Withdraw Consent
 You can withdraw consent for communications at any time.
 
-**To exercise these rights, contact: privacy@chartgenius.com with "GDPR Request" in the subject line.**
+**To exercise these rights, contact: privacy@tradvue.com with "GDPR Request" in the subject line.**
 
 ## 8. CCPA Rights (California Residents)
 
@@ -176,7 +176,7 @@ You can opt out of "sale" or "sharing" of your information (we do not sell data,
 ### Right to Non-Discrimination
 We will not discriminate against you for exercising your privacy rights.
 
-**To submit a CCPA request, contact: privacy@chartgenius.com with "CCPA Request" in the subject line. Requests must include your name and email. We will respond within 45 days.**
+**To submit a CCPA request, contact: privacy@tradvue.com with "CCPA Request" in the subject line. Requests must include your name and email. We will respond within 45 days.**
 
 ## 9. Cookies & Tracking Technologies
 
@@ -200,7 +200,7 @@ We will not discriminate against you for exercising your privacy rights.
 
 ### Cookie Consent & Control
 
-When you first visit ChartGenius, you will be presented with a cookie consent banner. You can:
+When you first visit TradVue, you will be presented with a cookie consent banner. You can:
 - Accept all cookies
 - Reject non-essential cookies
 - Customize your preferences
@@ -211,36 +211,36 @@ You can also control cookies through your browser settings, though some features
 
 ## 10. Children's Privacy
 
-ChartGenius is not directed to children under 13. We do not knowingly collect information from children. If we learn that a child under 13 has provided information, we will delete it immediately.
+TradVue is not directed to children under 13. We do not knowingly collect information from children. If we learn that a child under 13 has provided information, we will delete it immediately.
 
 ## 11. Third-Party Links
 
-ChartGenius may link to external websites. We are not responsible for their privacy practices. Please review their privacy policies before providing any information.
+TradVue may link to external websites. We are not responsible for their privacy practices. Please review their privacy policies before providing any information.
 
 ## 12. Changes to This Policy
 
-ChartGenius may update this Privacy Policy periodically. We will notify you of material changes via email or prominent notice on the platform. Continued use after changes indicates acceptance.
+TradVue may update this Privacy Policy periodically. We will notify you of material changes via email or prominent notice on the platform. Continued use after changes indicates acceptance.
 
 ## 13. International Data Transfers
 
-If you are outside the United States, your information may be transferred to, stored in, and processed in the US or other countries. By using ChartGenius, you consent to such transfers.
+If you are outside the United States, your information may be transferred to, stored in, and processed in the US or other countries. By using TradVue, you consent to such transfers.
 
 For EU/EEA residents, we use Standard Contractual Clauses to ensure adequate protection.
 
 ## 14. Contact & Complaints
 
 **Privacy Questions:**
-Email: privacy@chartgenius.com
+Email: privacy@tradvue.com
 
 **Data Protection Officer:**
-dpo@chartgenius.com
+dpo@tradvue.com
 
 **Mailing Address:**
-ChartGenius Privacy Team
+TradVue Privacy Team
 [Company Address]
 
 **EU/EEA Residents:** You have the right to lodge a complaint with your local data protection authority if you believe your rights have been violated.
 
 ---
 
-**By using ChartGenius, you acknowledge that you have read and understood this Privacy Policy.**
+**By using TradVue, you acknowledge that you have read and understood this Privacy Policy.**

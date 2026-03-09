@@ -1,10 +1,10 @@
-# ChartGenius - Product Hunt Launch Draft
+# TradVue - Product Hunt Launch Draft
 
 ## Tagline
 **Real-time market data, AI news analysis, and social sentiment for smarter trading**
 
 ## Description
-ChartGenius is the all-in-one trading intelligence platform that combines live market data, AI-powered news analysis, and social sentiment tracking. Track stocks, crypto, forex, and commodities in real-time with intelligent alerts. Make data-driven decisions with automatic sentiment scoring and impact analysis on breaking news.
+TradVue is the all-in-one trading intelligence platform that combines live market data, AI-powered news analysis, and social sentiment tracking. Track stocks, crypto, forex, and commodities in real-time with intelligent alerts. Make data-driven decisions with automatic sentiment scoring and impact analysis on breaking news.
 
 ## Key Features
 

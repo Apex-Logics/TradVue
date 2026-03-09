@@ -208,7 +208,7 @@ export default function StatusPage() {
             <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a9eff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
-            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0, #f0f0f2)', letterSpacing: '-0.02em' }}>ChartGenius</span>
+            <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0, #f0f0f2)', letterSpacing: '-0.02em' }}>TradVue</span>
           </a>
           <span style={{ color: 'var(--text-3, #555)', fontSize: '14px' }}>/</span>
           <span style={{ fontSize: '14px', color: 'var(--text-2, #888)' }}>Status</span>
@@ -217,7 +217,7 @@ export default function StatusPage() {
           System Status
         </h1>
         <p style={{ fontSize: '14px', color: 'var(--text-2, #888)', margin: 0 }}>
-          Real-time health of ChartGenius services
+          Real-time health of TradVue services
         </p>
       </header>
 
@@ -350,7 +350,7 @@ export default function StatusPage() {
         flexWrap: 'wrap', gap: '12px',
       }}>
         <p style={{ fontSize: '12px', color: 'var(--text-3, #555)', margin: 0 }}>
-          © 2026 ChartGenius · <a href="/landing" style={{ color: 'var(--text-3, #555)', textDecoration: 'none' }}>Home</a>
+          © 2026 TradVue · <a href="/landing" style={{ color: 'var(--text-3, #555)', textDecoration: 'none' }}>Home</a>
         </p>
         <p style={{ fontSize: '12px', color: 'var(--text-3, #555)', margin: 0 }}>
           {overallStatus === 'operational'

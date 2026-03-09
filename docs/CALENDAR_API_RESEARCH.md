@@ -2,7 +2,7 @@
 
 ## Overview
 
-The Google Calendar API is a RESTful API (v3) that allows applications to integrate with Google Calendar for reading, creating, and managing calendar events. It's ideal for ChartGenius to enable users to automatically schedule trading alerts, earnings announcements, and market events directly to their calendars.
+The Google Calendar API is a RESTful API (v3) that allows applications to integrate with Google Calendar for reading, creating, and managing calendar events. It's ideal for TradVue to enable users to automatically schedule trading alerts, earnings announcements, and market events directly to their calendars.
 
 ---
 
@@ -52,7 +52,7 @@ https://www.googleapis.com/auth/calendar.events
   → Manage events, but not calendar settings
 ```
 
-**Recommendation:** For ChartGenius, use `calendar.events` scope to allow creating trading alerts and events without accessing sensitive calendar settings.
+**Recommendation:** For TradVue, use `calendar.events` scope to allow creating trading alerts and events without accessing sensitive calendar settings.
 
 ---
 
@@ -154,7 +154,7 @@ Content-Type: application/json
 - `reminders.overrides[]`: Custom reminders (email, popup, SMS if supported)
 - `transparency`: "opaque" (blocks time) or "transparent" (doesn't block time)
 
-**ChartGenius Example:**
+**TradVue Example:**
 ```json
 {
   "summary": "BTC Price Alert: $45,000 Threshold",
@@ -270,7 +270,7 @@ POST /calendars/{calendarId}/events/watch
 
 ---
 
-## ChartGenius Integration Strategy
+## TradVue Integration Strategy
 
 ### Use Cases
 
@@ -290,14 +290,14 @@ POST /calendars/{calendarId}/events/watch
 - Set different reminder frequencies based on importance
 
 #### 4. **User Preferences Integration**
-- Store `googleCalendarId` in ChartGenius user profile
+- Store `googleCalendarId` in TradVue user profile
 - Allow users to opt-in/out of calendar sync per watchlist
 - Use subscription tier to determine reminder frequency
 
 ### Recommended Implementation
 
 ```javascript
-// Pseudo-code for ChartGenius integration
+// Pseudo-code for TradVue integration
 async function createPriceAlert(userId, symbol, threshold, googleCalendarId) {
   const currentPrice = await getPrice(symbol);
   
@@ -373,11 +373,11 @@ async function callCalendarAPI(method, endpoint, data) {
 
 ## Conclusion
 
-Google Calendar API is a robust, free, and scalable solution for integrating trading alerts into users' calendars. The generous free quotas (100 requests/user/minute) support ChartGenius's core use cases without additional cost. Implementing push notifications can further optimize API usage for production-scale applications.
+Google Calendar API is a robust, free, and scalable solution for integrating trading alerts into users' calendars. The generous free quotas (100 requests/user/minute) support TradVue's core use cases without additional cost. Implementing push notifications can further optimize API usage for production-scale applications.
 
 **Next Steps:**
 1. Obtain Google Cloud API credentials
-2. Implement OAuth flow in ChartGenius frontend
+2. Implement OAuth flow in TradVue frontend
 3. Store user's calendar ID in profile
 4. Build calendar event creation service
 5. Add calendar sync settings to user preferences

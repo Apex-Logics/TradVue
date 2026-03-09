@@ -12,8 +12,8 @@ Erick runs multiple companies through AI agents. Each company has projects, each
 | Channel | Purpose | Who's In |
 |---------|---------|----------|
 | **🏢 ApexLogics — HQ** | High-level strategy, cross-company decisions, daily briefings | Erick + Axle |
-| **📊 ChartGenius — Dev** | ChartGenius development, features, bugs, deploys | Erick + Axle + Bolt + Zip |
-| **📊 ChartGenius — Business** | Marketing, users, revenue, partnerships | Erick + Axle |
+| **📊 TradVue — Dev** | TradVue development, features, bugs, deploys | Erick + Axle + Bolt + Zip |
+| **📊 TradVue — Business** | Marketing, users, revenue, partnerships | Erick + Axle |
 | **🖥️ Infrastructure** | Server, security, OpenClaw, updates, monitoring | Erick + Axle |
 | **💼 [Future Company]** | Separate channel per new venture | As needed |
 | **📋 Daily Briefings** | Automated morning/evening reports | Axle → Erick |
@@ -67,7 +67,7 @@ Erick runs multiple companies through AI agents. Each company has projects, each
 
 ```
 ApexLogics (Parent)
-├── ChartGenius (Company/Product)
+├── TradVue (Company/Product)
 │   ├── Development
 │   │   ├── Frontend features
 │   │   ├── Backend/API

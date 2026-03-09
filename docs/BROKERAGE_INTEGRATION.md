@@ -1,14 +1,14 @@
-# Brokerage Integration Research for ChartGenius
+# Brokerage Integration Research for TradVue
 
 **Document Date:** March 2026  
 **Status:** Research & Planning (Pre-MVP)  
-**Purpose:** Evaluate brokerage integration options for future ChartGenius features
+**Purpose:** Evaluate brokerage integration options for future TradVue features
 
 ---
 
 ## Executive Summary
 
-This document evaluates six major brokerages for potential API integration with ChartGenius, a charting and trading analytics platform. The analysis covers API capabilities, authentication methods, regulatory requirements, and recommendations for MVP implementation.
+This document evaluates six major brokerages for potential API integration with TradVue, a charting and trading analytics platform. The analysis covers API capabilities, authentication methods, regulatory requirements, and recommendations for MVP implementation.
 
 **Key Finding:** Alpaca and Tradier are best positioned for MVP integration due to superior API documentation, OAuth2 support, and transparent rate limits. TD Ameritrade/Schwab integration is possible but requires partnership with Schwab. E*TRADE and Interactive Brokers offer comprehensive features but with steeper compliance complexity.
 
@@ -201,7 +201,7 @@ This document evaluates six major brokerages for potential API integration with 
 
 ---
 
-## 3. ENABLING FEATURES FOR CHARTGENIUS
+## 3. ENABLING FEATURES FOR TRADVUE
 
 ### 3.1 Position Import to Watchlist
 **Difficulty:** Easy-Medium  
@@ -242,7 +242,7 @@ This document evaluates six major brokerages for potential API integration with 
 
 ---
 
-### 3.3 One-Click Trade from ChartGenius
+### 3.3 One-Click Trade from TradVue
 **Difficulty:** Medium-Hard  
 **Prerequisites:** Trading API access, OAuth2 with trading scopes
 
@@ -254,7 +254,7 @@ This document evaluates six major brokerages for potential API integration with 
 
 **Implementation Path:**
 1. Authenticate with `trading` scope in OAuth2
-2. Build order builder UI in ChartGenius
+2. Build order builder UI in TradVue
 3. Pass symbol, qty, order type to `/v1/orders` endpoint
 4. Return order confirmation with ID
 5. Support stop-loss / take-profit orders
@@ -277,16 +277,16 @@ This document evaluates six major brokerages for potential API integration with 
 **Prerequisites:** Webhook support or polling infrastructure
 
 **Implementation Path:**
-1. User sets price alert in ChartGenius (e.g., "notify if SPY > $450")
-2. Alert triggers ChartGenius order placement
-3. ChartGenius places order via broker API
+1. User sets price alert in TradVue (e.g., "notify if SPY > $450")
+2. Alert triggers TradVue order placement
+3. TradVue places order via broker API
 4. Broker confirms order status
-5. Sync status back to ChartGenius alerts dashboard
+5. Sync status back to TradVue alerts dashboard
 
 **Alternative: Broker-Native Alerts**
 - Some brokers support alert APIs (Schwab, Tradier)
 - Could create alerts directly on broker account
-- Reduces infrastructure load on ChartGenius
+- Reduces infrastructure load on TradVue
 
 **Brokers with Alert APIs:**
 - Tradier: ✅ Native alert endpoint
@@ -332,27 +332,27 @@ This document evaluates six major brokerages for potential API integration with 
 
 **Analysis:**
 
-**If ChartGenius ONLY provides read-only features:**
+**If TradVue ONLY provides read-only features:**
 - ✅ NO broker-dealer registration needed
 - Only act as information provider / analytics tool
 - Users maintain full control of accounts at brokers
 
-**If ChartGenius enables order placement (One-Click Trade):**
+**If TradVue enables order placement (One-Click Trade):**
 - ⚠️ GRAY AREA - Depends on implementation
-- **Scenario 1:** User logs in, ChartGenius transmits pre-approved order
+- **Scenario 1:** User logs in, TradVue transmits pre-approved order
   - Likely: Not BD registration (user's broker executes)
-  - ChartGenius = order routing tool
-- **Scenario 2:** ChartGenius accumulates orders, executes in batches
+  - TradVue = order routing tool
+- **Scenario 2:** TradVue accumulates orders, executes in batches
   - Likely: **YES, BD registration required**
-  - ChartGenius = acting as intermediary
-- **Scenario 3:** ChartGenius acts on user's behalf without direct instruction
+  - TradVue = acting as intermediary
+- **Scenario 3:** TradVue acts on user's behalf without direct instruction
   - **DEFINITELY YES, BD registration + RIA registration required**
   - High legal risk
 
 **Recommendation for MVP:**
 - Keep order placement as "transmit-only" (user confirms each trade)
 - Do NOT batch orders or execute on behalf of users
-- Add explicit disclosure: "ChartGenius does not execute trades; orders are routed to [BROKER]"
+- Add explicit disclosure: "TradVue does not execute trades; orders are routed to [BROKER]"
 
 ---
 
@@ -362,11 +362,11 @@ This document evaluates six major brokerages for potential API integration with 
 
 | Regulation | Applies To | Requirement |
 |-----------|-----------|------------|
-| SEC Rule 10b5-1 | Algorithmic trading | Disclosure if ChartGenius runs auto-trading algorithms |
-| SEC Rule 10b5-2 | Trading under plans | ChartGenius cannot control trading plan execution without written agreement |
+| SEC Rule 10b5-1 | Algorithmic trading | Disclosure if TradVue runs auto-trading algorithms |
+| SEC Rule 10b5-2 | Trading under plans | TradVue cannot control trading plan execution without written agreement |
 | FINRA Rule 5210 | Anti-money laundering | Know-Your-Customer (KYC) compliance for trading activity |
-| FINRA Rule 2010 | Standards of conduct | Suitability of recommendations if ChartGenius provides trading signals |
-| SEC Rule 203A | Investment advice | If ChartGenius gives trading recommendations, may need RIA registration |
+| FINRA Rule 2010 | Standards of conduct | Suitability of recommendations if TradVue provides trading signals |
+| SEC Rule 203A | Investment advice | If TradVue gives trading recommendations, may need RIA registration |
 
 **For MVP (Read-Only + Manual Order Transmission):**
 - ✅ No SEC registration needed
@@ -385,11 +385,11 @@ This document evaluates six major brokerages for potential API integration with 
 **Required Disclosures (FINRA/SEC guidance):**
 
 1. **Service Limitations**
-   - "ChartGenius is a charting tool, not a broker or financial adviser"
+   - "TradVue is a charting tool, not a broker or financial adviser"
    - "Orders are routed directly to [BROKER], which executes your trades"
 
 2. **Conflict of Interest**
-   - If ChartGenius monetizes order flow or receives rebates
+   - If TradVue monetizes order flow or receives rebates
    - Any revenue sharing with brokers
 
 3. **Data Privacy**
@@ -404,7 +404,7 @@ This document evaluates six major brokerages for potential API integration with 
 
 5. **System Risk**
    - Latency disclosures (orders may not execute at displayed price)
-   - Downtime risk (what happens if ChartGenius goes offline)
+   - Downtime risk (what happens if TradVue goes offline)
    - Third-party dependency (reliance on broker APIs)
 
 ---
@@ -458,10 +458,10 @@ This document evaluates six major brokerages for potential API integration with 
 
 **Feature:** User-initiated order transmission
 - User clicks "Buy SPY 100 shares at market"
-- ChartGenius opens order preview modal
+- TradVue opens order preview modal
 - User confirms with password or 2FA
-- ChartGenius transmits order to broker API
-- Broker executes; ChartGenius displays confirmation
+- TradVue transmits order to broker API
+- Broker executes; TradVue displays confirmation
 
 **Target Broker(s):** Same as Phase 1 (Alpaca or Tradier)
 
@@ -493,9 +493,9 @@ This document evaluates six major brokerages for potential API integration with 
 **Current Status:** Public API, self-service
 
 **Partnership Opportunities:**
-- **White-Label Broker API:** Could become broker for ChartGenius users
+- **White-Label Broker API:** Could become broker for TradVue users
   - Alpaca handles regulatory compliance
-  - ChartGenius handles UX/charting
+  - TradVue handles UX/charting
   - Revenue split: 30-50% to Alpaca
   - Timeline: 6-12 months negotiation
 
@@ -643,7 +643,7 @@ This document evaluates six major brokerages for potential API integration with 
 
 ### For Phase 1 Launch (Read-Only Features)
 
-- [ ] Legal review: Confirm no BD/RIA registration needed for ChartGenius
+- [ ] Legal review: Confirm no BD/RIA registration needed for TradVue
 - [ ] Draft Terms of Service updates
   - [ ] Clear statement: "Not a broker, not a financial adviser"
   - [ ] Disclaimer on data timeliness (may be delayed)

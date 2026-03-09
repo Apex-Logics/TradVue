@@ -64,7 +64,7 @@ export default function Celebration({ onDone }: Props) {
           We'll ping you when things move.
         </p>
         <button className="celebration-btn" onClick={onDone}>
-          Explore ChartGenius
+          Explore TradVue
         </button>
       </div>
     </div>

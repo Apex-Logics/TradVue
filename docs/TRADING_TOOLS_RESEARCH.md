@@ -1,7 +1,7 @@
-# Trading Tools Research Report for ChartGenius
+# Trading Tools Research Report for TradVue
 
 **Prepared:** March 8, 2026  
-**Objective:** Identify high-value trading tools across all asset classes that can differentiate ChartGenius and provide genuine value to traders.
+**Objective:** Identify high-value trading tools across all asset classes that can differentiate TradVue and provide genuine value to traders.
 
 ---
 
@@ -89,7 +89,7 @@ This report evaluates 60+ trading tools across 6 major asset classes. Tools are 
 ---
 
 ### 5. **Economic Calendar (Already Noted - Enhance It)**
-- **Current status:** ChartGenius has this
+- **Current status:** TradVue has this
 - **Enhancement opportunities:**
   - **Impact predictor:** How will this news affect specific currency pairs/commodities?
   - **Trading alerts:** Get notified before high-impact events
@@ -915,7 +915,7 @@ These are the tools that will drive immediate user value and engagement:
 ---
 
 ### **Phase 2: Core Competitive Tools (Weeks 5-10)** - Build Traction
-Add tools that differentiate ChartGenius from competitors:
+Add tools that differentiate TradVue from competitors:
 
 6. **Options Greeks Calculator** ⭐ Not everywhere, high value
 7. **Stock Screener** ⭐ Major user draw
@@ -1044,9 +1044,9 @@ Only after you have proven product-market fit:
 
 ## Competitive Positioning
 
-### **Why ChartGenius Can Win:**
+### **Why TradVue Can Win:**
 
-| Tool | TradingView | ThinkOrSwim | ChartGenius Angle |
+| Tool | TradingView | ThinkOrSwim | TradVue Angle |
 |------|-------------|------------|-------------------|
 | Calculators | Premium feature | Built-in | **Free, elegant, fast** |
 | Screeners | Good but paid | Excellent, free | **Combine technical + fundamental** |
@@ -1056,7 +1056,7 @@ Only after you have proven product-market fit:
 | Correlation Matrix | Limited | No | **Multi-asset, cross-market** |
 | Sentiment | Paid feature | No | **Free, real-time, contrarian alerts** |
 
-**Key differentiation:** ChartGenius is the "Swiss Army knife" for traders. We're not trying to be TradingView (too expensive, bloated). We're being the essential calculators and analysis tools traders actually use daily, across all asset classes.
+**Key differentiation:** TradVue is the "Swiss Army knife" for traders. We're not trying to be TradingView (too expensive, bloated). We're being the essential calculators and analysis tools traders actually use daily, across all asset classes.
 
 ---
 
@@ -1106,7 +1106,7 @@ Only after you have proven product-market fit:
 3. ✅ **Options P&L Calculator** - Ship day 3-4
 4. ✅ **Enhanced Economic Calendar** - Iterate on existing
 
-These 4 tools will take 1 week to ship, provide immediate value, and establish ChartGenius as "the trader's essential toolkit."
+These 4 tools will take 1 week to ship, provide immediate value, and establish TradVue as "the trader's essential toolkit."
 
 **Then move to Phase 2:** Greeks + Screener + IV Rank (weeks 2-3)
 

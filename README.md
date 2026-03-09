@@ -1,14 +1,14 @@
-# ChartGenius 📊
+# TradVue 📊
 
 **Real-time market intelligence, AI-powered news analysis, and social sentiment tracking for traders.**
 
-ChartGenius is a comprehensive trading intelligence platform that aggregates market data, financial news, and social sentiment into actionable insights. Track multiple asset classes, set intelligent alerts, and make data-driven trading decisions.
+TradVue is a comprehensive trading intelligence platform that aggregates market data, financial news, and social sentiment into actionable insights. Track multiple asset classes, set intelligent alerts, and make data-driven trading decisions.
 
 [![Next.js](https://img.shields.io/badge/Next.js-14-black?logo=next.js)](https://nextjs.org)
 [![Node.js](https://img.shields.io/badge/Node.js-18+-339933?logo=node.js)](https://nodejs.org)
 [![TypeScript](https://img.shields.io/badge/TypeScript-5-3178C6?logo=typescript)](https://typescriptlang.org)
 [![Supabase](https://img.shields.io/badge/Supabase-PostgreSQL-3ECF8E?logo=supabase)](https://supabase.com)
-[![Vercel](https://img.shields.io/badge/Deployed-Vercel-000?logo=vercel)](https://chartgenius.io)
+[![Vercel](https://img.shields.io/badge/Deployed-Vercel-000?logo=vercel)](https://tradvue.io)
 
 ---
 
@@ -119,8 +119,8 @@ Power-user navigation — press `?` anywhere in the app to see the full shortlis
 ### 1. Clone & Install
 
 ```bash
-git clone https://github.com/ChartGenius/chartgenius.git
-cd chartgenius
+git clone https://github.com/TradVue/tradvue.git
+cd tradvue
 ```
 
 ### 2. Backend Setup
@@ -162,7 +162,7 @@ docker-compose logs -f
 
 ```env
 # ── Database ──────────────────────────────────────────────────────────────────
-DATABASE_URL=postgresql://user:password@localhost:5432/chartgenius
+DATABASE_URL=postgresql://user:password@localhost:5432/tradvue
 REDIS_URL=redis://localhost:6379
 
 # ── Market Data (at least one required) ────────────────────────────────────────
@@ -200,7 +200,7 @@ NEXT_PUBLIC_WS_URL=ws://localhost:3001
 ## 📁 Project Structure
 
 ```
-chartgenius/
+tradvue/
 ├── backend/
 │   ├── controllers/         # Request handlers
 │   ├── middleware/          # Auth, rate-limiting, error handling
@@ -238,7 +238,7 @@ chartgenius/
 
 ## 🧩 UI Components
 
-ChartGenius ships a small internal component library for consistent loading states:
+TradVue ships a small internal component library for consistent loading states:
 
 ```tsx
 import Spinner from '@/app/components/Spinner'
@@ -400,21 +400,21 @@ New features follow **Test-Driven Development** — write failing tests first, t
 | Full docs | [`/docs`](./docs/) |
 | API spec | [`/docs/api`](./docs/) |
 | Changelog | [`/CHANGELOG.md`](./CHANGELOG.md) |
-| Status page | https://chartgenius.io/status |
-| Support | support@chartgenius.io |
-| Discord | https://discord.gg/chartgenius |
+| Status page | https://tradvue.io/status |
+| Support | support@tradvue.io |
+| Discord | https://discord.gg/tradvue |
 
 ---
 
 ## ⚖️ License
 
-ChartGenius is proprietary software. All rights reserved. Unauthorized use, distribution, or modification is prohibited.
+TradVue is proprietary software. All rights reserved. Unauthorized use, distribution, or modification is prohibited.
 
 ---
 
 ## ⚠️ Disclaimer
 
-ChartGenius is for informational and educational purposes only. It is **not** financial advice. Always consult a qualified financial advisor before making investment decisions. Past performance does not guarantee future results.
+TradVue is for informational and educational purposes only. It is **not** financial advice. Always consult a qualified financial advisor before making investment decisions. Past performance does not guarantee future results.
 
 ---
 

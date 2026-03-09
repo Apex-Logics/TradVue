@@ -1,6 +1,6 @@
 # Release Process & Version Management
 
-ChartGenius follows **Semantic Versioning 2.0.0** with a structured release workflow designed for rapid beta iteration and stability at 1.0.0.
+TradVue follows **Semantic Versioning 2.0.0** with a structured release workflow designed for rapid beta iteration and stability at 1.0.0.
 
 ---
 
@@ -20,7 +20,7 @@ ChartGenius follows **Semantic Versioning 2.0.0** with a structured release work
 
 ## Semantic Versioning
 
-ChartGenius uses **MAJOR.MINOR.PATCH** format: `X.Y.Z`
+TradVue uses **MAJOR.MINOR.PATCH** format: `X.Y.Z`
 
 ### Version Components
 
@@ -180,7 +180,7 @@ git commit -m "chore(release): bump version to $VERSION
 ### Step 4: Create Release Tag
 ```bash
 # Create annotated tag (preferred)
-git tag -a v0.2.0-beta -m "ChartGenius v0.2.0-beta - Social Sentiment Features"
+git tag -a v0.2.0-beta -m "TradVue v0.2.0-beta - Social Sentiment Features"
 
 # Or lightweight tag (for simple releases)
 git tag v0.2.0-beta
@@ -244,7 +244,7 @@ v1.0.1+build.123     ← Build metadata (optional)
 
 ## Commit Conventions
 
-ChartGenius uses **Conventional Commits** format for clear changelog generation.
+TradVue uses **Conventional Commits** format for clear changelog generation.
 
 ### Format
 ```
@@ -316,7 +316,7 @@ git commit -m "feat(api)!: change watchlist response format"
 
 #### 1. Header Section
 ```
-ChartGenius Changelog
+TradVue Changelog
 Version releases and updates
 
 [Current Version Badge: v0.1.0-beta]

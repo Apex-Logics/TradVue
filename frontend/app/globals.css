@@ -3291,12 +3291,12 @@ a.alert-row-title:hover {
 }
 
 /* ─── Spinner & Skeleton animations ─────────────────────────────────────────── */
-@keyframes chartgenius-spin {
+@keyframes tradvue-spin {
   from { transform: rotate(0deg); }
   to   { transform: rotate(360deg); }
 }
 
-@keyframes chartgenius-shimmer {
+@keyframes tradvue-shimmer {
   0%   { background-position:  200% 0; }
   100% { background-position: -200% 0; }
 }

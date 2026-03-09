@@ -1,4 +1,4 @@
-# ChartGenius - Executive Summary
+# TradVue - Executive Summary
 
 **Real-Time Market Intelligence Platform for Modern Traders**
 
@@ -6,9 +6,9 @@
 
 ## 1️⃣ ONE-PAGER OVERVIEW
 
-### What is ChartGenius?
+### What is TradVue?
 
-ChartGenius is a **comprehensive trading intelligence platform** that aggregates real-time market data, AI-powered news analysis, and social sentiment into actionable insights for active traders and institutional investors.
+TradVue is a **comprehensive trading intelligence platform** that aggregates real-time market data, AI-powered news analysis, and social sentiment into actionable insights for active traders and institutional investors.
 
 ### The Problem We Solve
 
@@ -30,7 +30,7 @@ A **single unified platform** that:
 
 ### Key Differentiators
 
-| Feature | ChartGenius | Competitors |
+| Feature | TradVue | Competitors |
 |---------|------------|-------------|
 | **AI News Analysis** | Automatic sentiment & impact scoring | Manual, delayed insights |
 | **Speed** | Built in 2 days, MVP-ready | Months to launch |
@@ -86,7 +86,7 @@ A **single unified platform** that:
 
 ### What's Live
 
-- **Domain:** chartgenius.io (registered ✅)
+- **Domain:** tradvue.io (registered ✅)
 - **Database:** Production schema deployed
 - **APIs:** Connected to real market data providers
 - **Frontend:** 40% UI complete, core features functional
@@ -212,7 +212,7 @@ A **single unified platform** that:
 
 ### The AI-First Advantage
 
-Traditional teams require 3-6 months to build a product like ChartGenius with 10-15 people. Our **AI-first approach** delivered:
+Traditional teams require 3-6 months to build a product like TradVue with 10-15 people. Our **AI-first approach** delivered:
 - ✅ **MVP in 2 days** with 3 agents + 1 human
 - ✅ **Full documentation** & architecture ready
 - ✅ **Scalable playbook** for future features
@@ -317,7 +317,7 @@ Traditional teams require 3-6 months to build a product like ChartGenius with 10
 
 ---
 
-## Why ChartGenius Wins
+## Why TradVue Wins
 
 ✨ **Speed:** Built in 2 days vs. 6 months for competitors
 ✨ **Unified Experience:** One platform vs. 5-7 fragmented tools
@@ -332,9 +332,9 @@ Traditional teams require 3-6 months to build a product like ChartGenius with 10
 
 ## Conclusion
 
-**ChartGenius is positioned to become the unified trading intelligence platform for modern traders.** With an AI-first team delivering a polished MVP in 2 days, clear market validation, and a proven business model, we're ready to accelerate from MVP to market leader.
+**TradVue is positioned to become the unified trading intelligence platform for modern traders.** With an AI-first team delivering a polished MVP in 2 days, clear market validation, and a proven business model, we're ready to accelerate from MVP to market leader.
 
-The fragmented trading tools market is ripe for consolidation. ChartGenius offers traders the unified experience they've been waiting for—all at 70% of the cost of scattered alternatives.
+The fragmented trading tools market is ripe for consolidation. TradVue offers traders the unified experience they've been waiting for—all at 70% of the cost of scattered alternatives.
 
 **Let's make trading intelligence fast, simple, and profitable. 📊**
 

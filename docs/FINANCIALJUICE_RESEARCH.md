@@ -1,5 +1,5 @@
 # FinancialJuice Data Sources & Technology Research
-## Comprehensive Analysis for ChartGenius
+## Comprehensive Analysis for TradVue
 
 **Research Date:** March 6, 2026  
 **Research Agent:** Zip  
@@ -180,7 +180,7 @@ Filter rules:
 
 ---
 
-## 5. WHAT WE CAN LEGALLY REPLICATE FOR CHARTGENIUS
+## 5. WHAT WE CAN LEGALLY REPLICATE FOR TRADVUE
 
 ### ✅ IMMEDIATELY ACTIONABLE (Low Cost, Legal, High ROI)
 
@@ -291,7 +291,7 @@ Tools:
 
 ---
 
-## 6. ARCHITECTURE RECOMMENDATION FOR CHARTGENIUS
+## 6. ARCHITECTURE RECOMMENDATION FOR TRADVUE
 
 ### Phase 1 (Week 1–2): MVP News Aggregation
 ```
@@ -344,7 +344,7 @@ Add:
 | Other APIs | $100–300 | Benzinga, TradingEcon, etc. |
 | **TOTAL** | **$550–6,100** | **Start MVP at ~$500** |
 
-**For ChartGenius MVP:**
+**For TradVue MVP:**
 - **Budget:** $500–1,000/month (Year 1)
 - **Development:** ~40–60 hours (2–3 weeks)
 - **Expected ROI:** High (single alert can save/make thousands)
@@ -372,7 +372,7 @@ Add:
 
 ---
 
-## 9. COMPETITIVE ADVANTAGES FOR CHARTGENIUS
+## 9. COMPETITIVE ADVANTAGES FOR TRADVUE
 
 **vs FinancialJuice:**
 1. **Customization:** Alerts tuned specifically to Erick's trading strategy
@@ -383,7 +383,7 @@ Add:
 
 **Key Differentiator:**
 - FinancialJuice = broadcast service (alerts to many traders)
-- ChartGenius = proprietary system (optimized for one trader's style)
+- TradVue = proprietary system (optimized for one trader's style)
 
 ---
 
@@ -438,7 +438,7 @@ Add:
 3. Intelligent filtering (NLP + market relevance)
 4. Speed-optimized delivery (websocket push)
 
-**ChartGenius can compete/exceed by:**
+**TradVue can compete/exceed by:**
 1. Building a custom, Erick-specific alert system
 2. Starting with Twitter + NewsAPI (cheap MVP)
 3. Adding proprietary ML to predict which alerts matter

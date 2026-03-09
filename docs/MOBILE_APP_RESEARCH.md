@@ -1,4 +1,4 @@
-# ChartGenius Mobile App Feasibility Study
+# TradVue Mobile App Feasibility Study
 
 **Date:** March 2026  
 **Status:** Comprehensive Research & Recommendations  
@@ -626,7 +626,7 @@ $75-90K (14-16 weeks, higher risk)
 
 ## 13. Conclusion
 
-**ChartGenius should build a mobile app.** The market demands it. Traders expect it. Competitors have it.
+**TradVue should build a mobile app.** The market demands it. Traders expect it. Competitors have it.
 
 **Start with Capacitor.** It's the pragmatic choice for a bootstrapped team. You get app store presence in 8 weeks, prove demand, then decide whether to invest in React Native for better long-term performance.
 

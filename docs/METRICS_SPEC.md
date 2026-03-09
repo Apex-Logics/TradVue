@@ -1,4 +1,4 @@
-# ChartGenius Metrics Dashboard Specification
+# TradVue Metrics Dashboard Specification
 
 **Version:** 1.0  
 **Date:** March 2026  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-This spec defines the metrics ChartGenius will track to measure product-market fit, operational health, and growth during beta. Focused on **actionable insights** and **minimal operational overhead** — we're shipping a beta, not building a Fortune 500 analytics org.
+This spec defines the metrics TradVue will track to measure product-market fit, operational health, and growth during beta. Focused on **actionable insights** and **minimal operational overhead** — we're shipping a beta, not building a Fortune 500 analytics org.
 
 **Core Philosophy:**
 - Track what matters for decisions (not vanity metrics)
@@ -445,7 +445,7 @@ revenue_events (
 
 ```
 ╔══════════════════════════════════════════════════════════════╗
-║         CHARTGENIUS METRICS DASHBOARD (MAIN)                 ║
+║         TRADVUE METRICS DASHBOARD (MAIN)                 ║
 ║                   March 7, 2026                              ║
 ╠══════════════════════════════════════════════════════════════╣
 ║                                                              ║

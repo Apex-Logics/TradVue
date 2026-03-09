@@ -7,7 +7,7 @@
 
 ## Executive Summary
 
-The trading intelligence space is dominated by established platforms with strong feature sets and community engagement. ChartGenius can differentiate through:
+The trading intelligence space is dominated by established platforms with strong feature sets and community engagement. TradVue can differentiate through:
 1. **AI-powered news summarization** (vs. manual curation)
 2. **Real-time social sentiment** (vs. delayed aggregation)
 3. **Accessible pricing** for retail traders
@@ -72,7 +72,7 @@ TradingView is the market leader in charting and technical analysis. With 30+ mi
 ❌ **No Calendar Sync** — Events stay within TradingView only  
 ❌ **Community Noise** — Thousands of ideas = hard to find quality  
 
-### What ChartGenius Should Learn
+### What TradVue Should Learn
 - **Do:** Invest heavily in technical indicators and charting
 - **Do:** Build a strong community/social layer
 - **Don't:** Overwhelm beginners with options
@@ -133,7 +133,7 @@ Benzinga is a financial news and data platform focused on real-time market intel
 ❌ **Mobile App** — Functional but not as polished as TradingView  
 ❌ **Community Features** — No user-generated content or idea sharing  
 
-### What ChartGenius Should Learn
+### What TradVue Should Learn
 - **Do:** Prioritize news quality over quantity
 - **Do:** Provide smart filtering (sector, impact score, source)
 - **Do:** Offer multiple alert channels
@@ -188,7 +188,7 @@ StockTwits is a social network for traders, similar to Twitter but focused on st
 ❌ **Limited News** — No professional news curation  
 ❌ **No Calendar** — No earnings/economic event tracking  
 
-### What ChartGenius Should Learn
+### What TradVue Should Learn
 - **Do:** Track social sentiment, but validate with professional sources
 - **Do:** Build community but implement strong moderation
 - **Don't:** Rely solely on social sentiment for trading decisions
@@ -241,7 +241,7 @@ FinViz is a stock screening and analysis platform popular with technical analyst
 ❌ **Desktop-First** — Mobile app is limited  
 ❌ **No Real-time** — Free tier has significant delays  
 
-### What ChartGenius Should Learn
+### What TradVue Should Learn
 - **Do:** Offer powerful screening and filtering tools
 - **Do:** Visualize data effectively (heatmaps, charts)
 - **Don't:** Ignore fundamental analysis focus
@@ -292,7 +292,7 @@ Yahoo Finance is the free, consumer-friendly market data and news portal. Yahoo 
 ❌ **Premium Tier Underdeveloped** — Doesn't justify switching from free tier  
 ❌ **Slow Updates** — News and data updates lag competitors  
 
-### What ChartGenius Should Learn
+### What TradVue Should Learn
 - **Do:** Keep free tier robust and useful
 - **Do:** Build trust and credibility early
 - **Don't:** Force features behind paywall too quickly
@@ -300,11 +300,11 @@ Yahoo Finance is the free, consumer-friendly market data and news portal. Yahoo 
 
 ---
 
-## Competitive Positioning for ChartGenius
+## Competitive Positioning for TradVue
 
-### Market Gaps ChartGenius Can Fill
+### Market Gaps TradVue Can Fill
 
-| Gap | Opportunity | How ChartGenius Wins |
+| Gap | Opportunity | How TradVue Wins |
 |-----|-------------|-------------------  |
 | **News Overload** | Too many articles, no prioritization | AI-powered impact scoring + summaries |
 | **Sentiment Isolation** | Social sentiment (StockTwits) vs Professional news (Benzinga) | Combine both with validation layer |
@@ -318,7 +318,7 @@ Yahoo Finance is the free, consumer-friendly market data and news portal. Yahoo 
 
 ## Feature Comparison Matrix
 
-| Feature | TradingView | Benzinga | StockTwits | FinViz | ChartGenius |
+| Feature | TradingView | Benzinga | StockTwits | FinViz | TradVue |
 |---------|-------------|----------|-----------|--------|------------|
 | **Charting** | ⭐⭐⭐⭐⭐ | ❌ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐ |
 | **News Coverage** | ⭐⭐ | ⭐⭐⭐⭐⭐ | ⭐⭐ | ⭐⭐⭐ | ⭐⭐⭐⭐ |
@@ -335,7 +335,7 @@ Yahoo Finance is the free, consumer-friendly market data and news portal. Yahoo 
 
 ## Pricing Strategy Recommendation
 
-### Recommended Tiers for ChartGenius
+### Recommended Tiers for TradVue
 
 **Free Tier** ($0/month)
 - Real-time data (15-min delay on stocks)
@@ -372,7 +372,7 @@ Yahoo Finance is the free, consumer-friendly market data and news portal. Yahoo 
 ## Go-to-Market Strategy
 
 ### Phase 1: Differentiation
-1. **Launch with superior news analysis** — Make it clear ChartGenius is about intelligent insights, not info overload
+1. **Launch with superior news analysis** — Make it clear TradVue is about intelligent insights, not info overload
 2. **Highlight calendar integration** — This is unique; market it heavily
 3. **Target underserved segments:**
    - International traders (stocks, forex, crypto globally)
@@ -399,13 +399,13 @@ The trading intelligence market is large and growing, but **fragmented across pl
 - StockTwits (sentiment)
 - Google Calendar (event management)
 
-**ChartGenius's competitive advantage:** Unified platform combining news + sentiment + calendar, with AI-powered prioritization and beginner-friendly interface.
+**TradVue's competitive advantage:** Unified platform combining news + sentiment + calendar, with AI-powered prioritization and beginner-friendly interface.
 
 **Success depends on:**
 1. **Superior news analysis** (AI summaries, impact scoring)
 2. **Accurate sentiment tracking** (not just volume, but context)
 3. **Intuitive UX** (easier than TradingView, less noisy than StockTwits)
-4. **Clear messaging** (Why use ChartGenius vs alternatives?)
+4. **Clear messaging** (Why use TradVue vs alternatives?)
 5. **Consistent execution** (Quality > features)
 
 ---

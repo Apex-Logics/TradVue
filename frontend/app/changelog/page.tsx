@@ -721,7 +721,7 @@ export default function ChangelogPage() {
               <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
             </svg>
             <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.02em' }}>
-              ChartGenius
+              TradVue
             </span>
           </Link>
           <div style={{ display: 'flex', gap: '8px', alignItems: 'center' }}>
@@ -789,7 +789,7 @@ export default function ChangelogPage() {
           maxWidth: '520px',
           marginBottom: '32px',
         }}>
-          Every release, every fix, every improvement — documented here. ChartGenius is in active beta development.
+          Every release, every fix, every improvement — documented here. TradVue is in active beta development.
         </p>
 
         {/* Subscribe CTA */}
@@ -843,7 +843,7 @@ export default function ChangelogPage() {
           gap: '12px',
         }}>
           <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-            © 2026 ChartGenius. All rights reserved.
+            © 2026 TradVue. All rights reserved.
           </p>
           <div style={{ display: 'flex', gap: '20px', flexWrap: 'wrap' }}>
             {[

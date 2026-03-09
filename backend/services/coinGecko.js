@@ -57,7 +57,7 @@ class CoinGeckoService {
       timeout: 12000,
       headers: {
         Accept: 'application/json',
-        'User-Agent': 'ChartGenius/1.0 (chartgenius.io; market-data)',
+        'User-Agent': 'TradVue/1.0 (tradvue.io; market-data)',
       },
     });
 

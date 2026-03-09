@@ -1,5 +1,5 @@
 /**
- * ChartGenius GA4 Analytics Utility
+ * TradVue GA4 Analytics Utility
  * Lightweight, privacy-first analytics tracking.
  *
  * All tracking is gated behind user consent (localStorage flag: cg_analytics_consent).

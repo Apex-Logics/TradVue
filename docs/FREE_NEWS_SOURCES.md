@@ -1,4 +1,4 @@
-# FREE Financial News Sources & APIs for ChartGenius
+# FREE Financial News Sources & APIs for TradVue
 
 Research compiled March 2026 for free-tier financial news APIs and sources suitable for a trading platform.
 
@@ -283,4 +283,4 @@ Research compiled March 2026 for free-tier financial news APIs and sources suita
 ---
 
 *Last Updated: March 7, 2026*
-*Research completed for ChartGenius trading platform*
+*Research completed for TradVue trading platform*

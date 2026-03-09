@@ -1,11 +1,11 @@
-# ChartGenius Product Roadmap
+# TradVue Product Roadmap
 ## 12-Month Strategic Plan (Q1 2026 - Q4 2026)
 
 ---
 
 ## Executive Summary
 
-ChartGenius is a real-time charting and analysis platform for retail traders. This roadmap outlines the evolution from launch to scale over 12 months, targeting 10,000+ users by year-end with sustainable revenue. Assumptions: small team (3-5 engineers, 1 product), focus on quality over speed, user feedback-driven pivots.
+TradVue is a real-time charting and analysis platform for retail traders. This roadmap outlines the evolution from launch to scale over 12 months, targeting 10,000+ users by year-end with sustainable revenue. Assumptions: small team (3-5 engineers, 1 product), focus on quality over speed, user feedback-driven pivots.
 
 **Team Composition Assumptions:**
 - 3-4 Full-stack/Backend Engineers

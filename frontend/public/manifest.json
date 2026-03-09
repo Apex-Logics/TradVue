@@ -1,6 +1,6 @@
 {
-  "name": "ChartGenius",
-  "short_name": "ChartGenius",
+  "name": "TradVue",
+  "short_name": "TradVue",
   "description": "Real-Time Market Intelligence for active traders",
   "start_url": "/",
   "display": "standalone",

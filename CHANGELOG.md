@@ -1,6 +1,6 @@
 # Changelog
 
-All notable changes to ChartGenius are documented in this file.
+All notable changes to TradVue are documented in this file.
 
 The format is based on [Keep a Changelog](https://keepachangelog.com/en-release.md) and this project adheres to [Semantic Versioning](https://semver.org/).
 
@@ -171,19 +171,19 @@ The format is based on [Keep a Changelog](https://keepachangelog.com/en-release.
 
 | Commit | Feature | PR |
 |--------|---------|-----|
-| [c19742f](https://github.com/mini1/chartgenius/commit/c19742f) | GA4 analytics with privacy-first consent | [Link to PR] |
-| [7e036ff](https://github.com/mini1/chartgenius/commit/7e036ff) | Product, API, security docs | [Link to PR] |
-| [706b60f](https://github.com/mini1/chartgenius/commit/706b60f) | Legal pages (terms, privacy, cookies) | [Link to PR] |
-| [2315609](https://github.com/mini1/chartgenius/commit/2315609) | Landing page + waitlist backend | [Link to PR] |
-| [8c86a91](https://github.com/mini1/chartgenius/commit/8c86a91) | Onboarding flow with UX polish | [Link to PR] |
-| [a9a1978](https://github.com/mini1/chartgenius/commit/a9a1978) | Deployment checklist & .env setup | [Link to PR] |
-| [587756d](https://github.com/mini1/chartgenius/commit/587756d) | Real-Time Market Alerts System | [Link to PR] |
-| [785e2b7](https://github.com/mini1/chartgenius/commit/785e2b7) | UX polish, auth UI, settings, watchlist sync | [Link to PR] |
-| [dbd688b](https://github.com/mini1/chartgenius/commit/dbd688b) | Stock search, detail modal, watchlist persistence | [Link to PR] |
-| [2553c9d](https://github.com/mini1/chartgenius/commit/2553c9d) | Mobile responsive layout | [Link to PR] |
-| [e17064f](https://github.com/mini1/chartgenius/commit/e17064f) | Real data integration (ticker, news, quotes) | [Link to PR] |
-| [267c5ac](https://github.com/mini1/chartgenius/commit/267c5ac) | UI redesign - FinancialJuice style | [Link to PR] |
-| [abf4065](https://github.com/mini1/chartgenius/commit/abf4065) | Dark mode UI overhaul | [Link to PR] |
+| [c19742f](https://github.com/mini1/tradvue/commit/c19742f) | GA4 analytics with privacy-first consent | [Link to PR] |
+| [7e036ff](https://github.com/mini1/tradvue/commit/7e036ff) | Product, API, security docs | [Link to PR] |
+| [706b60f](https://github.com/mini1/tradvue/commit/706b60f) | Legal pages (terms, privacy, cookies) | [Link to PR] |
+| [2315609](https://github.com/mini1/tradvue/commit/2315609) | Landing page + waitlist backend | [Link to PR] |
+| [8c86a91](https://github.com/mini1/tradvue/commit/8c86a91) | Onboarding flow with UX polish | [Link to PR] |
+| [a9a1978](https://github.com/mini1/tradvue/commit/a9a1978) | Deployment checklist & .env setup | [Link to PR] |
+| [587756d](https://github.com/mini1/tradvue/commit/587756d) | Real-Time Market Alerts System | [Link to PR] |
+| [785e2b7](https://github.com/mini1/tradvue/commit/785e2b7) | UX polish, auth UI, settings, watchlist sync | [Link to PR] |
+| [dbd688b](https://github.com/mini1/tradvue/commit/dbd688b) | Stock search, detail modal, watchlist persistence | [Link to PR] |
+| [2553c9d](https://github.com/mini1/tradvue/commit/2553c9d) | Mobile responsive layout | [Link to PR] |
+| [e17064f](https://github.com/mini1/tradvue/commit/e17064f) | Real data integration (ticker, news, quotes) | [Link to PR] |
+| [267c5ac](https://github.com/mini1/tradvue/commit/267c5ac) | UI redesign - FinancialJuice style | [Link to PR] |
+| [abf4065](https://github.com/mini1/tradvue/commit/abf4065) | Dark mode UI overhaul | [Link to PR] |
 
 ---
 

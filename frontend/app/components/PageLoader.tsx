@@ -12,7 +12,7 @@ export interface PageLoaderProps {
   minimal?: boolean
 }
 
-// ─── Logo mark (inline SVG — ChartGenius chart icon) ─────────────────────────
+// ─── Logo mark (inline SVG — TradVue chart icon) ─────────────────────────
 
 function LogoMark() {
   return (
@@ -92,7 +92,7 @@ export default function PageLoader({ message = 'Loading…', minimal = false }: 
               color: 'var(--text-0, #e8e8ed)',
             }}
           >
-            ChartGenius
+            TradVue
           </span>
         </div>
       )}

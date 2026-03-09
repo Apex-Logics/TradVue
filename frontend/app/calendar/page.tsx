@@ -662,7 +662,7 @@ export default function CalendarPage() {
       <header className="page-header">
         <Link href="/" className="back-link">
           <IconArrowLeft size={16} />
-          ChartGenius
+          TradVue
         </Link>
         <span style={{ color: 'var(--border)' }}>|</span>
         <div className="page-header-title">

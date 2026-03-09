@@ -1,4 +1,4 @@
-# ChartGenius Beta Support Playbook
+# TradVue Beta Support Playbook
 
 **Version:** 1.0  
 **Last Updated:** March 6, 2026  
@@ -86,7 +86,7 @@
 
 **Troubleshooting Steps:**
 1. Verify browser notifications enabled:
-   - Settings → Privacy & Security → Notifications → ChartGenius ✓
+   - Settings → Privacy & Security → Notifications → TradVue ✓
 2. Check alert details:
    - Is the symbol correct? (AAPL not Apple)
    - Is threshold realistic? (not $0.01 below current price)
@@ -402,7 +402,7 @@ Started: [WHEN]. Affects [HOW MANY USERS].
 
 ## 4. Support Channels
 
-### Email: chartgeniusadmin@gmail.com
+### Email: tradvueadmin@gmail.com
 
 **Use for:** Primary contact method (monitored continuously)
 
@@ -416,8 +416,8 @@ Started: [WHEN]. Affects [HOW MANY USERS].
 **Email signature:**
 ```
 [YOUR NAME]
-ChartGenius Support
-chartgeniusadmin@gmail.com
+TradVue Support
+tradvueadmin@gmail.com
 
 Having issues? See our help center: https://[HELP URL]
 Report a bug: GitHub Issues or reply here
@@ -466,7 +466,7 @@ Feature request? Let us know what would help!
 ### Twitter/X Mentions
 
 **Monitoring:**
-- Set up saved search: `ChartGenius OR @ChartGenius_io -filter:retweets`
+- Set up saved search: `TradVue OR @TradVue_io -filter:retweets`
 - Check daily during market hours
 - Respond within 2 hours if public complaint
 
@@ -687,7 +687,7 @@ Hey! Sorry you hit that. DM us your email and we'll dig in right away.
 |--------|------|---------|-----------|
 | **Erick** | Founder / Backend | [Email / Slack] | 9am-9pm EST |
 | **Bolt** | DevOps / Frontend Lead | [Email / Slack] | 8am-10pm EST |
-| **You** | Support Lead | chartgeniusadmin@gmail.com | Market hours |
+| **You** | Support Lead | tradvueadmin@gmail.com | Market hours |
 
 ---
 
@@ -716,10 +716,10 @@ performance.memory
 railway logs
 
 # Test API health
-curl https://api.chartgenius.io/health
+curl https://api.tradvue.io/health
 
 # Check Supabase connection
-psql -h db.supabase.co -U postgres -d chartgenius -c "SELECT NOW();"
+psql -h db.supabase.co -U postgres -d tradvue -c "SELECT NOW();"
 ```
 
 ---

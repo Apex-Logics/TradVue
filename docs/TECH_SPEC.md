@@ -1,4 +1,4 @@
-# ChartGenius - Technical Specification
+# TradVue - Technical Specification
 
 ## Architecture Overview
 

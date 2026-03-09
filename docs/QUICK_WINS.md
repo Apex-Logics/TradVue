@@ -1,4 +1,4 @@
-# ChartGenius Quick-Win Features List
+# TradVue Quick-Win Features List
 
 **Purpose:** 15–20 low-effort, high-impact features to ship in next 2–4 weeks  
 **Created:** March 7, 2026  
@@ -269,7 +269,7 @@
 | Attribute | Value |
 |-----------|-------|
 | **Name** | Public Portfolio Share Links |
-| **Description** | Generate read-only share link for watchlist (e.g., `chartgenius.io/share/xyz123`). Show top holdings, allocation %, and performance. |
+| **Description** | Generate read-only share link for watchlist (e.g., `tradvue.io/share/xyz123`). Show top holdings, allocation %, and performance. |
 | **Effort** | M (link generation + public route + permission checks) |
 | **Impact** | Low-Medium (enables influencers, advisory, community sharing) |
 | **Priority Score** | **6.9/10** |

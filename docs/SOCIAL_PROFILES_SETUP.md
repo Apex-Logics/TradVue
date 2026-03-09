@@ -1,4 +1,4 @@
-# ChartGenius Social Media Profile Setup Guide
+# TradVue Social Media Profile Setup Guide
 
 **Last Updated:** March 2026  
 **Status:** Ready to Deploy
@@ -7,7 +7,7 @@
 
 ## Brand Overview
 
-**ChartGenius** is an intelligent trading platform that transforms complex market data into actionable insights through advanced charting, pattern recognition, and AI-powered analysis.
+**TradVue** is an intelligent trading platform that transforms complex market data into actionable insights through advanced charting, pattern recognition, and AI-powered analysis.
 
 ### Core Messaging
 - Empower traders with clarity and confidence
@@ -19,10 +19,10 @@
 ## 1. TWITTER/X PROFILE
 
 ### Username Recommendation
-**Primary:** `@ChartGenius`  
+**Primary:** `@TradVue`  
 **Alternatives (if taken):**
-- `@ChartGeniusApp`
-- `@ChartGeniusAI`
+- `@TradVueApp`
+- `@TradVueAI`
 - `@CGeniusTrading`
 
 ### Bio (160 chars max)
@@ -43,7 +43,7 @@ Intelligent charting for traders. AI-powered analysis. Real-time insights.
 ### Profile Image Specs
 - **Format:** JPG, PNG, or GIF
 - **Dimensions:** 400×400px (minimum)
-- **Recommendation:** Logo with solid background (ChartGenius mark/initials)
+- **Recommendation:** Logo with solid background (TradVue mark/initials)
 - **Style:** Professional, clean, recognizable at 100×100px
 - **File size:** <5MB
 
@@ -58,14 +58,14 @@ Intelligent charting for traders. AI-powered analysis. Real-time insights.
 ### Link in Bio Strategy
 **Primary CTA:** Website/Platform
 ```
-Link: https://chartgenius.com
-Use short link: bit.ly/chartgenius or custom domain
+Link: https://tradvue.com
+Use short link: bit.ly/tradvue or custom domain
 ```
 
 ### Pinned Tweet Strategy
 **Tweet 1 (Product Highlight):**
 ```
-🎯 Introducing ChartGenius
+🎯 Introducing TradVue
 
 Your trading decisions just got smarter.
 
@@ -81,7 +81,7 @@ Join thousands of traders making better decisions.
 
 **Tweet 2 (Social Proof):**
 ```
-"ChartGenius turned my trading from guesswork to strategy."
+"TradVue turned my trading from guesswork to strategy."
 
 - [User testimonial]
 
@@ -101,7 +101,7 @@ Ready to transform your trading? Join us.
 ## 2. LINKEDIN COMPANY PAGE
 
 ### Company Name & Tagline
-**Company Name:** ChartGenius
+**Company Name:** TradVue
 
 **Tagline (1-line):**
 ```
@@ -121,7 +121,7 @@ Transform Market Data Into Actionable Trading Strategies
 
 ### About Section (2000 chars max)
 ```
-ChartGenius is an AI-powered trading platform designed for traders who demand clarity, speed, and accuracy.
+TradVue is an AI-powered trading platform designed for traders who demand clarity, speed, and accuracy.
 
 We transform complex market data into actionable insights through:
 
@@ -134,13 +134,13 @@ We transform complex market data into actionable insights through:
 Our Mission:
 To empower traders of all levels with the intelligence they need to make confident, data-driven decisions.
 
-Why ChartGenius?
+Why TradVue?
 ✓ Reduce analysis time by 70%
 ✓ Improve decision confidence
 ✓ Access institutional-grade tools
 ✓ Join a community of intelligent traders
 
-Whether you're a day trader, swing trader, or long-term investor, ChartGenius gives you the competitive edge.
+Whether you're a day trader, swing trader, or long-term investor, TradVue gives you the competitive edge.
 
 Start your free trial today: [platform URL]
 ```
@@ -175,12 +175,12 @@ Start your free trial today: [platform URL]
 
 ### Server Name
 ```
-ChartGenius Community
+TradVue Community
 ```
 
 **Alternative:**
 ```
-ChartGenius Trading Hub
+TradVue Trading Hub
 ```
 
 ### Channel Structure
@@ -212,7 +212,7 @@ ChartGenius Trading Hub
 
 1. **Admin** – Full server management
 2. **Moderator** – Manage channels, enforce rules
-3. **ChartGenius Team** – Official staff, highlighted in green
+3. **TradVue Team** – Official staff, highlighted in green
 4. **Early Supporter** – Beta users, special perks
 5. **Verified Trader** – Active community members (self-assigned via react)
 6. **Member** – Standard role (auto-assigned on join)
@@ -220,7 +220,7 @@ ChartGenius Trading Hub
 ### Welcome Message (for #welcome channel)
 
 ```
-🎉 **Welcome to ChartGenius Community!**
+🎉 **Welcome to TradVue Community!**
 
 We're glad you're here. This is your space to learn, share, and grow as a trader.
 
@@ -231,9 +231,9 @@ We're glad you're here. This is your space to learn, share, and grow as a trader
 4. Join #market-analysis to discuss trading ideas
 
 📊 **Quick Links:**
-→ [Platform: https://chartgenius.com]
-→ [Documentation: https://docs.chartgenius.com]
-→ [Feedback Form: https://chartgenius.com/feedback]
+→ [Platform: https://tradvue.com]
+→ [Documentation: https://docs.tradvue.com]
+→ [Feedback Form: https://tradvue.com/feedback]
 
 ⚡ **Community Guidelines:**
 ✓ Be respectful and constructive
@@ -241,7 +241,7 @@ We're glad you're here. This is your space to learn, share, and grow as a trader
 ✓ No financial advice – share ideas, not recommendations
 ✓ Have fun and help each other grow
 
-**Need help?** Ping @ChartGenius Team or post in #support
+**Need help?** Ping @TradVue Team or post in #support
 
 Happy charting! 📈
 ```
@@ -249,7 +249,7 @@ Happy charting! 📈
 ### Server Rules (pinned message in #general)
 
 ```
-🏛️ **ChartGenius Community Rules**
+🏛️ **TradVue Community Rules**
 
 1️⃣ **Be Respectful** – Treat all members with kindness and professionalism
 2️⃣ **No Harassment** – No hate speech, discrimination, or personal attacks
@@ -262,7 +262,7 @@ Happy charting! 📈
 
 **Violations** may result in warnings, mutes, or removal.
 
-**Questions?** Ask @ChartGenius Team or post in #support
+**Questions?** Ask @TradVue Team or post in #support
 
 Thanks for being awesome! 🚀
 ```
@@ -273,17 +273,17 @@ Thanks for being awesome! 🚀
 
 ### Channel Name
 ```
-ChartGenius
+TradVue
 ```
 
 **Alternative (if taken):**
 ```
-ChartGenius Trading
+TradVue Trading
 ```
 
 ### Channel Description (About)
 ```
-Welcome to ChartGenius – Your AI-powered trading intelligence.
+Welcome to TradVue – Your AI-powered trading intelligence.
 
 Transform market data into actionable trading strategies with advanced charting, pattern recognition, and real-time analysis.
 
@@ -298,10 +298,10 @@ Transform market data into actionable trading strategies with advanced charting,
 Traders of all levels who want to improve their analysis and make confident, data-driven decisions.
 
 📌 Links:
-Website: https://chartgenius.com
-Platform: https://app.chartgenius.com
-Discord: https://discord.gg/chartgenius
-Twitter: @ChartGenius
+Website: https://tradvue.com
+Platform: https://app.tradvue.com
+Discord: https://discord.gg/tradvue
+Twitter: @TradVue
 
 📺 **Subscribe** and turn on notifications for the latest insights and market updates.
 
@@ -325,7 +325,7 @@ Happy trading! 📈
 ### Playlist Structure
 
 **1. Getting Started**
-- Welcome to ChartGenius
+- Welcome to TradVue
 - Platform overview
 - Creating your first chart
 - Basic navigation
@@ -389,13 +389,13 @@ Transform market complexity into clear, actionable trading strategies with AI-po
 
 **Full Description (launch-ready):**
 ```
-ChartGenius is an intelligent trading platform built for traders who want clarity, speed, and confidence.
+TradVue is an intelligent trading platform built for traders who want clarity, speed, and confidence.
 
 🎯 The Problem:
 Traditional charting is overwhelming. Too many indicators, too much noise, too many decisions. Traders waste hours analyzing data, only to feel unsure about their decisions.
 
 💡 Our Solution:
-ChartGenius combines professional charting tools with AI-powered pattern recognition to eliminate guesswork. Real-time analysis. Clear signals. Confident trading.
+TradVue combines professional charting tools with AI-powered pattern recognition to eliminate guesswork. Real-time analysis. Clear signals. Confident trading.
 
 ✨ Key Features:
 📊 Advanced Charting – Professional-grade tools with real-time data
@@ -405,7 +405,7 @@ ChartGenius combines professional charting tools with AI-powered pattern recogni
 🔗 Multi-Asset Support – Stocks, crypto, forex, commodities
 
 💼 For Everyone:
-Day traders, swing traders, long-term investors – ChartGenius adapts to your strategy.
+Day traders, swing traders, long-term investors – TradVue adapts to your strategy.
 
 📈 Results:
 ✓ 70% faster analysis
@@ -421,7 +421,7 @@ Ready to trade smarter? Start free today at [platform URL]
 ```
 Hi Product Hunt! 👋
 
-I'm [Your Name], founder of ChartGenius. We built this because we were frustrated with charting tools that felt designed by engineers for engineers – complex, noisy, and ultimately unhelpful.
+I'm [Your Name], founder of TradVue. We built this because we were frustrated with charting tools that felt designed by engineers for engineers – complex, noisy, and ultimately unhelpful.
 
 Our mission: Make professional trading intelligence accessible to every trader.
 
@@ -488,36 +488,36 @@ Ask us anything! 🚀
 
 ### Call-to-Action Hierarchy
 
-**Primary CTA:** "Start Free" or "Try ChartGenius"
+**Primary CTA:** "Start Free" or "Try TradVue"
 ```
-https://chartgenius.com/start-free
+https://tradvue.com/start-free
 ```
 
 **Secondary CTA:** "Learn More" or "See How It Works"
 ```
-https://chartgenius.com
+https://tradvue.com
 ```
 
 **Community CTA:** "Join Our Discord"
 ```
-https://discord.gg/chartgenius
+https://discord.gg/tradvue
 ```
 
 ### Ready-to-Copy Content Snippets
 
 **For Bio-style intros (Twitter replies, Discord intros):**
 ```
-ChartGenius user | Data-driven trader | Love real-time insights
+TradVue user | Data-driven trader | Love real-time insights
 ```
 
 **For social comments (when someone asks about charting):**
 ```
-Been using ChartGenius lately – the AI pattern recognition saves me hours every week. You should check it out.
+Been using TradVue lately – the AI pattern recognition saves me hours every week. You should check it out.
 ```
 
 **For testimonials (template):**
 ```
-"I went from spending 3 hours analyzing charts to 30 minutes. ChartGenius's pattern recognition is a game-changer."
+"I went from spending 3 hours analyzing charts to 30 minutes. TradVue's pattern recognition is a game-changer."
 - [Name], [Trader Type]
 ```
 
@@ -525,11 +525,11 @@ Been using ChartGenius lately – the AI pattern recognition saves me hours ever
 
 | Platform | Primary Link | Secondary Link |
 |----------|-------------|-----------------|
-| Twitter | chartgenius.com | discord.gg/chartgenius |
-| LinkedIn | chartgenius.com | careers or company news |
+| Twitter | tradvue.com | discord.gg/tradvue |
+| LinkedIn | tradvue.com | careers or company news |
 | Discord | N/A (community hub) | YouTube for tutorials |
-| YouTube | chartgenius.com | Platform signup |
-| Product Hunt | chartgenius.com | (auto-linked) |
+| YouTube | tradvue.com | Platform signup |
+| Product Hunt | tradvue.com | (auto-linked) |
 
 ### Image Asset Checklist
 
@@ -548,11 +548,11 @@ Been using ChartGenius lately – the AI pattern recognition saves me hours ever
 ## QUICK SETUP CHECKLIST
 
 ### Day 1: Twitter/X
-- [ ] Create account @ChartGenius
+- [ ] Create account @TradVue
 - [ ] Add bio (use template above)
 - [ ] Upload profile picture
 - [ ] Upload header image
-- [ ] Add link to chartgenius.com in bio
+- [ ] Add link to tradvue.com in bio
 - [ ] Compose 3 intro tweets
 - [ ] Pin best-performing tweet
 
@@ -573,7 +573,7 @@ Been using ChartGenius lately – the AI pattern recognition saves me hours ever
 - [ ] Add server banner
 
 ### Day 3: YouTube
-- [ ] Create channel as ChartGenius
+- [ ] Create channel as TradVue
 - [ ] Add channel description
 - [ ] Upload profile picture
 - [ ] Upload banner

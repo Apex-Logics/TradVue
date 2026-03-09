@@ -1,4 +1,4 @@
-# ChartGenius Onboarding UX Specification
+# TradVue Onboarding UX Specification
 
 **Document Version:** 1.0  
 **Last Updated:** 2026-03-06  
@@ -9,7 +9,7 @@
 
 ## Executive Summary
 
-The ChartGenius onboarding flow is designed to activate new users in under 5 minutes through progressive disclosure, quick wins, and subtle guidance. The experience guides users from "empty state" → "first watchlist symbol" → "first alert" → "enabled notifications" in a linear, confidence-building sequence.
+The TradVue onboarding flow is designed to activate new users in under 5 minutes through progressive disclosure, quick wins, and subtle guidance. The experience guides users from "empty state" → "first watchlist symbol" → "first alert" → "enabled notifications" in a linear, confidence-building sequence.
 
 ---
 
@@ -402,7 +402,7 @@ After completion, hide checklist and onboarding hints.
 ### 8.2 What if user signs up but never adds a symbol?
 
 **Day 1:** Show welcome screen (assume they forgot)  
-**Day 3:** Email: "Get started with ChartGenius"  
+**Day 3:** Email: "Get started with TradVue"  
 **Day 7:** Re-onboard with fresh welcome screen (reset `onboarding.completed = false`)
 
 ### 8.3 What if user has alerts but deletes them?

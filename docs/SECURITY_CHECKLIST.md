@@ -1,4 +1,4 @@
-# ChartGenius Security Checklist
+# TradVue Security Checklist
 
 **Last Updated:** 2026-03-06  
 **Status:** Active Security Framework  
@@ -109,7 +109,7 @@
 ### CORS Configuration
 - [ ] Set Access-Control-Allow-Origin to specific domains (never "*" for APIs)
   - Priority: **P0** | Status: **TODO**
-- [ ] Whitelist only trusted domains (e.g., app.chartgenius.com, admin.chartgenius.com)
+- [ ] Whitelist only trusted domains (e.g., app.tradvue.com, admin.tradvue.com)
   - Priority: **P0** | Status: **TODO**
 - [ ] Set Access-Control-Allow-Methods to required verbs (GET, POST, etc.)
   - Priority: **P1** | Status: **TODO**

@@ -67,7 +67,7 @@ export default function Spinner({
       role="status"
       aria-label={label}
       className={className}
-      style={{ animation: 'chartgenius-spin 0.75s linear infinite', flexShrink: 0 }}
+      style={{ animation: 'tradvue-spin 0.75s linear infinite', flexShrink: 0 }}
     >
       {/* Track */}
       <circle
@@ -103,7 +103,7 @@ if (typeof document !== 'undefined') {
     const style = document.createElement('style')
     style.id = id
     style.textContent = `
-      @keyframes chartgenius-spin {
+      @keyframes tradvue-spin {
         from { transform: rotate(0deg); }
         to   { transform: rotate(360deg); }
       }

@@ -10,9 +10,9 @@ import CookieConsent from './components/CookieConsent'
 import ToastContainer from './components/Toast'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.chartgenius.io'),
-  title: 'ChartGenius — Real-Time Market Intelligence',
-  description: 'Live market data, news feed, economic calendar and market movers for active traders',
+  metadataBase: new URL('https://www.tradvue.com'),
+  title: 'TradVue — Your Trading Edge',
+  description: 'TradVue - Professional trading platform with portfolio tracking, market analysis, trading tools, economic calendar, and trading journal.',
   manifest: '/manifest.json',
   icons: {
     icon: [
@@ -28,16 +28,16 @@ export const metadata: Metadata = {
     ],
   },
   openGraph: {
-    title: 'ChartGenius — Real-Time Market Intelligence',
-    description: 'Live market data, news feed, economic calendar and market movers for active traders',
-    url: 'https://www.chartgenius.io',
-    siteName: 'ChartGenius',
+    title: 'TradVue',
+    description: 'Professional trading platform with real-time market data, portfolio analytics, and 18+ trading tools.',
+    url: 'https://www.tradvue.com',
+    siteName: 'TradVue',
     images: [
       {
         url: '/logo-tagline.png',
         width: 1024,
         height: 1024,
-        alt: 'ChartGenius — AI Driven Alpha',
+        alt: 'TradVue — Your Trading Edge',
       },
     ],
     locale: 'en_US',
@@ -45,14 +45,14 @@ export const metadata: Metadata = {
   },
   twitter: {
     card: 'summary_large_image',
-    title: 'ChartGenius — Real-Time Market Intelligence',
-    description: 'Live market data, news feed, economic calendar and market movers for active traders',
+    title: 'TradVue',
+    description: 'Professional trading platform with real-time market data, portfolio analytics, and 18+ trading tools.',
     images: ['/logo-tagline.png'],
   },
   appleWebApp: {
     capable: true,
     statusBarStyle: 'black-translucent',
-    title: 'ChartGenius',
+    title: 'TradVue',
   },
   other: {
     'mobile-web-app-capable': 'yes',

@@ -16,7 +16,7 @@ const cache = require('./cache');
 
 const rssParser = new RSSParser({
   timeout: 10000,
-  headers: { 'User-Agent': 'ChartGenius/1.0 (chartgenius.io; calendar-bot)' }
+  headers: { 'User-Agent': 'TradVue/1.0 (tradvue.io; calendar-bot)' }
 });
 
 // ─── Type Classification ────────────────────────────────────────────────────
@@ -57,7 +57,7 @@ async function fetchForexFactory() {
     const url = 'https://nfs.faireconomy.media/ff_calendar_thisweek.json';
     const { data } = await axios.get(url, {
       timeout: 15000,
-      headers: { 'User-Agent': 'ChartGenius/1.0 (chartgenius.io; calendar-bot)' }
+      headers: { 'User-Agent': 'TradVue/1.0 (tradvue.io; calendar-bot)' }
     });
 
     const events = (Array.isArray(data) ? data : []).map(e => {

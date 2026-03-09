@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { LegalPage, Section, SubSection, UL, OL, WarningBox, AcknowledgmentBox } from '../components'
 
 export const metadata: Metadata = {
-  title: 'Terms of Service — ChartGenius',
-  description: 'Read the ChartGenius Terms of Service. By using our platform you agree to these terms.',
+  title: 'Terms of Service — TradVue',
+  description: 'Read the TradVue Terms of Service. By using our platform you agree to these terms.',
   alternates: {
-    canonical: 'https://chartgenius.io/legal/terms',
+    canonical: 'https://tradvue.io/legal/terms',
   },
   robots: 'noindex, follow',
 }
@@ -16,14 +16,14 @@ export default function TermsPage() {
 
       <Section id="agreement" title="1. Agreement to Terms">
         <p>
-          By accessing and using the ChartGenius platform ("Service"), you agree to be bound by these Terms of Service.
+          By accessing and using the TradVue platform ("Service"), you agree to be bound by these Terms of Service.
           If you do not agree to abide by the above, please do not use this service.
         </p>
       </Section>
 
       <Section id="description" title="2. Service Description">
         <p>
-          ChartGenius is a financial data visualization and analysis platform that provides charting tools, market data,
+          TradVue is a financial data visualization and analysis platform that provides charting tools, market data,
           and watchlist management features. The Service is provided on an "as-is" basis for informational purposes only.
         </p>
       </Section>
@@ -31,8 +31,8 @@ export default function TermsPage() {
       <WarningBox>
         <strong>NOT FINANCIAL ADVICE</strong>
         <br /><br />
-        <strong>ChartGenius does not provide financial, investment, or trading advice.</strong> The Service is a research
-        and visualization tool only. Nothing on ChartGenius constitutes:
+        <strong>TradVue does not provide financial, investment, or trading advice.</strong> The Service is a research
+        and visualization tool only. Nothing on TradVue constitutes:
         <ul style={{ marginTop: '12px', paddingLeft: '20px', display: 'flex', flexDirection: 'column', gap: '6px' }}>
           <li>Investment recommendations</li>
           <li>Financial advice</li>
@@ -59,7 +59,7 @@ export default function TermsPage() {
           <UL items={[
             'You must be at least 18 years old to use this Service',
             'You must comply with all applicable laws and regulations in your jurisdiction',
-            'You may not use ChartGenius if prohibited by law in your location',
+            'You may not use TradVue if prohibited by law in your location',
           ]} />
         </SubSection>
       </Section>
@@ -67,7 +67,7 @@ export default function TermsPage() {
       <Section id="acceptable-use" title="4. Acceptable Use">
         <p>You agree <strong>NOT</strong> to:</p>
         <UL items={[
-          'Use ChartGenius for illegal purposes or in violation of any laws',
+          'Use TradVue for illegal purposes or in violation of any laws',
           'Manipulate, scrape, or automatically access the Service without permission',
           'Reverse engineer, decompile, or attempt to access source code',
           'Upload malware, viruses, or harmful code',
@@ -82,7 +82,7 @@ export default function TermsPage() {
 
       <Section id="ip" title="5. Intellectual Property">
         <p>
-          ChartGenius owns all intellectual property rights to the Service, including charts, logos, design elements,
+          TradVue owns all intellectual property rights to the Service, including charts, logos, design elements,
           and proprietary analysis tools. You may not reproduce, distribute, or modify any content without permission.
         </p>
       </Section>
@@ -92,8 +92,8 @@ export default function TermsPage() {
           <strong>Nothing on this platform constitutes a solicitation, recommendation, or offer to buy or sell any securities.</strong>
         </p>
         <UL items={[
-          'ChartGenius does not provide personalized investment advice',
-          'ChartGenius does not make specific buy/sell recommendations',
+          'TradVue does not provide personalized investment advice',
+          'TradVue does not make specific buy/sell recommendations',
           'All content is for educational and informational purposes only',
           'You are solely responsible for your investment decisions',
           'You should consult with a qualified financial advisor before making trades',
@@ -115,7 +115,7 @@ export default function TermsPage() {
         </SubSection>
         <SubSection title="7.2 Third-Party Data">
           <p>
-            ChartGenius uses data from external sources including exchanges, brokers, and market data providers.
+            TradVue uses data from external sources including exchanges, brokers, and market data providers.
             We are not responsible for their errors, delays, or inaccuracies.
           </p>
         </SubSection>
@@ -133,14 +133,14 @@ export default function TermsPage() {
         </SubSection>
         <SubSection title="7.4 Tax Tools Disclaimer">
           <p>
-            <strong>Tax estimation features are provided as convenience tools only. ChartGenius is not a tax preparation service and makes no guarantees about the accuracy of tax calculations.</strong>
+            <strong>Tax estimation features are provided as convenience tools only. TradVue is not a tax preparation service and makes no guarantees about the accuracy of tax calculations.</strong>
           </p>
           <UL items={[
             'Tax calculations are approximations based on provided data',
             'Tax laws vary by jurisdiction and individual circumstances',
             'Always consult a qualified tax professional (CPA or tax attorney) before making tax decisions',
-            'ChartGenius is not responsible for tax errors or missed deductions',
-            'Do NOT use ChartGenius calculations as your primary tax reporting method',
+            'TradVue is not responsible for tax errors or missed deductions',
+            'Do NOT use TradVue calculations as your primary tax reporting method',
           ]} />
         </SubSection>
       </Section>
@@ -154,7 +154,7 @@ export default function TermsPage() {
           'Confirm dividend payments and earnings dates through official sources',
           'Validate all tax calculations with your tax professional',
           'Review all market data through independent sources before trading',
-          'Do NOT rely solely on ChartGenius for critical financial decisions',
+          'Do NOT rely solely on TradVue for critical financial decisions',
           'You assume all risk associated with use of platform data and tools',
         ]} />
       </Section>
@@ -162,9 +162,9 @@ export default function TermsPage() {
       <Section id="liability" title="9. Limitation of Liability">
         <p><strong>TO THE MAXIMUM EXTENT PERMITTED BY LAW:</strong></p>
         <p>
-          <strong>ChartGenius shall not be liable for any losses, damages, or claims arising from reliance on data, calculations, or analysis provided by the platform.</strong>
+          <strong>TradVue shall not be liable for any losses, damages, or claims arising from reliance on data, calculations, or analysis provided by the platform.</strong>
         </p>
-        <p>Specifically, ChartGenius and its owners, developers, and staff shall <strong>NOT</strong> be liable for:</p>
+        <p>Specifically, TradVue and its owners, developers, and staff shall <strong>NOT</strong> be liable for:</p>
         <UL items={[
           'Any trading losses, whether direct or indirect',
           'Loss of profits, revenue, or anticipated savings',
@@ -176,13 +176,13 @@ export default function TermsPage() {
           'Damages from use of AI-generated analysis or recommendations',
         ]} />
         <p style={{ marginTop: '16px' }}>
-          This limitation applies even if ChartGenius has been advised of the possibility of such damages.
+          This limitation applies even if TradVue has been advised of the possibility of such damages.
         </p>
       </Section>
 
       <Section id="risk" title="10. Assumption of Risk">
         <p>
-          <strong>Using ChartGenius for any financial decision is entirely at your own risk.</strong> You acknowledge that:
+          <strong>Using TradVue for any financial decision is entirely at your own risk.</strong> You acknowledge that:
         </p>
         <UL items={[
           'Trading and investing involve substantial risk of loss',
@@ -196,13 +196,13 @@ export default function TermsPage() {
 
       <Section id="modifications" title="11. Modification of Terms">
         <p>
-          ChartGenius reserves the right to modify these Terms at any time. Continued use of the Service
+          TradVue reserves the right to modify these Terms at any time. Continued use of the Service
           after changes constitute acceptance of the new terms.
         </p>
       </Section>
 
       <Section id="termination" title="12. Termination">
-        <p>ChartGenius may terminate your account without notice if you:</p>
+        <p>TradVue may terminate your account without notice if you:</p>
         <UL items={[
           'Violate these Terms',
           'Engage in illegal activity',
@@ -221,12 +221,12 @@ export default function TermsPage() {
       <Section id="contact" title="14. Contact">
         <p>
           For questions about these Terms, contact:{' '}
-          <a href="mailto:legal@chartgenius.io" style={{ color: '#4a9eff' }}>legal@chartgenius.io</a>
+          <a href="mailto:legal@tradvue.io" style={{ color: '#4a9eff' }}>legal@tradvue.io</a>
         </p>
       </Section>
 
       <AcknowledgmentBox>
-        By using ChartGenius, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
+        By using TradVue, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.
       </AcknowledgmentBox>
 
     </LegalPage>

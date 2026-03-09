@@ -1,4 +1,4 @@
-# ChartGenius Beta - Pre-Launch Checklist
+# TradVue Beta - Pre-Launch Checklist
 
 **Launch Date Target:** TBD  
 **Current Status:** In Progress  

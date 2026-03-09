@@ -1,4 +1,4 @@
-# ChartGenius Landing Page Copy & Structure
+# TradVue Landing Page Copy & Structure
 
 ## 1. HERO SECTION
 
@@ -83,7 +83,7 @@ Example structure:
 ### Beta Offer
 **🎁 All early access users get free Pro access through beta. No credit card, no expiration date.**
 
-### Free Tier (ChartGenius Lite)
+### Free Tier (TradVue Lite)
 - ✓ Real-time news feed (15-min delay)
 - ✓ Basic alerts (3 per watchlist)
 - ✓ Watchlist tracking (up to 5 lists)
@@ -91,7 +91,7 @@ Example structure:
 - ✓ Community forum access
 - **Cost:** Free forever
 
-### Pro Tier (ChartGenius Pro)
+### Pro Tier (TradVue Pro)
 - ✓ Real-time news (0-sec delay)
 - ✓ AI sentiment analysis (live)
 - ✓ Unlimited custom alerts
@@ -140,7 +140,7 @@ _Optional: "I also want [Telegram alerts] [Discord community access]"_
 - **Legal:** Terms of Service | Privacy Policy | Disclaimer
 
 ### Social Links
-- Twitter (@ChartGenius)
+- Twitter (@TradVue)
 - Telegram (Community)
 - Discord (Traders)
 - GitHub (API docs)
@@ -149,7 +149,7 @@ _Optional: "I also want [Telegram alerts] [Discord community access]"_
 "Get weekly market insights. Unsubscribe anytime." ← Simple footer form
 
 ### Copyright
-© 2026 ChartGenius. All rights reserved. | Last updated: [Date]
+© 2026 TradVue. All rights reserved. | Last updated: [Date]
 
 ---
 
@@ -184,7 +184,7 @@ _Optional: "I also want [Telegram alerts] [Discord community access]"_
 
 ## SEO / META (For Developers)
 
-- **Page Title:** ChartGenius — Real-Time Market Intelligence for Active Traders
+- **Page Title:** TradVue — Real-Time Market Intelligence for Active Traders
 - **Meta Description:** AI-powered news feeds, sentiment analysis, and smart alerts. React faster to market moves. Free beta access.
 - **H1:** Real-Time Market Intelligence. React Faster.
 - **Target Keywords:** real-time market data, trading alerts, AI sentiment analysis, market news feed, trader tools

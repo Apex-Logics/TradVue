@@ -1,14 +1,14 @@
-# ChartGenius - Reddit Post Drafts
+# TradVue - Reddit Post Drafts
 
 ---
 
 ## r/algotrading — Technical & Data-Focused
 
 ### Title
-ChartGenius Beta Launch: Real-Time Market Data, News Sentiment Analysis, and Alert Aggregation for Quant Traders
+TradVue Beta Launch: Real-Time Market Data, News Sentiment Analysis, and Alert Aggregation for Quant Traders
 
 ### Post
-We've been building ChartGenius for the past 6 months—a platform designed specifically for algorithmic traders who need low-latency data feeds, real-time sentiment scoring, and intelligent alert routing.
+We've been building TradVue for the past 6 months—a platform designed specifically for algorithmic traders who need low-latency data feeds, real-time sentiment scoring, and intelligent alert routing.
 
 **Core features for quant shops:**
 
@@ -31,20 +31,20 @@ Any questions about the stack or API design?
 ## r/stocks — Retail Investor Friendly
 
 ### Title
-New Trading Tool Alert: ChartGenius Tracks News, Alerts, and Sentiment (Beta Free)
+New Trading Tool Alert: TradVue Tracks News, Alerts, and Sentiment (Beta Free)
 
 ### Post
 Hey everyone,
 
 I've been testing this tool for the past month and honestly it's saved me from some dumb trades. Thought I'd share before they go mainstream.
 
-**ChartGenius** is launching beta tomorrow—basically a one-stop-shop for tracking anything that moves your stocks.
+**TradVue** is launching beta tomorrow—basically a one-stop-shop for tracking anything that moves your stocks.
 
 **What actually helps:**
 
 - **Real-time alerts** — Set price targets and get notified instantly. No more checking your phone every 5 minutes.
-- **News impact scoring** — When Apple reports earnings, you get 50 articles. ChartGenius shows you which ones actually matter for the stock. Huge time saver.
-- **Sentiment tracking** — You ever wonder why retail is piling into a stock everyone else is shorting? ChartGenius tracks that. It's like seeing the hive mind.
+- **News impact scoring** — When Apple reports earnings, you get 50 articles. TradVue shows you which ones actually matter for the stock. Huge time saver.
+- **Sentiment tracking** — You ever wonder why retail is piling into a stock everyone else is shorting? TradVue tracks that. It's like seeing the hive mind.
 - **Watchlists that scale** — Track unlimited stocks. Organize by sector, strategy, whatever. WAY better than Excel.
 
 **The free tier** gets you started. Pro is $19/month if you want real-time data and push notifications.
@@ -58,20 +58,20 @@ Beta access starts tomorrow. I'll be on there. Feel free to DM if anyone wants a
 ## r/wallstreetbets — Bold & Irreverent
 
 ### Title
-ChartGenius | Stop Missing the Move: AI News Alerts + Real-Time Sentiment for Degenerates (Beta Free)
+TradVue | Stop Missing the Move: AI News Alerts + Real-Time Sentiment for Degenerates (Beta Free)
 
 ### Post
 yo apes 🚀
 
 for the last 6 months we've been building the tool every WSB degenerate actually needs but didn't know existed.
 
-**ChartGenius in 30 seconds:**
+**TradVue in 30 seconds:**
 
 you're scrolling Twitter at 2am and see some CEO tweeting about earnings surprise. by the time you check your broker, the stock already moved. this tool would've caught it 10 minutes ago.
 
 you're holding some meme stock and want to know if retail is actually loading up or if it's bots. we track sentiment across Reddit, Twitter, Discord—literally the places you hang out. then we show you the vibe.
 
-you want to set price alerts but the broker app is clunky. ChartGenius: set it and forget it. real-time push notifications. no BS.
+you want to set price alerts but the broker app is clunky. TradVue: set it and forget it. real-time push notifications. no BS.
 
 **Who built this?** quants + traders who were tired of jumping between 5 different apps. decided to build the one thing that actually matters: real-time signals.
 

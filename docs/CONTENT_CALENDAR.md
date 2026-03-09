@@ -1,4 +1,4 @@
-# ChartGenius 90-Day Content Marketing Calendar
+# TradVue 90-Day Content Marketing Calendar
 
 **Launch Date:** Day 1 (Friday) | **Content Plan:** Days -14 through +75 (90 days)
 **Target Audience:** Day traders, swing traders, retail investors, trading educators
@@ -29,8 +29,8 @@
 - **Format:** Visual guide + actionable strategies
 - **CTA:** Sign up for pattern alerts
 
-#### POST 3: "ChartGenius vs. TradingView: A Day Trader's Honest Comparison"
-- **Target Keywords:** TradingView alternative, best charting software for day traders, ChartGenius review
+#### POST 3: "TradVue vs. TradingView: A Day Trader's Honest Comparison"
+- **Target Keywords:** TradingView alternative, best charting software for day traders, TradVue review
 - **Publish:** Day 1 (Launch day - Friday)
 - **Word Count:** 2,800 words
 - **Format:** Feature-by-feature comparison + pricing
@@ -48,7 +48,7 @@
 - **Publish:** Day 11 (Friday)
 - **Word Count:** 2,600 words
 - **Format:** Educational guide with indicator breakdown
-- **CTA:** ChartGenius volume indicator walkthrough
+- **CTA:** TradVue volume indicator walkthrough
 
 #### POST 6: "Backtesting Strategies: Why Paper Trading Isn't Enough"
 - **Target Keywords:** backtesting strategies, paper trading vs real trading, trading system testing
@@ -62,7 +62,7 @@
 - **Publish:** Day 25 (Friday)
 - **Word Count:** 1,800 words
 - **Format:** Quick how-to guide
-- **CTA:** ChartGenius dashboard templates
+- **CTA:** TradVue dashboard templates
 
 #### POST 8: "The Psychology of Day Trading: Managing Fear and Greed"
 - **Target Keywords:** trading psychology, trading emotions, trader mindset
@@ -83,7 +83,7 @@
 - **Publish:** Day 46 (Friday)
 - **Word Count:** 2,800 words
 - **Format:** Advanced technical guide
-- **CTA:** ChartGenius order flow tools guide
+- **CTA:** TradVue order flow tools guide
 
 #### POST 11: "Trading News and Economic Events: A Day Trader's Playbook"
 - **Target Keywords:** forex news trading, economic event trading, trading calendars
@@ -119,14 +119,14 @@
 - "Day traders lose $$$ because they rely on luck instead of process. It's not about picking winners. It's about managing risk. [Blog link]"
 - "The best traders don't trade more. They trade BETTER. They use the right tools, the right strategy, the right setup. Coming soon..."
 - "Chart pattern thread 🧵 Here are the 5 patterns that show up in 80% of profitable day trades:"
-- "Your broker is fine. Your charting software might be trash. That's the real edge loss. [Hint: ChartGenius launches Friday]"
+- "Your broker is fine. Your charting software might be trash. That's the real edge loss. [Hint: TradVue launches Friday]"
 - "Weekend homework: What's ONE thing you'd change about your current charting setup? RT + reply 👇"
 
 **Launch Week (Days 1-5):**
-- "🚀 ChartGenius is LIVE. Built by traders. For traders. Free trial, no credit card. Let's see what you think. [Launch link]"
-- "The #1 complaint traders have about TradingView? [Most common complaint]. We fixed it. [Thread with ChartGenius features]"
-- "Real-time market update with ChartGenius: Here's what the tape is telling us on SPY/QQQ right now..."
-- "Ask us anything about ChartGenius. Seriously. We're in the replies. AMA thread 🧵"
+- "🚀 TradVue is LIVE. Built by traders. For traders. Free trial, no credit card. Let's see what you think. [Launch link]"
+- "The #1 complaint traders have about TradingView? [Most common complaint]. We fixed it. [Thread with TradVue features]"
+- "Real-time market update with TradVue: Here's what the tape is telling us on SPY/QQQ right now..."
+- "Ask us anything about TradVue. Seriously. We're in the replies. AMA thread 🧵"
 - "Early adopters: We're dropping exclusive feature access for the first 500 sign-ups. Jump in now."
 
 #### Engagement Tactics:
@@ -149,7 +149,7 @@
 
 #### Content Strategy:
 - **80% value**: Genuine help, discussion, insights (no link)
-- **20% promotion**: ChartGenius when relevant and asked
+- **20% promotion**: TradVue when relevant and asked
 
 #### Sample Posts:
 
@@ -160,10 +160,10 @@
 
 **Launch Week:**
 - **r/Daytrading:** "We built a charting platform specifically for day traders. Spent 3 years on this. Happy to answer questions." (Honest intro, AMA format)
-- **r/algotrading:** "ChartGenius just launched with a free API tier. Docs in comments if interested." (Relevant to audience)
+- **r/algotrading:** "TradVue just launched with a free API tier. Docs in comments if interested." (Relevant to audience)
 
 **Post-Launch (Ongoing):**
-- Weekly comment help in threads (mention ChartGenius if someone describes a problem it solves)
+- Weekly comment help in threads (mention TradVue if someone describes a problem it solves)
 - Biweekly educational posts about chart analysis
 - Answer questions honestly; don't oversell
 
@@ -177,7 +177,7 @@
 ### LINKEDIN STRATEGY (3-4 posts/week)
 
 #### Content Angles:
-- **Founder story:** Journey building ChartGenius
+- **Founder story:** Journey building TradVue
 - **Fintech insights:** Market trends, trading industry analysis
 - **Trader spotlights:** Interview successful traders
 - **Educational:** Technical analysis, market structure
@@ -190,7 +190,7 @@
 - "The trading software market is broken. Here's what we're fixing..." [Problem statement + vision]
 
 **Launch Week:**
-- "Day 1: ChartGenius is live. 47 sign-ups in the first hour. 😅 From bootstrapped team to something real..." [Launch story]
+- "Day 1: TradVue is live. 47 sign-ups in the first hour. 😅 From bootstrapped team to something real..." [Launch story]
 - "Interview: How pro traders use our tools. Real feedback from beta users..." [Case study]
 
 **Post-Launch:**
@@ -207,7 +207,7 @@
 
 **Channels:**
 1. **#announcements** - Updates, new features
-2. **#chart-of-the-day** - Daily analysis with ChartGenius
+2. **#chart-of-the-day** - Daily analysis with TradVue
 3. **#strategy-discussion** - Peer learning
 4. **#general-chat** - Off-topic community
 5. **#help** - Product support
@@ -218,7 +218,7 @@
 #### Engagement:
 - Daily market open analysis (chart screenshots)
 - Weekly trading psychology tips
-- Biweekly live Q&A with ChartGenius team
+- Biweekly live Q&A with TradVue team
 - Monthly trader spotlight (community member interview)
 - Leaderboard: "Best chart analysis shared this week"
 
@@ -236,7 +236,7 @@
 #### Video Series (12-15 videos in 90 days):
 
 **Series A: "How to Trade Like a Pro" (6 videos)**
-1. "TradingView Alternative: ChartGenius Full Tour" (8 min)
+1. "TradingView Alternative: TradVue Full Tour" (8 min)
 2. "How to Read Price Action on Multiple Timeframes" (10 min)
 3. "Setting Up Your Perfect Trading Dashboard" (7 min)
 4. "Day Trading Chart Patterns: The 5 That Work" (12 min)
@@ -252,7 +252,7 @@
 **Series C: "Trader Interviews" (1 every 2 weeks)**
 - 15-20 min conversations with successful traders
 - Focus on their chart analysis methodology
-- How they use ChartGenius (or tools in general)
+- How they use TradVue (or tools in general)
 
 **Series D: "Quick Tips" (3-4/week, 1-2 min)**
 - "One chart pattern that changed my trading"
@@ -269,7 +269,7 @@
 #### YouTube Channel Setup:
 - Channel banner: "Tools & strategies for day traders"
 - Playlists by series
-- Links to ChartGenius in every description
+- Links to TradVue in every description
 
 ---
 
@@ -303,7 +303,7 @@
 **Hashtag Strategy:**
 - Primary: #daytradinglife #chartanalysis #technicalanalysis #stockmarket
 - Trending: Mix in current trading-related trends
-- Branded: #ChartGenius #TradersWhoUseChartGenius
+- Branded: #TradVue #TradersWhoUseTradVue
 
 ---
 
@@ -312,7 +312,7 @@
 **Webinar 1 (Week 3):** "Day Trading 101: From Zero to Your First Profitable Trade"
 - Duration: 90 minutes (60 min content + 30 min Q&A)
 - Audience: Beginners + intermediate traders
-- Guest: Successful day trader using ChartGenius
+- Guest: Successful day trader using TradVue
 - Topics: Chart basics, setups, risk management
 - CTA: Free trial + exclusive webinar-only indicator template
 
@@ -321,7 +321,7 @@
 - Audience: Intermediate to advanced
 - Deep dive into order flow, price action, support/resistance
 - Live chart analysis
-- CTA: ChartGenius Pro tier discount code
+- CTA: TradVue Pro tier discount code
 
 **Webinar 3 (Week 11):** "Backtesting & Optimization: Build Your Edge"
 - Duration: 2 hours (interactive)
@@ -368,12 +368,12 @@ SUBJECT LINES (Test these):
 - Current market setup
 - Stock/crypto to watch
 - Technical analysis breakdown
-- Visual: Screenshot from ChartGenius
+- Visual: Screenshot from TradVue
 
 **Section 3: Strategy Deep Dive (200 words)**
 - Rotating: Setups, indicators, psychology, risk management
 - Actionable: "Try this this week"
-- Example trade setup with ChartGenius visuals
+- Example trade setup with TradVue visuals
 
 **Section 4: Community Highlight (100 words)**
 - Trader win / interesting question from Discord/Reddit
@@ -387,7 +387,7 @@ SUBJECT LINES (Test these):
 
 **Section 6: Call to Action (50 words)**
 - Primary CTA: Encourage reply/engagement
-- Secondary CTA: ChartGenius trial (subtle)
+- Secondary CTA: TradVue trial (subtle)
 
 ### Segment Strategy:
 - **Cold segment:** Educational focus, light sales
@@ -397,7 +397,7 @@ SUBJECT LINES (Test these):
 
 ### Automation:
 - Day 1 (signup): Welcome sequence (3 emails over 1 week)
-- Week 2: "Here's what you can do with ChartGenius"
+- Week 2: "Here's what you can do with TradVue"
 - Week 3: Case study email
 - Week 4: Trial expiring? Re-engagement
 
@@ -431,7 +431,7 @@ SUBJECT LINES (Test these):
    - Pitch through contributor program
 
 4. **TradingView Blog**
-   - Topic: "From TradingView to ChartGenius: What's Different"
+   - Topic: "From TradingView to TradVue: What's Different"
    - Angle: Educational tool comparison
    - Contact: TradingView partnerships
 
@@ -472,7 +472,7 @@ SUBJECT LINES (Test these):
 ### Influencer Partnerships (Low-cost)
 
 **Tier 1: Micro-influencers (10-50k followers)**
-- Offer: Free ChartGenius access + affiliate commission
+- Offer: Free TradVue access + affiliate commission
 - Ask: "Try this for a month, share honest review"
 - Targets: Active trading Twitter/TikTok accounts
 - Outreach: DM + personal note (not template)
@@ -531,7 +531,7 @@ SUBJECT LINES (Test these):
 
 **6:00 AM - LAUNCH GO LIVE**
 - [ ] Site goes live
-- [ ] Blog post #3: "ChartGenius vs. TradingView"
+- [ ] Blog post #3: "TradVue vs. TradingView"
 - [ ] All social posts schedule: 6:30 AM, 12 PM, 5 PM
 
 **7:00 AM - First Wave Social**
@@ -541,7 +541,7 @@ SUBJECT LINES (Test these):
 - [ ] Discord: Announcement in #general + launch pin
 
 **8:00 AM - Email Blitz**
-- [ ] "ChartGenius is live" to full list
+- [ ] "TradVue is live" to full list
 - [ ] Email 1: Product announcement + free trial link
 - [ ] Email 2 (scheduled): Tutorial email (3 hours later)
 - [ ] Slice-based segments ready (trial users, interested tier)
@@ -572,8 +572,8 @@ SUBJECT LINES (Test these):
 ### DAY 2-3 (Saturday-Sunday)
 
 **Day 2 (Saturday):**
-- [ ] Short video: "ChartGenius full tour" (10 min, posted to YouTube Shorts + TikTok)
-- [ ] Tweet: Market analysis using ChartGenius
+- [ ] Short video: "TradVue full tour" (10 min, posted to YouTube Shorts + TikTok)
+- [ ] Tweet: Market analysis using TradVue
 - [ ] Reddit: Genuine help in trading subs (not promo)
 - [ ] Email: "Your first 24 hours" journey email (personalized)
 - [ ] Monitor: Support tickets, feedback
@@ -590,7 +590,7 @@ SUBJECT LINES (Test these):
 
 **Day 4 (Monday):**
 - [ ] Blog post #4 goes live: "Real-time chart analysis tutorial"
-- [ ] Email: "Here's how pros are using ChartGenius"
+- [ ] Email: "Here's how pros are using TradVue"
 - [ ] Twitter: Daily market analysis + engagement
 - [ ] YouTube: Publish "How to use indicators" (10 min)
 - [ ] Reddit: Continued community participation
@@ -602,13 +602,13 @@ SUBJECT LINES (Test these):
 - [ ] Discord: Featured trade of the day
 
 **Day 6 (Wednesday):**
-- [ ] Reddit: Post an AMA "Ask us anything about ChartGenius"
+- [ ] Reddit: Post an AMA "Ask us anything about TradVue"
 - [ ] Email: Feature spotlight (e.g., "Did you know about this?")
 - [ ] Twitter: Thread on trader psychology
 - [ ] Video: Short testimonial clip (user-generated or founder)
 
 **Day 7 (Thursday):**
-- [ ] Week recap: "X traders joined ChartGenius"
+- [ ] Week recap: "X traders joined TradVue"
 - [ ] Blog: Week 1 case study draft
 - [ ] Email: Weekly newsletter goes out (recap + next week preview)
 - [ ] Social: Thank you post, community highlight
@@ -744,7 +744,7 @@ SUBJECT LINES (Test these):
 1. **Authenticity first:** Share real insights, not just promotions
 2. **Community over sales:** Build trust and relationships
 3. **Consistency wins:** Show up daily, even with small content
-4. **User-generated content:** Celebrate traders using ChartGenius
+4. **User-generated content:** Celebrate traders using TradVue
 5. **Be present:** Reply to every comment, question, mention (first 30 days critical)
 6. **Test & iterate:** Weekly review metrics, pivot what's not working
 7. **Leverage your edge:** You're traders building for traders—own that perspective
@@ -753,5 +753,5 @@ SUBJECT LINES (Test these):
 ---
 
 **Created:** March 6, 2026  
-**For:** ChartGenius Launch  
+**For:** TradVue Launch  
 **Status:** Ready to Execute

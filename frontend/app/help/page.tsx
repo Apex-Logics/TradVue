@@ -17,7 +17,7 @@ const FAQ_DATA = [
     questions: [
       {
         q: 'How do I create an account?',
-        a: 'Go to chartgenius.com and click "Sign Up." Enter your email, create a password, and verify your email address. You\'ll be all set with a free account in seconds.',
+        a: 'Go to tradvue.com and click "Sign Up." Enter your email, create a password, and verify your email address. You\'ll be all set with a free account in seconds.',
       },
       {
         q: 'How do I set up my first watchlist?',
@@ -94,11 +94,11 @@ const FAQ_DATA = [
       },
       {
         q: "Why aren't my alerts working?",
-        a: 'Make sure alerts are enabled in Settings. Check your email spam folder and add chartgenius@alerts.com to your contacts. Verify the alert rule is set correctly.',
+        a: 'Make sure alerts are enabled in Settings. Check your email spam folder and add tradvue@alerts.com to your contacts. Verify the alert rule is set correctly.',
       },
       {
         q: "I can't log in. What should I do?",
-        a: 'Click "Forgot Password" to reset. If you never received a reset email, check spam. If it\'s still stuck, contact support@chartgenius.com with your email address.',
+        a: 'Click "Forgot Password" to reset. If you never received a reset email, check spam. If it\'s still stuck, contact support@tradvue.com with your email address.',
       },
       {
         q: 'Which browsers are supported?',
@@ -112,15 +112,15 @@ const FAQ_DATA = [
     icon: '📈',
     questions: [
       {
-        q: 'Is ChartGenius financial advice?',
-        a: 'No. ChartGenius is a research and monitoring tool only. We provide data and sentiment signals, not recommendations. Always do your own research and consult a financial advisor before trading.',
+        q: 'Is TradVue financial advice?',
+        a: 'No. TradVue is a research and monitoring tool only. We provide data and sentiment signals, not recommendations. Always do your own research and consult a financial advisor before trading.',
       },
       {
         q: 'Should I know about data delays?',
         a: 'Market data is real-time during trading hours but may lag 1-5 seconds. Sentiment data updates hourly. After-hours quotes have a 15-minute delay. Never rely solely on data for time-sensitive trades.',
       },
       {
-        q: 'What markets does ChartGenius support?',
+        q: 'What markets does TradVue support?',
         a: 'We cover US equities (NYSE, NASDAQ, AMEX), ETFs, and mutual funds. International markets coming soon. Crypto is not currently supported.',
       },
       {
@@ -341,7 +341,7 @@ export default function HelpPage() {
                 <polyline points="22 12 18 12 15 21 9 3 6 12 2 12" />
               </svg>
               <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.02em' }}>
-                ChartGenius
+                TradVue
               </span>
             </Link>
 
@@ -423,7 +423,7 @@ export default function HelpPage() {
               lineHeight: 1.65,
             }}
           >
-            Find answers to common questions about ChartGenius. Browse by category or search below.
+            Find answers to common questions about TradVue. Browse by category or search below.
           </p>
 
           {/* Search box */}
@@ -584,7 +584,7 @@ export default function HelpPage() {
               </p>
               <p style={{ fontSize: '14px' }}>
                 Try different keywords or{' '}
-                <a href="mailto:support@chartgenius.com" style={{ color: '#4a9eff', textDecoration: 'none' }}>
+                <a href="mailto:support@tradvue.com" style={{ color: '#4a9eff', textDecoration: 'none' }}>
                   contact support
                 </a>
                 .
@@ -728,7 +728,7 @@ export default function HelpPage() {
               }}
             >
               <a
-                href="mailto:support@chartgenius.com"
+                href="mailto:support@tradvue.com"
                 style={{
                   display: 'inline-flex',
                   alignItems: 'center',
@@ -752,7 +752,7 @@ export default function HelpPage() {
                 Email Support
               </a>
               <a
-                href="https://chartgenius.com/learn"
+                href="https://tradvue.com/learn"
                 target="_blank"
                 rel="noopener noreferrer"
                 style={{
@@ -793,7 +793,7 @@ export default function HelpPage() {
                 color: 'var(--text-3)',
               }}
             >
-              support@chartgenius.com · Mon–Fri, 9am–6pm ET
+              support@tradvue.com · Mon–Fri, 9am–6pm ET
             </p>
           </div>
         </div>
@@ -818,7 +818,7 @@ export default function HelpPage() {
             }}
           >
             <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-              © 2026 ChartGenius. All rights reserved.
+              © 2026 TradVue. All rights reserved.
             </p>
             <div style={{ display: 'flex', gap: '16px', flexWrap: 'wrap' }}>
               {[

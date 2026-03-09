@@ -1,8 +1,8 @@
-# ChartGenius - Beta User Welcome Email Template
+# TradVue - Beta User Welcome Email Template
 
 ---
 
-**Subject:** Welcome to ChartGenius Beta 🚀 — Your Trading Dashboard Awaits
+**Subject:** Welcome to TradVue Beta 🚀 — Your Trading Dashboard Awaits
 
 ---
 
@@ -10,7 +10,7 @@
 
 Hi [USER_NAME],
 
-**Welcome to the ChartGenius beta.** We're excited to have you as one of the first traders using the platform we've been building for the past 6 months.
+**Welcome to the TradVue beta.** We're excited to have you as one of the first traders using the platform we've been building for the past 6 months.
 
 ### What You Have Access To
 
@@ -40,7 +40,7 @@ We want to hear what works, what doesn't, and what's missing.
 
 ### First Steps
 
-1. **Log in** → https://chartgenius.io/beta
+1. **Log in** → https://tradvue.io/beta
 2. **Add your first watchlist** — Start with stocks/assets you're actively trading
 3. **Set up alerts** — Price targets, volume thresholds, or just monitor sentiment
 4. **Check the news feed** — See how we score impact vs. just dumping 50 articles at you
@@ -65,7 +65,7 @@ We know about these and are fixing them:
 
 ### Questions?
 
-- **General help** → support@chartgenius.io
+- **General help** → support@tradvue.io
 - **Technical issues** → Report in Discord #bugs channel
 - **Feature requests** → Discord #feature-requests
 - **Direct question** → Reply to this email
@@ -80,12 +80,12 @@ When we graduate out of beta (Q2 2026), you have three options:
 
 ### One Last Thing
 
-Thank you for being here. We built ChartGenius because we got tired of hunting for information across 5 different platforms. Your feedback helps us make sure it actually solves the problem.
+Thank you for being here. We built TradVue because we got tired of hunting for information across 5 different platforms. Your feedback helps us make sure it actually solves the problem.
 
 Now go make some data-driven trades. 📊
 
 Cheers,  
-**The ChartGenius Team**
+**The TradVue Team**
 
 ---
 

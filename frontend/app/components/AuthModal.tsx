@@ -93,7 +93,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               <path strokeLinecap="round" strokeLinejoin="round" d="M7 12l3-3 3 3 4-4" />
               <path strokeLinecap="round" strokeLinejoin="round" d="M3 20h18" />
             </svg>
-            ChartGenius
+            TradVue
           </div>
           <button className="modal-close-btn" onClick={onClose} aria-label="Close">✕</button>
         </div>

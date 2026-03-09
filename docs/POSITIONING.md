@@ -1,4 +1,4 @@
-# ChartGenius Positioning
+# TradVue Positioning
 
 ## What We ARE
 - **Trading Intelligence Platform**
@@ -11,12 +11,12 @@
 ## What We ARE NOT
 - ❌ NOT a brokerage
 - ❌ NOT a trading platform
-- ❌ Users CANNOT buy/sell stocks/crypto/forex on ChartGenius
+- ❌ Users CANNOT buy/sell stocks/crypto/forex on TradVue
 - ❌ No order execution
 - ❌ No account balances or portfolios (of real money)
 
 ## How Users Trade
-Users analyze on ChartGenius → Execute trades on their broker:
+Users analyze on TradVue → Execute trades on their broker:
 - Robinhood, TD Ameritrade, Schwab
 - Interactive Brokers, Fidelity
 - Coinbase, Binance (crypto)
@@ -25,7 +25,7 @@ Users analyze on ChartGenius → Execute trades on their broker:
 ## Competitive Comparison
 | Platform | What It Does |
 |----------|-------------|
-| **ChartGenius** | Intelligence & analysis (us) |
+| **TradVue** | Intelligence & analysis (us) |
 | TradingView | Charts & analysis |
 | Finviz | Screening & analysis |
 | Robinhood | Brokerage (trading) |

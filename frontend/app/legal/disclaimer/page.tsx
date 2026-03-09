@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { LegalPage, Section, SubSection, UL, OL, WarningBox, InfoBox, AcknowledgmentBox } from '../components'
 
 export const metadata: Metadata = {
-  title: 'Disclaimer — ChartGenius',
-  description: 'Important legal disclaimer: ChartGenius is not a financial advisor and does not provide investment advice. Read before using the platform.',
+  title: 'Disclaimer — TradVue',
+  description: 'Important legal disclaimer: TradVue is not a financial advisor and does not provide investment advice. Read before using the platform.',
   alternates: {
-    canonical: 'https://chartgenius.io/legal/disclaimer',
+    canonical: 'https://tradvue.io/legal/disclaimer',
   },
   robots: 'noindex, follow',
 }
@@ -17,19 +17,19 @@ export default function DisclaimerPage() {
       <WarningBox>
         <strong>⚠️ IMPORTANT LEGAL NOTICE</strong>
         <br /><br />
-        Read this disclaimer carefully before using ChartGenius.
+        Read this disclaimer carefully before using TradVue.
         Your use of the platform constitutes acceptance of all terms outlined below.
       </WarningBox>
 
       <Section id="not-advice" title="1. NOT FINANCIAL ADVICE">
         <p>
-          <strong>ChartGenius is NOT a financial advisor and does NOT provide investment, trading, or financial advice.</strong>
+          <strong>TradVue is NOT a financial advisor and does NOT provide investment, trading, or financial advice.</strong>
         </p>
         <p>
-          ChartGenius is a <strong>financial information and portfolio tracking tool</strong>. It is NOT a registered investment advisor,
+          TradVue is a <strong>financial information and portfolio tracking tool</strong>. It is NOT a registered investment advisor,
           broker-dealer, or tax preparer.
         </p>
-        <p>Nothing on ChartGenius — including charts, analysis, indicators, alerts, or any other content — should be construed as:</p>
+        <p>Nothing on TradVue — including charts, analysis, indicators, alerts, or any other content — should be construed as:</p>
         <UL items={[
           'A recommendation to buy, sell, or hold any security',
           'An offer to provide financial or investment advice',
@@ -40,7 +40,7 @@ export default function DisclaimerPage() {
         ]} />
         <p>
           <strong>All data, calculations, and analysis provided are for informational purposes only</strong> and should not be considered
-          financial, investment, tax, or legal advice. ChartGenius is a <strong>research and visualization tool only</strong>. All decisions
+          financial, investment, tax, or legal advice. TradVue is a <strong>research and visualization tool only</strong>. All decisions
           to buy, sell, or trade securities must be made independently by you, preferably with guidance from a qualified financial advisor.
         </p>
         <InfoBox>
@@ -49,7 +49,7 @@ export default function DisclaimerPage() {
       </Section>
 
       <Section id="warranties" title="2. NO WARRANTIES">
-        <p>ChartGenius is provided "AS-IS" without any warranties, express or implied. We make no guarantees regarding:</p>
+        <p>TradVue is provided "AS-IS" without any warranties, express or implied. We make no guarantees regarding:</p>
 
         <SubSection title="2.1 Data Accuracy">
           <UL items={[
@@ -92,17 +92,17 @@ export default function DisclaimerPage() {
 
       <Section id="tax-tools" title="3. TAX ESTIMATION TOOLS">
         <p>
-          Tax estimation and tax planning tools on ChartGenius provide <strong>approximate calculations based on user-provided data</strong>.
+          Tax estimation and tax planning tools on TradVue provide <strong>approximate calculations based on user-provided data</strong>.
         </p>
         <p><strong>IMPORTANT:</strong></p>
         <UL items={[
           'Tax estimations are NOT a substitute for professional tax preparation',
-          'ChartGenius is NOT a tax preparation service',
+          'TradVue is NOT a tax preparation service',
           'Tax calculations may contain errors, omissions, or inaccuracies',
           'Tax laws vary by jurisdiction, filing status, income level, and individual circumstances',
           'Past tax treatment does not guarantee future tax results',
           'You must verify all tax calculations with your tax professional before filing',
-          'ChartGenius makes NO guarantees about the accuracy of tax calculations',
+          'TradVue makes NO guarantees about the accuracy of tax calculations',
           'Always consult a qualified tax professional (CPA, tax attorney, or tax preparer) before making tax decisions',
         ]} />
         <WarningBox>
@@ -131,7 +131,7 @@ export default function DisclaimerPage() {
           <UL items={[
             'Compare cost basis, share counts, and valuations with your broker',
             'Use broker-supplied documents for tax reporting and accounting records',
-            'Do NOT rely solely on ChartGenius calculations for financial reporting or tax filing',
+            'Do NOT rely solely on TradVue calculations for financial reporting or tax filing',
           ]} />
         </SubSection>
 
@@ -160,21 +160,21 @@ export default function DisclaimerPage() {
         ]} />
       </Section>
 
-      <Section id="responsibility" title="6. CHARTGENIUS RESPONSIBILITY LIMITATIONS">
+      <Section id="responsibility" title="6. TRADVUE RESPONSIBILITY LIMITATIONS">
         <p>
-          <strong>ChartGenius is not responsible for any financial decisions made based on information provided by this platform.</strong>
+          <strong>TradVue is not responsible for any financial decisions made based on information provided by this platform.</strong>
         </p>
         <UL items={[
           'You accept full responsibility for all investment and trading decisions',
           'You accept full responsibility for understanding the risks of trading and investing',
-          'ChartGenius is not liable for losses arising from reliance on platform data or analysis',
-          'ChartGenius is not liable for missed trading opportunities or market timing errors',
+          'TradVue is not liable for losses arising from reliance on platform data or analysis',
+          'TradVue is not liable for missed trading opportunities or market timing errors',
           'You are solely responsible for verifying information before using it',
         ]} />
       </Section>
 
       <Section id="third-party" title="7. THIRD-PARTY DATA SOURCES">
-        <p>ChartGenius uses market data from external sources, including:</p>
+        <p>TradVue uses market data from external sources, including:</p>
         <UL items={[
           'Stock exchanges and market data providers',
           'Cryptocurrency exchanges',
@@ -199,7 +199,7 @@ export default function DisclaimerPage() {
       <Section id="data-limits" title="8. MARKET DATA & DELAY LIMITATIONS">
         <SubSection title="4.1 Real-Time vs. Delayed Data">
           <UL items={[
-            'ChartGenius may display delayed data (15–20 minutes behind live market)',
+            'TradVue may display delayed data (15–20 minutes behind live market)',
             'During market hours, delays are common',
             'Do NOT use delayed data for time-sensitive trading decisions',
             "For live trading, use your broker's official platform",
@@ -255,7 +255,7 @@ export default function DisclaimerPage() {
       </Section>
 
       <Section id="no-personalization" title="10. NO PERSONALIZATION">
-        <p>ChartGenius does <strong>NOT</strong>:</p>
+        <p>TradVue does <strong>NOT</strong>:</p>
         <UL items={[
           'Know your financial situation, goals, or risk tolerance',
           'Consider your income, assets, or liabilities',
@@ -299,7 +299,7 @@ export default function DisclaimerPage() {
 
       <Section id="liability" title="12. LIMITATION OF LIABILITY">
         <p><strong>TO THE MAXIMUM EXTENT PERMITTED BY LAW:</strong></p>
-        <p>ChartGenius shall NOT be liable for ANY losses, damages, or costs, including:</p>
+        <p>TradVue shall NOT be liable for ANY losses, damages, or costs, including:</p>
         <UL items={[
           'Trading losses (even if caused by incorrect data)',
           'Lost profits, revenue, or anticipated savings',
@@ -311,7 +311,7 @@ export default function DisclaimerPage() {
           'Damages from third-party services',
         ]} />
         <p>
-          <strong>This applies even if ChartGenius was advised of the possibility of such damages.</strong>
+          <strong>This applies even if TradVue was advised of the possibility of such damages.</strong>
         </p>
         <InfoBox>
           <strong>Your sole remedy is discontinuing use of the Service.</strong>
@@ -319,46 +319,46 @@ export default function DisclaimerPage() {
       </Section>
 
       <Section id="jurisdiction" title="13. JURISDICTIONAL LIMITATIONS">
-        <p>ChartGenius may not be available or legal in all jurisdictions. You are responsible for:</p>
+        <p>TradVue may not be available or legal in all jurisdictions. You are responsible for:</p>
         <UL items={[
-          'Determining if ChartGenius is legal in your country/state',
+          'Determining if TradVue is legal in your country/state',
           'Complying with all local investment and trading regulations',
           'Understanding tax implications of your trades',
           'Obtaining necessary licenses or permissions',
           'Filing required regulatory documents',
         ]} />
-        <p>ChartGenius cannot be held responsible for your violations of local law.</p>
+        <p>TradVue cannot be held responsible for your violations of local law.</p>
       </Section>
 
       <Section id="assumption" title="14. ASSUMPTION OF RISK">
-        <p><strong>By using ChartGenius, you acknowledge and accept that:</strong></p>
+        <p><strong>By using TradVue, you acknowledge and accept that:</strong></p>
         <UL items={[
           'Trading and investing involve substantial risk of loss',
-          'You may lose money using information or tools from ChartGenius',
+          'You may lose money using information or tools from TradVue',
           'You are making your own trading decisions',
           'You understand the risks involved',
           'You have read and accepted this disclaimer',
-          'You will not hold ChartGenius liable for trading losses',
+          'You will not hold TradVue liable for trading losses',
         ]} />
       </Section>
 
       <Section id="reliance" title="15. RELIANCE ON CONTENT">
         <p>
-          <strong>ChartGenius does not guarantee the accuracy or completeness of any content.</strong>{' '}
+          <strong>TradVue does not guarantee the accuracy or completeness of any content.</strong>{' '}
           Before making any investment decision:
         </p>
         <OL items={[
           'Verify data through official sources (exchanges, company filings, etc.)',
           'Consult with qualified financial professionals',
           'Conduct your own independent research',
-          'Do NOT rely solely on information from ChartGenius',
+          'Do NOT rely solely on information from TradVue',
           'Understand that errors or delays may occur',
         ]} />
       </Section>
 
       <Section id="changes" title="16. CHANGES TO DISCLAIMER">
         <p>
-          ChartGenius may update this disclaimer at any time. Your continued use of the platform
+          TradVue may update this disclaimer at any time. Your continued use of the platform
           after changes constitutes acceptance of the revised disclaimer.
         </p>
       </Section>
@@ -366,11 +366,11 @@ export default function DisclaimerPage() {
       <Section id="contact" title="17. CONTACT">
         <p>
           Questions about this disclaimer?{' '}
-          <a href="mailto:legal@chartgenius.io" style={{ color: '#4a9eff' }}>legal@chartgenius.io</a>
+          <a href="mailto:legal@tradvue.io" style={{ color: '#4a9eff' }}>legal@tradvue.io</a>
         </p>
         <p>
           Reporting data errors?{' '}
-          <a href="mailto:support@chartgenius.io" style={{ color: '#4a9eff' }}>support@chartgenius.io</a>{' '}
+          <a href="mailto:support@tradvue.io" style={{ color: '#4a9eff' }}>support@tradvue.io</a>{' '}
           — include "Data Error" in the subject line.
         </p>
       </Section>
@@ -381,13 +381,13 @@ export default function DisclaimerPage() {
           <a href="/legal/terms" style={{ color: '#4a9eff' }}>Terms of Service</a>{' '}
           and{' '}
           <a href="/legal/privacy" style={{ color: '#4a9eff' }}>Privacy Policy</a>,
-          constitutes the complete agreement between you and ChartGenius regarding the use of the platform.
+          constitutes the complete agreement between you and TradVue regarding the use of the platform.
         </p>
       </Section>
 
       <AcknowledgmentBox>
-        By using ChartGenius, you certify that you have read this entire disclaimer, understand the risks of
-        trading and investing, acknowledge that ChartGenius provides no financial advice, and accept all limitations
+        By using TradVue, you certify that you have read this entire disclaimer, understand the risks of
+        trading and investing, acknowledge that TradVue provides no financial advice, and accept all limitations
         and disclaimers outlined above. <strong>Use at Your Own Risk ⚠️</strong>
       </AcknowledgmentBox>
 

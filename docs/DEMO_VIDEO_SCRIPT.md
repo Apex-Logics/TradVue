@@ -1,4 +1,4 @@
-# ChartGenius Demo Video Script (2 Minutes)
+# TradVue Demo Video Script (2 Minutes)
 
 ---
 
@@ -28,18 +28,18 @@
 ## SOLUTION (10-30 seconds)
 
 ### Scene Description
-- **Visual:** ChartGenius dashboard fades in. Clean, modern interface. Multiple panes light up one by one.
+- **Visual:** TradVue dashboard fades in. Clean, modern interface. Multiple panes light up one by one.
 - **Background:** Subtle tech sounds (notification pings, data flowing)
 
 ### Voiceover Script
-"Meet ChartGenius. Real-time news. Live charts. Instant signals. All in one place. No switching tabs. No missing trades."
+"Meet TradVue. Real-time news. Live charts. Instant signals. All in one place. No switching tabs. No missing trades."
 
 [PAUSE - 0.5 second]
 
 "Trade smarter. Trade faster."
 
 ### On-Screen Text
-- "ChartGenius" (logo appears, bold)
+- "TradVue" (logo appears, bold)
 - Fade in keywords: "Real-time News" | "Live Charts" | "Instant Signals"
 - "Trade Smarter. Trade Faster." (appears at end)
 
@@ -138,7 +138,7 @@
 - **Background:** Uplifting, trustworthy music (subtle)
 
 ### Voiceover Script
-"Already trusted by thousands of traders. 94% say ChartGenius helped them make faster decisions. 87% increased their win rate in the first month."
+"Already trusted by thousands of traders. 94% say TradVue helped them make faster decisions. 87% increased their win rate in the first month."
 
 ### On-Screen Text
 - "⭐ 4.8/5 Stars | 2,400+ Beta Users"
@@ -159,19 +159,19 @@
 ## CALL-TO-ACTION (100-120 seconds)
 
 ### Scene Description
-- **Visual:** Clean screen. ChartGenius logo center. Website URL prominent. Beta signup button animates in (pulse or slide).
+- **Visual:** Clean screen. TradVue logo center. Website URL prominent. Beta signup button animates in (pulse or slide).
 - **Color scheme:** Bold accent color (teal/electric blue) for CTA button.
 - **Background:** Same trustworthy music continues, then fades to quiet.
 
 ### Voiceover Script
-"Sign up for ChartGenius beta today. It's free while you test it. No credit card. No tricks. Just the trading tools you've been waiting for."
+"Sign up for TradVue beta today. It's free while you test it. No credit card. No tricks. Just the trading tools you've been waiting for."
 
 [PAUSE - 0.5 second]
 
-"Head to ChartGenius.io and join thousands of smarter traders."
+"Head to TradVue.io and join thousands of smarter traders."
 
 ### On-Screen Text
-- Large: "chartgenius.io"
+- Large: "tradvue.io"
 - Medium: "Sign Up for Free Beta"
 - Subtext: "Free during beta. No credit card required."
 - Button animation: "GET STARTED →"
@@ -220,7 +220,7 @@
 | Section | Duration | Key Message |
 |---------|----------|-------------|
 | Hook | 10 sec | The Problem: Missing trades |
-| Solution | 20 sec | The Answer: ChartGenius |
+| Solution | 20 sec | The Answer: TradVue |
 | Features | 60 sec | What You Get (News, Charts, Alerts, Sentiment) |
 | Social Proof | 10 sec | Why It Works (Stats & Trust) |
 | CTA | 20 sec | How to Join (Website & Beta Signup) |
@@ -232,7 +232,7 @@
 ## DELIVERY CHECKLIST
 
 - [ ] Voiceover recorded (use professional studio if possible)
-- [ ] B-roll/UI screenshots captured from live ChartGenius dashboard
+- [ ] B-roll/UI screenshots captured from live TradVue dashboard
 - [ ] Chart animations smooth and professional
 - [ ] Sentiment pie chart data accurate (use real beta stats if available)
 - [ ] Music/sound effects licensed and mixed
@@ -240,7 +240,7 @@
 - [ ] Timestamps align with voiceover (tight sync)
 - [ ] Final video uploaded to YouTube, Vimeo, or TikTok
 - [ ] Social posts scheduled (LinkedIn, Twitter, email)
-- [ ] Landing page ready (chartgenius.io beta signup form working)
+- [ ] Landing page ready (tradvue.io beta signup form working)
 
 ---
 

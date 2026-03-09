@@ -1,20 +1,20 @@
 # Terms of Service
 
-**ChartGenius**
+**TradVue**
 
 Last Updated: March 6, 2026
 
 ## 1. Agreement to Terms
 
-By accessing and using the ChartGenius platform ("Service"), you agree to be bound by these Terms of Service. If you do not agree to abide by the above, please do not use this service.
+By accessing and using the TradVue platform ("Service"), you agree to be bound by these Terms of Service. If you do not agree to abide by the above, please do not use this service.
 
 ## 2. Service Description
 
-ChartGenius is a financial data visualization and analysis platform that provides charting tools, market data, and watchlist management features. The Service is provided on an "as-is" basis for informational purposes only.
+TradVue is a financial data visualization and analysis platform that provides charting tools, market data, and watchlist management features. The Service is provided on an "as-is" basis for informational purposes only.
 
 ## ⚠️ **NOT FINANCIAL ADVICE**
 
-**ChartGenius does not provide financial, investment, or trading advice.** The Service is a research and visualization tool only. Nothing on ChartGenius constitutes:
+**TradVue does not provide financial, investment, or trading advice.** The Service is a research and visualization tool only. Nothing on TradVue constitutes:
 - Investment recommendations
 - Financial advice
 - Trading signals
@@ -34,12 +34,12 @@ All market data, charts, and analysis are provided for educational and informati
 ### 3.2 Eligibility
 - You must be at least 18 years old to use this Service
 - You must comply with all applicable laws and regulations in your jurisdiction
-- You may not use ChartGenius if prohibited by law in your location
+- You may not use TradVue if prohibited by law in your location
 
 ## 4. Acceptable Use
 
 You agree NOT to:
-- Use ChartGenius for illegal purposes or in violation of any laws
+- Use TradVue for illegal purposes or in violation of any laws
 - Manipulate, scrape, or automatically access the Service without permission
 - Reverse engineer, decompile, or attempt to access source code
 - Upload malware, viruses, or harmful code
@@ -52,19 +52,19 @@ You agree NOT to:
 
 ## 5. Intellectual Property
 
-ChartGenius owns all intellectual property rights to the Service, including charts, logos, design elements, and proprietary analysis tools. You may not reproduce, distribute, or modify any content without permission.
+TradVue owns all intellectual property rights to the Service, including charts, logos, design elements, and proprietary analysis tools. You may not reproduce, distribute, or modify any content without permission.
 
 ## 6. Disclaimers & Limitations
 
 ### 6.1 Data Accuracy
-While we strive for accuracy, ChartGenius does not guarantee that:
+While we strive for accuracy, TradVue does not guarantee that:
 - Market data is real-time or error-free
 - Historical data is complete or accurate
 - Technical indicators are always reliable
 - Charts are free from technical errors
 
 ### 6.2 Third-Party Data
-ChartGenius uses data from external sources including exchanges, brokers, and market data providers. We are not responsible for their errors, delays, or inaccuracies.
+TradVue uses data from external sources including exchanges, brokers, and market data providers. We are not responsible for their errors, delays, or inaccuracies.
 
 ### 6.3 Service Availability
 The Service is provided on an "as-is" basis without warranties of merchantability or fitness for a particular purpose. We do not guarantee:
@@ -77,18 +77,18 @@ The Service is provided on an "as-is" basis without warranties of merchantabilit
 
 **TO THE MAXIMUM EXTENT PERMITTED BY LAW:**
 
-ChartGenius and its owners, developers, and staff shall NOT be liable for:
+TradVue and its owners, developers, and staff shall NOT be liable for:
 - Any trading losses, whether direct or indirect
 - Loss of profits, revenue, or anticipated savings
 - Loss of data or corruption of files
 - Any consequential, incidental, special, or punitive damages
 - Damages arising from interruptions, delays, or unavailability of the Service
 
-This limitation applies even if ChartGenius has been advised of the possibility of such damages.
+This limitation applies even if TradVue has been advised of the possibility of such damages.
 
 ## 8. Assumption of Risk
 
-**Using ChartGenius for any financial decision is entirely at your own risk.** You acknowledge that:
+**Using TradVue for any financial decision is entirely at your own risk.** You acknowledge that:
 - Trading and investing involve substantial risk of loss
 - Past performance does not guarantee future results
 - Market conditions are unpredictable
@@ -96,11 +96,11 @@ This limitation applies even if ChartGenius has been advised of the possibility 
 
 ## 9. Modification of Terms
 
-ChartGenius reserves the right to modify these Terms at any time. Continued use of the Service after changes constitute acceptance of the new terms.
+TradVue reserves the right to modify these Terms at any time. Continued use of the Service after changes constitute acceptance of the new terms.
 
 ## 10. Termination
 
-ChartGenius may terminate your account without notice if you:
+TradVue may terminate your account without notice if you:
 - Violate these Terms
 - Engage in illegal activity
 - Abuse the Service or other users
@@ -112,8 +112,8 @@ These Terms are governed by applicable law. Any disputes shall be resolved throu
 
 ## 12. Contact
 
-For questions about these Terms, contact: legal@chartgenius.com
+For questions about these Terms, contact: legal@tradvue.com
 
 ---
 
-**By using ChartGenius, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.**
+**By using TradVue, you acknowledge that you have read, understood, and agree to be bound by these Terms of Service.**

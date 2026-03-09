@@ -1,10 +1,10 @@
-# ChartGenius Competitor Feature Matrix
+# TradVue Competitor Feature Matrix
 
 **Last Updated:** March 6, 2026
 
 ## Feature Comparison Matrix
 
-| Feature | ChartGenius | TradingView | Benzinga Pro | FinancialJuice | Koyfin | Stocktwits | Bloomberg Terminal |
+| Feature | TradVue | TradingView | Benzinga Pro | FinancialJuice | Koyfin | Stocktwits | Bloomberg Terminal |
 |---------|---|---|---|---|---|---|---|
 | **Real-Time News Feed** | ✅ | ⚠️ (Limited) | ✅ | ✅ | ✅ | ✅ | ✅ |
 | **Sentiment Analysis** | ✅ | ❌ | 💰 (Benzinga Labs) | ⚠️ (Limited) | ⚠️ (Limited) | ✅ (Core feature) | ✅ |
@@ -17,7 +17,7 @@
 | **API Access** | ✅ | ✅ (Pine Script + REST/WebSocket) | 💰 (Enterprise) | ❌ | ✅ (Limited) | ✅ (Limited) | ✅ (Enterprise) |
 | **Backtesting/Strategy Tools** | ⚠️ (Planned) | ✅ (Advanced) | ❌ | ❌ | ⚠️ (Limited) | ❌ | ✅ (Advanced) |
 
-*ChartGenius is adding social sentiment features
+*TradVue is adding social sentiment features
 
 ---
 
@@ -178,7 +178,7 @@
 
 ---
 
-## Gap Analysis: ChartGenius Positioning
+## Gap Analysis: TradVue Positioning
 
 ### What Competitors Have That We're Missing
 
@@ -203,7 +203,7 @@
 1. **Social Sentiment + News Combined** 
    - Stocktwits has sentiment, but minimal news
    - Benzinga has news, but limited sentiment
-   - **ChartGenius Advantage:** Unified real-time news + sentiment dashboard
+   - **TradVue Advantage:** Unified real-time news + sentiment dashboard
    - **Action:** Emphasize this unique combination
 
 2. **Real-Time Alerts + Mobile-First**
@@ -218,12 +218,12 @@
    - Position between free tier (Stocktwits) and expensive (Bloomberg)
    - **Action:** Offer better value prop than TradingView for news-focused traders
 
-### Unique Differentiators for ChartGenius
+### Unique Differentiators for TradVue
 
 1. **News + Sentiment + Charts in One** (Not fragmented)
    - TradingView users need Benzinga/Stocktwits for sentiment
    - Benzinga users need TradingView for charts
-   - ChartGenius: All in one place
+   - TradVue: All in one place
 
 2. **Fast Alert Delivery**
    - Claim sub-100ms for market-moving events
@@ -247,7 +247,7 @@
 
 | Platform | Free Tier | Pro/Paid | Enterprise | Annual Discount |
 |----------|-----------|----------|-----------|-----------------|
-| **ChartGenius** | ✅ Limited | $TBD | ✅ Available | TBD |
+| **TradVue** | ✅ Limited | $TBD | ✅ Available | TBD |
 | **TradingView** | ✅ Limited | $15-60/mo | ❌ | 10-20% |
 | **Benzinga Pro** | ✅ Basic | $99/mo | ✅ Custom | 10-15% ($990/yr) |
 | **FinancialJuice** | ✅ Core | $TBD | ❌ | Unknown |
@@ -255,7 +255,7 @@
 | **Stocktwits** | ✅ Full core | $9.99/mo | ❌ | None |
 | **Bloomberg Terminal** | ❌ | ❌ | ✅ Only | ~5-10% (volume) |
 
-### Pricing Strategy Recommendation for ChartGenius
+### Pricing Strategy Recommendation for TradVue
 
 **Tier 1: Free**
 - Basic watchlists, alerts, news feed
@@ -275,7 +275,7 @@
 
 ## Competitive Strengths Summary
 
-| Factor | Best in Class | ChartGenius Position |
+| Factor | Best in Class | TradVue Position |
 |--------|------|---|
 | Charting | TradingView | ✅ Competitive (good, not best) |
 | News | Benzinga/Bloomberg | ✅ Competitive (real-time) |

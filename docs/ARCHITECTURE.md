@@ -1,4 +1,4 @@
-# ChartGenius System Architecture
+# TradVue System Architecture
 
 **Last Updated:** March 6, 2026  
 **Status:** Production (Vercel → Railway → Supabase)
@@ -7,7 +7,7 @@
 
 ## 1. High-Level Overview
 
-ChartGenius is a **full-stack trading intelligence platform** that aggregates real-time market data, financial news, and economic events into actionable insights for traders.
+TradVue is a **full-stack trading intelligence platform** that aggregates real-time market data, financial news, and economic events into actionable insights for traders.
 
 ### Technology Stack
 
@@ -508,7 +508,7 @@ ORDER BY published_at DESC;
 
 **Development (local):**
 ```
-postgresql://postgres:password@localhost:5432/chartgenius
+postgresql://postgres:password@localhost:5432/tradvue
 ```
 
 **Production (Railway):**
@@ -717,7 +717,7 @@ Frontend              Backend                  External API
 
 ```bash
 # .env.local
-NEXT_PUBLIC_API_URL=https://chartgenius-production.up.railway.app
+NEXT_PUBLIC_API_URL=https://tradvue-production.up.railway.app
 ```
 
 #### Backend (Railway)
@@ -936,7 +936,7 @@ cd backend
 npm install
 cp .env.example .env
 # Edit .env:
-#   DB_HOST=localhost, DB_NAME=chartgenius, etc.
+#   DB_HOST=localhost, DB_NAME=tradvue, etc.
 #   FINNHUB_API_KEY=your_key
 #   JWT_SECRET=dev_secret_123
 
@@ -949,13 +949,13 @@ npm run test:watch # Watch mode
 
 ```bash
 # Create database
-createdb chartgenius
+createdb tradvue
 
 # Run schema
-psql -U postgres -d chartgenius -f database/schema.sql
+psql -U postgres -d tradvue -f database/schema.sql
 
 # Seed instruments
-psql -U postgres -d chartgenius -c "INSERT INTO instruments ..."
+psql -U postgres -d tradvue -c "INSERT INTO instruments ..."
 ```
 
 Or use Supabase cloud for dev:
@@ -1041,7 +1041,7 @@ CREATE TABLE my_table (
 CREATE INDEX idx_my_table_user ON my_table (user_id);
 
 -- 3. Run migration
-psql -d chartgenius -f database/schema.sql
+psql -d tradvue -f database/schema.sql
 
 -- 4. Update Node DB queries
 const db = require('./db');
@@ -1132,7 +1132,7 @@ DATABASE_URL=postgresql://postgres.[ref]:[password]@aws-0-[region].pooler.supaba
 ## Appendix: File Structure
 
 ```
-chartgenius/
+tradvue/
 ├── frontend/                 # Next.js app
 │   ├── app/
 │   │   ├── layout.tsx        # Root layout
@@ -1200,4 +1200,4 @@ chartgenius/
 
 ---
 
-_This document is the single source of truth for ChartGenius architecture. Update it when making structural changes._
+_This document is the single source of truth for TradVue architecture. Update it when making structural changes._

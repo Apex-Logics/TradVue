@@ -1,5 +1,5 @@
 /**
- * API utilities for ChartGenius
+ * API utilities for TradVue
  */
 
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'

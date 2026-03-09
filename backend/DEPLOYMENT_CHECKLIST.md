@@ -1,4 +1,4 @@
-# ChartGenius Backend — Railway Deployment Checklist
+# TradVue Backend — Railway Deployment Checklist
 
 ## 🔴 Why Auth Is Broken
 

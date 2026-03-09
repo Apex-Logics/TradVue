@@ -117,7 +117,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
           <div className="settings-row settings-row-col">
             <span className="settings-row-desc" style={{ marginBottom: 8 }}>
-              Sets the default tab when opening ChartGenius
+              Sets the default tab when opening TradVue
             </span>
             <div className="settings-market-toggle">
               {(['US', 'Crypto', 'Forex'] as DefaultMarket[]).map(m => (
@@ -164,9 +164,9 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         {/* Footer */}
         <div className="settings-footer">
-          <span>ChartGenius v0.1 · ApexLogics</span>
+          <span>TradVue v0.1 · ApexLogics</span>
           <a
-            href="https://chartgenius.io/privacy"
+            href="https://tradvue.io/privacy"
             target="_blank"
             rel="noopener noreferrer"
             className="settings-footer-link"

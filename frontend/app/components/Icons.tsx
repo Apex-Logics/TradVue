@@ -1,5 +1,5 @@
 /**
- * Icons — unified SVG icon set for ChartGenius
+ * Icons — unified SVG icon set for TradVue
  * 
  * All icons:
  *  - strokeWidth="1.8" (consistent visual weight)

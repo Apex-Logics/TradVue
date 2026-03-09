@@ -68,9 +68,9 @@ const DEFAULT_COMPANIES: Company[] = [
     id: 'apex',
     name: 'ApexLogics',
     projects: [
-      { id: 'cg-dev', name: 'ChartGenius › Development', category: 'Development' },
-      { id: 'cg-biz', name: 'ChartGenius › Business', category: 'Business' },
-      { id: 'cg-ops', name: 'ChartGenius › Operations', category: 'Operations' },
+      { id: 'cg-dev', name: 'TradVue › Development', category: 'Development' },
+      { id: 'cg-biz', name: 'TradVue › Business', category: 'Business' },
+      { id: 'cg-ops', name: 'TradVue › Operations', category: 'Operations' },
     ],
   },
 ]
@@ -79,7 +79,7 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't1', title: 'News feed expansion — 5 new sources',
     description: 'Add Reuters, Bloomberg, FT, Seeking Alpha, and Benzinga to the news aggregator.',
-    status: 'done', project: 'ChartGenius › Development', company: 'ApexLogics',
+    status: 'done', project: 'TradVue › Development', company: 'ApexLogics',
     agent: 'Bolt', priority: 'high', dueDate: todayStr,
     createdAt: new Date(Date.now() - 7200000).toISOString(),
     completedAt: new Date(Date.now() - 3600000).toISOString(), notes: '',
@@ -87,7 +87,7 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't2', title: 'Portfolio P&L chart',
     description: 'Build cumulative P&L chart with time range selector.',
-    status: 'done', project: 'ChartGenius › Development', company: 'ApexLogics',
+    status: 'done', project: 'TradVue › Development', company: 'ApexLogics',
     agent: 'Bolt', priority: 'high', dueDate: todayStr,
     createdAt: new Date(Date.now() - 10800000).toISOString(),
     completedAt: new Date(Date.now() - 5400000).toISOString(), notes: '',
@@ -95,7 +95,7 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't3', title: 'Legal disclaimers — all pages',
     description: 'Add "Not financial advice" disclaimers to all public-facing pages.',
-    status: 'done', project: 'ChartGenius › Operations', company: 'ApexLogics',
+    status: 'done', project: 'TradVue › Operations', company: 'ApexLogics',
     agent: 'Zip', priority: 'medium', dueDate: todayStr,
     createdAt: new Date(Date.now() - 14400000).toISOString(),
     completedAt: new Date(Date.now() - 7200000).toISOString(), notes: '',
@@ -103,7 +103,7 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't4', title: 'Trading tools phase 2',
     description: 'ATR calculator, correlation matrix, and options screener.',
-    status: 'done', project: 'ChartGenius › Development', company: 'ApexLogics',
+    status: 'done', project: 'TradVue › Development', company: 'ApexLogics',
     agent: 'Bolt', priority: 'high', dueDate: todayStr,
     createdAt: new Date(Date.now() - 18000000).toISOString(),
     completedAt: new Date(Date.now() - 9000000).toISOString(), notes: '',
@@ -111,7 +111,7 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't5', title: 'Market sentiment analysis',
     description: 'Research and implement Fear & Greed index integration.',
-    status: 'inprogress', project: 'ChartGenius › Development', company: 'ApexLogics',
+    status: 'inprogress', project: 'TradVue › Development', company: 'ApexLogics',
     agent: 'Bolt', priority: 'medium', dueDate: todayStr,
     createdAt: new Date(Date.now() - 1800000).toISOString(),
     completedAt: '', notes: 'API endpoint found: CNN Fear & Greed',
@@ -119,7 +119,7 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't6', title: 'User acquisition strategy',
     description: 'Draft SEO strategy and content calendar for Q2 2026.',
-    status: 'inprogress', project: 'ChartGenius › Business', company: 'ApexLogics',
+    status: 'inprogress', project: 'TradVue › Business', company: 'ApexLogics',
     agent: 'Axle', priority: 'medium', dueDate: todayStr,
     createdAt: new Date(Date.now() - 3600000).toISOString(),
     completedAt: '', notes: '',
@@ -127,27 +127,27 @@ const DEFAULT_TASKS: Task[] = [
   {
     id: 't7', title: 'Deploy staging environment',
     description: 'Set up Vercel staging branch with feature flags.',
-    status: 'todo', project: 'ChartGenius › Operations', company: 'ApexLogics',
+    status: 'todo', project: 'TradVue › Operations', company: 'ApexLogics',
     agent: 'Bolt', priority: 'low', dueDate: '',
     createdAt: TODAY, completedAt: '', notes: '',
   },
   {
     id: 't8', title: 'Email onboarding sequence',
     description: 'Write 3-email welcome sequence for new signups.',
-    status: 'todo', project: 'ChartGenius › Business', company: 'ApexLogics',
+    status: 'todo', project: 'TradVue › Business', company: 'ApexLogics',
     agent: 'Zip', priority: 'medium', dueDate: '',
     createdAt: TODAY, completedAt: '', notes: '',
   },
 ]
 
 const DEFAULT_ACTIVITY: ActivityItem[] = [
-  { id: 'a1', type: 'task_complete', message: 'Bolt completed: trading tools phase 2', agent: 'Bolt', project: 'ChartGenius › Development', timestamp: new Date(Date.now() - 9000000).toISOString() },
-  { id: 'a2', type: 'task_complete', message: 'Zip completed: legal disclaimers', agent: 'Zip', project: 'ChartGenius › Operations', timestamp: new Date(Date.now() - 7200000).toISOString() },
-  { id: 'a3', type: 'task_complete', message: 'Bolt completed: portfolio P&L chart', agent: 'Bolt', project: 'ChartGenius › Development', timestamp: new Date(Date.now() - 5400000).toISOString() },
-  { id: 'a4', type: 'task_complete', message: 'Bolt completed: news feed expansion', agent: 'Bolt', project: 'ChartGenius › Development', timestamp: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'a5', type: 'task_start', message: 'Axle started: user acquisition strategy', agent: 'Axle', project: 'ChartGenius › Business', timestamp: new Date(Date.now() - 3600000).toISOString() },
-  { id: 'a6', type: 'task_start', message: 'Bolt started: market sentiment analysis', agent: 'Bolt', project: 'ChartGenius › Development', timestamp: new Date(Date.now() - 1800000).toISOString() },
-  { id: 'a7', type: 'deploy', message: 'Deployed to production: ChartGenius v2.4', agent: 'Bolt', project: 'ChartGenius › Operations', timestamp: new Date(Date.now() - 10800000).toISOString() },
+  { id: 'a1', type: 'task_complete', message: 'Bolt completed: trading tools phase 2', agent: 'Bolt', project: 'TradVue › Development', timestamp: new Date(Date.now() - 9000000).toISOString() },
+  { id: 'a2', type: 'task_complete', message: 'Zip completed: legal disclaimers', agent: 'Zip', project: 'TradVue › Operations', timestamp: new Date(Date.now() - 7200000).toISOString() },
+  { id: 'a3', type: 'task_complete', message: 'Bolt completed: portfolio P&L chart', agent: 'Bolt', project: 'TradVue › Development', timestamp: new Date(Date.now() - 5400000).toISOString() },
+  { id: 'a4', type: 'task_complete', message: 'Bolt completed: news feed expansion', agent: 'Bolt', project: 'TradVue › Development', timestamp: new Date(Date.now() - 3600000).toISOString() },
+  { id: 'a5', type: 'task_start', message: 'Axle started: user acquisition strategy', agent: 'Axle', project: 'TradVue › Business', timestamp: new Date(Date.now() - 3600000).toISOString() },
+  { id: 'a6', type: 'task_start', message: 'Bolt started: market sentiment analysis', agent: 'Bolt', project: 'TradVue › Development', timestamp: new Date(Date.now() - 1800000).toISOString() },
+  { id: 'a7', type: 'deploy', message: 'Deployed to production: TradVue v2.4', agent: 'Bolt', project: 'TradVue › Operations', timestamp: new Date(Date.now() - 10800000).toISOString() },
 ]
 
 const DEFAULT_SETTINGS: DashboardSettings = {
@@ -306,7 +306,7 @@ function AddTaskModal({
 }) {
   const [form, setForm] = useState({
     title: '', description: '', status: defaultStatus || 'todo' as TaskStatus,
-    project: 'ChartGenius › Development', company: 'ApexLogics',
+    project: 'TradVue › Development', company: 'ApexLogics',
     agent: '' as AgentName | '', priority: 'medium' as Priority,
     dueDate: '', notes: '',
   })
@@ -816,7 +816,7 @@ export default function DashboardPage() {
         {/* Back link */}
         <div style={{ padding: '12px 20px', borderTop: '1px solid var(--border)' }}>
           <Link href="/" style={{ fontSize: 12, color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 6 }}>
-            ← ChartGenius
+            ← TradVue
           </Link>
         </div>
       </aside>
@@ -1031,7 +1031,7 @@ export default function DashboardPage() {
                         borderRadius: 8, padding: '9px', color: 'var(--text-1)',
                         transition: '0.15s',
                       }}>
-                        ChartGenius App ↗
+                        TradVue App ↗
                       </Link>
                     </div>
                   </div>

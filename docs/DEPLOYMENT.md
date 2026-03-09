@@ -1,4 +1,4 @@
-# ChartGenius — Production Deployment Guide
+# TradVue — Production Deployment Guide
 
 > **Prepared by Bolt | Status: Ready to deploy — Erick just needs to run ~10 commands**
 
@@ -36,10 +36,10 @@ Railway and Vercel both deploy from GitHub. If you don't have a remote yet:
 cd /Users/mini1/.openclaw/workspace/tradingplatform
 
 # Create a new GitHub repo at https://github.com/new
-# Name it: chartgenius (private recommended)
+# Name it: tradvue (private recommended)
 # Then:
 
-git remote add origin https://github.com/YOUR_USERNAME/chartgenius.git
+git remote add origin https://github.com/YOUR_USERNAME/tradvue.git
 git push -u origin master
 ```
 
@@ -51,7 +51,7 @@ git push -u origin master
 
 1. Go to **https://railway.app** → Sign in / Create account
 2. Click **"New Project"** → **"Deploy from GitHub repo"**
-3. Select your `chartgenius` repo
+3. Select your `tradvue` repo
 4. Set **Root Directory** to: `backend`
 5. Railway auto-detects Node.js via Nixpacks
 
@@ -67,7 +67,7 @@ git push -u origin master
 | `DATABASE_URL` | `postgresql://postgres:ChartG3n1us_Pr0d_2026!@db.ryckpsjmsrxbiylddqnb.supabase.co:5432/postgres` |
 
 6. Click **Deploy** — Railway will build and assign a URL like:
-   `https://chartgenius-backend-production.up.railway.app`
+   `https://tradvue-backend-production.up.railway.app`
 
 ### Option B — Railway CLI
 
@@ -76,7 +76,7 @@ npm install -g @railway/cli   # already installed
 
 railway login                 # Opens browser — log in with GitHub
 cd /Users/mini1/.openclaw/workspace/tradingplatform/backend
-railway init                  # Create new project, name it "chartgenius-backend"
+railway init                  # Create new project, name it "tradvue-backend"
 railway up                    # Deploy
 
 # Set env vars:
@@ -98,12 +98,12 @@ railway domain   # Get your deployed URL
 
 > ⚠️ **Do Step 2 first** — you need the Railway backend URL before deploying the frontend.
 
-Replace `RAILWAY_BACKEND_URL` with your actual Railway URL (e.g., `https://chartgenius-backend-production.up.railway.app`)
+Replace `RAILWAY_BACKEND_URL` with your actual Railway URL (e.g., `https://tradvue-backend-production.up.railway.app`)
 
 ### Option A — Vercel Dashboard (Recommended)
 
 1. Go to **https://vercel.com** → Sign in / Create account with GitHub
-2. Click **"Add New Project"** → Import your `chartgenius` repo
+2. Click **"Add New Project"** → Import your `tradvue` repo
 3. Set **Root Directory** to: `frontend`
 4. Framework auto-detected as **Next.js**
 
@@ -114,7 +114,7 @@ Replace `RAILWAY_BACKEND_URL` with your actual Railway URL (e.g., `https://chart
 | `NEXT_PUBLIC_API_URL` | `https://YOUR-RAILWAY-URL.up.railway.app/api` |
 
 5. Click **Deploy** — Vercel assigns a URL like:
-   `https://chartgenius.vercel.app`
+   `https://tradvue.vercel.app`
 
 ### Option B — Vercel CLI
 
@@ -124,7 +124,7 @@ npm install -g vercel   # already installed
 vercel login            # Opens browser — log in with GitHub
 
 cd /Users/mini1/.openclaw/workspace/tradingplatform/frontend
-vercel --prod           # Follow prompts: link to your account, project name: chartgenius
+vercel --prod           # Follow prompts: link to your account, project name: tradvue
 
 # Set environment variable:
 vercel env add NEXT_PUBLIC_API_URL production
@@ -155,7 +155,7 @@ curl https://YOUR-RAILWAY-URL.up.railway.app/api/market-data/quote/AAPL
 # 3. Auth — Register
 curl -X POST https://YOUR-RAILWAY-URL.up.railway.app/api/auth/register \
   -H "Content-Type: application/json" \
-  -d '{"email":"test@chartgenius.io","password":"TestPass123!","name":"Test User"}'
+  -d '{"email":"test@tradvue.io","password":"TestPass123!","name":"Test User"}'
 
 # 4. Frontend
 open https://YOUR-VERCEL-URL.vercel.app
@@ -163,11 +163,11 @@ open https://YOUR-VERCEL-URL.vercel.app
 
 ---
 
-## Step 5: Point chartgenius.io DNS to Vercel
+## Step 5: Point tradvue.io DNS to Vercel
 
 In your domain registrar (or Cloudflare if using that):
 
-### Root domain (chartgenius.io)
+### Root domain (tradvue.io)
 - Add **A record**: `@` → `76.76.19.61` (Vercel's IP)
 - OR **CNAME** (if your registrar supports CNAME flattening): `@` → `cname.vercel-dns.com`
 
@@ -176,7 +176,7 @@ In your domain registrar (or Cloudflare if using that):
 
 ### Then in Vercel Dashboard:
 1. Go to your project → **Settings** → **Domains**
-2. Add `chartgenius.io` and `www.chartgenius.io`
+2. Add `tradvue.io` and `www.tradvue.io`
 3. Vercel auto-provisions SSL (Let's Encrypt)
 
 ---
@@ -184,7 +184,7 @@ In your domain registrar (or Cloudflare if using that):
 ## Architecture Overview
 
 ```
-chartgenius.io (DNS → Vercel)
+tradvue.io (DNS → Vercel)
        │
        ▼
   Vercel (Next.js frontend)
@@ -205,7 +205,7 @@ chartgenius.io (DNS → Vercel)
 
 2. **CORS**: Currently set to `cors()` (allow all). For production hardening, update `server.js` to:
    ```js
-   app.use(cors({ origin: 'https://chartgenius.io' }));
+   app.use(cors({ origin: 'https://tradvue.io' }));
    ```
 
 3. **Railway pricing**: Hobby plan ($5/mo) is enough for initial launch. Scales automatically.

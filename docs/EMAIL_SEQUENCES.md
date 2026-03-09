@@ -1,4 +1,4 @@
-# ChartGenius Beta User Email Sequences
+# TradVue Beta User Email Sequences
 
 Automated email sequences for beta user onboarding, engagement, feedback, and upgrade paths. All sequences designed for busy traders — short, specific, action-focused.
 
@@ -10,7 +10,7 @@ Automated email sequences for beta user onboarding, engagement, feedback, and up
 
 **Send Timing:** Immediately upon signup
 
-**Subject Line (A):** Welcome to ChartGenius Beta — Your First Trade Awaits  
+**Subject Line (A):** Welcome to TradVue Beta — Your First Trade Awaits  
 **Subject Line (B):** You're In. Here's What To Do Next.
 
 **Preview Text:** Get up and running in 5 minutes
@@ -20,7 +20,7 @@ Automated email sequences for beta user onboarding, engagement, feedback, and up
 ```
 Hey [First Name],
 
-You're now part of the ChartGenius beta. No fluff—just the tools that matter.
+You're now part of the TradVue beta. No fluff—just the tools that matter.
 
 Here's what to do in the next 5 minutes:
 1. Add your watchlist (2 min) — Import tickers or paste them in
@@ -31,7 +31,7 @@ Quick tip: You can customize alert thresholds per stock. Make them tight if you'
 
 Questions? Hit reply. We read everything.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Get Started Now → [watchlist-setup]
@@ -58,7 +58,7 @@ Most traders keep their watch lists scattered across three tabs and a notebook.
 
 Bad idea.
 
-ChartGenius watchlists sync everywhere. Add a stock once. See it on desktop, mobile, anywhere. Real-time updates, no lag.
+TradVue watchlists sync everywhere. Add a stock once. See it on desktop, mobile, anywhere. Real-time updates, no lag.
 
 Pro move: Create watchlists by strategy (swing plays, dividend holds, covered calls). Check them pre-market. Boom—ready to trade.
 
@@ -66,7 +66,7 @@ Pro move: Create watchlists by strategy (swing plays, dividend holds, covered ca
 
 Already added your first? You're ahead of 70% of beta users.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Explore Watchlists → [watchlist-demo]
@@ -93,7 +93,7 @@ Trading rule #1: You can't watch everything at once.
 
 That's what alerts are for.
 
-ChartGenius alerts hit your phone the second your stock triggers. Price moves, volume spikes, earnings releases—you choose what matters.
+TradVue alerts hit your phone the second your stock triggers. Price moves, volume spikes, earnings releases—you choose what matters.
 
 Setup takes 30 seconds per stock. Set it and forget it.
 
@@ -104,7 +104,7 @@ Popular alerts from beta users:
 
 Your baseline is 5 alerts free. Need more? We'll cover it in beta.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Create Your First Alert → [alerts-setup]
@@ -129,7 +129,7 @@ Hey [First Name],
 
 Your stock just jumped 3%. Why?
 
-Instead of digging through 20 news sources, check ChartGenius news feed. We pull earnings, SEC filings, analyst notes, and social signals—filtered for *your* watchlist only.
+Instead of digging through 20 news sources, check TradVue news feed. We pull earnings, SEC filings, analyst notes, and social signals—filtered for *your* watchlist only.
 
 No noise. Just signal.
 
@@ -139,7 +139,7 @@ Real example: COIN +6% on earnings beat. You see it before the dump. That's cont
 
 [Screenshot of news feed]
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Check Your News Feed → [news-demo]
@@ -152,7 +152,7 @@ Real example: COIN +6% on earnings beat. You see it before the dump. That's cont
 
 **Send Timing:** Day 7 at 10:00 AM user timezone
 
-**Subject Line (A):** One Quick Question—How's ChartGenius?  
+**Subject Line (A):** One Quick Question—How's TradVue?  
 **Subject Line (B):** Your Feedback = Better Features
 
 **Preview Text:** Help shape what we build next
@@ -164,7 +164,7 @@ Hey [First Name],
 
 One week in. How's it going?
 
-We built ChartGenius for traders like you. That means we need your real feedback to know if we're nailing it.
+We built TradVue for traders like you. That means we need your real feedback to know if we're nailing it.
 
 Three quick questions (2 min):
 1. What's working? 
@@ -175,7 +175,7 @@ Hit reply. Seriously. We read every message and respond within 24 hours.
 
 Early adopters who give feedback get early access to new features first. Just saying.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Send Your Feedback → [feedback-form]
@@ -213,7 +213,7 @@ Your alerts would've caught these. Just saying.
 
 One tap to catch up. Your watchlists are exactly as you left them.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Check Watchlists → [watchlists]
@@ -247,7 +247,7 @@ We recommend starting with 5-10 stocks. Keeps it focused.
 
 Once you've added one, alerts and news feed light up automatically.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Add Your First Stock → [watchlist-add]
@@ -281,7 +281,7 @@ Start simple:
 
 That's it. You'll get a notification the second it hits.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Create First Alert → [alerts-setup]
@@ -304,7 +304,7 @@ That's it. You'll get a notification the second it hits.
 ```
 Hey [First Name],
 
-We've noticed you haven't used ChartGenius in a week.
+We've noticed you haven't used TradVue in a week.
 
 That's cool—beta feedback is optional. But here's what's changing:
 
@@ -312,11 +312,11 @@ That's cool—beta feedback is optional. But here's what's changing:
 
 This is the cheapest it'll ever be for beta users.
 
-If you think ChartGenius might work for you long-term, now's the time to kick the tires. No pressure.
+If you think TradVue might work for you long-term, now's the time to kick the tires. No pressure.
 
 Questions? Reply to this email.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Log Back In → [dashboard]
@@ -331,7 +331,7 @@ Questions? Reply to this email.
 
 **Send Timing:** Day 14 from signup, 11:00 AM user timezone
 
-**Subject Line (A):** Rate ChartGenius (1 Question, 10 Seconds)  
+**Subject Line (A):** Rate TradVue (1 Question, 10 Seconds)  
 **Subject Line (B):** Quick Poll—How Are We Doing?
 
 **Preview Text:** Your honest feedback shapes our roadmap
@@ -343,7 +343,7 @@ Hey [First Name],
 
 Two weeks in. Time for the real talk.
 
-On a scale of 0-10: How likely are you to recommend ChartGenius to another trader?
+On a scale of 0-10: How likely are you to recommend TradVue to another trader?
 
 0 = Not at all | 10 = 100% would recommend
 
@@ -353,7 +353,7 @@ Your answer takes 10 seconds and tells us everything about what we're nailing vs
 
 Thanks for being part of the beta.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Vote Now (Scale: 0-10) → [nps-survey]
@@ -378,7 +378,7 @@ Hey [First Name],
 
 Every feature we build comes from beta user requests.
 
-So tell us: What's missing? What would make ChartGenius 10x better for your trading?
+So tell us: What's missing? What would make TradVue 10x better for your trading?
 
 Ideas can be:
 — Totally new (like options Greeks, portfolio backtesting)
@@ -389,7 +389,7 @@ No idea is too "out there." We've built features requested by a single user befo
 
 Reply with your #1 feature request. Subject line: "FEATURE REQUEST: [your idea]"
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Send Your Feature Request → [feature-request-form]
@@ -426,7 +426,7 @@ Reply with subject line: "BUG REPORT: [brief description]"
 
 These get priority. Sometimes we fix bugs within hours of a report.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Report a Bug → [bug-template]
@@ -453,7 +453,7 @@ Sent to engaged beta users who've completed key milestones.
 ```
 Hey [First Name],
 
-Official heads up: The ChartGenius beta closes on [DATE].
+Official heads up: The TradVue beta closes on [DATE].
 
 After that, we're going public with a Pro tier. Here's what changes:
 
@@ -464,11 +464,11 @@ But here's the deal: Early beta adopters lock in **50% lifetime discount** ($14.
 
 That discount is ONLY for people who tested with us.
 
-If ChartGenius is working for you, upgrading now is the smartest move. Lock in the rate, no surprises later.
+If TradVue is working for you, upgrading now is the smartest move. Lock in the rate, no surprises later.
 
 Questions? We're here.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Lock in Early Bird Pricing → [upgrade-pro]
@@ -491,7 +491,7 @@ Questions? We're here.
 ```
 Hey [First Name],
 
-When ChartGenius goes live, Pro users get early access to:
+When TradVue goes live, Pro users get early access to:
 
 **Portfolio Backtesting**
 Test your entire strategy against 10 years of data. See what actually works.
@@ -509,7 +509,7 @@ All of these are launching within 30 days of closing beta. Pro subscribers get t
 
 Early bird subscribers lock in 50% off forever. That's $14.50/mo. The price never goes up.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** See Pro Features Demo → [pro-demo]
@@ -522,7 +522,7 @@ Early bird subscribers lock in 50% off forever. That's $14.50/mo. The price neve
 
 **Send Timing:** 3 days before beta closes, 2:00 PM user timezone
 
-**Subject Line (A):** Last Chance: 50% Off ChartGenius Pro (Beta Ends [DATE])  
+**Subject Line (A):** Last Chance: 50% Off TradVue Pro (Beta Ends [DATE])  
 **Subject Line (B):** 3 Days Left for Early Bird Pricing
 
 **Preview Text:** Lock in your discount before it's gone
@@ -532,7 +532,7 @@ Early bird subscribers lock in 50% off forever. That's $14.50/mo. The price neve
 ```
 Hey [First Name],
 
-This is it. Three days left to lock in 50% off ChartGenius Pro forever.
+This is it. Three days left to lock in 50% off TradVue Pro forever.
 
 After [DATE], this discount goes away. Regular price is $29/mo. Early bird rate is $14.50/mo and never increases.
 
@@ -547,7 +547,7 @@ Non-negotiable: This offer expires when beta closes. No extensions, no exception
 
 Decision time.
 
-—The ChartGenius Team
+—The TradVue Team
 ```
 
 **CTA Button:** Subscribe Now at 50% Off → [subscribe-early-bird]

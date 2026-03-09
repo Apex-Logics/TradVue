@@ -107,7 +107,7 @@ router.get('/live', (req, res) => {
 
   // Send initial heartbeat so client knows it's connected
   res.write(`event: connected\ndata: ${JSON.stringify({
-    message: 'ChartGenius Alert Stream connected',
+    message: 'TradVue Alert Stream connected',
     clientId,
     timestamp: new Date().toISOString(),
     connectedClients: alertService.getSSEClientCount(),

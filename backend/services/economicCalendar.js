@@ -26,7 +26,7 @@ const parser = new RSSParser({
   },
   timeout: 10000,
   headers: {
-    'User-Agent': 'ChartGenius/1.0 (chartgenius.io; economic-calendar-bot)'
+    'User-Agent': 'TradVue/1.0 (tradvue.io; economic-calendar-bot)'
   }
 });
 

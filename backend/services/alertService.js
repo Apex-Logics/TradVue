@@ -1,7 +1,7 @@
 /**
  * Alert Service
  *
- * Real-time market alert engine for ChartGenius.
+ * Real-time market alert engine for TradVue.
  *
  * Responsibilities:
  *   1. Poll RSS feeds for high-impact market-moving news

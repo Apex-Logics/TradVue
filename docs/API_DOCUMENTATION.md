@@ -1,6 +1,6 @@
-# ChartGenius API Documentation
+# TradVue API Documentation
 
-**API Base URL:** `https://chartgenius-production.up.railway.app/api`
+**API Base URL:** `https://tradvue-production.up.railway.app/api`
 
 ---
 
@@ -910,7 +910,7 @@ GET /api/alerts/live
 ```
 event: connected
 data: {
-  "message": "ChartGenius Alert Stream connected",
+  "message": "TradVue Alert Stream connected",
   "clientId": "client-uuid",
   "timestamp": "2025-03-06T22:19:00.000Z",
   "connectedClients": 42
@@ -1272,7 +1272,7 @@ connectToAlertStream();
 #### Register and Login
 ```javascript
 // Register
-const registerResponse = await fetch('https://chartgenius-production.up.railway.app/api/auth/register', {
+const registerResponse = await fetch('https://tradvue-production.up.railway.app/api/auth/register', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1283,10 +1283,10 @@ const registerResponse = await fetch('https://chartgenius-production.up.railway.
 });
 
 const { token, user } = await registerResponse.json();
-localStorage.setItem('chartgenius_token', token);
+localStorage.setItem('tradvue_token', token);
 
 // Login
-const loginResponse = await fetch('https://chartgenius-production.up.railway.app/api/auth/login', {
+const loginResponse = await fetch('https://tradvue-production.up.railway.app/api/auth/login', {
   method: 'POST',
   headers: { 'Content-Type': 'application/json' },
   body: JSON.stringify({
@@ -1296,15 +1296,15 @@ const loginResponse = await fetch('https://chartgenius-production.up.railway.app
 });
 
 const { token } = await loginResponse.json();
-localStorage.setItem('chartgenius_token', token);
+localStorage.setItem('tradvue_token', token);
 ```
 
 #### Get Real-time Quote
 ```javascript
-const token = localStorage.getItem('chartgenius_token');
+const token = localStorage.getItem('tradvue_token');
 
 const response = await fetch(
-  'https://chartgenius-production.up.railway.app/api/market-data/quote/AAPL',
+  'https://tradvue-production.up.railway.app/api/market-data/quote/AAPL',
   {
     headers: { 'Authorization': `Bearer ${token}` }
   }
@@ -1316,10 +1316,10 @@ console.log(`${data.symbol}: $${data.current} (${data.changePct}%)`);
 
 #### Get Watchlist
 ```javascript
-const token = localStorage.getItem('chartgenius_token');
+const token = localStorage.getItem('tradvue_token');
 
 const response = await fetch(
-  'https://chartgenius-production.up.railway.app/api/watchlist',
+  'https://tradvue-production.up.railway.app/api/watchlist',
   {
     headers: { 'Authorization': `Bearer ${token}` }
   }
@@ -1333,10 +1333,10 @@ watchlist.forEach(item => {
 
 #### Add to Watchlist
 ```javascript
-const token = localStorage.getItem('chartgenius_token');
+const token = localStorage.getItem('tradvue_token');
 
 const response = await fetch(
-  'https://chartgenius-production.up.railway.app/api/watchlist',
+  'https://tradvue-production.up.railway.app/api/watchlist',
   {
     method: 'POST',
     headers: {
@@ -1358,10 +1358,10 @@ console.log(`Added ${item.symbol} to watchlist`);
 
 #### Real-time Alerts Stream
 ```javascript
-const token = localStorage.getItem('chartgenius_token');
+const token = localStorage.getItem('tradvue_token');
 
 const eventSource = new EventSource(
-  `https://chartgenius-production.up.railway.app/api/alerts/live?token=${token}`
+  `https://tradvue-production.up.railway.app/api/alerts/live?token=${token}`
 );
 
 eventSource.addEventListener('alert', (event) => {
@@ -1369,7 +1369,7 @@ eventSource.addEventListener('alert', (event) => {
   console.log('🚨 New Alert:', alert.title);
   
   // Show notification
-  new Notification('ChartGenius Alert', {
+  new Notification('TradVue Alert', {
     body: alert.title,
     badge: '/favicon.ico'
   });
@@ -1390,7 +1390,7 @@ eventSource.onerror = () => {
 import requests
 import json
 
-BASE_URL = 'https://chartgenius-production.up.railway.app/api'
+BASE_URL = 'https://tradvue-production.up.railway.app/api'
 
 # Login
 response = requests.post(
@@ -1414,7 +1414,7 @@ print(profile_response.json()['user'])
 ```python
 import requests
 
-BASE_URL = 'https://chartgenius-production.up.railway.app/api'
+BASE_URL = 'https://tradvue-production.up.railway.app/api'
 
 # Get multiple quotes
 response = requests.get(
@@ -1434,7 +1434,7 @@ for symbol, quote in quotes.items():
 ```python
 import requests
 
-BASE_URL = 'https://chartgenius-production.up.railway.app/api'
+BASE_URL = 'https://tradvue-production.up.railway.app/api'
 token = 'your_jwt_token'
 headers = {'Authorization': f'Bearer {token}'}
 
@@ -1468,7 +1468,7 @@ print(f"Deleted: {delete_response.json()['message']}")
 ```python
 import requests
 
-BASE_URL = 'https://chartgenius-production.up.railway.app/api'
+BASE_URL = 'https://tradvue-production.up.railway.app/api'
 
 # Get aggregated news
 response = requests.get(
@@ -1490,7 +1490,7 @@ for article in articles:
 ```python
 import requests
 
-BASE_URL = 'https://chartgenius-production.up.railway.app/api'
+BASE_URL = 'https://tradvue-production.up.railway.app/api'
 
 # High-impact events
 response = requests.get(
@@ -1510,7 +1510,7 @@ for event in events:
 #### Authentication
 ```bash
 # Register
-curl -X POST https://chartgenius-production.up.railway.app/api/auth/register \
+curl -X POST https://tradvue-production.up.railway.app/api/auth/register \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -1518,7 +1518,7 @@ curl -X POST https://chartgenius-production.up.railway.app/api/auth/register \
   }'
 
 # Login
-curl -X POST https://chartgenius-production.up.railway.app/api/auth/login \
+curl -X POST https://tradvue-production.up.railway.app/api/auth/login \
   -H "Content-Type: application/json" \
   -d '{
     "email": "user@example.com",
@@ -1526,36 +1526,36 @@ curl -X POST https://chartgenius-production.up.railway.app/api/auth/login \
   }'
 
 # Get Profile (requires token)
-curl -X GET https://chartgenius-production.up.railway.app/api/auth/profile \
+curl -X GET https://tradvue-production.up.railway.app/api/auth/profile \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### Market Data
 ```bash
 # Get single quote
-curl https://chartgenius-production.up.railway.app/api/market-data/quote/AAPL
+curl https://tradvue-production.up.railway.app/api/market-data/quote/AAPL
 
 # Batch quotes
-curl "https://chartgenius-production.up.railway.app/api/market-data/batch?symbols=AAPL,TSLA,MSFT"
+curl "https://tradvue-production.up.railway.app/api/market-data/batch?symbols=AAPL,TSLA,MSFT"
 
 # Candlestick data
-curl "https://chartgenius-production.up.railway.app/api/market-data/candles/AAPL?resolution=D"
+curl "https://tradvue-production.up.railway.app/api/market-data/candles/AAPL?resolution=D"
 
 # Market status
-curl "https://chartgenius-production.up.railway.app/api/market-data/status?exchange=US"
+curl "https://tradvue-production.up.railway.app/api/market-data/status?exchange=US"
 
 # Movers
-curl https://chartgenius-production.up.railway.app/api/market-data/movers
+curl https://tradvue-production.up.railway.app/api/market-data/movers
 ```
 
 #### Watchlist Operations
 ```bash
 # Get watchlist
-curl -X GET https://chartgenius-production.up.railway.app/api/watchlist \
+curl -X GET https://tradvue-production.up.railway.app/api/watchlist \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 
 # Add item
-curl -X POST https://chartgenius-production.up.railway.app/api/watchlist \
+curl -X POST https://tradvue-production.up.railway.app/api/watchlist \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1565,7 +1565,7 @@ curl -X POST https://chartgenius-production.up.railway.app/api/watchlist \
   }'
 
 # Update alerts
-curl -X PUT https://chartgenius-production.up.railway.app/api/watchlist/1/alerts \
+curl -X PUT https://tradvue-production.up.railway.app/api/watchlist/1/alerts \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1574,23 +1574,23 @@ curl -X PUT https://chartgenius-production.up.railway.app/api/watchlist/1/alerts
   }'
 
 # Delete item
-curl -X DELETE https://chartgenius-production.up.railway.app/api/watchlist/1 \
+curl -X DELETE https://tradvue-production.up.railway.app/api/watchlist/1 \
   -H "Authorization: Bearer YOUR_JWT_TOKEN"
 ```
 
 #### News and Alerts
 ```bash
 # Get news feed
-curl "https://chartgenius-production.up.railway.app/api/feed/news?limit=10&category=stocks"
+curl "https://tradvue-production.up.railway.app/api/feed/news?limit=10&category=stocks"
 
 # Get sentiment
-curl "https://chartgenius-production.up.railway.app/api/feed/news/sentiment/AAPL"
+curl "https://tradvue-production.up.railway.app/api/feed/news/sentiment/AAPL"
 
 # Get alerts
-curl "https://chartgenius-production.up.railway.app/api/alerts?limit=20&category=FED"
+curl "https://tradvue-production.up.railway.app/api/alerts?limit=20&category=FED"
 
 # Subscribe to alerts
-curl -X POST https://chartgenius-production.up.railway.app/api/alerts/subscribe \
+curl -X POST https://tradvue-production.up.railway.app/api/alerts/subscribe \
   -H "Authorization: Bearer YOUR_JWT_TOKEN" \
   -H "Content-Type: application/json" \
   -d '{
@@ -1602,16 +1602,16 @@ curl -X POST https://chartgenius-production.up.railway.app/api/alerts/subscribe 
 #### Economic Calendar
 ```bash
 # Upcoming events
-curl "https://chartgenius-production.up.railway.app/api/calendar/upcoming?days=7&currencies=USD,EUR"
+curl "https://tradvue-production.up.railway.app/api/calendar/upcoming?days=7&currencies=USD,EUR"
 
 # Today's events
-curl "https://chartgenius-production.up.railway.app/api/calendar/today"
+curl "https://tradvue-production.up.railway.app/api/calendar/today"
 
 # High-impact only
-curl "https://chartgenius-production.up.railway.app/api/calendar/high-impact?days=3"
+curl "https://tradvue-production.up.railway.app/api/calendar/high-impact?days=3"
 
 # Macro snapshot
-curl https://chartgenius-production.up.railway.app/api/calendar/macro
+curl https://tradvue-production.up.railway.app/api/calendar/macro
 ```
 
 ---
@@ -1632,9 +1632,9 @@ curl https://chartgenius-production.up.railway.app/api/calendar/macro
 ### Error Handling
 ```javascript
 async function apiCall(endpoint, options = {}) {
-  const response = await fetch(`https://chartgenius-production.up.railway.app/api${endpoint}`, {
+  const response = await fetch(`https://tradvue-production.up.railway.app/api${endpoint}`, {
     headers: {
-      'Authorization': `Bearer ${localStorage.getItem('chartgenius_token')}`,
+      'Authorization': `Bearer ${localStorage.getItem('tradvue_token')}`,
       ...options.headers
     },
     ...options
@@ -1678,11 +1678,11 @@ async function apiCall(endpoint, options = {}) {
 
 For issues, feature requests, or API documentation updates:
 - Email: api-support@apexlogics.com
-- GitHub Issues: [chartgenius/api-issues](https://github.com/apexlogics/chartgenius/issues)
-- Status Page: [status.chartgenius.io](https://status.chartgenius.io)
+- GitHub Issues: [tradvue/api-issues](https://github.com/apexlogics/tradvue/issues)
+- Status Page: [status.tradvue.io](https://status.tradvue.io)
 
 ---
 
 **Last Updated:** March 6, 2025  
 **API Version:** 1.0.0  
-**Base URL:** https://chartgenius-production.up.railway.app/api
+**Base URL:** https://tradvue-production.up.railway.app/api

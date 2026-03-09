@@ -1,6 +1,6 @@
 # Cookie Policy
 
-**ChartGenius**
+**TradVue**
 
 Last Updated: March 6, 2026
 
@@ -8,7 +8,7 @@ Last Updated: March 6, 2026
 
 Cookies are small text files stored on your device (computer, phone, or tablet) when you visit a website. They allow websites to remember your preferences, keep you logged in, and track usage patterns.
 
-ChartGenius uses cookies to improve your experience and understand how the platform is used.
+TradVue uses cookies to improve your experience and understand how the platform is used.
 
 ## 2. Types of Cookies We Use
 
@@ -18,10 +18,10 @@ These cookies are necessary for the Service to function properly. They cannot be
 
 | Cookie Name | Purpose | Duration | Type |
 |---|---|---|---|
-| `session_id` | Keeps you logged in | Session (cleared on logout) | ChartGenius |
-| `csrf_token` | Prevents cross-site request forgery | Session | ChartGenius |
-| `auth_token` | Authentication and authorization | 30 days | ChartGenius |
-| `timezone` | Stores your timezone for data display | 1 year | ChartGenius |
+| `session_id` | Keeps you logged in | Session (cleared on logout) | TradVue |
+| `csrf_token` | Prevents cross-site request forgery | Session | TradVue |
+| `auth_token` | Authentication and authorization | 30 days | TradVue |
+| `timezone` | Stores your timezone for data display | 1 year | TradVue |
 
 **What happens if you disable essential cookies?**
 - You won't be able to log in
@@ -35,16 +35,16 @@ These cookies store your preferences and settings.
 
 | Cookie Name | Purpose | Duration | Type |
 |---|---|---|---|
-| `theme_preference` | Dark/light mode setting | 2 years | ChartGenius |
-| `language` | Your preferred language | 2 years | ChartGenius |
-| `chart_layout` | Default chart view (candlestick, line, etc.) | 2 years | ChartGenius |
-| `sidebar_collapsed` | Whether sidebar is collapsed | 2 years | ChartGenius |
+| `theme_preference` | Dark/light mode setting | 2 years | TradVue |
+| `language` | Your preferred language | 2 years | TradVue |
+| `chart_layout` | Default chart view (candlestick, line, etc.) | 2 years | TradVue |
+| `sidebar_collapsed` | Whether sidebar is collapsed | 2 years | TradVue |
 
 **You can opt out of these cookies.** Disabling them means you'll need to set your preferences each visit.
 
 ### 2.3 Analytics Cookies (Optional)
 
-These cookies help us understand how users interact with ChartGenius, identify issues, and improve the platform.
+These cookies help us understand how users interact with TradVue, identify issues, and improve the platform.
 
 | Cookie/Tool | Purpose | Duration | Third-Party |
 |---|---|---|---|
@@ -67,7 +67,7 @@ These cookies are only active if you explicitly consent. They allow us to show y
 
 | Cookie Name | Purpose | Duration | Third-Party |
 |---|---|---|---|
-| `marketing_consent` | Tracks if you consented to marketing | 1 year | ChartGenius |
+| `marketing_consent` | Tracks if you consented to marketing | 1 year | TradVue |
 | Facebook Pixel | Retargeting ads on Facebook/Instagram | Session | Meta |
 | LinkedIn Insight | Retargeting on LinkedIn | Session | LinkedIn |
 
@@ -75,9 +75,9 @@ These cookies are only active if you explicitly consent. They allow us to show y
 
 ## 3. How to Manage Cookies
 
-### 3.1 Via ChartGenius Cookie Banner
+### 3.1 Via TradVue Cookie Banner
 
-When you first visit ChartGenius, a cookie consent banner appears. You can:
+When you first visit TradVue, a cookie consent banner appears. You can:
 
 1. **Accept All Cookies** - Enable all non-essential cookies
 2. **Reject Non-Essential** - Only essential cookies are active
@@ -92,7 +92,7 @@ All modern browsers allow you to control cookies:
 **Chrome:**
 1. Settings → Privacy and security → Cookies and other site data
 2. Manage all cookies and site data
-3. Search "chartgenius.com" and delete or allow
+3. Search "tradvue.com" and delete or allow
 
 **Firefox:**
 1. Settings → Privacy & Security → Cookies and Site Data
@@ -125,7 +125,7 @@ All modern browsers allow you to control cookies:
 
 ## 5. Local Storage & Other Tracking
 
-In addition to cookies, ChartGenius may use:
+In addition to cookies, TradVue may use:
 
 ### Local Storage
 - Stores chart preferences, watchlist filters, and recent searches
@@ -142,7 +142,7 @@ In addition to cookies, ChartGenius may use:
 
 ## 6. Do-Not-Track Signals
 
-Some browsers allow you to set a "Do Not Track" (DNT) signal. ChartGenius respects DNT preferences:
+Some browsers allow you to set a "Do Not Track" (DNT) signal. TradVue respects DNT preferences:
 
 - We do NOT enable tracking cookies if DNT is active
 - We still use essential cookies (necessary for the Service)
@@ -150,7 +150,7 @@ Some browsers allow you to set a "Do Not Track" (DNT) signal. ChartGenius respec
 
 ## 7. Cookie Changes
 
-ChartGenius may:
+TradVue may:
 - Add new cookies to improve the Service
 - Remove cookies that are no longer needed
 - Update cookie names or purposes
@@ -160,7 +160,7 @@ We will update this policy and notify users of significant changes.
 ## 8. Contact & More Information
 
 **Questions about cookies?**
-Email: privacy@chartgenius.com
+Email: privacy@tradvue.com
 
 **Learn more about cookies:**
 - AboutCookies.org
@@ -171,4 +171,4 @@ Email: privacy@chartgenius.com
 
 **Last Updated: March 6, 2026**
 
-By using ChartGenius, you accept our use of cookies as described in this policy.
+By using TradVue, you accept our use of cookies as described in this policy.

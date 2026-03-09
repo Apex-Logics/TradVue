@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { LegalPage, Section, SubSection, UL, InfoBox, AcknowledgmentBox } from '../components'
 
 export const metadata: Metadata = {
-  title: 'Privacy Policy — ChartGenius',
-  description: 'Learn how ChartGenius collects, uses, and protects your personal information.',
+  title: 'Privacy Policy — TradVue',
+  description: 'Learn how TradVue collects, uses, and protects your personal information.',
   alternates: {
-    canonical: 'https://chartgenius.io/legal/privacy',
+    canonical: 'https://tradvue.io/legal/privacy',
   },
   robots: 'noindex, follow',
 }
@@ -16,13 +16,13 @@ export default function PrivacyPage() {
 
       <Section id="intro" title="1. Introduction">
         <p>
-          ChartGenius ("Company," "we," "us," "our") is committed to protecting your privacy.
+          TradVue ("Company," "we," "us," "our") is committed to protecting your privacy.
           This Privacy Policy explains how we collect, use, disclose, and safeguard your information
           when you use our platform.
         </p>
         <p>
           Please read this policy carefully. If you do not agree with our practices,
-          please do not use ChartGenius.
+          please do not use TradVue.
         </p>
       </Section>
 
@@ -89,7 +89,7 @@ export default function PrivacyPage() {
         </SubSection>
         <SubSection title="Analytics & Improvement">
           <UL items={[
-            'Understanding how users interact with ChartGenius',
+            'Understanding how users interact with TradVue',
             'Identifying trends and improving user experience',
             'Measuring platform performance',
             'Conducting A/B testing',
@@ -108,7 +108,7 @@ export default function PrivacyPage() {
             'Complying with legal obligations',
             'Enforcing our Terms of Service',
             'Preventing fraud, abuse, or illegal activity',
-            'Protecting the rights, property, and safety of ChartGenius, users, and the public',
+            'Protecting the rights, property, and safety of TradVue, users, and the public',
           ]} />
         </SubSection>
         <SubSection title="Marketing (with consent)">
@@ -146,7 +146,7 @@ export default function PrivacyPage() {
         </SubSection>
         <SubSection title="4.3 Business Transfers">
           <p>
-            If ChartGenius is acquired, merged, or its assets sold, your information may be transferred
+            If TradVue is acquired, merged, or its assets sold, your information may be transferred
             as part of that transaction. We will notify you of any such change.
           </p>
         </SubSection>
@@ -165,7 +165,7 @@ export default function PrivacyPage() {
         <SubSection title="5.1 Portfolio Holdings & Financial Data">
           <UL items={[
             'Portfolio data (holdings, transactions, cost basis) is encrypted and stored securely',
-            'Your portfolio is accessible only to you and ChartGenius staff (for support purposes only)',
+            'Your portfolio is accessible only to you and TradVue staff (for support purposes only)',
             'We do not share your portfolio holdings or financial data with third parties',
             'We do not sell, rent, or license your portfolio data to advertisers or data brokers',
           ]} />
@@ -176,7 +176,7 @@ export default function PrivacyPage() {
             <strong>If you use broker integration features, we receive read-only data through secure third-party providers (e.g., Plaid) and never store your broker credentials.</strong>
           </p>
           <UL items={[
-            'Broker login credentials are transmitted directly to third-party providers; ChartGenius never stores them',
+            'Broker login credentials are transmitted directly to third-party providers; TradVue never stores them',
             'We access only account-level data (holdings, transactions) for portfolio tracking',
             'Broker integration is optional; you can manually enter portfolio data instead',
             'Third-party integrations are subject to their own privacy policies',
@@ -194,7 +194,7 @@ export default function PrivacyPage() {
       </Section>
 
       <Section id="security" title="6. Data Security">
-        <p>ChartGenius implements industry-standard security measures:</p>
+        <p>TradVue implements industry-standard security measures:</p>
         <UL items={[
           'SSL/TLS encryption for data in transit',
           'AES-256 encryption for sensitive data at rest',
@@ -231,7 +231,7 @@ export default function PrivacyPage() {
         ]} />
         <InfoBox>
           To exercise these rights, contact{' '}
-          <a href="mailto:privacy@chartgenius.io" style={{ color: '#4a9eff' }}>privacy@chartgenius.io</a>{' '}
+          <a href="mailto:privacy@tradvue.io" style={{ color: '#4a9eff' }}>privacy@tradvue.io</a>{' '}
           with "GDPR Request" in the subject line.
         </InfoBox>
       </Section>
@@ -246,7 +246,7 @@ export default function PrivacyPage() {
         ]} />
         <InfoBox>
           To submit a CCPA request, contact{' '}
-          <a href="mailto:privacy@chartgenius.io" style={{ color: '#4a9eff' }}>privacy@chartgenius.io</a>{' '}
+          <a href="mailto:privacy@tradvue.io" style={{ color: '#4a9eff' }}>privacy@tradvue.io</a>{' '}
           with "CCPA Request" in the subject line. Include your name and email.
           We will respond within 45 days.
         </InfoBox>
@@ -254,7 +254,7 @@ export default function PrivacyPage() {
 
       <Section id="cookies" title="10. Cookies & Tracking Technologies">
         <p>
-          When you first visit ChartGenius, you will be presented with a cookie consent banner.
+          When you first visit TradVue, you will be presented with a cookie consent banner.
           You can accept all cookies, reject non-essential cookies, or customize your preferences.
           You can also control cookies through your browser settings, though some features may not work properly.
         </p>
@@ -266,21 +266,21 @@ export default function PrivacyPage() {
 
       <Section id="children" title="11. Children's Privacy">
         <p>
-          ChartGenius is not directed to children under 13. We do not knowingly collect information from children.
+          TradVue is not directed to children under 13. We do not knowingly collect information from children.
           If we learn that a child under 13 has provided information, we will delete it immediately.
         </p>
       </Section>
 
       <Section id="third-party" title="12. Third-Party Links">
         <p>
-          ChartGenius may link to external websites. We are not responsible for their privacy practices.
+          TradVue may link to external websites. We are not responsible for their privacy practices.
           Please review their privacy policies before providing any information.
         </p>
       </Section>
 
       <Section id="changes" title="13. Changes to This Policy">
         <p>
-          ChartGenius may update this Privacy Policy periodically. We will notify you of material changes
+          TradVue may update this Privacy Policy periodically. We will notify you of material changes
           via email or prominent notice on the platform. Continued use after changes indicates acceptance.
         </p>
       </Section>
@@ -288,7 +288,7 @@ export default function PrivacyPage() {
       <Section id="international" title="14. International Data Transfers">
         <p>
           If you are outside the United States, your information may be transferred to, stored in,
-          and processed in the US or other countries. By using ChartGenius, you consent to such transfers.
+          and processed in the US or other countries. By using TradVue, you consent to such transfers.
         </p>
         <p>
           For EU/EEA residents, we use Standard Contractual Clauses to ensure adequate protection.
@@ -297,9 +297,9 @@ export default function PrivacyPage() {
 
       <Section id="contact" title="15. Contact & Complaints">
         <UL items={[
-          'Privacy Questions: privacy@chartgenius.io',
-          'Data Protection Officer: dpo@chartgenius.io',
-          'Mailing Address: ChartGenius Privacy Team, [Company Address]',
+          'Privacy Questions: privacy@tradvue.io',
+          'Data Protection Officer: dpo@tradvue.io',
+          'Mailing Address: TradVue Privacy Team, [Company Address]',
         ]} />
         <p>
           <strong>EU/EEA Residents:</strong> You have the right to lodge a complaint with your local
@@ -308,7 +308,7 @@ export default function PrivacyPage() {
       </Section>
 
       <AcknowledgmentBox>
-        By using ChartGenius, you acknowledge that you have read and understood this Privacy Policy.
+        By using TradVue, you acknowledge that you have read and understood this Privacy Policy.
       </AcknowledgmentBox>
 
     </LegalPage>

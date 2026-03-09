@@ -2,10 +2,10 @@ import type { Metadata } from 'next'
 import { LegalPage, Section, SubSection, UL, InfoBox, WarningBox, CookieTable, ImpactTable, AcknowledgmentBox } from '../components'
 
 export const metadata: Metadata = {
-  title: 'Cookie Policy — ChartGenius',
-  description: 'Learn about the cookies ChartGenius uses and how to manage your cookie preferences.',
+  title: 'Cookie Policy — TradVue',
+  description: 'Learn about the cookies TradVue uses and how to manage your cookie preferences.',
   alternates: {
-    canonical: 'https://chartgenius.io/legal/cookies',
+    canonical: 'https://tradvue.io/legal/cookies',
   },
   robots: 'noindex, follow',
 }
@@ -20,7 +20,7 @@ export default function CookiesPage() {
           They allow websites to remember your preferences, keep you logged in, and track usage patterns.
         </p>
         <p>
-          ChartGenius uses cookies to improve your experience and understand how the platform is used.
+          TradVue uses cookies to improve your experience and understand how the platform is used.
         </p>
       </Section>
 
@@ -32,10 +32,10 @@ export default function CookiesPage() {
             They cannot be disabled without breaking core features.
           </p>
           <CookieTable rows={[
-            { name: 'session_id',  purpose: 'Keeps you logged in',                          duration: 'Session (cleared on logout)', type: 'ChartGenius' },
-            { name: 'csrf_token',  purpose: 'Prevents cross-site request forgery',           duration: 'Session',                     type: 'ChartGenius' },
-            { name: 'auth_token',  purpose: 'Authentication and authorization',              duration: '30 days',                     type: 'ChartGenius' },
-            { name: 'timezone',    purpose: 'Stores your timezone for data display',         duration: '1 year',                      type: 'ChartGenius' },
+            { name: 'session_id',  purpose: 'Keeps you logged in',                          duration: 'Session (cleared on logout)', type: 'TradVue' },
+            { name: 'csrf_token',  purpose: 'Prevents cross-site request forgery',           duration: 'Session',                     type: 'TradVue' },
+            { name: 'auth_token',  purpose: 'Authentication and authorization',              duration: '30 days',                     type: 'TradVue' },
+            { name: 'timezone',    purpose: 'Stores your timezone for data display',         duration: '1 year',                      type: 'TradVue' },
           ]} />
           <WarningBox>
             <strong>What happens if you disable essential cookies?</strong>
@@ -51,10 +51,10 @@ export default function CookiesPage() {
         <SubSection title="2.2 Preference Cookies (Optional)">
           <p>These cookies store your preferences and settings.</p>
           <CookieTable rows={[
-            { name: 'theme_preference', purpose: 'Dark/light mode setting',                 duration: '2 years', type: 'ChartGenius' },
-            { name: 'language',         purpose: 'Your preferred language',                  duration: '2 years', type: 'ChartGenius' },
-            { name: 'chart_layout',     purpose: 'Default chart view (candlestick, line…)',  duration: '2 years', type: 'ChartGenius' },
-            { name: 'sidebar_collapsed',purpose: 'Whether sidebar is collapsed',             duration: '2 years', type: 'ChartGenius' },
+            { name: 'theme_preference', purpose: 'Dark/light mode setting',                 duration: '2 years', type: 'TradVue' },
+            { name: 'language',         purpose: 'Your preferred language',                  duration: '2 years', type: 'TradVue' },
+            { name: 'chart_layout',     purpose: 'Default chart view (candlestick, line…)',  duration: '2 years', type: 'TradVue' },
+            { name: 'sidebar_collapsed',purpose: 'Whether sidebar is collapsed',             duration: '2 years', type: 'TradVue' },
           ]} />
           <p>
             <strong>You can opt out of these cookies.</strong> Disabling them means you'll need to set your preferences each visit.
@@ -63,7 +63,7 @@ export default function CookiesPage() {
 
         <SubSection title="2.3 Analytics Cookies (Optional)">
           <p>
-            These cookies help us understand how users interact with ChartGenius,
+            These cookies help us understand how users interact with TradVue,
             identify issues, and improve the platform.
           </p>
           <CookieTable rows={[
@@ -86,7 +86,7 @@ export default function CookiesPage() {
             They allow us to show you relevant promotions.
           </p>
           <CookieTable rows={[
-            { name: 'marketing_consent', purpose: 'Tracks if you consented to marketing',    duration: '1 year', type: 'ChartGenius' },
+            { name: 'marketing_consent', purpose: 'Tracks if you consented to marketing',    duration: '1 year', type: 'TradVue' },
             { name: 'Facebook Pixel',    purpose: 'Retargeting ads on Facebook/Instagram',   duration: 'Session',type: 'Meta'        },
             { name: 'LinkedIn Insight',  purpose: 'Retargeting on LinkedIn',                  duration: 'Session',type: 'LinkedIn'    },
           ]} />
@@ -95,8 +95,8 @@ export default function CookiesPage() {
       </Section>
 
       <Section id="manage" title="3. How to Manage Cookies">
-        <SubSection title="3.1 Via ChartGenius Cookie Banner">
-          <p>When you first visit ChartGenius, a cookie consent banner appears. You can:</p>
+        <SubSection title="3.1 Via TradVue Cookie Banner">
+          <p>When you first visit TradVue, a cookie consent banner appears. You can:</p>
           <UL items={[
             'Accept All Cookies — Enable all non-essential cookies',
             'Reject Non-Essential — Only essential cookies are active',
@@ -109,7 +109,7 @@ export default function CookiesPage() {
           <p>All modern browsers allow you to control cookies:</p>
           <div style={{ display: 'flex', flexDirection: 'column', gap: '10px' }}>
             {[
-              { browser: 'Chrome', steps: 'Settings → Privacy and security → Cookies and other site data → Manage all cookies and site data → Search "chartgenius.com"' },
+              { browser: 'Chrome', steps: 'Settings → Privacy and security → Cookies and other site data → Manage all cookies and site data → Search "tradvue.com"' },
               { browser: 'Firefox', steps: 'Settings → Privacy & Security → Cookies and Site Data → Manage Exceptions or Clear Data' },
               { browser: 'Safari', steps: 'Preferences → Privacy → Manage website data' },
               { browser: 'Edge', steps: 'Settings → Privacy → Clear browsing data → Choose "Cookies and other site data"' },
@@ -171,7 +171,7 @@ export default function CookiesPage() {
       <Section id="dnt" title="6. Do-Not-Track Signals">
         <p>
           Some browsers allow you to set a "Do Not Track" (DNT) signal.
-          ChartGenius respects DNT preferences:
+          TradVue respects DNT preferences:
         </p>
         <UL items={[
           'We do NOT enable tracking cookies if DNT is active',
@@ -181,7 +181,7 @@ export default function CookiesPage() {
       </Section>
 
       <Section id="changes" title="7. Cookie Changes">
-        <p>ChartGenius may:</p>
+        <p>TradVue may:</p>
         <UL items={[
           'Add new cookies to improve the Service',
           'Remove cookies that are no longer needed',
@@ -193,7 +193,7 @@ export default function CookiesPage() {
       <Section id="contact" title="8. Contact & More Information">
         <p>
           Questions about cookies? Email:{' '}
-          <a href="mailto:privacy@chartgenius.io" style={{ color: '#4a9eff' }}>privacy@chartgenius.io</a>
+          <a href="mailto:privacy@tradvue.io" style={{ color: '#4a9eff' }}>privacy@tradvue.io</a>
         </p>
         <p>Learn more about cookies:</p>
         <UL items={[
@@ -204,7 +204,7 @@ export default function CookiesPage() {
       </Section>
 
       <AcknowledgmentBox>
-        By using ChartGenius, you accept our use of cookies as described in this policy.
+        By using TradVue, you accept our use of cookies as described in this policy.
       </AcknowledgmentBox>
 
     </LegalPage>

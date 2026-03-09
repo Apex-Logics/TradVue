@@ -1,9 +1,9 @@
 import type { Metadata } from 'next'
 
 export const metadata: Metadata = {
-  metadataBase: new URL('https://www.chartgenius.io'),
+  metadataBase: new URL('https://www.tradvue.com'),
   // ── Title & Description ────────────────────────────────────────────────
-  title: 'ChartGenius — Real-Time Market Intelligence for Active Traders',
+  title: 'TradVue — Real-Time Market Intelligence for Active Traders',
   description:
     'AI-powered news feeds, sentiment analysis, and smart alerts. React faster to market moves. Free beta access — no credit card required.',
 
@@ -22,17 +22,17 @@ export const metadata: Metadata = {
   // ── Open Graph ────────────────────────────────────────────────────────
   openGraph: {
     type: 'website',
-    url: 'https://chartgenius.io/landing',
-    siteName: 'ChartGenius',
-    title: 'ChartGenius — Real-Time Market Intelligence for Active Traders',
+    url: 'https://tradvue.com/landing',
+    siteName: 'TradVue',
+    title: 'TradVue — Real-Time Market Intelligence for Active Traders',
     description:
       'AI-powered news feeds, sentiment analysis, and smart alerts for traders who can\'t afford to miss a move.',
     images: [
       {
-        url: 'https://www.chartgenius.io/logo-tagline.png',
+        url: 'https://www.tradvue.com/logo-tagline.png',
         width: 1024,
         height: 1024,
-        alt: 'ChartGenius — AI Driven Alpha',
+        alt: 'TradVue — AI Driven Alpha',
       },
     ],
   },
@@ -40,11 +40,11 @@ export const metadata: Metadata = {
   // ── Twitter Card ──────────────────────────────────────────────────────
   twitter: {
     card: 'summary_large_image',
-    site: '@chartgenius',
-    creator: '@chartgenius',
-    title: 'ChartGenius — Real-Time Market Intelligence for Active Traders',
+    site: '@tradvue',
+    creator: '@tradvue',
+    title: 'TradVue — Real-Time Market Intelligence for Active Traders',
     description: 'AI-powered news, sentiment analysis, and smart alerts. Free beta access.',
-    images: ['https://www.chartgenius.io/logo-tagline.png'],
+    images: ['https://www.tradvue.com/logo-tagline.png'],
   },
 
   // ── Robots ────────────────────────────────────────────────────────────
@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 
   // ── Canonical ─────────────────────────────────────────────────────────
   alternates: {
-    canonical: 'https://chartgenius.io/landing',
+    canonical: 'https://tradvue.com/landing',
   },
 }
 

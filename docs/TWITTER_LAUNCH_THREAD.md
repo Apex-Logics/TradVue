@@ -1,11 +1,11 @@
-# ChartGenius - Twitter/X Launch Thread
+# TradVue - Twitter/X Launch Thread
 
 ## Tweet 1 (Thread Starter)
 we spent 6 months building the trading platform we wish existed.
 
 most trading tools make you jump between 5+ apps: charting, news, social sentiment, alerts, calendar events.
 
-meet ChartGenius 📊 — one place for everything that moves markets.
+meet TradVue 📊 — one place for everything that moves markets.
 
 launching beta tomorrow.
 
@@ -23,7 +23,7 @@ real-time market data is table stakes.
 
 what separates winners from noise traders? they spot patterns others miss.
 
-ChartGenius auto-tracks when:
+TradVue auto-tracks when:
 - prices hit your thresholds
 - volume spikes unexpectedly  
 - high-impact news breaks on your holdings
@@ -64,5 +64,5 @@ we're the information layer every trader needs.
 
 watch the markets differently. 
 
-ChartGenius beta live now 🚀
+TradVue beta live now 🚀
 

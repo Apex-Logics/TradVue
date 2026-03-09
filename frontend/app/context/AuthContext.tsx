@@ -58,8 +58,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (didInit.current) return
     didInit.current = true
     try {
-      const storedToken = localStorage.getItem('cg_token')
-      const storedUser  = localStorage.getItem('cg_user')
+      const storedToken = localStorage.getItem('cg_token') // cg_ = legacy prefix from ChartGenius era; kept to avoid breaking existing user data
+      const storedUser  = localStorage.getItem('cg_user')  // cg_ = legacy prefix from ChartGenius era; kept to avoid breaking existing user data
       if (storedToken && storedUser) {
         setToken(storedToken)
         setUser(JSON.parse(storedUser))

@@ -1835,7 +1835,7 @@ export default function Home() {
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-horizontal.png"
-            alt="ChartGenius"
+            alt="TradVue"
             className="header-logo-img"
             style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
           />
@@ -2319,7 +2319,7 @@ export default function Home() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="site-footer">
         <span>
-          <strong style={{ color: '#a0a0b0' }}>ChartGenius</strong> — ApexLogics © 2025
+          <strong style={{ color: '#a0a0b0' }}>TradVue</strong> — ApexLogics © 2025
         </span>
         <span>Data: Finnhub · CoinGecko · NewsAPI · RSS · Not financial advice</span>
         <span>

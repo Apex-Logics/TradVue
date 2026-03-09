@@ -1,4 +1,4 @@
-# ChartGenius SEO & Analytics Setup Guide
+# TradVue SEO & Analytics Setup Guide
 
 **Document Version:** 1.0  
 **Last Updated:** 2026-03-06  
@@ -13,32 +13,32 @@
 
 **Homepage:**
 ```html
-<title>ChartGenius - Real-Time Trading Dashboard & Market Intelligence</title>
+<title>TradVue - Real-Time Trading Dashboard & Market Intelligence</title>
 ```
 
 **Features Page:**
 ```html
-<title>Trading Features | ChartGenius - Watchlists, Alerts & Analysis</title>
+<title>Trading Features | TradVue - Watchlists, Alerts & Analysis</title>
 ```
 
 **Pricing Page:**
 ```html
-<title>Pricing Plans | ChartGenius - Professional Trading Tools</title>
+<title>Pricing Plans | TradVue - Professional Trading Tools</title>
 ```
 
 **Dashboard (Authenticated):**
 ```html
-<title>Dashboard - ChartGenius</title>
+<title>Dashboard - TradVue</title>
 ```
 
 **Market News Page:**
 ```html
-<title>Market News & Analysis | ChartGenius Trading Intelligence</title>
+<title>Market News & Analysis | TradVue Trading Intelligence</title>
 ```
 
 **Blog Post Template:**
 ```html
-<title>[Post Title] | ChartGenius Trading Blog</title>
+<title>[Post Title] | TradVue Trading Blog</title>
 ```
 
 **Best Practices:**
@@ -52,22 +52,22 @@
 
 **Homepage (155 characters):**
 ```html
-<meta name="description" content="ChartGenius is a real-time trading dashboard with advanced charting, customizable watchlists, price alerts, and market intelligence for active traders.">
+<meta name="description" content="TradVue is a real-time trading dashboard with advanced charting, customizable watchlists, price alerts, and market intelligence for active traders.">
 ```
 
 **Features Page (158 characters):**
 ```html
-<meta name="description" content="Explore ChartGenius features: advanced technical analysis, real-time alerts, customizable watchlists, market news integration, and portfolio tracking for traders.">
+<meta name="description" content="Explore TradVue features: advanced technical analysis, real-time alerts, customizable watchlists, market news integration, and portfolio tracking for traders.">
 ```
 
 **Pricing Page (155 characters):**
 ```html
-<meta name="description" content="Compare ChartGenius pricing plans. From free community access to professional trading tools. Start analyzing markets with real-time data and alerts.">
+<meta name="description" content="Compare TradVue pricing plans. From free community access to professional trading tools. Start analyzing markets with real-time data and alerts.">
 ```
 
 **Market News (160 characters):**
 ```html
-<meta name="description" content="Get the latest market news, analysis, and trading insights on ChartGenius. Real-time updates on stocks, crypto, forex, and commodities with expert commentary.">
+<meta name="description" content="Get the latest market news, analysis, and trading insights on TradVue. Real-time updates on stocks, crypto, forex, and commodities with expert commentary.">
 ```
 
 **Best Practices:**
@@ -82,22 +82,22 @@
 **Homepage:**
 ```html
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://chartgenius.io/">
-<meta property="og:title" content="ChartGenius - Real-Time Trading Dashboard & Market Intelligence">
+<meta property="og:url" content="https://tradvue.io/">
+<meta property="og:title" content="TradVue - Real-Time Trading Dashboard & Market Intelligence">
 <meta property="og:description" content="Professional trading tools with live charts, alerts, and market analysis.">
-<meta property="og:image" content="https://chartgenius.io/og-image-homepage.jpg">
+<meta property="og:image" content="https://tradvue.io/og-image-homepage.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
-<meta property="og:site_name" content="ChartGenius">
+<meta property="og:site_name" content="TradVue">
 ```
 
 **Features/Pricing Pages:**
 ```html
 <meta property="og:type" content="website">
-<meta property="og:url" content="https://chartgenius.io/features">
-<meta property="og:title" content="Trading Features | ChartGenius">
+<meta property="og:url" content="https://tradvue.io/features">
+<meta property="og:title" content="Trading Features | TradVue">
 <meta property="og:description" content="Watchlists, alerts, technical analysis, and more.">
-<meta property="og:image" content="https://chartgenius.io/og-image-features.jpg">
+<meta property="og:image" content="https://tradvue.io/og-image-features.jpg">
 <meta property="og:image:width" content="1200">
 <meta property="og:image:height" content="630">
 ```
@@ -113,12 +113,12 @@
 **Homepage & Key Pages:**
 ```html
 <meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:site" content="@chartgenius">
-<meta name="twitter:creator" content="@chartgenius">
-<meta name="twitter:title" content="ChartGenius - Real-Time Trading Dashboard">
+<meta name="twitter:site" content="@tradvue">
+<meta name="twitter:creator" content="@tradvue">
+<meta name="twitter:title" content="TradVue - Real-Time Trading Dashboard">
 <meta name="twitter:description" content="Professional trading tools with live charts, alerts, and market analysis.">
-<meta name="twitter:image" content="https://chartgenius.io/twitter-image.jpg">
-<meta name="twitter:image:alt" content="ChartGenius dashboard interface showing live market charts">
+<meta name="twitter:image" content="https://tradvue.io/twitter-image.jpg">
+<meta name="twitter:image:alt" content="TradVue dashboard interface showing live market charts">
 ```
 
 **Best Practices:**
@@ -134,18 +134,18 @@
 {
   "@context": "https://schema.org",
   "@type": "Organization",
-  "name": "ChartGenius",
-  "url": "https://chartgenius.io",
-  "logo": "https://chartgenius.io/logo.png",
+  "name": "TradVue",
+  "url": "https://tradvue.io",
+  "logo": "https://tradvue.io/logo.png",
   "description": "Real-time trading dashboard with advanced charting and market intelligence",
   "sameAs": [
-    "https://twitter.com/chartgenius",
-    "https://www.linkedin.com/company/chartgenius"
+    "https://twitter.com/tradvue",
+    "https://www.linkedin.com/company/tradvue"
   ],
   "contact": {
     "@type": "ContactPoint",
     "contactType": "Customer Service",
-    "email": "support@chartgenius.io"
+    "email": "support@tradvue.io"
   }
 }
 ```
@@ -155,7 +155,7 @@
 {
   "@context": "https://schema.org",
   "@type": "SoftwareApplication",
-  "name": "ChartGenius",
+  "name": "TradVue",
   "applicationCategory": "FinanceApplication",
   "description": "Professional trading dashboard for real-time market analysis",
   "offers": {
@@ -177,15 +177,15 @@
 {
   "@context": "https://schema.org",
   "@type": "Product",
-  "name": "ChartGenius Pro",
+  "name": "TradVue Pro",
   "description": "Professional trading tools subscription",
   "brand": {
     "@type": "Brand",
-    "name": "ChartGenius"
+    "name": "TradVue"
   },
   "offers": {
     "@type": "Offer",
-    "url": "https://chartgenius.io/pricing",
+    "url": "https://tradvue.io/pricing",
     "priceCurrency": "USD",
     "price": "29.99",
     "priceValidUntil": "2026-12-31"
@@ -281,7 +281,7 @@ gtag('event', 'purchase', {
   'value': 29.99,
   'items': [{
     'item_id': 'pro_monthly',
-    'item_name': 'ChartGenius Pro - Monthly',
+    'item_name': 'TradVue Pro - Monthly',
     'price': 29.99
   }]
 });
@@ -367,21 +367,21 @@ gtag('set', {
 
 ### 3.1 Sitemap Structure
 
-**Primary Sitemap:** `https://chartgenius.io/sitemap.xml`
+**Primary Sitemap:** `https://tradvue.io/sitemap.xml`
 
 ```xml
 <?xml version="1.0" encoding="UTF-8"?>
 <sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <sitemap>
-    <loc>https://chartgenius.io/sitemap-pages.xml</loc>
+    <loc>https://tradvue.io/sitemap-pages.xml</loc>
     <lastmod>2026-03-06</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://chartgenius.io/sitemap-blog.xml</loc>
+    <loc>https://tradvue.io/sitemap-blog.xml</loc>
     <lastmod>2026-03-06</lastmod>
   </sitemap>
   <sitemap>
-    <loc>https://chartgenius.io/sitemap-market-data.xml</loc>
+    <loc>https://tradvue.io/sitemap-market-data.xml</loc>
     <lastmod>2026-03-06</lastmod>
   </sitemap>
 </sitemapindex>
@@ -392,31 +392,31 @@ gtag('set', {
 <?xml version="1.0" encoding="UTF-8"?>
 <urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
   <url>
-    <loc>https://chartgenius.io/</loc>
+    <loc>https://tradvue.io/</loc>
     <lastmod>2026-03-06</lastmod>
     <changefreq>weekly</changefreq>
     <priority>1.0</priority>
   </url>
   <url>
-    <loc>https://chartgenius.io/features</loc>
+    <loc>https://tradvue.io/features</loc>
     <lastmod>2026-03-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://chartgenius.io/pricing</loc>
+    <loc>https://tradvue.io/pricing</loc>
     <lastmod>2026-03-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.9</priority>
   </url>
   <url>
-    <loc>https://chartgenius.io/market-news</loc>
+    <loc>https://tradvue.io/market-news</loc>
     <lastmod>2026-03-06</lastmod>
     <changefreq>daily</changefreq>
     <priority>0.8</priority>
   </url>
   <url>
-    <loc>https://chartgenius.io/docs</loc>
+    <loc>https://tradvue.io/docs</loc>
     <lastmod>2026-03-06</lastmod>
     <changefreq>monthly</changefreq>
     <priority>0.7</priority>
@@ -488,8 +488,8 @@ Disallow: /
 Crawl-delay: 1
 
 # Sitemap location
-Sitemap: https://chartgenius.io/sitemap.xml
-Sitemap: https://chartgenius.io/sitemap-blog.xml
+Sitemap: https://tradvue.io/sitemap.xml
+Sitemap: https://tradvue.io/sitemap-blog.xml
 ```
 
 ### 3.4 Search Console Configuration
@@ -567,9 +567,9 @@ export default function App() {
   "ci": {
     "collect": {
       "url": [
-        "https://chartgenius.io/",
-        "https://chartgenius.io/features",
-        "https://chartgenius.io/pricing"
+        "https://tradvue.io/",
+        "https://tradvue.io/features",
+        "https://tradvue.io/pricing"
       ],
       "numberOfRuns": 3,
       "settings": {

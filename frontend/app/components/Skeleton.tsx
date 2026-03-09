@@ -12,7 +12,7 @@ interface BaseProps {
 const shimmer: React.CSSProperties = {
   background: 'linear-gradient(90deg, var(--bg-3,#1a1a1f) 25%, var(--bg-4,#212128) 50%, var(--bg-3,#1a1a1f) 75%)',
   backgroundSize: '200% 100%',
-  animation: 'chartgenius-shimmer 1.5s ease-in-out infinite',
+  animation: 'tradvue-shimmer 1.5s ease-in-out infinite',
   borderRadius: '4px',
   flexShrink: 0,
 }
@@ -24,7 +24,7 @@ if (typeof document !== 'undefined') {
     const style = document.createElement('style')
     style.id = id
     style.textContent = `
-      @keyframes chartgenius-shimmer {
+      @keyframes tradvue-shimmer {
         0%   { background-position:  200% 0; }
         100% { background-position: -200% 0; }
       }

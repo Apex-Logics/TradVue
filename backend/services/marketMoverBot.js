@@ -20,7 +20,7 @@ const cache = require('./cache');
 const parser = new RSSParser({
   timeout: 15000,
   headers: {
-    'User-Agent': 'ChartGenius/1.0 (chartgenius.io; market-mover-bot)'
+    'User-Agent': 'TradVue/1.0 (tradvue.io; market-mover-bot)'
   }
 });
 

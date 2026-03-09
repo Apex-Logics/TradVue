@@ -1,4 +1,4 @@
-# API Research Reference for ChartGenius
+# API Research Reference for TradVue
 **Compiled for:** Bolt's integration development  
 **Date:** March 5, 2026  
 **Status:** Active Research
@@ -226,7 +226,7 @@ https://www.forexfactory.com/calendar.php?content=rss&type=events
 ⚠️ **Data Quality:** RSS feed format unstable; may break without notice  
 ✗ **Unreliable:** Not recommended for production trading systems  
 
-### Recommendation for ChartGenius
+### Recommendation for TradVue
 **Use Trading Economics API instead:**
 - Official, maintained API
 - Same calendar data
@@ -305,7 +305,7 @@ GET https://api.coingecko.com/api/v3/derivatives
 
 ---
 
-## Integration Recommendations for ChartGenius
+## Integration Recommendations for TradVue
 
 ### Data Layer Strategy
 1. **Stocks & ETFs:** FinnHub (free tier, real-time, 60 req/min)
@@ -346,4 +346,4 @@ GET https://api.coingecko.com/api/v3/derivatives
 ---
 
 _Last Updated: March 5, 2026_  
-_Compiled for: ChartGenius Trading Platform_
+_Compiled for: TradVue Trading Platform_

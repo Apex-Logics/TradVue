@@ -337,7 +337,7 @@ export default function LandingPage() {
           __html: JSON.stringify({
             '@context': 'https://schema.org',
             '@type': 'SoftwareApplication',
-            name: 'ChartGenius',
+            name: 'TradVue',
             applicationCategory: 'FinanceApplication',
             description: 'Professional trading dashboard for real-time market analysis',
             offers: {
@@ -378,7 +378,7 @@ export default function LandingPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo-horizontal.png"
-                alt="ChartGenius"
+                alt="TradVue"
                 style={{ height: '32px', width: 'auto', objectFit: 'contain' }}
               />
               <span style={{
@@ -458,7 +458,7 @@ export default function LandingPage() {
               {/* eslint-disable-next-line @next/next/no-img-element */}
               <img
                 src="/logo-tagline.png"
-                alt="ChartGenius — AI Driven Alpha"
+                alt="TradVue — AI Driven Alpha"
                 style={{
                   height: 'clamp(100px, 18vw, 160px)',
                   width: 'auto',
@@ -824,7 +824,7 @@ export default function LandingPage() {
               }}>
                 <div style={{ marginBottom: '24px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--text-2)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    ChartGenius Lite
+                    TradVue Lite
                   </div>
                   <div style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-0)', lineHeight: 1 }}>
                     Free
@@ -875,7 +875,7 @@ export default function LandingPage() {
 
                 <div style={{ marginBottom: '24px' }}>
                   <div style={{ fontSize: '12px', fontWeight: 700, letterSpacing: '0.1em', color: 'var(--blue)', textTransform: 'uppercase', marginBottom: '8px' }}>
-                    ChartGenius Pro
+                    TradVue Pro
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                     <div style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-0)', lineHeight: 1 }}>
@@ -959,7 +959,7 @@ export default function LandingPage() {
                 </p>
                 <p style={{ fontSize: '13px', color: 'var(--text-2)' }}>
                   In the meantime:{' '}
-                  <a href="https://t.me/chartgenius" target="_blank" rel="noopener noreferrer"
+                  <a href="https://t.me/tradvue" target="_blank" rel="noopener noreferrer"
                     style={{ color: 'var(--blue)', fontWeight: 600, textDecoration: 'none' }}>
                     Join our Telegram community
                   </a>{' '}
@@ -1164,17 +1164,17 @@ export default function LandingPage() {
                   <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#4a9eff" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                     <polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>
                   </svg>
-                  <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.02em' }}>ChartGenius</span>
+                  <span style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0)', letterSpacing: '-0.02em' }}>TradVue</span>
                 </div>
                 <p style={{ fontSize: '13px', color: 'var(--text-2)', lineHeight: 1.6, marginBottom: '20px', maxWidth: '200px' }}>
                   Real-time market intelligence for active traders.
                 </p>
                 <div style={{ display: 'flex', gap: '12px' }}>
                   {[
-                    { icon: <IconTwitter />, href: 'https://twitter.com/chartgenius', label: 'Twitter' },
-                    { icon: <IconTelegram />, href: 'https://t.me/chartgenius', label: 'Telegram' },
-                    { icon: <IconDiscord />, href: 'https://discord.gg/chartgenius', label: 'Discord' },
-                    { icon: <IconGithub />, href: 'https://github.com/chartgenius', label: 'GitHub' },
+                    { icon: <IconTwitter />, href: 'https://twitter.com/tradvue', label: 'Twitter' },
+                    { icon: <IconTelegram />, href: 'https://t.me/tradvue', label: 'Telegram' },
+                    { icon: <IconDiscord />, href: 'https://discord.gg/tradvue', label: 'Discord' },
+                    { icon: <IconGithub />, href: 'https://github.com/tradvue', label: 'GitHub' },
                   ].map(s => (
                     <a key={s.label} href={s.href} target="_blank" rel="noopener noreferrer"
                       aria-label={s.label}
@@ -1276,7 +1276,7 @@ export default function LandingPage() {
               flexWrap: 'wrap', gap: '12px',
             }}>
               <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>
-                © 2026 ChartGenius. All rights reserved.
+                © 2026 TradVue. All rights reserved.
               </p>
               <p style={{ fontSize: '12px', color: 'var(--text-3)' }}>
                 Not financial advice. Trading involves risk.

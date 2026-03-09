@@ -9,7 +9,7 @@ interface ErrorProps {
 
 export default function Error({ error, reset }: ErrorProps) {
   useEffect(() => {
-    console.error('[ChartGenius] Runtime error:', error)
+    console.error('[TradVue] Runtime error:', error)
   }, [error])
 
   return (

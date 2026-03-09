@@ -25,7 +25,7 @@ app.use(helmet({
       scriptSrc: ["'self'"],
       styleSrc: ["'self'", "'unsafe-inline'"],
       imgSrc: ["'self'", "data:", "https:"],
-      connectSrc: ["'self'", "https://chartgenius-production.up.railway.app"]
+      connectSrc: ["'self'", "https://tradvue-production.up.railway.app"]
     }
   },
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
@@ -33,8 +33,12 @@ app.use(helmet({
 
 // ── CORS — locked to known origins ───────────────────────────────────────────
 const allowedOrigins = [
-  'https://www.chartgenius.io',
-  'https://chartgenius.io',
+  'https://www.tradvue.io',
+  'https://tradvue.io',
+  'https://www.tradvue.com',
+  'https://tradvue.com',
+  'https://www.chartgenius.io', // legacy — kept during transition
+  'https://chartgenius.io',     // legacy — kept during transition
 ];
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
@@ -99,7 +103,7 @@ app.use((req, res) => {
 });
 
 app.listen(PORT, () => {
-  console.log(`🚀 ChartGenius API server running on port ${PORT}`);
+  console.log(`🚀 TradVue API server running on port ${PORT}`);
   console.log(`📊 Health check: http://localhost:${PORT}/health`);
   console.log(`📈 Market data:  http://localhost:${PORT}/api/market-data/batch`);
   console.log(`📰 News feed:    http://localhost:${PORT}/api/feed/news`);
