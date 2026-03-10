@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
 import { IconArrowLeft, IconAlert, IconDownload } from '../components/Icons'
 import Link from 'next/link'
+import PersistentNav from '../components/PersistentNav'
 import Tooltip from '../components/Tooltip'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
@@ -163,6 +164,30 @@ function fmtDollar(n: number) {
 }
 function fmtPct(n: number) {
   return `${n >= 0 ? '+' : ''}${n.toFixed(2)}%`
+}
+
+// Privacy-aware dollar formatter (component)
+function PrivacyDollar({ value, privacyMode, className, style }: {
+  value: number | string
+  privacyMode: boolean
+  className?: string
+  style?: React.CSSProperties
+}) {
+  const display = privacyMode
+    ? '•••••'
+    : typeof value === 'number' ? fmtDollar(value) : value
+  return <span className={`privacy-val${privacyMode ? ' privacy-hidden' : ''}${className ? ' ' + className : ''}`} style={style}>{display}</span>
+}
+
+function PrivacyNum({ value, privacyMode, prefix = '', suffix = '', style }: {
+  value: string | number
+  privacyMode: boolean
+  prefix?: string
+  suffix?: string
+  style?: React.CSSProperties
+}) {
+  const display = privacyMode ? '•••' : `${prefix}${value}${suffix}`
+  return <span className={`privacy-val${privacyMode ? ' privacy-hidden' : ''}`} style={style}>{display}</span>
 }
 function uid() {
   return Math.random().toString(36).slice(2) + Date.now().toString(36)
@@ -526,6 +551,21 @@ export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'holdings' | 'dividends' | 'sold' | 'watchlist' | 'tax'>('dashboard')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [showImportBanner, setShowImportBanner] = useState(false)
+
+  // Privacy mode — hides all dollar amounts, shows only percentages
+  const [privacyMode, setPrivacyMode] = useState<boolean>(() => {
+    if (typeof window !== 'undefined') {
+      try { return localStorage.getItem('pf_privacy') === '1' } catch {}
+    }
+    return false
+  })
+  const togglePrivacy = () => {
+    setPrivacyMode(m => {
+      const next = !m
+      try { localStorage.setItem('pf_privacy', next ? '1' : '0') } catch {}
+      return next
+    })
+  }
 
   // Core data
   const [holdings, setHoldings] = useState<Holding[]>([])
@@ -961,10 +1001,12 @@ export default function PortfolioPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font)' }}>
+      {/* Persistent Navigation */}
+      <PersistentNav />
       {/* Header */}
       <header style={{
         background: 'var(--bg-1)', borderBottom: '1px solid var(--border)', padding: '0 20px',
-        display: 'flex', alignItems: 'center', gap: 16, height: 52, position: 'sticky', top: 0, zIndex: 100,
+        display: 'flex', alignItems: 'center', gap: 16, height: 52, position: 'sticky', top: 'var(--apn-height, 48px)', zIndex: 100,
       }}>
         <Link href="/" className="back-link">
           <IconArrowLeft size={16} />
@@ -978,14 +1020,33 @@ export default function PortfolioPage() {
         {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <Link href="/login" style={{ color: 'var(--accent)' }}>Sign in to save</Link></span>}
         <div style={{ flex: 1 }} />
         {loadingPrices && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>↻ Updating prices…</span>}
+        {/* Privacy toggle */}
+        <button
+          onClick={togglePrivacy}
+          title={privacyMode ? 'Show values (privacy mode off)' : 'Hide values (privacy mode on)'}
+          style={{
+            fontSize: 16, cursor: 'pointer', padding: '4px 8px',
+            border: '1px solid var(--border)', borderRadius: 6,
+            background: privacyMode ? 'var(--accent-dim)' : 'var(--bg-3)',
+            color: privacyMode ? 'var(--accent)' : 'var(--text-2)',
+            lineHeight: 1, transition: 'all 0.15s',
+          }}
+          aria-label="Toggle privacy mode"
+        >
+          {privacyMode ? '👁‍🗨' : '👁'}
+        </button>
         <button onClick={fetchStockInfos} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>
           ↻ Refresh
         </button>
         <PortfolioExportButton />
         {totalMarketValue > 0 && (
           <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
-            <span style={{ color: 'var(--text-2)' }}>Value: <strong style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>{fmtDollar(totalMarketValue)}</strong></span>
-            <span style={{ color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>Total: {fmtDollar(totalReturn)} ({fmtPct(totalReturnPct)})</span>
+            <span style={{ color: 'var(--text-2)' }}>Value: <strong style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>
+              {privacyMode ? '•••••' : fmtDollar(totalMarketValue)}
+            </strong></span>
+            <span style={{ color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              Total: {privacyMode ? '•••••' : fmtDollar(totalReturn)} ({fmtPct(totalReturnPct)})
+            </span>
           </div>
         )}
       </header>
@@ -1043,6 +1104,7 @@ export default function PortfolioPage() {
             portfolioSettings={portfolioSettings}
             savePortfolioSettings={savePortfolioSettings}
             exchangeRates={exchangeRates}
+            privacyMode={privacyMode}
           />
         )}
         {activeTab === 'holdings' && (
@@ -1055,6 +1117,7 @@ export default function PortfolioPage() {
             onSellPosition={(h) => { setSellFromHolding({ holding: h }); setActiveTab('sold') }}
             priceAlerts={priceAlerts} addPriceAlert={addPriceAlert} deletePriceAlert={deletePriceAlert}
             portfolioSettings={portfolioSettings} toggleDRIP={toggleDRIP}
+            privacyMode={privacyMode}
           />
         )}
         {activeTab === 'dividends' && (
@@ -1128,7 +1191,7 @@ function DashboardTab({
   totalReturn, totalReturnPct, totalDayGain, totalDayGainPct,
   divYieldPortfolio, yieldOnCostPortfolio, projAnnualIncome,
   sectorData, barChartData, snapshots, holdings, holdingsEnriched,
-  stockInfos, portfolioSettings, savePortfolioSettings, exchangeRates,
+  stockInfos, portfolioSettings, savePortfolioSettings, exchangeRates, privacyMode = false,
 }: {
   totalCostBasis: number; totalMarketValue: number; totalMarketReturn: number; totalMarketReturnPct: number;
   totalReturn: number; totalReturnPct: number; totalDayGain: number; totalDayGainPct: number;
@@ -1141,7 +1204,10 @@ function DashboardTab({
   portfolioSettings: PortfolioSettings;
   savePortfolioSettings: (s: PortfolioSettings) => Promise<void>;
   exchangeRates: ExchangeRates | null;
-}) {
+  privacyMode?: boolean;
+})
+{
+  const pv = (n: number) => privacyMode ? '•••••' : fmtDollar(n)
   if (holdings.length === 0) {
     return (
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 20px' }}>
@@ -1223,14 +1289,14 @@ function DashboardTab({
   const incomeHome = convertToHome(projAnnualIncome)
 
   const kpis = [
-    { label: 'COST BASIS', value: fmtHome(costHome), tooltip: 'The total amount you originally paid for all your holdings (purchase price × shares). This is your "money in" baseline.' },
-    { label: 'MARKET VALUE', value: fmtHome(mvHome), tooltip: 'Current market value of all your holdings (current price × shares). This is what your portfolio is worth right now.' },
-    { label: 'MARKET RETURN', value: fmtHome(convertToHome(totalMarketReturn)), sub: fmtPct(totalMarketReturnPct), color: totalMarketReturn >= 0 ? 'var(--green)' : 'var(--red)', tooltip: 'Profit or loss from price appreciation only — does not include dividends. Market Value minus Cost Basis.' },
-    { label: 'TOTAL RETURN', value: fmtHome(convertToHome(totalReturn)), sub: fmtPct(totalReturnPct), color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)', tooltip: 'Your complete gain/loss including both price appreciation AND dividends received. This is the true performance of your portfolio.' },
-    { label: 'DAY GAIN', value: fmtHome(convertToHome(totalDayGain)), sub: fmtPct(totalDayGainPct), color: totalDayGain >= 0 ? 'var(--green)' : 'var(--red)', tooltip: "How much your portfolio's value has changed today compared to yesterday's close." },
+    { label: 'COST BASIS', value: privacyMode ? '•••••' : fmtHome(costHome), tooltip: 'The total amount you originally paid for all your holdings (purchase price × shares). This is your "money in" baseline.' },
+    { label: 'MARKET VALUE', value: privacyMode ? '•••••' : fmtHome(mvHome), tooltip: 'Current market value of all your holdings (current price × shares). This is what your portfolio is worth right now.' },
+    { label: 'MARKET RETURN', value: privacyMode ? '•••••' : fmtHome(convertToHome(totalMarketReturn)), sub: fmtPct(totalMarketReturnPct), color: totalMarketReturn >= 0 ? 'var(--green)' : 'var(--red)', tooltip: 'Profit or loss from price appreciation only — does not include dividends. Market Value minus Cost Basis.' },
+    { label: 'TOTAL RETURN', value: privacyMode ? '•••••' : fmtHome(convertToHome(totalReturn)), sub: fmtPct(totalReturnPct), color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)', tooltip: 'Your complete gain/loss including both price appreciation AND dividends received. This is the true performance of your portfolio.' },
+    { label: 'DAY GAIN', value: privacyMode ? '•••••' : fmtHome(convertToHome(totalDayGain)), sub: fmtPct(totalDayGainPct), color: totalDayGain >= 0 ? 'var(--green)' : 'var(--red)', tooltip: "How much your portfolio's value has changed today compared to yesterday's close." },
     { label: 'DIVIDEND YIELD', value: `${divYieldPortfolio.toFixed(2)}%`, color: 'var(--yellow)', tooltip: 'Annual dividend income divided by current market value. Shows what % return you earn from dividends at current prices. Higher = more income per dollar invested.' },
     { label: 'YIELD ON COST', value: `${yieldOnCostPortfolio.toFixed(2)}%`, color: 'var(--yellow)', tooltip: 'Annual dividend income divided by your original cost basis. Shows your dividend return on what you actually paid. Great for long-term holders who bought at lower prices.' },
-    { label: 'PROJ. ANNUAL INCOME', value: fmtHome(incomeHome), sub: `${fmtHome(incomeHome / 12)}/mo · ${fmtHome(incomeHome / 52)}/wk · ${fmtHome(incomeHome / 365)}/day`, color: 'var(--green)', tooltip: 'Estimated total dividend income you will receive over the next 12 months, based on current dividend rates and your share count.' },
+    { label: 'PROJ. ANNUAL INCOME', value: privacyMode ? '•••••' : fmtHome(incomeHome), sub: privacyMode ? '• /mo · • /wk' : `${fmtHome(incomeHome / 12)}/mo · ${fmtHome(incomeHome / 52)}/wk · ${fmtHome(incomeHome / 365)}/day`, color: 'var(--green)', tooltip: 'Estimated total dividend income you will receive over the next 12 months, based on current dividend rates and your share count.' },
   ]
   return (
     <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }}>
@@ -1300,7 +1366,7 @@ type HoldingEnriched = Holding & {
 function HoldingsTab({
   holdings, setHoldings, holdingsEnriched, totalMarketValue, stockInfos,
   isLoggedIn, persistHolding, deleteHoldingAPI, onSellPosition,
-  priceAlerts, addPriceAlert, deletePriceAlert, portfolioSettings, toggleDRIP,
+  priceAlerts, addPriceAlert, deletePriceAlert, portfolioSettings, toggleDRIP, privacyMode = false,
 }: {
   holdings: Holding[]
   setHoldings: React.Dispatch<React.SetStateAction<Holding[]>>
@@ -1316,6 +1382,7 @@ function HoldingsTab({
   deletePriceAlert: (id: string) => Promise<void>
   portfolioSettings: PortfolioSettings
   toggleDRIP: (ticker: string, enabled: boolean) => Promise<void>
+  privacyMode?: boolean
 }) {
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -1576,29 +1643,29 @@ function HoldingsTab({
                     <td style={cell}>${fmt(h.avgCost)}</td>
                     <td style={cell}>${fmt(h.currentPrice)}</td>
                     <td style={{ ...cell, color: (info?.dayChange ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {info?.dayChange != null ? (<>{fmtDollar(h.dayGain)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(info.dayChangePct ?? 0)}</span></>) : '—'}
+                      {info?.dayChange != null ? (<>{privacyMode ? '•••' : fmtDollar(h.dayGain)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(info.dayChangePct ?? 0)}</span></>) : '—'}
                     </td>
                     <td style={{ ...cell, color: h.marketReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmtDollar(h.marketReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.marketReturnPct)}</span>
+                      {privacyMode ? '•••' : fmtDollar(h.marketReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.marketReturnPct)}</span>
                     </td>
                     <td style={{ ...cell, color: h.totalReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {fmtDollar(h.totalReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.totalReturnPct)}</span>
+                      {privacyMode ? '•••' : fmtDollar(h.totalReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.totalReturnPct)}</span>
                     </td>
                     <td style={{ ...cellLeft, fontSize: 10 }}>{h.sector}</td>
                     <td style={cell}>{alloc.toFixed(1)}%</td>
                     <td style={{ ...cell, color: hasOverride ? 'var(--yellow)' : 'var(--text-0)' }}>
-                      ${fmt(h.annualDividend, 4)}
-                      {hasOverride && <span style={{ fontSize: 8, marginLeft: 3, color: 'var(--yellow)' }}>✎</span>}
+                      {privacyMode ? '•••' : `$${fmt(h.annualDividend, 4)}`}
+                      {hasOverride && !privacyMode && <span style={{ fontSize: 8, marginLeft: 3, color: 'var(--yellow)' }}>✎</span>}
                     </td>
                     <td style={{ ...cell, fontSize: 9.5, color: 'var(--text-3)' }}>
                       {info?.dividendFrequency ? info.dividendFrequency.slice(0, 3).toUpperCase() : '—'}
                     </td>
                     <td style={{ ...cell, color: 'var(--yellow)' }}>{h.divYield.toFixed(2)}%</td>
                     <td style={{ ...cell, color: 'var(--yellow)' }}>{h.yieldOnCost.toFixed(2)}%</td>
-                    <td style={cell}>{fmtDollar(h.costBasis)}</td>
-                    <td style={cell}>{fmtDollar(h.marketValue)}</td>
-                    <td style={{ ...cell, color: 'var(--green)' }}>{fmtDollar(h.annualDivIncome)}</td>
-                    <td style={cell}>{fmtDollar(h.totalDividendsReceived)}</td>
+                    <td style={cell}>{privacyMode ? '•••••' : fmtDollar(h.costBasis)}</td>
+                    <td style={cell}>{privacyMode ? '•••••' : fmtDollar(h.marketValue)}</td>
+                    <td style={{ ...cell, color: 'var(--green)' }}>{privacyMode ? '•••' : fmtDollar(h.annualDivIncome)}</td>
+                    <td style={cell}>{privacyMode ? '•••' : fmtDollar(h.totalDividendsReceived)}</td>
                     <td style={{ ...cell, textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
                         <button onClick={() => openEdit(h)} style={{ fontSize: 9.5, color: 'var(--accent)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>

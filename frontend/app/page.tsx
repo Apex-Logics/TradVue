@@ -125,7 +125,20 @@ interface PortfolioPosition {
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
-const SIDEBAR_SYMBOLS = ['AAPL', 'GOOGL', 'TSLA', 'MSFT', 'META', 'NVDA', 'AMZN', 'SPY']
+// Sidebar symbols for fetching quotes used in Analysis view gainers/losers
+const SIDEBAR_SYMBOLS = ['SPY', 'QQQ', 'DIA', 'GLD', 'SLV', 'AAPL', 'MSFT', 'NVDA']
+
+// Default watchlist symbols (pre-populated for new users)
+const DEFAULT_WATCHLIST = [
+  'SPY', 'QQQ', 'DIA', 'IWM',
+  'AAPL', 'GOOGL', 'TSLA', 'MSFT', 'META', 'NVDA', 'AMZN',
+  'GLD', 'SLV',
+  'BTC', 'ETH',
+  'EURUSD', 'GBPUSD',
+  'VIX',
+]
+
+const NEWS_ARTICLE_COUNTS = [5, 10, 25, 50]
 
 const TICKER_SYMBOLS = ['SPY', 'QQQ', 'DIA', 'BTC-USD', 'ETH-USD', 'EURUSD', 'GBPUSD', 'GC=F', 'CL=F', 'VIX']
 const TICKER_DISPLAY: Record<string, string> = {
@@ -263,6 +276,22 @@ const TOP_SYMBOLS = [
   { symbol: 'VOO',   name: 'Vanguard S&P 500 ETF' },
   { symbol: 'BRK.B', name: 'Berkshire Hathaway Class B' },
 ]
+
+// ─── Crypto symbol map (for watchlist display) ───────────────────────────────
+
+const CRYPTO_SYMBOL_MAP: Record<string, string> = {
+  // user-facing → CoinGecko/API symbol
+  'BTC': 'BTC',
+  'ETH': 'ETH',
+  'SOL': 'SOL',
+  'ADA': 'ADA',
+  'DOGE': 'DOGE',
+  'XRP': 'XRP',
+  'BNB': 'BNB',
+  'AVAX': 'AVAX',
+  'DOT': 'DOT',
+  'MATIC': 'MATIC',
+}
 
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
@@ -1317,7 +1346,7 @@ export default function Home() {
   const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null)
 
   // Watchlist
-  const [watchlist, setWatchlist] = useState<string[]>([])
+  const [watchlist, setWatchlist] = useState<string[]>(DEFAULT_WATCHLIST)
   const [watchlistSyncing, setWatchlistSyncing] = useState(false)
 
   // Calendar
@@ -1329,6 +1358,12 @@ export default function Home() {
   const [loadingNews, setLoadingNews] = useState(true)
   const [newsError, setNewsError] = useState<string | null>(null)
   const [newsSymbolFilter, setNewsSymbolFilter] = useState('')
+  const [newsArticleCount, setNewsArticleCount] = useState<number>(() => {
+    if (typeof window !== 'undefined') {
+      try { return Number(localStorage.getItem('cg_news_count')) || 10 } catch {}
+    }
+    return 10
+  })
 
   // Crypto prices (CoinGecko)
   const [cryptoCoins, setCryptoCoins] = useState<CryptoCoin[]>([])
@@ -1346,6 +1381,9 @@ export default function Home() {
 
   // Active nav tab
   const [activeNav, setActiveNav] = useState('Markets')
+
+  // Mobile sidebar open/close
+  const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
 
   // Track if we already did the initial backend watchlist sync for this session
   const didSyncWatchlist = useRef(false)
@@ -1372,7 +1410,15 @@ export default function Home() {
 
   // ── Persist: watchlist (localStorage) ─────────────────────────────────────
   useEffect(() => {
-    try { const s = localStorage.getItem('cg_wl'); if (s) setWatchlist(JSON.parse(s)) } catch {}
+    try {
+      const s = localStorage.getItem('cg_wl')
+      if (s) {
+        const parsed = JSON.parse(s)
+        // Use defaults if stored list is empty (e.g. user cleared it)
+        setWatchlist(Array.isArray(parsed) && parsed.length > 0 ? parsed : DEFAULT_WATCHLIST)
+      }
+      // else: keep DEFAULT_WATCHLIST from useState initializer
+    } catch {}
   }, [])
 
   useEffect(() => {
@@ -1417,6 +1463,11 @@ export default function Home() {
   useEffect(() => {
     try { localStorage.setItem('cg_ticker_prefs', JSON.stringify([...tickerHiddenSymbols])) } catch {}
   }, [tickerHiddenSymbols])
+
+  // ── Persist: news count preference ───────────────────────────────────────
+  useEffect(() => {
+    try { localStorage.setItem('cg_news_count', String(newsArticleCount)) } catch {}
+  }, [newsArticleCount])
 
   // ── Persist: column widths ────────────────────────────────────────────────
   useEffect(() => {
@@ -1513,17 +1564,18 @@ export default function Home() {
   }, [isOffline])
 
   // ── Fetch news ─────────────────────────────────────────────────────────────
-  const fetchNews = useCallback(async (cat: string, sym?: string) => {
+  const fetchNews = useCallback(async (cat: string, sym?: string, count?: number) => {
     if (isOffline) { setLoadingNews(false); return }
     setLoadingNews(true)
     setNewsError(null)
+    const limit = count ?? newsArticleCount
     try {
       let url: string
       if (sym?.trim()) {
-        url = `${API_BASE}/api/feed/news/symbol/${encodeURIComponent(sym.trim().toUpperCase())}?limit=40`
+        url = `${API_BASE}/api/feed/news/symbol/${encodeURIComponent(sym.trim().toUpperCase())}?limit=${limit}`
       } else {
         const apiCat = NEWS_CAT_MAP[cat] || 'all'
-        const p = new URLSearchParams({ limit: '40' })
+        const p = new URLSearchParams({ limit: String(limit) })
         if (apiCat !== 'all') p.set('category', apiCat)
         url = `${API_BASE}/api/feed/news?${p.toString()}`
       }
@@ -1542,7 +1594,7 @@ export default function Home() {
       setLoadingNews(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [isOffline])
+  }, [isOffline, newsArticleCount])
 
   // ── Initial load ───────────────────────────────────────────────────────────
   useEffect(() => {
@@ -1634,6 +1686,35 @@ export default function Home() {
     setStockQuote(null)
     setStockProfile(null)
   }
+
+  // ── Get best price for watchlist symbol (stock + crypto) ─────────────────
+  const getWatchlistQuote = useCallback((sym: string) => {
+    // Direct stock quote
+    if (quotes[sym]) return quotes[sym]
+    if (tickerQuotes[sym]) return tickerQuotes[sym]
+    // Crypto: try sym + '-USD'
+    if (tickerQuotes[sym + '-USD']) return tickerQuotes[sym + '-USD']
+    // Crypto from coins list
+    const cryptoSym = CRYPTO_SYMBOL_MAP[sym.toUpperCase()]
+    if (cryptoSym) {
+      const coin = cryptoCoins.find(c => c.symbol.toUpperCase() === cryptoSym)
+      if (coin) {
+        return {
+          symbol: sym,
+          current: coin.price,
+          change: coin.price * coin.change24h / 100,
+          changePct: coin.change24h,
+          high: coin.price * 1.02,
+          low: coin.price * 0.98,
+          open: coin.price,
+          prevClose: coin.price,
+          timestamp: new Date().toISOString(),
+          source: 'finnhub' as const,
+        }
+      }
+    }
+    return null
+  }, [quotes, tickerQuotes, cryptoCoins])
 
   // ── Keyboard shortcut handlers ─────────────────────────────────────────────
   const handleKbFocusSearch = useCallback(() => {
@@ -1790,42 +1871,40 @@ export default function Home() {
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <header className="site-header">
         <div className="header-left">
+          {/* Mobile hamburger — opens watchlist sidebar */}
+          <button
+            className="mobile-hamburger"
+            onClick={() => setMobileSidebarOpen(o => !o)}
+            aria-label="Toggle watchlist"
+          >
+            <span /><span /><span />
+          </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img
             src="/logo-header.svg"
             alt="TradVue"
             className="header-logo-img"
-            style={{ height: '44px', width: 'auto', objectFit: 'contain' }}
           />
           <span className="logo-badge">BETA</span>
+          <span className="header-motto">AI DRIVEN ALPHA</span>
         </div>
 
-        {/* Navigation — wired to actions */}
+        {/* Navigation — persistent across the app */}
         <nav className="header-nav">
           <button className={`nav-item${activeNav === 'Markets' ? ' active' : ''}`} onClick={() => {
             setActiveNav('Markets')
             setShowAlerts(false)
             window.scrollTo({ top: 0, behavior: 'smooth' })
-            document.querySelector('.col-watchlist')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}>Markets</button>
-          <button className={`nav-item${activeNav === 'News' ? ' active' : ''}`} onClick={() => {
-            setActiveNav('News')
-            setShowAlerts(false)
-            handleNewsCategory('All')
-            document.querySelector('.col-news')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-          }}>News</button>
+          }}>Dashboard</button>
+          <a href="/news" className={`nav-item${activeNav === 'News' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>News</a>
           <button className={`nav-item${activeNav === 'Analysis' ? ' active' : ''}`} onClick={() => {
             setActiveNav('Analysis')
             setShowAlerts(false)
-            document.querySelector('.col-news')?.scrollIntoView({ behavior: 'smooth', block: 'start' })
           }}>Analysis</button>
-          <button className={`nav-item${activeNav === 'Calendar' ? ' active' : ''}`} onClick={() => {
-            window.open('/calendar', '_blank')
-          }}>Calendar</button>
+          <a href="/calendar" className={`nav-item${activeNav === 'Calendar' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Calendar</a>
           <a href="/portfolio" className={`nav-item${activeNav === 'Portfolio' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Portfolio</a>
           <a href="/tools" className={`nav-item${activeNav === 'Tools' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Tools</a>
           <a href="/journal" className={`nav-item${activeNav === 'Journal' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Journal</a>
-
         </nav>
 
         <div className="header-right">
@@ -1897,155 +1976,131 @@ export default function Home() {
         style={{ gridTemplateColumns: `${colWidths[0].toFixed(1)}% ${colWidths[1].toFixed(1)}% ${colWidths[2].toFixed(1)}%` }}
       >
 
-        {/* ── Column 1 (LEFT): Market Data / Watchlist ─────────────────────── */}
-        <div className="col-watchlist">
+        {/* ── Column 1 (LEFT): Watchlist ───────────────────────────────────── */}
+        {/* Mobile sidebar overlay backdrop */}
+        {mobileSidebarOpen && (
+          <div
+            className="mobile-sidebar-backdrop"
+            onClick={() => setMobileSidebarOpen(false)}
+          />
+        )}
 
-          {/* Search + Add */}
-          <div className="sidebar-section" style={{ padding: '8px 10px' }}>
-            <OnboardingTooltip
-              id="stock-search"
-              content="Search any stock ticker to track it in your watchlist"
-              position="bottom"
-              delayMs={3000}
-            >
-              <StockSearch onSelect={(sym, name) => openStockDetail(sym, name)} />
-            </OnboardingTooltip>
-          </div>
+        <div className={`col-watchlist${mobileSidebarOpen ? ' mobile-sidebar-open' : ''}`}>
 
-          {/* Market Quotes */}
-          <div className="sidebar-section">
-            <div className="sidebar-title">MARKET QUOTES</div>
-            {loadingQuotes
-              ? <SidebarSkeletons count={4} />
-              : quoteList.length > 0
-                ? quoteList.map(q => (
-                  <MoverRow
-                    key={q.symbol}
-                    quote={q}
-                    onWatch={toggleWatch}
-                    watched={watchlist.includes(q.symbol)}
-                    onClick={sym => openStockDetail(sym)}
-                  />
-                ))
-                : <DataError compact onRetry={fetchQuotes} autoRetryAfter={10} />
-            }
-          </div>
-
-          {/* Top Gainers */}
-          {gainers.length > 0 && (
-            <div className="sidebar-section">
-              <div className="sidebar-title sidebar-title-gain">▲ TOP GAINERS</div>
-              {gainers.map(q => (
-                <MoverRow key={q.symbol} quote={q} onClick={sym => openStockDetail(sym)} />
-              ))}
-            </div>
-          )}
-
-          {/* Top Losers */}
-          {losers.length > 0 && (
-            <div className="sidebar-section">
-              <div className="sidebar-title sidebar-title-loss">▼ TOP LOSERS</div>
-              {losers.map(q => (
-                <MoverRow key={q.symbol} quote={q} onClick={sym => openStockDetail(sym)} />
-              ))}
-            </div>
-          )}
-
-          {/* Crypto Prices */}
-          {cryptoCoins.length > 0 && (
-            <div className="sidebar-section">
-              <div className="sidebar-title" style={{ cursor: 'pointer', userSelect: 'none' }} onClick={() => setCryptoExpanded(e => !e)}>
-                ₿ CRYPTO PRICES
-                <span style={{ marginLeft: 6, fontSize: 9, color: 'var(--text-3)' }}>
-                  {cryptoExpanded ? '▲' : '▼'}
-                </span>
-                <span style={{ marginLeft: 'auto', fontSize: 9, color: 'var(--text-3)', fontWeight: 400 }}>
-                  CoinGecko
-                </span>
-              </div>
-              {(cryptoExpanded ? cryptoCoins : cryptoCoins.slice(0, 5)).map(coin => (
-                <CryptoCoinRow key={coin.id} coin={coin} />
-              ))}
-              {!cryptoExpanded && cryptoCoins.length > 5 && (
-                <button
-                  onClick={() => setCryptoExpanded(true)}
-                  style={{ fontSize: 10, color: 'var(--accent)', padding: '4px 14px', cursor: 'pointer', textAlign: 'left', width: '100%' }}
-                >
-                  + {cryptoCoins.length - 5} more coins
-                </button>
-              )}
-            </div>
-          )}
-
-          {/* Watchlist */}
-          <div className="sidebar-section">
-            <div className="sidebar-title">
+          {/* Watchlist header */}
+          <div className="watchlist-header">
+            <span className="watchlist-header-title">
               ★ WATCHLIST
+            </span>
+            <div className="watchlist-header-right">
               {token && (
-                <span className={`watchlist-sync-badge${watchlistSyncing ? ' syncing' : ''}`} style={{ marginLeft: 6 }}>
-                  {watchlistSyncing ? '⟳ SYNCING' : '● SYNCED'}
+                <span className={`watchlist-sync-badge${watchlistSyncing ? ' syncing' : ''}`}>
+                  {watchlistSyncing ? '⟳' : '✓'}
                 </span>
               )}
               {!token && watchlist.length > 0 && (
                 <button
                   onClick={() => setAuthModalOpen(true)}
-                  style={{ marginLeft: 6, fontSize: 9.5, color: 'var(--accent)', textDecoration: 'underline', cursor: 'pointer' }}
+                  style={{ fontSize: 9, color: 'var(--accent)', cursor: 'pointer' }}
                 >
-                  Sign in to sync
+                  sync ↑
                 </button>
               )}
+              {/* Mobile close button */}
+              <button
+                className="mobile-sidebar-close"
+                onClick={() => setMobileSidebarOpen(false)}
+                aria-label="Close watchlist"
+              >
+                ✕
+              </button>
             </div>
+          </div>
+
+          {/* Search + Add to Watchlist */}
+          <div style={{ padding: '6px 8px', borderBottom: '1px solid var(--border)' }}>
+            <OnboardingTooltip
+              id="stock-search"
+              content="Search any stock ticker to add to your watchlist"
+              position="bottom"
+              delayMs={3000}
+            >
+              <StockSearch onSelect={(sym, name) => {
+                // Add to watchlist directly, then open detail
+                if (!watchlist.includes(sym)) toggleWatch(sym)
+                openStockDetail(sym, name)
+              }} />
+            </OnboardingTooltip>
+          </div>
+
+          {/* Watchlist items */}
+          <div className="watchlist-list">
             {watchlist.length === 0 ? (
-              <WatchlistEmpty
-                onAddSymbol={() => {
-                  const el = document.querySelector<HTMLInputElement>('.symbol-search')
-                  el?.focus()
-                }}
-                onExample={() => {
-                  toggleWatch('AAPL')
-                  openStockDetail('AAPL', 'Apple Inc.')
-                }}
-              />
-            ) : (
-              watchlist.map(sym => (
-                <div
-                  key={sym}
-                  className="mover-row mover-row-clickable"
-                  onClick={() => openStockDetail(sym)}
+              <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-3)', fontSize: 11 }}>
+                <div style={{ marginBottom: 8 }}>Your watchlist is empty</div>
+                <button
+                  style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer' }}
+                  onClick={() => {
+                    const el = document.querySelector<HTMLInputElement>('.symbol-search')
+                    el?.focus()
+                  }}
                 >
-                  <span className="mover-symbol">{sym}</span>
-                  {quotes[sym]
-                    ? <>
-                        <span className="mover-price">${fmt(quotes[sym].current)}</span>
-                        <span className={quotes[sym].changePct >= 0 ? 'mover-up' : 'mover-down'}>
-                          {fmtPct(quotes[sym].changePct)}
-                        </span>
-                      </>
-                    : <span className="mover-price" style={{ color: 'var(--text-3)' }}>—</span>
-                  }
-                  <button
-                    onClick={e => { e.stopPropagation(); toggleWatch(sym) }}
-                    className="remove-btn"
-                    style={{ display: 'block' }}
+                  Search to add a ticker →
+                </button>
+              </div>
+            ) : (
+              watchlist.map(sym => {
+                const q = getWatchlistQuote(sym)
+                const isCrypto = !!CRYPTO_SYMBOL_MAP[sym.toUpperCase()]
+                return (
+                  <div
+                    key={sym}
+                    className="watchlist-row"
+                    onClick={() => openStockDetail(sym)}
                   >
-                    ✕
-                  </button>
-                </div>
-              ))
+                    <div className="watchlist-row-left">
+                      <span className="watchlist-sym">{sym}</span>
+                      {isCrypto && <span className="watchlist-tag-crypto">crypto</span>}
+                    </div>
+                    {q ? (
+                      <div className="watchlist-row-right">
+                        <span className="watchlist-price">
+                          {q.current >= 1000
+                            ? fmt(q.current, 0)
+                            : q.current >= 1
+                            ? fmt(q.current, 2)
+                            : fmt(q.current, 4)}
+                        </span>
+                        <span className={q.changePct >= 0 ? 'watchlist-chg-up' : 'watchlist-chg-down'}>
+                          {q.changePct >= 0 ? '+' : ''}{q.changePct.toFixed(2)}%
+                        </span>
+                      </div>
+                    ) : (
+                      <div className="watchlist-row-right">
+                        <span style={{ color: 'var(--text-3)', fontSize: 10 }}>loading…</span>
+                      </div>
+                    )}
+                    <button
+                      onClick={e => { e.stopPropagation(); toggleWatch(sym) }}
+                      className="watchlist-remove-btn"
+                      title={`Remove ${sym}`}
+                    >
+                      ✕
+                    </button>
+                  </div>
+                )
+              })
             )}
           </div>
 
-          {/* Custom Ticker symbols */}
+          {/* Custom Ticker tags */}
           {customTickerSymbols.length > 0 && (
-            <div className="sidebar-section">
-              <div className="sidebar-title">📊 MY TICKER</div>
+            <div className="sidebar-section" style={{ marginTop: 'auto' }}>
+              <div className="sidebar-title">📊 MY TICKER BAR</div>
               <div style={{ padding: '4px 8px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
                 {customTickerSymbols.map(sym => (
                   <span key={sym} className="ticker-tag">
-                    <span
-                      style={{ cursor: 'pointer' }}
-                      onClick={() => openStockDetail(sym)}
-                    >
+                    <span style={{ cursor: 'pointer' }} onClick={() => openStockDetail(sym)}>
                       {sym}
                     </span>
                     <button
@@ -2059,21 +2114,7 @@ export default function Home() {
                 ))}
               </div>
               <div style={{ fontSize: 10, color: 'var(--text-3)', padding: '2px 14px 6px', textAlign: 'right' }}>
-                {customTickerSymbols.length}/{MAX_TICKER_CUSTOM}
-              </div>
-            </div>
-          )}
-
-          {/* Quick add watchlist */}
-          {quoteList.some(q => !watchlist.includes(q.symbol)) && (
-            <div className="sidebar-section">
-              <div className="sidebar-title">QUICK ADD</div>
-              <div style={{ padding: '6px 8px', display: 'flex', flexWrap: 'wrap', gap: 4 }}>
-                {quoteList.filter(q => !watchlist.includes(q.symbol)).map(q => (
-                  <button key={q.symbol} className="watchlist-add-btn" onClick={() => toggleWatch(q.symbol)}>
-                    + {q.symbol}
-                  </button>
-                ))}
+                {customTickerSymbols.length}/{MAX_TICKER_CUSTOM} slots
               </div>
             </div>
           )}
@@ -2081,21 +2122,6 @@ export default function Home() {
 
         {/* ── Column 2 (CENTER): News Feed / Analysis ──────────────────────── */}
         <div className="col-news">
-
-          {/* Nav tabs — only show for non-analysis */}
-          {activeNav !== 'Analysis' && (
-            <div className="news-filter-tabs">
-              {NEWS_CATEGORIES.map(cat => (
-                <button
-                  key={cat}
-                  className={`news-filter-tab${newsCategory === cat ? ' active' : ''}`}
-                  onClick={() => handleNewsCategory(cat)}
-                >
-                  {cat}
-                </button>
-              ))}
-            </div>
-          )}
 
           {/* Analysis view */}
           {activeNav === 'Analysis' && (
@@ -2107,17 +2133,60 @@ export default function Home() {
             />
           )}
 
+          {/* News toolbar: category + count filters */}
+          {!showAlerts && activeNav !== 'Analysis' && (
+            <div className="news-toolbar">
+              <div className="news-filter-tabs" style={{ borderBottom: 'none', flex: 1, minWidth: 0 }}>
+                {NEWS_CATEGORIES.map(cat => (
+                  <button
+                    key={cat}
+                    className={`news-filter-tab${newsCategory === cat ? ' active' : ''}`}
+                    onClick={() => handleNewsCategory(cat)}
+                  >
+                    {cat}
+                  </button>
+                ))}
+              </div>
+              <div className="news-count-selector">
+                <span className="news-count-label">Show:</span>
+                {NEWS_ARTICLE_COUNTS.map(n => (
+                  <button
+                    key={n}
+                    className={`news-count-btn${newsArticleCount === n ? ' active' : ''}`}
+                    onClick={() => {
+                      setNewsArticleCount(n)
+                      fetchNews(newsCategory, newsSymbolFilter, n)
+                    }}
+                  >
+                    {n}
+                  </button>
+                ))}
+              </div>
+            </div>
+          )}
+
           {/* Feed header */}
           {!showAlerts && activeNav !== 'Analysis' && (
             <div className="feed-header">
               <span className="feed-title">
                 <span className="live-dot" />
-                LIVE NEWS FEED
+                LIVE FEED
               </span>
-              <span style={{ fontSize: 10.5, color: 'var(--text-3)', marginLeft: 12 }}>
-                {hasRealTickerData ? '● LIVE DATA' : '○ SIMULATED'}
+              <span style={{ fontSize: 10, color: 'var(--text-3)', marginLeft: 8 }}>
+                {hasRealTickerData ? '● LIVE' : '○ SIM'}
               </span>
-              <span className="feed-count">{newsArticles.length} articles</span>
+              <span className="feed-count">{newsArticles.length}</span>
+              <input
+                type="text"
+                className="symbol-search news-symbol-filter"
+                placeholder="Symbol…"
+                value={newsSymbolFilter}
+                onChange={e => setNewsSymbolFilter(e.target.value)}
+                style={{ width: 90, marginLeft: 4 }}
+              />
+              <a href="/news" style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 4, whiteSpace: 'nowrap' }}>
+                Full page →
+              </a>
               <button onClick={() => fetchNews(newsCategory, newsSymbolFilter)} className="refresh-btn">↻</button>
             </div>
           )}
@@ -2140,25 +2209,11 @@ export default function Home() {
             </div>
           )}
 
-          {/* Symbol filter input */}
-          {!showAlerts && activeNav !== 'Analysis' && (
-            <div style={{ padding: '4px 8px', background: 'var(--bg-1)', borderBottom: '1px solid var(--border)' }}>
-              <input
-                type="text"
-                className="symbol-search news-symbol-filter"
-                placeholder="Filter by symbol (e.g. AAPL)…"
-                value={newsSymbolFilter}
-                onChange={e => setNewsSymbolFilter(e.target.value)}
-                style={{ width: '100%' }}
-              />
-            </div>
-          )}
-
           {/* News list */}
           {!showAlerts && activeNav !== 'Analysis' && (
             <div className="news-list">
               {loadingNews
-                ? <NewsSkeletons count={20} />
+                ? <NewsSkeletons count={newsArticleCount} />
                 : newsError
                   ? (
                     <DataError

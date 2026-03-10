@@ -4,6 +4,7 @@ import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
 import { IconChart, IconArrowLeft, IconUpload, IconDownload } from '../components/Icons'
+import PersistentNav from '../components/PersistentNav'
 import ImportModal from './ImportModal'
 import AdvancedReports from './AdvancedReports'
 import { TagPicker, TagFilterBar, TagChip, loadCustomTags, saveCustomTags, type TagDefinition } from './TagManager'
@@ -2209,6 +2210,8 @@ export default function JournalPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+      {/* Persistent Navigation */}
+      <PersistentNav />
       {/* Header */}
       <div style={{
         borderBottom: '1px solid var(--border)',
@@ -2218,7 +2221,7 @@ export default function JournalPage() {
         gap: 16,
         background: 'var(--bg-2)',
         position: 'sticky',
-        top: 0,
+        top: 'var(--apn-height, 48px)',
         zIndex: 100,
       }}>
         <Link href="/" className="back-link"><IconArrowLeft size={16} />Back</Link>

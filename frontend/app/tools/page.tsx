@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import Tooltip from '../components/Tooltip'
 import { ToolIcon, IconArrowLeft, IconTool } from '../components/Icons'
+import PersistentNav from '../components/PersistentNav'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
@@ -1762,6 +1763,8 @@ export default function ToolsPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-1)', color: 'var(--text-0)', paddingBottom: 60 }}>
+      {/* Persistent Navigation */}
+      <PersistentNav />
       {/* Page header */}
       <div className="page-header">
         <a href="/" className="back-link">

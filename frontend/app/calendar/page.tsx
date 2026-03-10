@@ -3,6 +3,7 @@
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
 import { IconTrendingUp, IconChart, IconMic, IconFlag, IconCalendar, IconArrowLeft } from '../components/Icons'
+import PersistentNav from '../components/PersistentNav'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
@@ -557,13 +558,40 @@ export default function CalendarPage() {
     setLoading(true)
     setError(null)
     const { from, to } = dateRange
-    const j = await apiFetchSafe<{ success: boolean; events: unknown[] }>(`${API_BASE}/api/calendar/events?from=${from}&to=${to}&type=all`)
-    if (j?.success && j.events) {
-      setEvents(j.events as typeof events)
-      setLastRefresh(new Date())
+    // Use limit=500 to ensure we get enough events; try pagination endpoint as well
+    const url = `${API_BASE}/api/calendar/events?from=${from}&to=${to}&type=all&limit=500&page=1`
+    const j = await apiFetchSafe<{ success: boolean; events?: unknown[]; data?: unknown[] }>(url)
+    if (j?.success) {
+      const evts = (j.events ?? j.data ?? []) as typeof events
+      if (evts.length > 0) {
+        setEvents(evts)
+        setLastRefresh(new Date())
+      } else {
+        // Fallback: try the upcoming endpoint
+        const j2 = await apiFetchSafe<{ success: boolean; data?: unknown[] }>(
+          `${API_BASE}/api/calendar/upcoming?days=30&minImpact=1&limit=300`
+        )
+        if (j2?.success && j2.data && j2.data.length > 0) {
+          setEvents(j2.data as typeof events)
+          setLastRefresh(new Date())
+        } else {
+          setEvents([])
+        }
+      }
     } else if (!j) {
       setError('unavailable')
       setEvents([])
+    } else {
+      // j exists but success=false — try upcoming fallback
+      const j2 = await apiFetchSafe<{ success: boolean; data?: unknown[] }>(
+        `${API_BASE}/api/calendar/upcoming?days=30&minImpact=1&limit=300`
+      )
+      if (j2?.success && j2.data) {
+        setEvents(j2.data as typeof events)
+        setLastRefresh(new Date())
+      } else {
+        setEvents([])
+      }
     }
     setLoading(false)
   }, [dateRange])
@@ -651,6 +679,9 @@ export default function CalendarPage() {
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font)' }}>
+
+      {/* ── Persistent Navigation ── */}
+      <PersistentNav />
 
       {/* ── Top Header ── */}
       <header className="page-header">
