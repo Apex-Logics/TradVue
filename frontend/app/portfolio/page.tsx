@@ -151,6 +151,7 @@ interface TaxLot {
 // ─── Helpers ─────────────────────────────────────────────────────────────────
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+import { apiFetchSafe } from '../lib/apiFetch'
 
 function fmt(n: number, d = 2) {
   return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -825,15 +826,11 @@ export default function PortfolioPage() {
       const results: Record<string, StockInfo> = {}
       for (let i = 0; i < allTickers.length; i++) {
         const sym = allTickers[i]
-        try {
-          const r = await fetch(`${API_BASE}/api/stock-info/${sym}`)
-          if (r.ok) results[sym] = await r.json()
-        } catch {}
+        const data = await apiFetchSafe<StockInfo>(`${API_BASE}/api/stock-info/${sym}`)
+        if (data) results[sym] = data
         if (i < allTickers.length - 1) await new Promise(res => setTimeout(res, 120))
       }
       setStockInfos(prev => ({ ...prev, ...results }))
-    } catch (err) {
-      console.warn('[Portfolio] fetchStockInfos error:', err)
     } finally {
       setLoadingPrices(false)
     }
@@ -1401,14 +1398,11 @@ function HoldingsTab({
     if (upper.length < 1) return
     debRef.current = setTimeout(async () => {
       setLookingUp(true)
-      try {
-        const r = await fetch(`${API_BASE}/api/stock-info/${upper}`)
-        if (r.ok) {
-          const data: StockInfo = await r.json()
-          setPeekInfo(data)
-          if (data.currentPrice) setForm(f => ({ ...f, avgCost: f.avgCost || data.currentPrice!.toFixed(2) }))
-        }
-      } catch {}
+      const data = await apiFetchSafe<StockInfo>(`${API_BASE}/api/stock-info/${upper}`)
+      if (data) {
+        setPeekInfo(data)
+        if (data.currentPrice) setForm(f => ({ ...f, avgCost: f.avgCost || data.currentPrice!.toFixed(2) }))
+      }
       setLookingUp(false)
     }, 600)
   }
@@ -2321,13 +2315,8 @@ function WatchlistTab({
     if (upper.length < 1) return
     debRef.current = setTimeout(async () => {
       setLookingUp(true)
-      try {
-        const r = await fetch(`${API_BASE}/api/stock-info/${upper}`)
-        if (r.ok) {
-          const data: StockInfo = await r.json()
-          setForm(f => ({ ...f, company: f.company || data.companyName || upper, sector: data.sector || f.sector || 'Other' }))
-        }
-      } catch {}
+      const data = await apiFetchSafe<StockInfo>(`${API_BASE}/api/stock-info/${upper}`)
+      if (data) setForm(f => ({ ...f, company: f.company || data.companyName || upper, sector: data.sector || f.sector || 'Other' }))
       setLookingUp(false)
     }, 600)
   }
@@ -2519,22 +2508,10 @@ function BenchmarkSection({ holdingsEnriched, totalCostBasis }: {
     const fetchBenchmark = async () => {
       setLoading(true)
       setError(null)
-      try {
-        const yahooRange = rangeMap[range] || '1y'
-        const resp = await fetch(
-          `${API_BASE}/api/stock-info/benchmark/${benchmark}?range=${yahooRange}`
-        )
-        if (resp.ok) {
-          const data = await resp.json()
-          if (data?.prices) {
-            setBenchmarkData(data.prices)
-          }
-        } else {
-          setError('Could not load benchmark data')
-        }
-      } catch {
-        setError('Could not load benchmark data')
-      }
+      const yahooRange = rangeMap[range] || '1y'
+      const data = await apiFetchSafe<{ prices: unknown[] }>(`${API_BASE}/api/stock-info/benchmark/${benchmark}?range=${yahooRange}`)
+      if (data?.prices) setBenchmarkData(data.prices as typeof benchmarkData)
+      else setError('Benchmark data temporarily unavailable.')
       setLoading(false)
     }
     fetchBenchmark()

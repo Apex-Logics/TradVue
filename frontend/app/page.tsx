@@ -23,6 +23,8 @@ import { WatchlistEmpty, AlertsEmpty } from './components/EmptyState'
 import OnboardingTooltip from './components/OnboardingTooltip'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+import { apiFetchSafe } from './lib/apiFetch'
+import DataError from './components/DataError'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -1132,13 +1134,8 @@ function PortfolioPanel({ quotes, onOpenStock }: { quotes: Record<string, Quote>
       setLoadingPrices(true)
       try {
         const tickers = holdings.map(h => h.ticker).join(',')
-        const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${tickers}`)
-        if (res.ok) {
-          const j = await res.json()
-          if (j.success && j.data) setLiveQuotes(j.data)
-        }
-      } catch (err) {
-        console.warn('[PortfolioPanel] fetch failed:', err)
+        const j = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${tickers}`)
+        if (j?.success && j.data) setLiveQuotes(j.data)
       } finally {
         setLoadingPrices(false)
       }
@@ -1441,26 +1438,21 @@ export default function Home() {
       const all = [...new Set([...TICKER_SYMBOLS, ...extra])]
       const stockSymbols = all.filter(s => !cryptoSymbols.has(s))
 
-      const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${stockSymbols.join(',')}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const j = await res.json()
-      if (j.success && j.data) {
+      const j = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${stockSymbols.join(',')}`)
+      if (j?.success && j.data) {
         const merged = { ...j.data }
 
         // Fetch real crypto prices from the crypto endpoint
         try {
-          const cryptoRes = await fetch(`${API_BASE}/api/crypto/prices?limit=20`)
-          if (cryptoRes.ok) {
-            const cj = await cryptoRes.json()
-            if (cj.success && cj.data) {
+          const cj = await apiFetchSafe<{ success: boolean; data: Array<{ symbol: string; price: number; change24h: number }> }>(`${API_BASE}/api/crypto/prices?limit=20`)
+          if (cj?.success && cj.data) {
               const btc = cj.data.find((c: { symbol: string }) => c.symbol === 'BTC')
               const eth = cj.data.find((c: { symbol: string }) => c.symbol === 'ETH')
               if (btc) merged['BTC-USD'] = { symbol: 'BTC-USD', current: btc.price, change: btc.price * btc.change24h / 100, changePct: btc.change24h, high: btc.price * 1.02, low: btc.price * 0.98, open: btc.price, prevClose: btc.price, timestamp: new Date().toISOString(), source: 'finnhub' as const }
               if (eth) merged['ETH-USD'] = { symbol: 'ETH-USD', current: eth.price, change: eth.price * eth.change24h / 100, changePct: eth.change24h, high: eth.price * 1.02, low: eth.price * 0.98, open: eth.price, prevClose: eth.price, timestamp: new Date().toISOString(), source: 'finnhub' as const }
             }
-          }
         } catch (cryptoErr) {
-          console.warn('[TickerBar] crypto prices fetch failed:', cryptoErr)
+          console.warn('[TickerBar] crypto prices fetch failed (ignored):', cryptoErr instanceof Error ? cryptoErr.message : cryptoErr)
         }
 
         setTickerQuotes(merged)
@@ -1480,12 +1472,8 @@ export default function Home() {
   const fetchQuotes = useCallback(async () => {
     if (isOffline) return
     try {
-      const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${SIDEBAR_SYMBOLS.join(',')}`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const j = await res.json()
-      if (j.success && j.data) setQuotes(j.data)
-    } catch (err) {
-      console.warn('[MarketQuotes] fetch failed:', err)
+      const j = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${SIDEBAR_SYMBOLS.join(',')}`)
+      if (j?.success && j.data) setQuotes(j.data)
     } finally {
       setLoadingQuotes(false)
     }
@@ -1494,25 +1482,15 @@ export default function Home() {
   // ── Fetch market status ────────────────────────────────────────────────────
   const fetchStatus = useCallback(async () => {
     if (isOffline) return
-    try {
-      const res = await fetch(`${API_BASE}/api/market-data/status?exchange=US`)
-      if (!res.ok) return
-      const j = await res.json()
-      if (j.success) setMarketStatus(j.data)
-    } catch {}
+    const j = await apiFetchSafe<{ success: boolean; data: MarketStatus }>(`${API_BASE}/api/market-data/status?exchange=US`)
+    if (j?.success) setMarketStatus(j.data)
   }, [isOffline])
 
   // ── Fetch crypto prices ────────────────────────────────────────────────────
   const fetchCryptoPrices = useCallback(async () => {
     if (isOffline) return
-    try {
-      const res = await fetch(`${API_BASE}/api/crypto/prices?limit=10`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const j = await res.json()
-      if (j.success && j.data) setCryptoCoins(j.data)
-    } catch (err) {
-      console.warn('[Crypto] fetch failed:', err)
-    }
+    const j = await apiFetchSafe<{ success: boolean; data: CryptoCoin[] }>(`${API_BASE}/api/crypto/prices?limit=10`)
+    if (j?.success && j.data) setCryptoCoins(j.data)
   }, [isOffline])
 
   // ── Fetch economic calendar (upcoming week) ────────────────────────────────
@@ -1521,19 +1499,14 @@ export default function Home() {
     setLoadingCalendar(true)
     try {
       // Try upcoming week first for better coverage
-      const res = await fetch(`${API_BASE}/api/calendar/upcoming?days=5&minImpact=1`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const j = await res.json()
-      if (j.success && j.data) {
+      const j = await apiFetchSafe<{ success: boolean; data: CalendarEvent[] }>(`${API_BASE}/api/calendar/upcoming?days=5&minImpact=1`)
+      if (j?.success && j.data) {
         setCalendarEvents(j.data)
       } else {
         // Fallback to today
-        const res2 = await fetch(`${API_BASE}/api/calendar/today`)
-        const j2 = await res2.json()
-        if (j2.success) setCalendarEvents(j2.data || [])
+        const j2 = await apiFetchSafe<{ success: boolean; data: CalendarEvent[] }>(`${API_BASE}/api/calendar/today`)
+        if (j2?.success) setCalendarEvents(j2.data || [])
       }
-    } catch (err) {
-      console.warn('[Calendar] fetch failed:', err)
     } finally {
       setLoadingCalendar(false)
     }
@@ -1554,20 +1527,20 @@ export default function Home() {
         if (apiCat !== 'all') p.set('category', apiCat)
         url = `${API_BASE}/api/feed/news?${p.toString()}`
       }
-      const res = await fetch(url)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const j = await res.json()
-      if (j.success) setNewsArticles(j.data || [])
-      else throw new Error(j.error || 'API error')
-    } catch (err) {
-      const msg = err instanceof Error ? err.message : 'Unknown error'
-      setNewsError(msg)
+      const j = await apiFetchSafe<{ success: boolean; data: NewsArticle[]; error?: string }>(url)
+      if (j?.success) {
+        setNewsArticles(j.data || [])
+      } else {
+        // API responded but reported an error — show clean empty state
+        setNewsError('unavailable')
+        setNewsArticles([])
+      }
+    } catch {
+      setNewsError('unavailable')
       setNewsArticles([])
-      showToast(`Failed to load feed: ${msg}`, 'error')
     } finally {
       setLoadingNews(false)
     }
-  // showToast is stable, no need in deps
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOffline])
 
@@ -1628,44 +1601,29 @@ export default function Home() {
       } else {
         let fetched = false
         // Try batch endpoint first
-        try {
-          const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${encodeURIComponent(symbol)}`)
-          if (res.ok) {
-            const j = await res.json()
-            if (j.success && j.data && j.data[symbol]) {
-              setStockQuote(j.data[symbol])
-              fetched = true
-            }
-          }
-        } catch {}
+        const bj = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${encodeURIComponent(symbol)}`)
+        if (bj?.success && bj.data?.[symbol]) {
+          setStockQuote(bj.data[symbol])
+          fetched = true
+        }
 
         // Fallback to individual quote endpoint (works for ANY symbol)
         if (!fetched) {
-          try {
-            const res2 = await fetch(`${API_BASE}/api/market-data/quote?symbol=${encodeURIComponent(symbol)}`)
-            if (res2.ok) {
-              const j2 = await res2.json()
-              if (j2.success && j2.data) setStockQuote(j2.data)
-            }
-          } catch {}
+          const qj = await apiFetchSafe<{ success: boolean; data: Quote }>(`${API_BASE}/api/market-data/quote?symbol=${encodeURIComponent(symbol)}`)
+          if (qj?.success && qj.data) setStockQuote(qj.data)
         }
 
         setLoadingStockQuote(false)
       }
     } catch (err) {
-      console.warn('[StockDetail] quote fetch failed:', err)
+      console.warn('[StockDetail] quote fetch failed:', err instanceof Error ? err.message : err)
       setLoadingStockQuote(false)
     }
 
     // Fetch company profile in parallel
     try {
-      const res = await fetch(`${API_BASE}/api/market-data/profile/${encodeURIComponent(symbol)}`)
-      if (res.ok) {
-        const j = await res.json()
-        if (j.success && j.data) setStockProfile(j.data)
-      }
-    } catch (err) {
-      console.warn('[StockDetail] profile fetch failed:', err)
+      const pj = await apiFetchSafe<{ success: boolean; data: CompanyProfile }>(`${API_BASE}/api/market-data/profile/${encodeURIComponent(symbol)}`)
+      if (pj?.success && pj.data) setStockProfile(pj.data)
     } finally {
       setLoadingStockProfile(false)
     }
@@ -1969,7 +1927,7 @@ export default function Home() {
                     onClick={sym => openStockDetail(sym)}
                   />
                 ))
-                : <div className="feed-empty" style={{ fontSize: 11 }}>Backend not responding</div>
+                : <DataError compact onRetry={fetchQuotes} autoRetryAfter={10} />
             }
           </div>
 
@@ -2203,10 +2161,11 @@ export default function Home() {
                 ? <NewsSkeletons count={20} />
                 : newsError
                   ? (
-                    <div className="feed-empty">
-                      <p>⚠ Could not load feed — {newsError}</p>
-                      <button onClick={() => fetchNews(newsCategory, newsSymbolFilter)} className="retry-btn">↻ Retry</button>
-                    </div>
+                    <DataError
+                      onRetry={() => fetchNews(newsCategory, newsSymbolFilter)}
+                      autoRetryAfter={10}
+                      message="News feed is temporarily unavailable. Please try again in a moment."
+                    />
                   )
                   : newsArticles.length > 0
                     ? newsArticles.map((a, i) => <NewsRow key={a.id} article={a} index={i} />)

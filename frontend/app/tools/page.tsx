@@ -5,6 +5,7 @@ import Tooltip from '../components/Tooltip'
 import { ToolIcon, IconArrowLeft, IconTool } from '../components/Icons'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+import { apiFetchSafe } from '../lib/apiFetch'
 
 // ─── Reusable UI Primitives ──────────────────────────────────────────────────
 
@@ -699,11 +700,10 @@ function StockScreener() {
       if (minPrice) params.set('minPrice', minPrice)
       if (maxPrice) params.set('maxPrice', maxPrice)
       params.set('limit', '40')
-      const res = await fetch(`${API_BASE}/api/tools/screener?${params}`)
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Screener failed')
+      const json = await apiFetchSafe<{ success: boolean; data: unknown[] }>(`${API_BASE}/api/tools/screener?${params}`)
+      if (!json?.success) { setError('unavailable'); return }
       setResults(json.data || [])
-    } catch (e: any) { setError(e.message) }
+    } catch { setError('unavailable') }
     setLoading(false)
   }, [minPE, maxPE, minYield, sector, minPrice, maxPrice])
 
@@ -738,7 +738,7 @@ function StockScreener() {
       <button onClick={runScreener} disabled={loading} style={{ padding: '10px 24px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.4)', borderRadius: 8, color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
         {loading ? '⏳ Scanning...' : '🔍 Run Screener'}
       </button>
-      {error && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Market data is temporarily unavailable. Please try again.</div>}
       {searched && !loading && (
         <div style={{ overflowX: 'auto' }}>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 8 }}>{sorted.length} stocks found</div>
@@ -808,12 +808,9 @@ function EarningsCalendar() {
       to = new Date(now.getTime() + 14 * 86400000)
     }
     const fmt = (d: Date) => d.toISOString().split('T')[0]
-    try {
-      const res = await fetch(`${API_BASE}/api/tools/earnings?from=${fmt(from)}&to=${fmt(to)}`)
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Failed')
-      setEarnings(json.data || [])
-    } catch (e: any) { setError(e.message) }
+    const json = await apiFetchSafe<{ success: boolean; data: unknown[] }>(`${API_BASE}/api/tools/earnings?from=${fmt(from)}&to=${fmt(to)}`)
+    if (!json?.success) setError('unavailable')
+    else setEarnings(json.data || [])
     setLoading(false)
   }, [period])
 
@@ -843,7 +840,7 @@ function EarningsCalendar() {
         <button onClick={fetchEarnings} style={{ padding: '5px 12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}>↻ Refresh</button>
       </div>
       {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading earnings...</div>}
-      {error && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Earnings data temporarily unavailable.</div>}
       {!loading && (
         <div style={{ overflowX: 'auto' }}>
           <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 6 }}>{filtered.length} earnings reports</div>
@@ -906,13 +903,9 @@ function MarketHeatmap() {
 
   const fetchHeatmap = useCallback(async () => {
     setLoading(true); setError('')
-    try {
-      const res = await fetch(`${API_BASE}/api/market-data/batch?symbols=${ALL_HEATMAP_SYMBOLS.join(',')}`)
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error || 'Failed')
-      setQuotes(json.data || {})
-      setLastUpdated(new Date().toLocaleTimeString())
-    } catch (e: any) { setError(e.message) }
+    const json = await apiFetchSafe<{ success: boolean; data: Record<string, unknown> }>(`${API_BASE}/api/market-data/batch?symbols=${ALL_HEATMAP_SYMBOLS.join(',')}`)
+    if (!json?.success) setError('unavailable')
+    else { setQuotes(json.data || {}); setLastUpdated(new Date().toLocaleTimeString()) }
     setLoading(false)
   }, [])
 
@@ -946,7 +939,7 @@ function MarketHeatmap() {
         </div>
       </div>
       {loading && Object.keys(quotes).length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading heatmap...</div>}
-      {error && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Market data temporarily unavailable.</div>}
       {/* Legend */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Scale:</span>
@@ -991,17 +984,14 @@ function FearGreedIndex() {
   const [error, setError] = useState('')
 
   useEffect(() => {
-    const fetch_ = async () => {
+    const load = async () => {
       setLoading(true)
-      try {
-        const res = await fetch(`${API_BASE}/api/tools/fear-greed?limit=30`)
-        const json = await res.json()
-        if (!json.success) throw new Error(json.error)
-        setData(json)
-      } catch (e: any) { setError(e.message) }
+      const json = await apiFetchSafe<{ success: boolean }>(`${API_BASE}/api/tools/fear-greed?limit=30`)
+      if (!json?.success) setError('unavailable')
+      else setData(json)
       setLoading(false)
     }
-    fetch_()
+    load()
   }, [])
 
   const getGradient = (v: number) => {
@@ -1038,7 +1028,7 @@ function FearGreedIndex() {
         <Tooltip text="Measures market sentiment. Extreme Fear (0-25) can signal buying opportunities — others are panicking. Extreme Greed (75-100) may signal overvaluation — everyone is euphoric. Made famous by Warren Buffett: 'Be fearful when others are greedy and greedy when others are fearful.'" position="right" />
       </div>
       {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading...</div>}
-      {error && <div style={{ color: 'var(--red)', fontSize: 12 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Market sentiment data temporarily unavailable.</div>}
       {data && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
           {/* Gauge */}
@@ -1124,12 +1114,9 @@ function GasFeeTracker() {
 
   const fetchGas = useCallback(async () => {
     setLoading(true)
-    try {
-      const res = await fetch(`${API_BASE}/api/tools/gas`)
-      const json = await res.json()
-      if (!json.success) throw new Error(json.error)
-      setGasData(json)
-    } catch (e: any) { setError(e.message) }
+    const json = await apiFetchSafe<{ success: boolean }>(`${API_BASE}/api/tools/gas`)
+    if (!json?.success) setError('unavailable')
+    else setGasData(json)
     setLoading(false)
   }, [])
 
@@ -1163,7 +1150,7 @@ function GasFeeTracker() {
         <Tooltip text="Gas fees are the cost to execute transactions on Ethereum. Think of it like a tip to miners/validators who process your transaction. Higher fees = faster confirmation. Measured in 'Gwei' (billionths of ETH)." position="right" />
       </div>
       {loading && !gasData && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Fetching gas prices...</div>}
-      {error && <div style={{ color: 'var(--red)', fontSize: 12, marginBottom: 8 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Gas fee data temporarily unavailable.</div>}
       {gasData && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
@@ -1450,13 +1437,9 @@ function CurrencyStrengthMeter() {
   useEffect(() => {
     const fetchRates = async () => {
       setLoading(true)
-      try {
-        const res = await fetch(`${API_BASE}/api/tools/currency-rates`)
-        const json = await res.json()
-        if (!json.success) throw new Error(json.error)
-        setRates(json.rates)
-        setLastUpdated(new Date().toLocaleTimeString())
-      } catch (e: any) { setError(e.message) }
+      const json = await apiFetchSafe<{ success: boolean; rates: Record<string, number> }>(`${API_BASE}/api/tools/currency-rates`)
+      if (!json?.success) setError('unavailable')
+      else { setRates(json.rates); setLastUpdated(new Date().toLocaleTimeString()) }
       setLoading(false)
     }
     fetchRates()
@@ -1483,7 +1466,7 @@ function CurrencyStrengthMeter() {
         <Tooltip text="Shows which currencies are gaining or losing value relative to others. Strategy: trade strong vs weak pairs. E.g., if GBP is strongest and JPY is weakest, consider buying GBP/JPY." position="right" />
       </div>
       {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading rates...</div>}
-      {error && <div style={{ color: 'var(--red)', fontSize: 12 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Currency data temporarily unavailable.</div>}
       {scores.length > 0 && (
         <>
           <div style={{ marginBottom: 16 }}>
@@ -1529,12 +1512,9 @@ function CorrelationMatrix() {
   useEffect(() => {
     const fetchCorr = async () => {
       setLoading(true)
-      try {
-        const res = await fetch(`${API_BASE}/api/tools/correlation`)
-        const json = await res.json()
-        if (!json.success) throw new Error(json.error)
-        setMatrix(json)
-      } catch (e: any) { setError(e.message) }
+      const json = await apiFetchSafe<{ success: boolean }>(`${API_BASE}/api/tools/correlation`)
+      if (!json?.success) setError('unavailable')
+      else setMatrix(json)
       setLoading(false)
     }
     fetchCorr()
@@ -1564,7 +1544,7 @@ function CorrelationMatrix() {
         <Tooltip text="Correlation shows how assets move together. +1.0 = always move together. -1.0 = always move opposite. 0 = no relationship. Green = positive correlation, Red = negative. Diversification works best with low/negative correlations." position="right" />
       </div>
       {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Calculating correlations...</div>}
-      {error && <div style={{ color: 'var(--red)', fontSize: 12 }}>⚠️ {error}</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Correlation data temporarily unavailable.</div>}
       {matrix && (
         <>
           <div style={{ overflowX: 'auto' }}>

@@ -3847,3 +3847,8 @@ a.alert-row-title:hover {
     grid-template-columns: 1fr;
   }
 }
+
+/* ── DataError spinner animation ─────────────────────────────────────────── */
+@keyframes tv-spin {
+  to { transform: rotate(360deg); }
+}

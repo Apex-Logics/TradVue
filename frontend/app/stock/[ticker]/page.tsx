@@ -7,6 +7,7 @@ import Tooltip from '../../components/Tooltip'
 import Link from 'next/link'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+import { apiFetchSafe } from '../../lib/apiFetch'
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -490,35 +491,20 @@ export default function StockDetailPage() {
 
     // Fetch all three in parallel
     const fetchInfo = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/stock-info/${ticker}`)
-        const data = await res.json()
-        if (data && !data.error) setInfo(data)
-      } catch (e) {
-        console.error('Failed to fetch stock info:', e)
-      }
+      const data = await apiFetchSafe<StockInfo>(`${API_BASE}/api/stock-info/${ticker}`)
+      if (data) setInfo(data)
       setInfoLoading(false)
     }
 
     const fetchRatings = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/stocks/${ticker}/ratings`)
-        const json = await res.json()
-        if (json.success) setRatings(json.data)
-      } catch (e) {
-        console.error('Failed to fetch ratings:', e)
-      }
+      const json = await apiFetchSafe<{ success: boolean; data: AnalystRatings }>(`${API_BASE}/api/stocks/${ticker}/ratings`)
+      if (json?.success) setRatings(json.data)
       setRatingsLoading(false)
     }
 
     const fetchScore = async () => {
-      try {
-        const res = await fetch(`${API_BASE}/api/stocks/${ticker}/score`)
-        const json = await res.json()
-        if (json.success) setScore(json.data)
-      } catch (e) {
-        console.error('Failed to fetch score:', e)
-      }
+      const json = await apiFetchSafe<{ success: boolean; data: StockScore }>(`${API_BASE}/api/stocks/${ticker}/score`)
+      if (json?.success) setScore(json.data)
       setScoreLoading(false)
     }
 

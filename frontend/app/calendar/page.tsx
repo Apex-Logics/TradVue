@@ -5,6 +5,7 @@ import Link from 'next/link'
 import { IconTrendingUp, IconChart, IconMic, IconFlag, IconCalendar, IconArrowLeft } from '../components/Icons'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+import { apiFetchSafe } from '../lib/apiFetch'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // Types
@@ -555,23 +556,16 @@ export default function CalendarPage() {
   const fetchEvents = useCallback(async () => {
     setLoading(true)
     setError(null)
-    try {
-      const { from, to } = dateRange
-      const res = await fetch(`${API_BASE}/api/calendar/events?from=${from}&to=${to}&type=all`)
-      if (!res.ok) throw new Error(`HTTP ${res.status}`)
-      const j = await res.json()
-      if (j.success && j.events) {
-        setEvents(j.events)
-        setLastRefresh(new Date())
-      } else {
-        throw new Error(j.error || 'Failed to fetch')
-      }
-    } catch (err) {
-      setError(err instanceof Error ? err.message : 'Unknown error')
+    const { from, to } = dateRange
+    const j = await apiFetchSafe<{ success: boolean; events: unknown[] }>(`${API_BASE}/api/calendar/events?from=${from}&to=${to}&type=all`)
+    if (j?.success && j.events) {
+      setEvents(j.events as typeof events)
+      setLastRefresh(new Date())
+    } else if (!j) {
+      setError('unavailable')
       setEvents([])
-    } finally {
-      setLoading(false)
     }
+    setLoading(false)
   }, [dateRange])
 
   useEffect(() => {
@@ -798,8 +792,9 @@ export default function CalendarPage() {
 
       {/* ── Error ── */}
       {error && (
-        <div style={{ margin: '12px 16px', padding: '10px 14px', background: 'var(--red-dim)', border: '1px solid rgba(255,69,96,0.4)', borderRadius: 'var(--card-radius)', color: 'var(--red)', fontSize: 12 }}>
-          {error} — <button onClick={fetchEvents} style={{ color: 'var(--red)', background: 'none', border: 'none', cursor: 'pointer', textDecoration: 'underline' }}>Retry</button>
+        <div style={{ margin: '12px 16px', padding: '10px 14px', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', color: 'var(--text-3)', fontSize: 12, display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span>Calendar data is temporarily unavailable.</span>
+          <button onClick={fetchEvents} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', fontSize: 12 }}>↻ Retry</button>
         </div>
       )}
 
