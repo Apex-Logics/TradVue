@@ -164,7 +164,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
 
         {/* Footer */}
         <div className="settings-footer">
-          <span>TradVue v0.1 · ApexLogics</span>
+          <span>TradVue v0.1 · © 2026 TradVue</span>
           <a
             href="https://tradvue.com/privacy"
             target="_blank"

@@ -606,4 +606,4 @@ All engagement sequences are triggered server-side based on user behavior data:
 ---
 
 **Last Updated:** 2026-03-06  
-**Created by:** Zip (ApexLogics Research)
+**Created by:** Zip (TradVue)

@@ -2278,7 +2278,7 @@ export default function Home() {
       {/* ── Footer ─────────────────────────────────────────────────────────── */}
       <footer className="site-footer">
         <span>
-          <strong style={{ color: '#a0a0b0' }}>TradVue</strong> — ApexLogics © 2025
+          <strong style={{ color: '#a0a0b0' }}>TradVue</strong> — © 2026 TradVue. All rights reserved.
         </span>
         <span>Data: Finnhub · CoinGecko · NewsAPI · RSS · Not financial advice</span>
         <span>

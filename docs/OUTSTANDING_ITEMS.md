@@ -19,7 +19,7 @@
 | Item | Description | Owner | Deadline |
 |------|-------------|-------|----------|
 | **Domain Redirect** | Redirect old domain(s) to tradvue.com | Erick | 3/16 |
-| **Support Email Setup** | Set up support@apexlogics.com or similar; wire to ticket system | Erick | This week |
+| **Support Email Setup** | Set up support@tradvue.com; wire to ticket system | Erick | This week |
 | **Vercel Team Rename** | Rename Vercel team from `chartgenius-projects` → `apexlogics` (or similar) in dashboard | Erick | This week |
 
 ### Vercel Rename Instructions

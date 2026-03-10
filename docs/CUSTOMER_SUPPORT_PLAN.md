@@ -2,7 +2,7 @@
 
 > **Document:** CUSTOMER_SUPPORT_PLAN.md
 > **Created:** 2026-03-10
-> **Owner:** Erick (ApexLogics)
+> **Owner:** Erick (TradVue)
 > **Maintained by:** Zip (AI Agent)
 > **Status:** Draft v1.0
 
@@ -603,5 +603,5 @@ status: published  # draft | published | archived
 
 ---
 
-*Plan authored by Zip · ApexLogics · TradVue · 2026-03-10*
+*Plan authored by Zip · TradVue · 2026-03-10*
 *Review and update quarterly or after significant user growth*
