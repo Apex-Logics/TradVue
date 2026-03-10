@@ -1814,17 +1814,29 @@ export default function ToolsPage() {
           // Hub view
           <div>
             {/* Intro banner */}
-            <div style={{ marginBottom: 24, padding: '16px 20px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.2)', borderRadius: 'var(--card-radius)' }}>
-              <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>Professional Trading Calculators</div>
-              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
-                All tools update in real-time as you type. Every field has a{' '}
-                <Tooltip text="Hover over the ? icon next to any label to learn what that field means. We explain everything in plain English!" position="right" />
-                {' '}tooltip to explain what it means. No financial jargon without explanation.
+            <div style={{ marginBottom: 24, padding: '20px 24px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.2)', borderRadius: 'var(--card-radius)' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-0)', marginBottom: 6, letterSpacing: '-0.02em' }}>Professional trading tools to sharpen your edge</div>
+              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65, marginBottom: 12 }}>
+                Every tool updates in real-time as you type — no submit buttons. Hover the{' '}
+                <Tooltip text="Hover the ? icon next to any label to learn exactly what that field means. No jargon without explanation." position="right" />
+                {' '}icon next to any label for a plain-English explanation. All calculations run locally — your data never leaves your browser.
+              </div>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {[
+                  { label: '⚡ Real-time', desc: 'Results update as you type' },
+                  { label: '🔒 Private', desc: 'All calculations run locally' },
+                  { label: '💡 Explained', desc: 'Every field has a tooltip' },
+                  { label: '📱 Responsive', desc: 'Works on mobile & desktop' },
+                ].map(f => (
+                  <div key={f.label} style={{ fontSize: 11, color: 'var(--text-2)' }}>
+                    <strong style={{ color: 'var(--text-1)' }}>{f.label}</strong> — {f.desc}
+                  </div>
+                ))}
               </div>
             </div>
 
             {/* Category tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 24, flexWrap: 'wrap' }}>
+            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
               {TOOL_CATEGORIES.map(cat => (
                 <button
                   key={cat}
@@ -1834,6 +1846,18 @@ export default function ToolsPage() {
                 >{cat}</button>
               ))}
             </div>
+
+            {/* Category description */}
+            {activeCategory !== 'All' && (
+              <div style={{ marginBottom: 20, fontSize: 13, color: 'var(--text-2)', padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                {activeCategory === 'Stocks' && '📈 Tools for US equity traders — position sizing, risk/reward, stock screening, earnings, and market heatmaps.'}
+                {activeCategory === 'Options' && '📋 Options-specific calculators — P&L scenarios, break-even prices, and Black-Scholes Greeks (Delta, Gamma, Theta, Vega).'}
+                {activeCategory === 'Forex' && '💱 Forex trading tools — pip value, lot sizing, session timers, and currency strength rankings across 8 major pairs.'}
+                {activeCategory === 'Crypto' && '₿ Crypto market tools — Fear & Greed Index, live Ethereum gas fees, and staking reward projections for major chains.'}
+                {activeCategory === 'Universal' && '🔧 Works for any market or asset class — compound interest, Fibonacci retracement, correlation matrix, and profit target planning.'}
+              </div>
+            )}
+
 
             {/* Tools grid */}
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
@@ -1889,6 +1913,18 @@ export default function ToolsPage() {
           </div>
         )}
       </div>
+
+      {/* Footer */}
+      <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-1)', padding: '20px 24px', marginTop: 40 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            © 2026 TradVue · <a href="/legal/disclaimer" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Disclaimer</a> · <a href="/help" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Help</a>
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            All calculations for educational purposes only. Not financial advice.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }

@@ -993,6 +993,14 @@ export default function PortfolioPage() {
         )}
       </header>
 
+      {/* Welcome banner for new users */}
+      {holdings.length === 0 && watchlist.length === 0 && (
+        <div style={{ background: 'rgba(74,158,255,0.06)', borderBottom: '1px solid rgba(74,158,255,0.15)', padding: '10px 20px', display: 'flex', alignItems: 'center', gap: 12, fontSize: 12, color: 'var(--text-2)' }}>
+          <span style={{ color: 'var(--accent)', fontSize: 16 }}>💡</span>
+          <span><strong style={{ color: 'var(--text-1)' }}>New here?</strong> Start in the <strong style={{ color: 'var(--text-1)' }}>Holdings</strong> tab to add positions, or <strong style={{ color: 'var(--text-1)' }}>Watchlist</strong> tab to track stocks you&apos;re considering. Dashboard will populate automatically.</span>
+        </div>
+      )}
+
       {/* Portfolio Disclaimer Banner */}
       <div style={{ background: 'var(--yellow-dim)', borderBottom: '1px solid rgba(240,165,0,0.25)', padding: '10px 20px', fontSize: 11, color: 'var(--text-2)' }}>
         <span style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1100,6 +1108,18 @@ export default function PortfolioPage() {
           ))}
         </div>
       )}
+
+      {/* Footer */}
+      <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-1)', padding: '20px 24px', marginTop: 40 }}>
+        <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            © 2026 TradVue · <a href="/legal/disclaimer" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Disclaimer</a> · <a href="/legal/privacy" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Privacy</a> · <a href="/help" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Help</a>
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            Portfolio calculations are estimates. Not financial advice. Verify with your broker.
+          </p>
+        </div>
+      </footer>
     </div>
   )
 }
@@ -1127,10 +1147,60 @@ function DashboardTab({
 }) {
   if (holdings.length === 0) {
     return (
-      <div style={{ textAlign: 'center', padding: '80px 20px', color: 'var(--text-3)' }}>
-        <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
-        <div style={{ fontSize: 18, fontWeight: 700, marginBottom: 8, color: 'var(--text-1)' }}>No Holdings Yet</div>
-        <div style={{ fontSize: 13 }}>Add positions in the Holdings tab to see your dashboard.</div>
+      <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 20px' }}>
+        {/* Welcome hero */}
+        <div style={{ textAlign: 'center', marginBottom: 36 }}>
+          <div style={{ fontSize: 48, marginBottom: 16 }}>📊</div>
+          <h2 style={{ fontSize: 24, fontWeight: 800, color: 'var(--text-0)', marginBottom: 10, letterSpacing: '-0.03em' }}>
+            Track your holdings, watchlist &amp; performance
+          </h2>
+          <p style={{ fontSize: 14, color: 'var(--text-2)', lineHeight: 1.7 }}>
+            TradVue Portfolio tracks your stock positions, dividends, realized gains/losses, and benchmarks your returns against the S&amp;P 500. Add your first position to get started.
+          </p>
+        </div>
+
+        {/* Feature cards */}
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12, marginBottom: 32 }}>
+          {[
+            { icon: '📁', title: 'Holdings', desc: 'Track shares, avg cost, P&L, and allocation % for every position.' },
+            { icon: '💰', title: 'Dividends', desc: 'Automatic dividend tracking from history. Override any value.' },
+            { icon: '👁', title: 'Watchlist', desc: 'Monitor stocks you\'re watching with price alerts and target prices.' },
+            { icon: '🧾', title: 'Tax', desc: 'Estimate realized gains, short vs long-term, and tax impact.' },
+          ].map(f => (
+            <div key={f.title} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
+              <div style={{ fontSize: 22, marginBottom: 6 }}>{f.icon}</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>{f.title}</div>
+              <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.5 }}>{f.desc}</div>
+            </div>
+          ))}
+        </div>
+
+        {/* How to add a position */}
+        <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: '20px 24px', marginBottom: 24 }}>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 12 }}>How to add your first holding</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, minWidth: 18 }}>1.</span>
+              Click the <strong style={{ color: 'var(--text-1)' }}>Holdings</strong> tab above, then click <strong style={{ color: 'var(--accent)' }}>+ Add Position</strong>
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, minWidth: 18 }}>2.</span>
+              Enter ticker symbol, number of shares, buy date, and average cost per share
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, minWidth: 18 }}>3.</span>
+              Company info, current price, and dividends are fetched automatically
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', display: 'flex', gap: 10, alignItems: 'flex-start' }}>
+              <span style={{ color: 'var(--accent)', fontWeight: 700, minWidth: 18 }}>4.</span>
+              Your dashboard will show cost basis, market value, total return, and sector allocation
+            </div>
+          </div>
+        </div>
+
+        <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center' }}>
+          💾 No account required — data saves locally in your browser. <span style={{ color: 'var(--accent)' }}>Sign in</span> to enable cloud sync.
+        </div>
       </div>
     )
   }
@@ -1448,10 +1518,19 @@ function HoldingsTab({
       </div>
 
       {holdings.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 8 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>📁</div>
-          <div style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 8 }}>No positions yet</div>
-          <div style={{ fontSize: 12 }}>Click &ldquo;+ Add Position&rdquo; — just enter ticker, shares, buy date &amp; avg cost.</div>
+        <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed var(--border)', borderRadius: 12 }}>
+          <div style={{ fontSize: 40, marginBottom: 14 }}>📁</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>No positions yet</div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 420, margin: '0 auto 16px', lineHeight: 1.65 }}>
+            Add your first stock position. You&apos;ll need: <strong style={{ color: 'var(--text-1)' }}>ticker</strong>, <strong style={{ color: 'var(--text-1)' }}>shares</strong>, <strong style={{ color: 'var(--text-1)' }}>buy date</strong>, and <strong style={{ color: 'var(--text-1)' }}>average cost</strong>. Company info and current prices are fetched automatically.
+          </div>
+          <button onClick={openAdd} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'var(--accent)', color: '#fff',
+            padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}>
+            + Add Your First Position
+          </button>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -2284,9 +2363,30 @@ function WatchlistTab({
         </button>
       </div>
       {watchlist.length === 0 ? (
-        <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 8 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>👁</div>
-          <div style={{ fontSize: 14, color: 'var(--text-2)' }}>No stocks on watchlist</div>
+        <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed var(--border)', borderRadius: 12 }}>
+          <div style={{ fontSize: 40, marginBottom: 14 }}>👁</div>
+          <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Your watchlist is empty</div>
+          <div style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 400, margin: '0 auto 20px', lineHeight: 1.65 }}>
+            Track stocks you&apos;re watching but haven&apos;t bought yet. Monitor price, day change, P/E ratio, and dividend yield in one place.
+          </div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, maxWidth: 360, margin: '0 auto 24px', textAlign: 'left' }}>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
+              <strong style={{ color: 'var(--text-1)' }}>① Enter a ticker</strong> — type any US stock symbol (e.g. AAPL, TSLA, NVDA)
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
+              <strong style={{ color: 'var(--text-1)' }}>② Set a target price</strong> — your ideal buy price (optional but helpful)
+            </div>
+            <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
+              <strong style={{ color: 'var(--text-1)' }}>③ Set a price alert</strong> — get notified when the stock hits your target (click the 🔔 icon)
+            </div>
+          </div>
+          <button onClick={openAdd} style={{
+            display: 'inline-flex', alignItems: 'center', gap: 8,
+            background: 'var(--accent)', color: '#fff',
+            padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
+          }}>
+            + Add Your First Stock
+          </button>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>

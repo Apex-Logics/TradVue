@@ -569,10 +569,24 @@ function TabDashboard({ trades }: { trades: Trade[] }) {
   }, [trades])
 
   if (trades.length === 0) return (
-    <div style={{ textAlign: 'center', padding: '60px 20px' }}>
+    <div style={{ maxWidth: 600, margin: '0 auto', textAlign: 'center', padding: '48px 20px' }}>
       <div style={{ fontSize: 48, marginBottom: 16 }}>📋</div>
-      <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>No trades yet</h3>
-      <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Head to the Trade Log tab to log your first trade!</p>
+      <h3 style={{ color: 'var(--text-0)', marginBottom: 8, fontSize: 20, fontWeight: 800, letterSpacing: '-0.02em' }}>
+        Record your first trade or import from CSV
+      </h3>
+      <p style={{ color: 'var(--text-2)', fontSize: 14, lineHeight: 1.65, marginBottom: 24 }}>
+        Once you have trades logged, this dashboard shows your equity curve, win rate, profit factor, and per-setup analytics — everything you need to identify what works.
+      </p>
+      <div style={{ display: 'flex', gap: 12, justifyContent: 'center', flexWrap: 'wrap' }}>
+        <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', textAlign: 'left', maxWidth: 200 }}>
+          <div style={{ fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>✏️ Manual Entry</div>
+          Go to <strong style={{ color: 'var(--accent)' }}>Trade Log</strong> → <strong style={{ color: 'var(--accent)' }}>+ New Trade</strong>
+        </div>
+        <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 16px', textAlign: 'left', maxWidth: 200 }}>
+          <div style={{ fontWeight: 700, color: 'var(--text-1)', marginBottom: 4 }}>📂 CSV Import</div>
+          Click <strong style={{ color: 'var(--accent)' }}>Import CSV</strong> in the header. Supports Robinhood, IBKR, and Generic formats.
+        </div>
+      </div>
     </div>
   )
 
@@ -2270,6 +2284,46 @@ export default function JournalPage() {
           </button>
         ))}
       </div>
+
+      {/* Intro banner — shown to new users with no trades */}
+      {trades.length === 0 && (
+        <div style={{ background: 'rgba(74,158,255,0.05)', borderBottom: '1px solid rgba(74,158,255,0.15)', padding: '16px 24px' }}>
+          <div style={{ maxWidth: 900, margin: '0 auto' }}>
+            <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)', marginBottom: 10 }}>
+              📒 Log, analyze, and improve your trades
+            </div>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(240px, 1fr))', gap: 10, marginBottom: 14 }}>
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>✏️ Manual Entry</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                  Click <strong style={{ color: 'var(--accent)' }}>Trade Log → + New Trade</strong>. Fill in symbol, entry/exit price, shares, and stop loss. P&L and R-Multiple calculate automatically.
+                </div>
+              </div>
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>📂 CSV Import</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                  Click <strong style={{ color: 'var(--accent)' }}>Import CSV</strong> above. Supports <strong>Robinhood</strong>, <strong>IBKR</strong>, and <strong>Generic CSV</strong> formats. Download a sample template from the import dialog.
+                </div>
+              </div>
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>🏷️ Tags &amp; Analysis</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                  Tag each trade with a <strong>setup type</strong> (e.g. Breakout, Pullback) and <strong>mistake tag</strong> (e.g. FOMO, Oversize). Analytics will show which setups are most profitable.
+                </div>
+              </div>
+              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '12px 14px' }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>📝 Notebook</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.55 }}>
+                  Use the <strong>Notebook</strong> tab for daily trading plans, weekly recaps, and strategy playbooks. Templates provided — just fill in the blanks.
+                </div>
+              </div>
+            </div>
+            <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+              💾 All data saves locally in your browser. Use <strong style={{ color: 'var(--text-2)' }}>Backup</strong> to export a JSON snapshot you can restore anytime.
+            </div>
+          </div>
+        </div>
+      )}
 
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>

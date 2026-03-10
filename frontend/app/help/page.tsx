@@ -121,11 +121,154 @@ const FAQ_DATA = [
       },
       {
         q: 'What markets does TradVue support?',
-        a: 'We cover US equities (NYSE, NASDAQ, AMEX), ETFs, and mutual funds. International markets coming soon. Crypto is not currently supported.',
+        a: 'We cover US equities (NYSE, NASDAQ, AMEX), ETFs, and mutual funds. International markets coming soon. Crypto tools (Fear & Greed, Gas Tracker, Staking Calculator) are available in Tools.',
       },
       {
         q: 'How much historical data is available?',
         a: 'Free users get 1 year of chart history. Pro users get 2 years. All users can view company fundamentals and news archives going back 5 years.',
+      },
+    ],
+  },
+  {
+    id: 'market-data',
+    category: 'Market Data',
+    icon: '📡',
+    questions: [
+      {
+        q: 'Where does the stock price data come from?',
+        a: 'Real-time quotes are sourced from licensed market data providers covering NYSE, NASDAQ, and AMEX. Data is updated every 1-5 seconds during trading hours (9:30 AM – 4:00 PM ET).',
+      },
+      {
+        q: 'How often is the news feed updated?',
+        a: 'News articles refresh every few minutes during market hours. Breaking news is surfaced within 2-5 minutes of publication. After-hours, the feed updates once every 30 minutes.',
+      },
+      {
+        q: 'Why does a stock price look slightly different from my broker?',
+        a: 'Minor discrepancies (a few cents) are normal due to the time it takes to fetch and display quotes. If you see a large discrepancy, try refreshing the page. Always use your broker\'s price for actual trade execution.',
+      },
+      {
+        q: 'Does TradVue support pre-market and after-hours quotes?',
+        a: 'Yes. Extended hours quotes (4 AM – 8 PM ET) are displayed where available. Note that extended-hours data can be less liquid and more volatile than regular session prices.',
+      },
+    ],
+  },
+  {
+    id: 'portfolio',
+    category: 'Portfolio',
+    icon: '📊',
+    questions: [
+      {
+        q: 'How do I add a stock to my watchlist?',
+        a: 'Go to Portfolio → Watchlist tab → click "+ Add to Watchlist". Enter the ticker symbol (e.g. AAPL) and an optional target buy price. Company info, current price, and key metrics are fetched automatically.',
+      },
+      {
+        q: 'How do I add a stock to my holdings?',
+        a: 'Go to Portfolio → Holdings tab → click "+ Add Position". Enter ticker, number of shares, buy date, and average cost per share. The company name, sector, current price, and dividend data populate automatically.',
+      },
+      {
+        q: 'How do I remove a stock from my watchlist or holdings?',
+        a: 'In the watchlist or holdings table, click the "Del" button on the right side of the row. You\'ll be prompted to confirm before deletion.',
+      },
+      {
+        q: 'What does "Allocation %" mean in the Holdings table?',
+        a: 'Allocation % shows what percentage of your total portfolio market value this single position represents. For example, if AAPL is worth $5,000 and your total portfolio is $25,000, AAPL is 20% allocated. High concentration in one stock = higher risk.',
+      },
+      {
+        q: 'What is "Yield on Cost" (YOC)?',
+        a: 'Yield on Cost is your annual dividend income divided by what you originally paid (your cost basis), not the current price. If you bought a stock for $50 that now yields $3/year, your YOC is 6% — even if the stock is now at $100 and the current yield is only 3%.',
+      },
+      {
+        q: 'Does my portfolio data sync across devices?',
+        a: 'Without an account, data is stored in your browser\'s local storage (device-specific). Sign in to enable cloud sync — your data will then be available on any device. Use the Export button to back up your data as JSON or CSV anytime.',
+      },
+      {
+        q: 'How accurate are the dividend calculations?',
+        a: 'Dividend data is pulled from historical payment records. Projected annual income is estimated from the most recent dividend rate × share count. Always verify against your broker statements — forward dividends can change.',
+      },
+    ],
+  },
+  {
+    id: 'journal',
+    category: 'Journal',
+    icon: '📒',
+    questions: [
+      {
+        q: 'How do I log a trade manually?',
+        a: 'Go to Journal → Trade Log tab → click "+ New Trade". Fill in the symbol, entry price, exit price, position size, and stop loss. P&L, R-Multiple, and % gain/loss are calculated automatically. Add a setup tag and rating to enable analytics.',
+      },
+      {
+        q: 'What CSV formats does the import support?',
+        a: 'TradVue Journal supports three CSV formats: Generic (our standard template — download from the import dialog), Robinhood (exported from the app or website), and IBKR (Interactive Brokers trade confirmations). Other brokers may work with the Generic format if columns match.',
+      },
+      {
+        q: 'What are setup tags and how should I use them?',
+        a: 'Setup tags label the type of trade you took — e.g. "Breakout", "Pullback", "Gap Fill", "VWAP Bounce". Tag every trade consistently, and the Analytics tab will show you which setups have the best win rate and profit factor. This reveals your edge.',
+      },
+      {
+        q: 'What are mistake tags?',
+        a: 'Mistake tags help you track recurring errors — e.g. "FOMO", "Oversize", "Held Too Long", "Revenge Trade". After logging 20+ trades, the Analytics tab shows which mistakes cost you the most money, so you can focus on fixing the highest-impact ones first.',
+      },
+      {
+        q: 'What is R-Multiple?',
+        a: 'R-Multiple measures your trade\'s outcome relative to your initial risk. If you risked $100 (entry minus stop × shares) and made $250, that\'s a +2.5R trade. If you lost $100, that\'s -1R. Tracking R-Multiple lets you evaluate performance independently of position size.',
+      },
+      {
+        q: 'How do I export my journal data?',
+        a: 'Click the Export button in the journal header. You can export as CSV (for spreadsheets) or JSON (for full backup and restore). The Backup button saves all trades and notes as a restorable JSON file.',
+      },
+    ],
+  },
+  {
+    id: 'tools',
+    category: 'Tools',
+    icon: '🔧',
+    questions: [
+      {
+        q: 'What is the Position Size Calculator?',
+        a: 'This tool tells you how many shares to buy based on your account size, how much you\'re willing to risk (%), your entry price, and your stop loss price. It helps ensure you never risk more than your defined % on a single trade.',
+      },
+      {
+        q: 'What is the Risk/Reward Calculator?',
+        a: 'Enter your entry price, stop loss, and take profit target. The tool shows your risk/reward ratio (e.g. 1:3), break-even win rate needed to be profitable, and dollar amounts at stake. A 1:2 or better ratio is generally considered good.',
+      },
+      {
+        q: 'What are Options Greeks?',
+        a: 'Greeks measure how an option\'s price changes relative to different factors. Delta = sensitivity to stock price movement. Gamma = rate of Delta change. Theta = time decay per day. Vega = sensitivity to volatility. The Options Greeks Calculator uses Black-Scholes to compute these for any option.',
+      },
+      {
+        q: 'What is the Fibonacci Retracement tool?',
+        a: 'Enter the high and low of a price move, and the tool calculates key Fibonacci levels (23.6%, 38.2%, 50%, 61.8%, 78.6%). These are commonly watched support and resistance areas where price may reverse or pause during a pullback.',
+      },
+      {
+        q: 'Do my tool inputs save between sessions?',
+        a: 'Most tools reset when you close the tab, as they\'re meant for quick, in-session calculations. The Trading Journal is the exception — it saves all data persistently in your browser (or cloud if signed in).',
+      },
+    ],
+  },
+  {
+    id: 'support',
+    category: 'Support',
+    icon: '🛟',
+    questions: [
+      {
+        q: 'How do I contact the TradVue support team?',
+        a: 'Email us at support@tradvue.com. We typically respond within a few hours on weekdays (Mon–Fri, 9am–6pm ET). For urgent issues, describe the problem clearly and include your browser and OS version.',
+      },
+      {
+        q: 'Are there any known issues I should be aware of?',
+        a: 'We maintain a real-time status page at tradvue.com/status showing the health of our market data feeds, API, and web app. Check there first if something seems broken — it may already be on our radar.',
+      },
+      {
+        q: 'How do I report a bug?',
+        a: 'Email support@tradvue.com with: (1) what you were trying to do, (2) what happened instead, (3) your browser and OS. Screenshots help a lot. We aim to fix critical bugs within 24 hours.',
+      },
+      {
+        q: 'Is there a roadmap or changelog I can follow?',
+        a: 'Yes! Check out tradvue.com/changelog for a detailed history of features, fixes, and improvements. We ship updates frequently and list every change with dates.',
+      },
+      {
+        q: 'How do I request a new feature?',
+        a: 'Send your idea to support@tradvue.com with subject line "Feature Request". We prioritize based on how many users ask for the same thing, so be as specific as possible about what you need and why.',
       },
     ],
   },
