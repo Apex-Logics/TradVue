@@ -168,7 +168,7 @@
 
 [PAUSE - 0.5 second]
 
-"Head to TradVue.io and join thousands of smarter traders."
+"Head to TradVue.com and join thousands of smarter traders."
 
 ### On-Screen Text
 - Large: "tradvue.com"

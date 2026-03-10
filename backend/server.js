@@ -35,8 +35,6 @@ app.use(helmet({
 const allowedOrigins = [
   'https://www.tradvue.com',
   'https://tradvue.com',
-  'https://www.tradvue.com',
-  'https://tradvue.com',
 ];
 if (process.env.NODE_ENV !== 'production') {
   allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
