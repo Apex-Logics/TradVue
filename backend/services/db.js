@@ -23,13 +23,13 @@ pool.on('connect', () => {
 });
 
 pool.on('error', (err) => {
-  console.error('[DB] Unexpected error on idle client:', err.message);
+  console.error('[DB] Unexpected error on idle client (non-fatal):', err.message);
 });
 
-// Test connection on startup
+// Test connection on startup (non-fatal — server continues even if DB is temporarily unreachable)
 pool.query('SELECT NOW()')
   .then(r => console.info(`[DB] ✅ PostgreSQL connected — server time: ${r.rows[0].now}`))
-  .catch(e => console.error('[DB] ❌ PostgreSQL connection failed:', e.message));
+  .catch(e => console.error('[DB] ⚠️ PostgreSQL connection failed (will retry on first request):', e.message));
 
 module.exports = {
   query: (text, params) => pool.query(text, params),

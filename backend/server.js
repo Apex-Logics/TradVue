@@ -2,6 +2,18 @@
 const dns = require('dns');
 dns.setDefaultResultOrder('ipv4first');
 
+// Prevent unhandled rejections from crashing the server
+process.on('unhandledRejection', (reason, promise) => {
+  console.error('[Server] Unhandled rejection (non-fatal):', reason?.message || reason);
+});
+process.on('uncaughtException', (err) => {
+  console.error('[Server] Uncaught exception:', err.message);
+  // Only exit on truly fatal errors, not DB connection issues
+  if (err.message?.includes('EADDRINUSE') || err.message?.includes('FATAL')) {
+    process.exit(1);
+  }
+});
+
 const express = require('express');
 const cors = require('cors');
 const helmet = require('helmet');

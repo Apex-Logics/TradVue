@@ -372,10 +372,10 @@ async function checkTableExists() {
   } catch (err) {
     if (err.message.includes('does not exist')) {
       console.warn('[Alerts] market_alerts table not found — polling disabled. Run migrations to enable.');
-      tableExists = false;
     } else {
-      throw err;
+      console.error('[Alerts] DB connection error during table check:', err.message);
     }
+    tableExists = false;
   }
   tableCheckDone = true;
   return tableExists;
