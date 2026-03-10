@@ -33,3 +33,4 @@ Thumbs.db
 /tmp/
 *.log
 frontend/app/dashboard/
+.vercel
