@@ -129,15 +129,29 @@ app.listen(PORT, () => {
   console.log(`₿  Crypto:       http://localhost:${PORT}/api/crypto/snapshot`);
   console.log(`🚨 Movers:       http://localhost:${PORT}/api/market-movers`);
 
-  // Start real-time alert poll loop (every 5 minutes)
-  const alertService = require('./services/alertService');
-  alertService.startPolling(5 * 60 * 1000);
+  // Delay DB-dependent background tasks by 10s to let healthcheck pass first
+  // This prevents Railway deploy failures when DB connection is slow/unreachable
+  setTimeout(() => {
+    console.log('[Startup] Initializing background services...');
+    
+    // Start real-time alert poll loop (every 5 minutes)
+    try {
+      const alertService = require('./services/alertService');
+      alertService.startPolling(5 * 60 * 1000);
+    } catch (err) {
+      console.error('[Startup] Alert service failed to start:', err.message);
+    }
 
-  // Check user price alerts every 5 minutes
-  const { checkAndTriggerAlerts } = require('./routes/priceAlerts');
-  setInterval(async () => {
-    try { await checkAndTriggerAlerts(); } catch {}
-  }, 5 * 60 * 1000);
+    // Check user price alerts every 5 minutes
+    try {
+      const { checkAndTriggerAlerts } = require('./routes/priceAlerts');
+      setInterval(async () => {
+        try { await checkAndTriggerAlerts(); } catch {}
+      }, 5 * 60 * 1000);
+    } catch (err) {
+      console.error('[Startup] Price alerts failed to start:', err.message);
+    }
+  }, 10000);
   
   // Start market mover scanner (every 10 minutes)
   const marketMoverBot = require('./services/marketMoverBot');

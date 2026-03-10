@@ -26,9 +26,12 @@ async function ensureTable() {
   `);
 }
 
-ensureTable().catch(err =>
-  console.error('[waitlist] table init error:', err.message)
-);
+// Delay table creation to avoid crashing during Railway healthcheck
+setTimeout(() => {
+  ensureTable().catch(err =>
+    console.error('[waitlist] table init error:', err.message)
+  );
+}, 10000);
 
 // ── POST /api/waitlist ────────────────────────────────────────────────────
 router.post('/', async (req, res) => {
