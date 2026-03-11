@@ -5131,8 +5131,11 @@ a.alert-row-title:hover {
   }
 }
 
-/* ── Landscape tablets (≤1024px landscape): same hamburger rules ── */
-@media (max-width: 1024px) and (orientation: landscape) {
+/* ── Landscape phones (any width, short viewport): hamburger + 3-col layout ── */
+/* Uses max-height instead of max-width — modern phones in landscape are wider
+   than 1024px CSS pixels but always have short viewport height (< 500px).
+   This won't fire on desktops/laptops (height > 500px). */
+@media (orientation: landscape) and (max-height: 500px) {
   /* Hide the horizontal tab bar — too wide, wastes vertical space */
   .apn-items {
     display: none !important;
@@ -5143,7 +5146,7 @@ a.alert-row-title:hover {
     display: none !important;
   }
 
-  /* Show hamburger on main page */
+  /* Show hamburger on main page (opens nav drawer) */
   .mobile-hamburger {
     display: flex !important;
   }
@@ -5157,6 +5160,12 @@ a.alert-row-title:hover {
 
   /* Unstick ticker bar */
   .ticker-bar-wrap {
+    position: relative !important;
+    top: unset !important;
+  }
+
+  /* Unstick the LIVE FEED bar */
+  .feed-header {
     position: relative !important;
     top: unset !important;
   }
@@ -5222,10 +5231,7 @@ a.alert-row-title:hover {
     min-height: unset;
   }
 
-  /* Disable hamburger overlay for watchlist — it's in the grid */
-  .mobile-hamburger {
-    display: none !important;
-  }
+  /* Sidebar close button not needed — watchlist is in the grid, not an overlay */
   .mobile-sidebar-close {
     display: none !important;
   }
