@@ -4987,9 +4987,9 @@ a.alert-row-title:hover {
     border-right: none;
   }
 
-  /* Hamburger not needed — watchlist is visible in grid */
+  /* Hamburger IS needed — it opens the nav drawer (not watchlist) */
   .mobile-hamburger {
-    display: none !important;
+    display: flex !important;
   }
 
   /* Sidebar close button not needed — not an overlay */
