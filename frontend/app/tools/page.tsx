@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback } from 'react'
 import Tooltip from '../components/Tooltip'
 import { ToolIcon, IconArrowLeft, IconTool } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
+import FuturesCalculator from './FuturesCalculator'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
@@ -1703,9 +1704,11 @@ function ProfitTargetCalc() {
 
 // ─── Tools Hub Page ───────────────────────────────────────────────────────────
 
-const TOOL_CATEGORIES = ['All', 'Stocks', 'Options', 'Forex', 'Crypto', 'Universal']
+const TOOL_CATEGORIES = ['All', 'Futures', 'Stocks', 'Options', 'Forex', 'Crypto', 'Universal']
 
 const TOOL_CATALOG = [
+  // ── Futures ──
+  { id: 'futures', category: 'Futures', title: 'Futures Risk/Reward Calculator', desc: '39 contracts with accurate tick/margin data. Position sizing, multi-target R:R, risk matrix, visual P&L bar, session indicators, and contract specs.' },
   // ── Phase 1 Tools ──
   { id: 'position',    category: 'Stocks',   title: 'Position Size Calculator',      desc: 'Calculate how many shares to buy based on your risk tolerance.' },
   { id: 'riskreward',  category: 'Stocks',   title: 'Risk/Reward Calculator',         desc: 'Evaluate trade setups by comparing potential profit vs loss.' },
@@ -1757,6 +1760,7 @@ export default function ToolsPage() {
       case 'strength':    return <CurrencyStrengthMeter />
       case 'correlation': return <CorrelationMatrix />
       case 'profit':      return <ProfitTargetCalc />
+      case 'futures':     return <FuturesCalculator />
       default: return null
     }
   }
@@ -1833,6 +1837,7 @@ export default function ToolsPage() {
             {/* Category description */}
             {activeCategory !== 'All' && (
               <div style={{ marginBottom: 20, fontSize: 13, color: 'var(--text-2)', padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                {activeCategory === 'Futures' && '📊 Futures trading tools — 39 contracts with accurate tick data, position sizing by risk %, multi-target R:R calculator, margin requirements, session timers, and risk matrices.'}
                 {activeCategory === 'Stocks' && '📈 Tools for US equity traders — position sizing, risk/reward, stock screening, earnings, and market heatmaps.'}
                 {activeCategory === 'Options' && '📋 Options-specific calculators — P&L scenarios, break-even prices, and Black-Scholes Greeks (Delta, Gamma, Theta, Vega).'}
                 {activeCategory === 'Forex' && '💱 Forex trading tools — pip value, lot sizing, session timers, and currency strength rankings across 8 major pairs.'}

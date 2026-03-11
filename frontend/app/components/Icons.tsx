@@ -819,6 +819,7 @@ export function IconNotebook({ size = 20, ...p }: IconProps) {
 
 export function ToolIcon({ id, size = 20 }: { id: string; size?: number }) {
   const icons: Record<string, React.FC<IconProps>> = {
+    futures:     IconCalculator,
     position:    IconRuler,
     riskreward:  IconScale,
     optionspl:   IconChart,
