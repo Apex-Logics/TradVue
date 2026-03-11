@@ -171,6 +171,48 @@ const NOTE_TEMPLATES = {
 
 const ASSET_CLASSES: AssetClass[] = ['Stock', 'Option', 'Futures', 'Forex', 'Crypto']
 
+// ── Auto-detect asset class from symbol ──────────────────────────────────────
+const FUTURES_SYMBOLS = new Set([
+  'ES','NQ','YM','RTY','MES','MNQ','MYM','CL','NG','MCL','RB','HO',
+  'GC','SI','HG','PL','MGC','SIL','ZC','ZS','ZW','ZL','CT','KC','SB',
+  'LE','HE','ZB','ZN','ZF','ZT','6E','6B','6J','6A','6C','BTC','MBT','ETH',
+  'NKD','FDAX','FESX','VX',
+])
+const FOREX_CURRENCIES = new Set([
+  'USD','EUR','GBP','JPY','CAD','AUD','CHF','NZD','CNY','HKD',
+  'SEK','NOK','DKK','SGD','MXN','ZAR','BRL','INR','TRY',
+])
+const CRYPTO_SYMBOLS = new Set([
+  'BTC','ETH','SOL','DOGE','XRP','ADA','AVAX','DOT','LINK','MATIC',
+  'SHIB','UNI','LTC','BCH','ATOM','NEAR','APT','ARB','OP','FTM',
+  'BTCUSD','ETHUSD','SOLUSD','DOGEUSD',
+])
+
+function detectAssetClass(symbol: string): AssetClass | null {
+  const s = symbol.toUpperCase().trim()
+  if (!s) return null
+
+  // Futures: exact match or with month/year suffix (e.g. ESH26, NQM25)
+  const base = s.replace(/[FGHJKMNQUVXZ]\d{1,2}$/, '') // strip futures month+year
+  if (FUTURES_SYMBOLS.has(base) || FUTURES_SYMBOLS.has(s)) return 'Futures'
+
+  // Forex: 6-letter pair (EURUSD, GBPJPY) or with slash (EUR/USD)
+  const cleaned = s.replace('/', '')
+  if (cleaned.length === 6) {
+    const b = cleaned.slice(0, 3), q = cleaned.slice(3, 6)
+    if (FOREX_CURRENCIES.has(b) && FOREX_CURRENCIES.has(q)) return 'Forex'
+  }
+
+  // Crypto
+  if (CRYPTO_SYMBOLS.has(s)) return 'Crypto'
+
+  // Options: contains date-like pattern or C/P suffix (e.g. AAPL250321C200)
+  if (/\d{6}[CP]\d+/.test(s) || /\s+(call|put|c|p)\s*$/i.test(s)) return 'Option'
+
+  // Default: Stock (don't return null — most common)
+  return 'Stock'
+}
+
 // ─── Storage ──────────────────────────────────────────────────────────────────
 
 const TRADES_KEY = 'cg_journal_trades' // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
@@ -929,7 +971,12 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
             </div>
             <div>
               <FieldLabel label="Symbol" tooltip="The ticker symbol — e.g. AAPL, TSLA, EUR/USD, BTC. Use the exchange symbol." />
-              <input type="text" value={form.symbol} onChange={e => set('symbol')(e.target.value.toUpperCase())} placeholder="e.g. AAPL" style={inputSx} />
+              <input type="text" value={form.symbol} onChange={e => {
+                const sym = e.target.value.toUpperCase()
+                set('symbol')(sym)
+                const detected = detectAssetClass(sym)
+                if (detected) set('assetClass')(detected)
+              }} placeholder="e.g. AAPL" style={inputSx} />
             </div>
             <div>
               <FieldLabel label="Asset Class" tooltip="Type of instrument. Each has different characteristics — stocks trade shares, options trade contracts, forex trades lots." />
