@@ -5103,6 +5103,22 @@ a.alert-row-title:hover {
   display: block;
 }
 
+/* ── Mobile (both orientations ≤768px): hamburger replaces tab bar ── */
+@media (max-width: 768px) {
+  /* Hide the horizontal tab bar on all mobile, portrait AND landscape */
+  .apn-items {
+    display: none !important;
+  }
+
+  /* Show hamburger button */
+  .apn-hamburger {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+  }
+}
+
+/* ── Landscape tablets (≤1024px landscape): same hamburger rules ── */
 @media (max-width: 1024px) and (orientation: landscape) {
   /* Hide the horizontal tab bar — too wide, wastes vertical space */
   .apn-items {
@@ -5114,5 +5130,67 @@ a.alert-row-title:hover {
     display: flex;
     align-items: center;
     justify-content: center;
+  }
+
+  /* ── Landscape 3-column layout: Watchlist | News | Calendar ── */
+  .layout-3col {
+    display: grid !important;
+    grid-template-columns: 1fr 2fr 1fr !important;
+    grid-template-rows: 1fr !important;
+    grid-template-areas: "watchlist news calendar" !important;
+    height: calc(100vh - var(--apn-height, 48px));
+    min-height: unset;
+    overflow: hidden;
+  }
+
+  /* Watchlist: left column, scrollable */
+  .col-watchlist {
+    display: flex !important;
+    flex-direction: column;
+    position: static !important;
+    width: auto !important;
+    max-height: calc(100vh - var(--apn-height, 48px)) !important;
+    height: calc(100vh - var(--apn-height, 48px));
+    overflow-y: auto;
+    box-shadow: none !important;
+    z-index: auto !important;
+    grid-area: watchlist;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    min-height: unset;
+  }
+
+  /* News: center column (largest), scrollable */
+  .col-news {
+    grid-area: news;
+    display: flex;
+    flex-direction: column;
+    height: calc(100vh - var(--apn-height, 48px));
+    overflow-y: auto;
+    border-right: 1px solid var(--border);
+    border-bottom: none;
+    min-height: unset;
+  }
+
+  /* Calendar: right column, scrollable */
+  .col-calendar {
+    grid-area: calendar;
+    display: flex;
+    flex-direction: column;
+    position: static !important;
+    height: calc(100vh - var(--apn-height, 48px));
+    max-height: calc(100vh - var(--apn-height, 48px)) !important;
+    overflow-y: auto;
+    border-right: none;
+    border-bottom: none;
+    min-height: unset;
+  }
+
+  /* Disable hamburger overlay for watchlist — it's in the grid */
+  .mobile-hamburger {
+    display: none !important;
+  }
+  .mobile-sidebar-close {
+    display: none !important;
   }
 }
