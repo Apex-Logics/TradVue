@@ -531,6 +531,11 @@ function CompanyProfileSection({ profile }: { profile: CompanyProfile }) {
 
 // ─── Stock Detail Modal ───────────────────────────────────────────────────────
 
+// ─── Chart size cycle ─────────────────────────────────────────────────────────
+
+const CHART_SIZES = ['default', 'expanded', 'fullscreen'] as const
+type ChartSize = (typeof CHART_SIZES)[number]
+
 function StockDetailModal({
   symbol,
   name,
@@ -558,11 +563,35 @@ function StockDetailModal({
   inWatchlist: boolean
   tickerFull: boolean
 }) {
+  // ── Chart size state (persisted to localStorage) ─────────────────────────
+  const [chartSize, setChartSize] = useState<ChartSize>(() => {
+    try {
+      const saved = (localStorage.getItem('cg_chart_size') ?? '') as ChartSize
+      return (CHART_SIZES as readonly string[]).includes(saved) ? saved : 'default'
+    } catch { return 'default' }
+  })
+
+  const cycleChartSize = useCallback(() => {
+    setChartSize(s => {
+      const next = CHART_SIZES[(CHART_SIZES.indexOf(s) + 1) % CHART_SIZES.length]
+      try { localStorage.setItem('cg_chart_size', next) } catch {}
+      return next
+    })
+  }, [])
+
+  // ── Keyboard: Escape closes, F cycles chart size ──────────────────────────
   useEffect(() => {
-    const h = (e: KeyboardEvent) => { if (e.key === 'Escape') onClose() }
+    const h = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') { onClose(); return }
+      if (e.key === 'f' || e.key === 'F') {
+        const target = e.target as HTMLElement
+        if (target.tagName === 'INPUT' || target.tagName === 'TEXTAREA' || target.isContentEditable) return
+        cycleChartSize()
+      }
+    }
     document.addEventListener('keydown', h)
     return () => document.removeEventListener('keydown', h)
-  }, [onClose])
+  }, [onClose, cycleChartSize])
 
   useEffect(() => {
     document.body.style.overflow = 'hidden'
@@ -571,10 +600,23 @@ function StockDetailModal({
 
   const isUp = quote ? quote.changePct >= 0 : true
 
+  // Expand button icon/title
+  const expandIcon  = chartSize === 'fullscreen' ? '⤡' : '⛶'
+  const expandTitle = chartSize === 'default'
+    ? 'Expand chart (F)'
+    : chartSize === 'expanded'
+      ? 'Fullscreen chart (F)'
+      : 'Collapse chart (F)'
+
   return (
     <>
       <div className="modal-backdrop" onClick={onClose} />
-      <div className="stock-modal" role="dialog" aria-modal="true" aria-label={`${symbol} detail`}>
+      <div
+        className={`stock-modal${chartSize !== 'default' ? ` chart-${chartSize}` : ''}`}
+        role="dialog"
+        aria-modal="true"
+        aria-label={`${symbol} detail`}
+      >
         <div className="stock-modal-header">
           <div className="stock-modal-title">
             <span className="stock-modal-symbol">{symbol}</span>
@@ -611,6 +653,14 @@ function StockDetailModal({
 
         {/* TradingView Chart */}
         <div className="stock-chart-wrap">
+          <button
+            className="chart-expand-btn"
+            onClick={cycleChartSize}
+            title={expandTitle}
+            aria-label={expandTitle}
+          >
+            {expandIcon}
+          </button>
           <iframe
             src={`https://s.tradingview.com/widgetembed/?symbol=${encodeURIComponent(symbol)}&interval=D&theme=dark&style=1&locale=en&toolbar_bg=%230f0f12&hide_top_toolbar=0&hide_side_toolbar=1&allow_symbol_change=0&save_image=0&calendar=0&hideideas=1`}
             width="100%"

@@ -1561,15 +1561,77 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .stock-chart-wrap {
+  position: relative;
   flex: 1;
   overflow: hidden;
   background: var(--bg-0);
   min-height: 320px;
+  transition: height 0.25s ease, min-height 0.25s ease;
 }
 
 .stock-chart-wrap iframe {
   display: block;
   border: none;
+  transition: height 0.25s ease;
+}
+
+/* ── Chart expand button ────────────────────────────────────────────────── */
+.chart-expand-btn {
+  position: absolute;
+  top: 8px;
+  right: 8px;
+  z-index: 10;
+  width: 28px;
+  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  background: rgba(0, 0, 0, 0.5);
+  border: 1px solid rgba(255, 255, 255, 0.15);
+  border-radius: 5px;
+  color: rgba(255, 255, 255, 0.7);
+  font-size: 13px;
+  cursor: pointer;
+  opacity: 0.7;
+  transition: background 0.15s, color 0.15s, opacity 0.15s;
+  line-height: 1;
+  padding: 0;
+}
+
+.chart-expand-btn:hover {
+  background: rgba(0, 0, 0, 0.8);
+  color: #fff;
+  opacity: 1;
+}
+
+/* ── Chart size: expanded (500 px) ──────────────────────────────────────── */
+.stock-modal.chart-expanded .stock-chart-wrap {
+  flex: none;
+  height: 500px;
+  min-height: 500px;
+}
+
+.stock-modal.chart-expanded .stock-chart-wrap iframe {
+  height: 500px !important;
+}
+
+/* ── Chart size: fullscreen (modal fills viewport) ──────────────────────── */
+.stock-modal.chart-fullscreen {
+  width: 95vw !important;
+  height: 95vh !important;
+  max-width: 95vw !important;
+  max-height: 95vh !important;
+  overflow-y: auto;
+}
+
+.stock-modal.chart-fullscreen .stock-chart-wrap {
+  flex: none;
+  min-height: unset;
+  height: auto;
+}
+
+.stock-modal.chart-fullscreen .stock-chart-wrap iframe {
+  height: 60vh !important;
 }
 
 .stock-stats {

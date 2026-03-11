@@ -19,6 +19,7 @@ export const SHORTCUTS: ShortcutDef[] = [
   { keys: 'g h',    description: 'Go to Home',            category: 'Go To' },
   { keys: 'g a',    description: 'Go to Alerts',          category: 'Go To' },
   { keys: 'g s',    description: 'Open Settings',         category: 'Go To' },
+  { keys: 'F',      description: 'Cycle chart size (modal open)', category: 'Chart' },
 ]
 
 // ─── Help Modal ───────────────────────────────────────────────────────────────
