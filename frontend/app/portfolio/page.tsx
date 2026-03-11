@@ -1311,7 +1311,7 @@ function DashboardTab({
       {/* Ex-Dividend Alert Banners */}
       <ExDivAlerts holdingsEnriched={holdingsEnriched} stockInfos={stockInfos} />
 
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12 }}>
+      <div className="kpi-grid">
         {kpis.map((k, i) => <KpiCard key={i} label={k.label} value={k.value} sub={k.sub} color={k.color} tooltip={k.tooltip} />)}
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -2973,7 +2973,7 @@ function TaxTab({ holdings, soldPositions, stockInfos }: {
       </div>
 
       {/* Summary cards */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 24 }}>
+      <div className="kpi-grid" style={{ marginBottom: 24 }}>
         <KpiCard label="NET SHORT-TERM" value={fmtDollar(netShortTerm)} color={netShortTerm >= 0 ? 'var(--red)' : 'var(--green)'} sub={`Rate: ${bracket}%`} tooltip="Net gains/losses from positions held LESS than 1 year. Short-term gains are taxed at your ordinary income rate (same as your salary)." />
         <KpiCard label="NET LONG-TERM" value={fmtDollar(netLongTerm)} color={netLongTerm >= 0 ? 'var(--yellow)' : 'var(--green)'} sub="Rate: 15%" tooltip="Net gains/losses from positions held MORE than 1 year. Long-term gains get preferential tax rates: 0%, 15%, or 20% depending on your income. Holding over 1 year saves taxes!" />
         <KpiCard label="EST. TAX OWED" value={fmtDollar(totalEstimatedTax)} color="var(--red)" tooltip="Rough estimate of taxes owed on your realized gains. This is approximate — consult a tax professional for your actual liability." />
@@ -3447,7 +3447,7 @@ function RiskMetricsSection({ holdingsEnriched, stockInfos, totalMarketValue }: 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>📉 RISK METRICS</div>
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 12 }}>
+      <div className="kpi-grid">
         {cards.map((c, i) => (
           <div key={i} style={{ background: 'var(--bg-3)', borderRadius: 6, padding: '12px 14px' }}>
             <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-3)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 2 }}>
@@ -3634,7 +3634,7 @@ function WhatIfSection({ holdingsEnriched, totalMarketValue, projAnnualIncome, s
               <div style={{ fontWeight: 700, fontSize: 13, marginBottom: 10, color: 'var(--text-0)' }}>
                 If you buy {projection.shares} shares of {projection.ticker} @ {fmtDollar(projection.cost)}:
               </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 10 }}>
+              <div className="kpi-grid" style={{ gap: 10 }}>
                 <div style={{ background: 'var(--bg-2)', borderRadius: 4, padding: '8px 10px' }}>
                   <div style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.06em' }}>NEW PORTFOLIO VALUE</div>
                   <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>{fmtDollar(projection.newTotalValue)}</div>

@@ -922,12 +922,7 @@ export default function CalendarPage() {
           Loading calendar data…
         </div>
       ) : (
-        <div style={{
-          display: 'grid',
-          gridTemplateColumns: selectedDay ? '1fr 320px' : '1fr',
-          gap: 0,
-          minHeight: 'calc(100vh - 160px)',
-        }}>
+        <div className={`cal-main-grid${selectedDay ? '' : ' no-detail'}`}>
           {/* Left / Main area */}
           <div style={{ padding: 16, overflow: 'hidden' }}>
 

@@ -319,13 +319,7 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
       }} />
 
       {/* Modal */}
-      <div style={{
-        position: 'fixed', top: '50%', left: '50%', transform: 'translate(-50%, -50%)',
-        background: 'var(--bg-2)', border: '1px solid var(--border)',
-        borderRadius: 16, padding: 28, zIndex: 1001,
-        width: 'min(90vw, 800px)', maxHeight: '85vh', overflowY: 'auto',
-        boxShadow: '0 24px 48px rgba(0,0,0,0.4)',
-      }}>
+      <div className="import-modal-container">
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>

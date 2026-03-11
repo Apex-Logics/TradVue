@@ -1819,7 +1819,7 @@ export default function ToolsPage() {
             </div>
 
             {/* Category tabs */}
-            <div style={{ display: 'flex', gap: 8, marginBottom: 12, flexWrap: 'wrap' }}>
+            <div className="tools-filter-tabs" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
               {TOOL_CATEGORIES.map(cat => (
                 <button
                   key={cat}

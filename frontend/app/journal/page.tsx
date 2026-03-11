@@ -1798,7 +1798,7 @@ function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[])
         sub="Your trading plan workspace. Use templates to build trading plans, strategy playbooks, and weekly recaps."
       />
 
-      <div style={{ display: 'grid', gridTemplateColumns: '240px 1fr', gap: 16 }}>
+      <div className="journal-notebook-grid">
         {/* Sidebar */}
         <div>
           <div style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
