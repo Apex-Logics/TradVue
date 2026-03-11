@@ -13,6 +13,7 @@ const express = require('express');
 const router = express.Router();
 const axios = require('axios');
 const cache = require('../services/cache');
+const finnhubService = require('../services/finnhub');
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 const finnhubKey = () => process.env.FINNHUB_API_KEY || '';
@@ -140,8 +141,9 @@ router.get('/screener', async (req, res) => {
           const metrics = metricRes.status === 'fulfilled' ? metricRes.value?.metric || {} : {};
           const quote = quoteRes.status === 'fulfilled' ? quoteRes.value || {} : {};
 
+          const price = quote.c || 0;
           metricData = {
-            price: quote.c || 0,
+            price,
             change: quote.dp || 0,
             pe: metrics['peBasicExclExtraTTM'] || metrics['peTTM'] || null,
             divYield: metrics['dividendYieldIndicatedAnnual'] || null,
@@ -150,20 +152,28 @@ router.get('/screener', async (req, res) => {
             revenue: metrics['revenueTTM'] || null,
           };
 
-          // Cache individual metrics for 6 hours
-          await cache.set(metricCacheKey, metricData, 6 * 60 * 60);
+          // Only cache if we got a valid price — prevents stale zero-price entries
+          if (price > 0) {
+            await cache.set(metricCacheKey, metricData, 6 * 60 * 60);
+          }
         }
 
-        if (!metricData) {
-          // Mock data fallback
-          metricData = {
-            price: Math.random() * 300 + 50,
-            change: (Math.random() - 0.5) * 5,
-            pe: Math.random() * 30 + 5,
-            divYield: Math.random() * 3,
-            marketCap: Math.random() * 500 + 10,
-            eps: Math.random() * 10 + 1,
-          };
+        // If metricData is missing or price is still 0, try finnhubService quote (has mock fallback)
+        if (!metricData || metricData.price === 0) {
+          try {
+            const liveQuote = await finnhubService.getQuote(stock.symbol);
+            const base = metricData || {};
+            metricData = {
+              ...base,
+              price: liveQuote.current || base.price || 0,
+              change: liveQuote.changePct || base.change || 0,
+            };
+          } catch (e) {
+            // Last resort: keep what we have or use fallback
+            if (!metricData) {
+              metricData = { price: 0, change: 0, pe: null, divYield: null, marketCap: null, eps: null };
+            }
+          }
         }
 
         // Apply numeric filters
@@ -536,6 +546,139 @@ router.get('/currency-rates', async (req, res) => {
       rates: { USD: 1, EUR: 0.92, GBP: 0.79, JPY: 149.5, CHF: 0.89, AUD: 1.53, CAD: 1.36, NZD: 1.64 },
       timestamp: new Date().toISOString(), _fallback: true,
     });
+  }
+});
+
+// ── GET /api/tools/sectors ───────────────────────────────────────────────────
+router.get('/sectors', async (req, res) => {
+  try {
+    const cacheKey = 'tools:sectors';
+    const cached = await cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    const apiKey = finnhubKey();
+    let sectors = null;
+    let dataSource = 'mock';
+
+    // Try Finnhub sector performance endpoint (may require premium)
+    if (apiKey) {
+      try {
+        const data = await safeFetch(`${FINNHUB_BASE}/sector-performance`, { token: apiKey }, 5000);
+        if (Array.isArray(data) && data.length > 0) {
+          sectors = data.map(s => ({
+            name: s.sector,
+            change: parseFloat((parseFloat(s.changesPercentage) || 0).toFixed(2)),
+            ytdChange: null,
+            _source: 'finnhub',
+          }));
+          dataSource = 'finnhub';
+        }
+      } catch (e) {
+        console.warn('[Tools] Finnhub sector-performance unavailable:', e.message);
+      }
+    }
+
+    // Structured fallback — representative sector data
+    if (!sectors) {
+      sectors = [
+        { name: 'Technology',              change: 1.24,  ytdChange: 8.5  },
+        { name: 'Healthcare',              change: -0.32, ytdChange: 2.1  },
+        { name: 'Financial',               change: 0.78,  ytdChange: 5.4  },
+        { name: 'Energy',                  change: -1.15, ytdChange: -3.2 },
+        { name: 'Consumer Discretionary',  change: 0.45,  ytdChange: 4.7  },
+        { name: 'Consumer Staples',        change: -0.12, ytdChange: 1.8  },
+        { name: 'Industrials',             change: 0.63,  ytdChange: 3.9  },
+        { name: 'Materials',               change: -0.55, ytdChange: -1.5 },
+        { name: 'Utilities',               change: 0.28,  ytdChange: 0.9  },
+        { name: 'Real Estate',             change: -0.87, ytdChange: -4.1 },
+        { name: 'Communication Services',  change: 1.05,  ytdChange: 6.2  },
+      ];
+    }
+
+    const response = {
+      success: true,
+      data: sectors,
+      dataSource,
+      _isMock: dataSource === 'mock',
+      timestamp: new Date().toISOString(),
+    };
+
+    await cache.set(cacheKey, response, 60 * 15); // 15 min cache
+    res.json(response);
+  } catch (error) {
+    console.error('[Tools] /sectors error:', error.message);
+    res.status(500).json({ success: false, error: 'Sectors fetch failed', details: error.message });
+  }
+});
+
+// ── GET /api/tools/heatmap ───────────────────────────────────────────────────
+router.get('/heatmap', async (req, res) => {
+  try {
+    const cacheKey = 'tools:heatmap';
+    const cached = await cache.get(cacheKey);
+    if (cached) return res.json(cached);
+
+    // Representative sector change baselines
+    const sectorBaselines = {
+      Technology:    1.24, Financial: 0.78, Healthcare: -0.32,
+      Energy:       -1.15, Consumer:  0.45, Industrials:  0.63,
+      Utilities:     0.28, 'Real Estate': -0.87, Materials: -0.55,
+    };
+
+    // Deduplicate universe
+    const uniqueStocks = STOCK_UNIVERSE.filter(
+      (s, i, arr) => arr.findIndex(x => x.symbol === s.symbol) === i
+    );
+
+    // Group by sector
+    const sectorMap = {};
+    uniqueStocks.forEach(stock => {
+      if (!sectorMap[stock.sector]) sectorMap[stock.sector] = [];
+      sectorMap[stock.sector].push({ symbol: stock.symbol, name: stock.name, change: null });
+    });
+
+    // Attempt to enrich with cached Finnhub quote data (no live calls here)
+    await Promise.allSettled(
+      uniqueStocks.map(async (stock) => {
+        try {
+          const quoteCacheKey = `finnhub:quote:${stock.symbol}`;
+          const quote = await cache.get(quoteCacheKey);
+          if (quote && typeof quote.changePct === 'number' && quote.changePct !== 0) {
+            const entry = sectorMap[stock.sector]?.find(s => s.symbol === stock.symbol);
+            if (entry) entry.change = parseFloat(quote.changePct.toFixed(2));
+          }
+        } catch (_) { /* skip */ }
+      })
+    );
+
+    // Fill any remaining nulls with sector-consistent seeded values
+    const heatmapData = Object.entries(sectorMap).map(([sector, stocks]) => {
+      const base = sectorBaselines[sector] ?? 0;
+      return {
+        sector,
+        sectorChange: parseFloat(base.toFixed(2)),
+        stocks: stocks.map(s => ({
+          symbol: s.symbol,
+          name: s.name,
+          change: s.change !== null
+            ? s.change
+            : parseFloat((base + (Math.random() - 0.5) * 1.5).toFixed(2)),
+        })),
+      };
+    });
+
+    const response = {
+      success: true,
+      data: heatmapData,
+      _isMock: true, // Prices are seeded/cached — not guaranteed live
+      timestamp: new Date().toISOString(),
+    };
+
+    await cache.set(cacheKey, response, 60 * 5); // 5 min cache
+    res.json(response);
+  } catch (error) {
+    console.error('[Tools] /heatmap error:', error.message);
+    res.status(500).json({ success: false, error: 'Heatmap fetch failed', details: error.message });
   }
 });
 

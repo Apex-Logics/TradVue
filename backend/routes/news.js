@@ -1,6 +1,7 @@
 const express = require('express');
 const axios = require('axios');
 const router = express.Router();
+const finnhubService = require('../services/finnhub');
 
 // Mock news data (replace with real API integration later)
 const mockNews = [
@@ -67,28 +68,95 @@ const mockNews = [
 ];
 
 // Get latest news articles
-router.get('/', (req, res) => {
+router.get('/', async (req, res) => {
   try {
-    const { 
-      limit = 20, 
-      offset = 0, 
-      category, 
+    const {
+      limit = 20,
+      offset = 0,
+      category,
+      symbol,
       min_impact = 0,
-      sort = 'published_at' 
+      sort = 'published_at'
     } = req.query;
 
+    // ── Stock-specific news: fetch from Finnhub company-news ─────────────────
+    if (symbol) {
+      try {
+        const articles = await finnhubService.getCompanyNews(symbol.toUpperCase(), { days: 7 });
+        if (articles && articles.length > 0) {
+          const mapped = articles.slice(0, parseInt(limit)).map((a, i) => ({
+            id: a.id || i + 1,
+            title: a.title || '',
+            summary: a.summary || '',
+            content: a.summary || '',
+            source: a.source || 'Finnhub',
+            url: a.url || '#',
+            impact_score: 6.0,
+            sentiment_score: 0,
+            published_at: a.publishedAt || new Date().toISOString(),
+            tags: [symbol.toLowerCase(), 'stocks'],
+            imageUrl: a.imageUrl || null,
+          }));
+          return res.json({
+            articles: mapped,
+            total: mapped.length,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            has_more: false,
+            source: 'finnhub',
+          });
+        }
+      } catch (e) {
+        console.warn(`[News] Finnhub company news failed for ${symbol}:`, e.message);
+      }
+      // Fall through to mock if Finnhub fails
+    }
+
+    // ── General/market news: try Finnhub general news first ─────────────────
+    const isGeneral = !category || category === 'general' || category === 'all';
+    if (isGeneral) {
+      try {
+        const articles = await finnhubService.getGeneralNews('general', { limit: parseInt(limit) });
+        if (articles && articles.length > 0) {
+          const mapped = articles.slice(parseInt(offset), parseInt(offset) + parseInt(limit)).map((a, i) => ({
+            id: a.id || i + 1,
+            title: a.title || '',
+            summary: a.summary || '',
+            content: a.summary || '',
+            source: a.source || 'Finnhub',
+            url: a.url || '#',
+            impact_score: 6.0,
+            sentiment_score: 0,
+            published_at: a.publishedAt || new Date().toISOString(),
+            tags: ['general', 'markets'],
+          }));
+          return res.json({
+            articles: mapped,
+            total: mapped.length,
+            limit: parseInt(limit),
+            offset: parseInt(offset),
+            has_more: false,
+            source: 'finnhub',
+          });
+        }
+      } catch (e) {
+        console.warn('[News] Finnhub general news failed:', e.message);
+      }
+    }
+
+    // ── Fallback: filter mock news by category/tags ───────────────────────────
     let filteredNews = [...mockNews];
 
-    // Filter by category/tags if specified
-    if (category) {
-      filteredNews = filteredNews.filter(article => 
+    // 'general' and 'all' should return everything; only filter on specific categories
+    if (category && !isGeneral) {
+      filteredNews = filteredNews.filter(article =>
         article.tags.some(tag => tag.includes(category.toLowerCase()))
       );
     }
 
     // Filter by minimum impact score
     if (min_impact > 0) {
-      filteredNews = filteredNews.filter(article => 
+      filteredNews = filteredNews.filter(article =>
         article.impact_score >= parseFloat(min_impact)
       );
     }
@@ -110,7 +178,8 @@ router.get('/', (req, res) => {
       total: filteredNews.length,
       limit: parseInt(limit),
       offset: parseInt(offset),
-      has_more: endIndex < filteredNews.length
+      has_more: endIndex < filteredNews.length,
+      source: 'mock',
     });
 
   } catch (error) {

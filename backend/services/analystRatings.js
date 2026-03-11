@@ -56,8 +56,8 @@ async function getAnalystRatings(ticker) {
   return cache.cacheAPICall(cacheKey, async () => {
     const apiKey = process.env.FINNHUB_API_KEY;
 
-    // Fire Yahoo + Finnhub in parallel
-    const [yahooRes, finnhubRes] = await Promise.allSettled([
+    // Fire Yahoo + Finnhub in parallel (3 requests total)
+    const [yahooRes, finnhubRes, finnhubTargetRes] = await Promise.allSettled([
       // Yahoo Finance quote summary — includes analyst data in the quote
       axios.get(`${YAHOO_BASE}/v10/finance/quoteSummary/${upper}`, {
         params: { modules: 'financialData' },
@@ -67,6 +67,13 @@ async function getAnalystRatings(ticker) {
       // Finnhub recommendation trends
       apiKey
         ? axios.get(`${FINNHUB_BASE}/stock/recommendation`, {
+            params: { symbol: upper, token: apiKey },
+            timeout: 8000,
+          })
+        : Promise.reject(new Error('No FINNHUB_API_KEY')),
+      // Finnhub price targets (free tier supports this)
+      apiKey
+        ? axios.get(`${FINNHUB_BASE}/stock/price-target`, {
             params: { symbol: upper, token: apiKey },
             timeout: 8000,
           })
@@ -127,18 +134,67 @@ async function getAnalystRatings(ticker) {
           finnhub.latestPeriod = data[0].period;
         }
       } catch (e) {
-        console.warn(`[AnalystRatings] Finnhub parse error for ${upper}:`, e.message);
+        console.warn(`[AnalystRatings] Finnhub trends parse error for ${upper}:`, e.message);
       }
+    } else {
+      console.warn(`[AnalystRatings] Finnhub trends failed for ${upper}:`, finnhubRes.reason?.message);
+    }
+
+    // ─── Parse Finnhub price targets ────────────────────────────────
+    let finnhubTargets = {
+      targetHigh: null,
+      targetLow: null,
+      targetMean: null,
+      targetMedian: null,
+      lastUpdated: null,
+    };
+
+    if (finnhubTargetRes.status === 'fulfilled') {
+      try {
+        const td = finnhubTargetRes.value.data;
+        if (td && (td.targetMean || td.targetHigh)) {
+          finnhubTargets = {
+            targetHigh:   td.targetHigh   || null,
+            targetLow:    td.targetLow    || null,
+            targetMean:   td.targetMean   || null,
+            targetMedian: td.targetMedian || null,
+            lastUpdated:  td.lastUpdated  || null,
+          };
+        }
+      } catch (e) {
+        console.warn(`[AnalystRatings] Finnhub price-target parse error for ${upper}:`, e.message);
+      }
+    } else {
+      console.warn(`[AnalystRatings] Finnhub price-target failed for ${upper}:`, finnhubTargetRes.reason?.message);
     }
 
     // ─── Build unified response ───────────────────────────────────────
-    const consensusLabel = getConsensusLabel(yahoo.recommendationMean);
+
+    // Consensus: prefer Yahoo's recommendationMean; if missing, derive from Finnhub trends
+    let recommendationMean = yahoo.recommendationMean;
+    if (recommendationMean == null && finnhub.trends.length > 0) {
+      const t = finnhub.trends[0];
+      const total = t.strongBuy + t.buy + t.hold + t.sell + t.strongSell;
+      if (total > 0) {
+        // Weighted: strongBuy=1, buy=2, hold=3, sell=4, strongSell=5
+        const weighted = (t.strongBuy * 1 + t.buy * 2 + t.hold * 3 + t.sell * 4 + t.strongSell * 5) / total;
+        recommendationMean = parseFloat(weighted.toFixed(2));
+      }
+    }
+
+    const consensusLabel = getConsensusLabel(recommendationMean);
+
+    // Price targets: prefer Yahoo, fall back to Finnhub targets
+    const targetHigh   = yahoo.targetHighPrice   ?? finnhubTargets.targetHigh;
+    const targetLow    = yahoo.targetLowPrice    ?? finnhubTargets.targetLow;
+    const targetMean   = yahoo.targetMeanPrice   ?? finnhubTargets.targetMean;
+    const targetMedian = yahoo.targetMedianPrice ?? finnhubTargets.targetMedian;
 
     // Calculate upside/downside from mean target
     let upsidePct = null;
-    if (yahoo.currentPrice && yahoo.targetMeanPrice) {
+    if (yahoo.currentPrice && targetMean) {
       upsidePct = parseFloat(
-        (((yahoo.targetMeanPrice - yahoo.currentPrice) / yahoo.currentPrice) * 100).toFixed(2)
+        (((targetMean - yahoo.currentPrice) / yahoo.currentPrice) * 100).toFixed(2)
       );
     }
 
@@ -152,15 +208,15 @@ async function getAnalystRatings(ticker) {
       symbol: upper,
       consensus: {
         label: consensusLabel,
-        mean: yahoo.recommendationMean,
-        key: yahoo.recommendationKey,
+        mean: recommendationMean,
+        key: yahoo.recommendationKey || (consensusLabel ? consensusLabel.toLowerCase().replace(' ', '_') : null),
         color: getConsensusColor(consensusLabel),
       },
       priceTargets: {
-        high: yahoo.targetHighPrice,
-        low: yahoo.targetLowPrice,
-        mean: yahoo.targetMeanPrice,
-        median: yahoo.targetMedianPrice,
+        high:         targetHigh,
+        low:          targetLow,
+        mean:         targetMean,
+        median:       targetMedian,
         currentPrice: yahoo.currentPrice,
         upsidePct,
       },
@@ -168,13 +224,13 @@ async function getAnalystRatings(ticker) {
       // Finnhub detailed breakdown
       distribution: latestTrend
         ? {
-            strongBuy: latestTrend.strongBuy,
-            buy: latestTrend.buy,
-            hold: latestTrend.hold,
-            sell: latestTrend.sell,
+            strongBuy:  latestTrend.strongBuy,
+            buy:        latestTrend.buy,
+            hold:       latestTrend.hold,
+            sell:       latestTrend.sell,
             strongSell: latestTrend.strongSell,
-            total: totalRatings,
-            period: finnhub.latestPeriod,
+            total:      totalRatings,
+            period:     finnhub.latestPeriod,
           }
         : null,
       // Historical trends (last 4 periods)
