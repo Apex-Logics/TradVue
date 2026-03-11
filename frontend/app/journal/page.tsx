@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useMemo, useRef } from 'react'
+import { useState, useEffect, useMemo, useRef, Suspense } from 'react'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
 import {
@@ -9,13 +9,14 @@ import {
   IconZap, IconHash, IconCalculator, IconStar, IconHeartCrack, IconFlame,
   IconCalendar, IconMicroscope, IconBrain, IconNotebook,
   IconPencil, IconFolder, IconSave, IconTrophy, IconSkull,
-  IconTag, IconSearch, IconAlert, IconCheck, IconArrowUpDown,
+  IconTag, IconSearch, IconAlert, IconCheck, IconArrowUpDown, IconInfo,
 } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import ImportModal from './ImportModal'
 import AdvancedReports from './AdvancedReports'
 import { TagPicker, TagFilterBar, TagChip, loadCustomTags, saveCustomTags, type TagDefinition } from './TagManager'
 import { ExportButton, ImportBackupModal } from './ExportImport'
+import WeeklySummary from './WeeklySummary'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -62,6 +63,8 @@ interface Trade {
   tags_setup_types?: string[]
   tags_mistakes?: string[]
   tags_strategies?: string[]
+  // Emotional tags
+  emotionTag?: string
 }
 
 interface Note {
@@ -727,6 +730,17 @@ function TabDashboard({ trades }: { trades: Trade[] }) {
 
 // ─── Tab 2: Trade Log ─────────────────────────────────────────────────────────
 
+const EMOTION_TAGS = [
+  { label: 'Disciplined', color: '#22c55e', desc: 'Followed the plan, no impulsive decisions' },
+  { label: 'Confident', color: '#3b82f6', desc: 'Strong conviction in the setup' },
+  { label: 'Patient', color: '#8b5cf6', desc: 'Waited for the right entry' },
+  { label: 'Anxious', color: '#f59e0b', desc: 'Felt uncertain or nervous' },
+  { label: 'FOMO', color: '#f97316', desc: 'Fear of missing out drove the trade' },
+  { label: 'Revenge', color: '#ef4444', desc: 'Traded to recover a loss' },
+  { label: 'Overconfident', color: '#dc2626', desc: 'Took too much risk, felt invincible' },
+  { label: 'Neutral', color: 'var(--text-3)', desc: 'No strong emotion' },
+]
+
 const EMPTY_FORM = {
   date: new Date().toISOString().slice(0, 10),
   time: new Date().toTimeString().slice(0, 5),
@@ -744,6 +758,7 @@ const EMPTY_FORM = {
   rating: 3,
   notes: '',
   screenshot: '',
+  emotionTag: '',
   // Option fields
   strike: '', expiry: '', premium: '', contracts: '',
   // Forex fields
@@ -768,9 +783,10 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   )
 }
 
-function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
+function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }: {
   trades: Trade[]; setTrades: (t: Trade[]) => void
   customTags: TagDefinition[]; onAddCustomTag: (tag: TagDefinition) => void
+  prefill?: { symbol?: string; price?: string; asset?: string } | null
 }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
@@ -789,7 +805,22 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
   // Tag filters
   const [tagFilters, setTagFilters] = useState({ setup_types: [] as string[], mistakes: [] as string[], strategies: [] as string[] })
 
+  const [livePriceFetching, setLivePriceFetching] = useState(false)
+  const [livePriceHint, setLivePriceHint] = useState<{ symbol: string; price: number } | null>(null)
   const set = (k: string) => (v: string | number) => setForm(f => ({ ...f, [k]: v }))
+
+  // Pre-fill from URL params (watchlist +LOG button)
+  useEffect(() => {
+    if (!prefill?.symbol) return
+    setShowForm(true)
+    setForm(f => ({
+      ...f,
+      symbol: prefill.symbol || '',
+      entryPrice: prefill.price || '',
+      assetClass: (prefill.asset as AssetClass) || f.assetClass,
+    }))
+    if (prefill.price) setLivePriceHint({ symbol: prefill.symbol || '', price: parseFloat(prefill.price) })
+  }, [prefill])
 
   // Auto-calc preview
   const preview = useMemo(() => {
@@ -861,10 +892,19 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
       tags_setup_types: formSetupTypes,
       tags_mistakes: formMistakes,
       tags_strategies: formStrategies,
+      emotionTag: form.emotionTag || '',
     }
     const updated = [trade, ...trades]
     setTrades(updated)
     saveTrades(updated)
+    // Save smart defaults for this asset class
+    try {
+      localStorage.setItem(`cg_journal_defaults_${form.assetClass}`, JSON.stringify({
+        stopDistance: Math.abs(entry - (parseFloat(form.stopLoss) || entry)),
+        positionSize: size,
+        commissions: parseFloat(form.commissions) || 0,
+      }))
+    } catch {}
     setForm({ ...EMPTY_FORM, date: form.date })
     setFormSetupTypes([])
     setFormMistakes([])
@@ -936,6 +976,31 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
         sub="Record every trade you make — even the bad ones! Honest logging is how you find patterns and improve."
       />
 
+      {/* Weekly Summary */}
+      <WeeklySummary trades={trades} />
+
+      {/* Streak Banner */}
+      {(() => {
+        if (trades.length < 2) return null
+        let streak = 0; const last = trades[0]
+        if (!last) return null
+        for (const t of trades) {
+          if (last.pnl > 0 && t.pnl > 0) streak++
+          else if (last.pnl < 0 && t.pnl < 0) streak++
+          else break
+        }
+        if (streak < 3) return null
+        const isWin = last.pnl > 0
+        return (
+          <div style={{ padding: '8px 14px', borderRadius: 8, background: isWin ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${isWin ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, marginBottom: 12, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
+            <span style={{ fontSize: 18 }}>🔥</span>
+            <span style={{ color: isWin ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
+              {streak} {isWin ? 'wins' : 'losses'} in a row{isWin ? '! Keep your discipline.' : ' — take a break and review your setups.'}
+            </span>
+          </div>
+        )
+      })()}
+
       {/* Action bar */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <button
@@ -980,9 +1045,24 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
             </div>
             <div>
               <FieldLabel label="Asset Class" tooltip="Type of instrument. Each has different characteristics — stocks trade shares, options trade contracts, forex trades lots." />
-              <select value={form.assetClass} onChange={e => set('assetClass')(e.target.value)} style={inputSx}>
+              <select value={form.assetClass} onChange={e => {
+                const ac = e.target.value
+                set('assetClass')(ac)
+                // Load smart defaults for this asset class
+                try {
+                  const saved = JSON.parse(localStorage.getItem(`cg_journal_defaults_${ac}`) || '{}')
+                  if (saved.commissions !== undefined) set('commissions')(String(saved.commissions))
+                } catch {}
+              }} style={inputSx}>
                 {ASSET_CLASSES.map(a => <option key={a} value={a}>{a}</option>)}
               </select>
+              {(() => {
+                try {
+                  const saved = JSON.parse(localStorage.getItem(`cg_journal_defaults_${form.assetClass}`) || '{}')
+                  if (saved.positionSize) return <div style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>Using your {form.assetClass} defaults · <button type="button" onClick={() => { try { localStorage.removeItem(`cg_journal_defaults_${form.assetClass}`) } catch {} }} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--accent)', fontSize: 9, padding: 0 }}>reset</button></div>
+                } catch {}
+                return null
+              })()}
             </div>
             <div>
               <FieldLabel label="Direction" tooltip="Long = you bought expecting price to go UP. Short = you sold/shorted expecting price to go DOWN." />
@@ -997,7 +1077,38 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(150px, 1fr))', gap: 12, marginBottom: 12 }}>
             <div>
               <FieldLabel label="Entry Price" tooltip="The price you bought/shorted at. Be exact — this is your cost basis." />
-              <input type="number" value={form.entryPrice} onChange={e => set('entryPrice')(e.target.value)} placeholder="e.g. 150.00" step="any" style={inputSx} />
+              <div style={{ position: 'relative' }}>
+                <input type="number" value={form.entryPrice} onChange={e => set('entryPrice')(e.target.value)} placeholder="e.g. 150.00" step="any" style={inputSx} />
+                {form.symbol && !form.entryPrice && (
+                  <button
+                    type="button"
+                    disabled={livePriceFetching}
+                    onClick={async () => {
+                      if (!form.symbol) return
+                      setLivePriceFetching(true)
+                      try {
+                        const API_BASE_J = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
+                        const r = await fetch(`${API_BASE_J}/api/market-data/quote/${form.symbol}`)
+                        const j = await r.json()
+                        const price = j?.c || j?.regularMarketPrice || j?.price
+                        if (price) {
+                          set('entryPrice')(String(price.toFixed(2)))
+                          setLivePriceHint({ symbol: form.symbol, price })
+                        }
+                      } catch {}
+                      setLivePriceFetching(false)
+                    }}
+                    style={{ marginTop: 4, fontSize: 10, padding: '2px 8px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.3)', borderRadius: 4, cursor: 'pointer', color: 'var(--accent)' }}
+                  >
+                    {livePriceFetching ? 'Fetching…' : `Fill ${form.symbol} current price`}
+                  </button>
+                )}
+                {livePriceHint && livePriceHint.symbol === form.symbol && (
+                  <div style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>
+                    Current: <strong style={{ color: 'var(--accent)' }}>${livePriceHint.price.toFixed(2)}</strong> — you can edit above
+                  </div>
+                )}
+              </div>
             </div>
             <div>
               <FieldLabel label="Exit Price" tooltip="The price you sold/covered at. P&L is calculated from entry to exit." />
@@ -1084,6 +1195,31 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag }: {
             <div>
               <FieldLabel label="Rating" tooltip="How well did you execute this trade? 5 stars = followed your plan perfectly. 1 star = broke all your rules. Rate execution, not outcome." />
               <StarRating value={form.rating} onChange={v => set('rating')(v)} />
+            </div>
+
+            {/* Emotion tag picker */}
+            <div style={{ gridColumn: '1 / -1' }}>
+              <FieldLabel label="Emotional State (optional)" tooltip="Tag your emotional state when entering this trade. Over time, you'll see which emotions lead to losses. Patterns like 'FOMO trades lose 78%' change behavior faster than rules." />
+              <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+                <button
+                  type="button"
+                  onClick={() => set('emotionTag')('')}
+                  style={{ padding: '4px 10px', borderRadius: 20, border: `1px solid ${!form.emotionTag ? 'var(--accent)' : 'var(--border)'}`, background: !form.emotionTag ? 'var(--accent-dim)' : 'transparent', color: !form.emotionTag ? 'var(--accent)' : 'var(--text-3)', fontSize: 11, cursor: 'pointer' }}
+                >
+                  None
+                </button>
+                {EMOTION_TAGS.map(e => (
+                  <button
+                    key={e.label}
+                    type="button"
+                    title={e.desc}
+                    onClick={() => set('emotionTag')(form.emotionTag === e.label ? '' : e.label)}
+                    style={{ padding: '4px 10px', borderRadius: 20, border: `1px solid ${form.emotionTag === e.label ? e.color : 'var(--border)'}`, background: form.emotionTag === e.label ? e.color + '25' : 'transparent', color: form.emotionTag === e.label ? e.color : 'var(--text-2)', fontSize: 11, cursor: 'pointer', fontWeight: form.emotionTag === e.label ? 700 : 400 }}
+                  >
+                    {e.label}
+                  </button>
+                ))}
+              </div>
             </div>
           </div>
 
@@ -1727,6 +1863,125 @@ function TabAnalytics({ trades }: { trades: Trade[] }) {
           </svg>
         </Card>
       </div>
+
+      {/* Pattern Detection */}
+      {trades.length >= 5 && <PatternDetection trades={trades} />}
+    </div>
+  )
+}
+
+// ─── Pattern Detection ────────────────────────────────────────────────────────
+
+function PatternDetection({ trades }: { trades: Trade[] }) {
+  const patterns = useMemo(() => {
+    const findings: { text: string; type: 'positive' | 'negative' | 'neutral'; detail?: string }[] = []
+    if (trades.length < 5) return findings
+
+    // Day of week analysis
+    const dowMap: Record<number, { wins: number; total: number; pnl: number }> = {}
+    const days = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+    trades.forEach(t => {
+      const dow = new Date(t.date + 'T12:00:00').getDay()
+      if (!dowMap[dow]) dowMap[dow] = { wins: 0, total: 0, pnl: 0 }
+      dowMap[dow].total++
+      dowMap[dow].pnl += t.pnl
+      if (t.pnl > 0) dowMap[dow].wins++
+    })
+    const dowEntries = Object.entries(dowMap).filter(([, d]) => d.total >= 3).map(([d, v]) => ({ day: days[parseInt(d)], wr: v.wins / v.total, pnl: v.pnl, count: v.total }))
+    const worstDay = dowEntries.sort((a, b) => a.wr - b.wr)[0]
+    const bestDay = [...dowEntries].sort((a, b) => b.wr - a.wr)[0]
+    if (worstDay && worstDay.wr < 0.35) findings.push({ text: `You lose ${((1 - worstDay.wr) * 100).toFixed(0)}% on ${worstDay.day}s`, type: 'negative', detail: `Consider trading fewer contracts or skipping ${worstDay.day}s entirely.` })
+    if (bestDay && bestDay.wr > 0.65) findings.push({ text: `${bestDay.day} is your best day — ${(bestDay.wr * 100).toFixed(0)}% win rate`, type: 'positive' })
+
+    // Asset class analysis
+    const assetMap: Record<string, { wins: number; total: number }> = {}
+    trades.forEach(t => {
+      if (!assetMap[t.assetClass]) assetMap[t.assetClass] = { wins: 0, total: 0 }
+      assetMap[t.assetClass].total++
+      if (t.pnl > 0) assetMap[t.assetClass].wins++
+    })
+    Object.entries(assetMap).filter(([, d]) => d.total >= 3).forEach(([ac, d]) => {
+      const wr = d.wins / d.total
+      if (wr > 0.60) findings.push({ text: `Win rate on ${ac}: ${(wr * 100).toFixed(0)}%`, type: 'positive' })
+      if (wr < 0.35) findings.push({ text: `Struggling with ${ac} — only ${(wr * 100).toFixed(0)}% win rate`, type: 'negative', detail: `Consider pausing ${ac} trades to review your edge.` })
+    })
+
+    // Time of day analysis
+    const hourMap: Record<number, { wins: number; total: number; pnl: number }> = {}
+    trades.forEach(t => {
+      if (!t.time) return
+      const h = parseInt(t.time.slice(0, 2))
+      if (isNaN(h)) return
+      if (!hourMap[h]) hourMap[h] = { wins: 0, total: 0, pnl: 0 }
+      hourMap[h].total++
+      hourMap[h].pnl += t.pnl
+      if (t.pnl > 0) hourMap[h].wins++
+    })
+    const hourEntries = Object.entries(hourMap).filter(([, d]) => d.total >= 3)
+    const bestHour = hourEntries.sort((a, b) => b[1].pnl / b[1].total - a[1].pnl / a[1].total)[0]
+    const worstHour = hourEntries.sort((a, b) => a[1].pnl / a[1].total - b[1].pnl / b[1].total)[0]
+    if (bestHour) findings.push({ text: `Most profitable hour: ${bestHour[0]}:00`, type: 'positive' })
+    if (worstHour && worstHour[1].pnl < 0) findings.push({ text: `Losing money consistently at ${worstHour[0]}:00`, type: 'negative', detail: `Avoid trading at ${worstHour[0]}:00 — consistent losses in this hour.` })
+
+    // Emotional tag analysis
+    const emotionMap: Record<string, { wins: number; total: number }> = {}
+    trades.forEach(t => {
+      if (!t.emotionTag) return
+      if (!emotionMap[t.emotionTag]) emotionMap[t.emotionTag] = { wins: 0, total: 0 }
+      emotionMap[t.emotionTag].total++
+      if (t.pnl > 0) emotionMap[t.emotionTag].wins++
+    })
+    Object.entries(emotionMap).filter(([, d]) => d.total >= 3).forEach(([tag, d]) => {
+      const wr = d.wins / d.total
+      if (wr > 0.65) findings.push({ text: `When ${tag}: ${(wr * 100).toFixed(0)}% win rate`, type: 'positive', detail: `${tag} trades are your most profitable. This mental state works.` })
+      if (wr < 0.35) findings.push({ text: `When ${tag}: you lose ${((1 - wr) * 100).toFixed(0)}% of the time`, type: 'negative', detail: `${tag} is costing you money. When you feel this way, step away.` })
+    })
+
+    // Hold time analysis
+    const shortTrades = trades.filter(t => t.holdMinutes > 0 && t.holdMinutes <= 60)
+    const medTrades = trades.filter(t => t.holdMinutes > 60 && t.holdMinutes <= 1440)
+    const longTrades = trades.filter(t => t.holdMinutes > 1440)
+    const wr = (arr: Trade[]) => arr.length ? arr.filter(t => t.pnl > 0).length / arr.length : -1
+    if (shortTrades.length >= 3 && medTrades.length >= 3) {
+      const swr = wr(shortTrades); const mwr = wr(medTrades)
+      if (swr > mwr + 0.15) findings.push({ text: `Best holding period: under 1 hour (${(swr * 100).toFixed(0)}% win rate)`, type: 'positive' })
+      else if (mwr > swr + 0.15) findings.push({ text: `Best holding period: 1–24 hours (${(mwr * 100).toFixed(0)}% win rate)`, type: 'positive' })
+    }
+
+    // Size analysis: are bigger positions losing money?
+    const sorted = [...trades].filter(t => t.positionSize > 0).sort((a, b) => a.positionSize - b.positionSize)
+    if (sorted.length >= 6) {
+      const half = Math.floor(sorted.length / 2)
+      const smallWR = wr(sorted.slice(0, half))
+      const bigWR = wr(sorted.slice(half))
+      if (smallWR > bigWR + 0.15) findings.push({ text: `Smaller positions win more (${(smallWR * 100).toFixed(0)}% vs ${(bigWR * 100).toFixed(0)}%)`, type: 'negative', detail: 'You may be oversizing your largest positions. Stick to consistent sizing.' })
+    }
+
+    if (findings.length === 0) findings.push({ text: 'Keep logging trades — patterns will emerge after 20+ trades', type: 'neutral' })
+    return findings
+  }, [trades])
+
+  if (trades.length < 5) return null
+
+  return (
+    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 20, marginTop: 20 }}>
+      <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
+        <IconBrain size={14} />Pattern Detection
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 14 }}>Auto-detected from {trades.length} trades</div>
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+        {patterns.map((p, i) => (
+          <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', borderRadius: 8, background: p.type === 'positive' ? 'rgba(34,197,94,0.1)' : p.type === 'negative' ? 'rgba(239,68,68,0.1)' : 'var(--bg-3)', border: `1px solid ${p.type === 'positive' ? 'rgba(34,197,94,0.3)' : p.type === 'negative' ? 'rgba(239,68,68,0.3)' : 'var(--border)'}` }}>
+            <span style={{ color: p.type === 'positive' ? 'var(--green)' : p.type === 'negative' ? 'var(--red)' : 'var(--text-3)', flexShrink: 0, marginTop: 1 }}>
+              {p.type === 'positive' ? <IconCheck size={13} /> : p.type === 'negative' ? <IconAlert size={13} /> : <IconInfo size={13} />}
+            </span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-0)' }}>{p.text}</div>
+              {p.detail && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{p.detail}</div>}
+            </div>
+          </div>
+        ))}
+      </div>
     </div>
   )
 }
@@ -2206,18 +2461,32 @@ const TABS: { id: string; label: string; Icon: React.FC<{ size?: number; classNa
   { id: 'advanced',  label: 'Advanced',  Icon: IconBrain },
 ]
 
-export default function JournalPage() {
-  const [activeTab, setActiveTab] = useState('dashboard')
+function JournalPageInner() {
+  const [activeTab, setActiveTab] = useState('tradelog')
   const [trades, setTrades] = useState<Trade[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [showImportModal, setShowImportModal] = useState(false)
   const [showBackupImport, setShowBackupImport] = useState(false)
   const [customTags, setCustomTags] = useState<TagDefinition[]>([])
+  // Pre-fill from URL params (from watchlist +LOG button)
+  const [prefillParams, setPrefillParams] = useState<{ symbol?: string; price?: string; asset?: string } | null>(null)
 
   useEffect(() => {
     setTrades(loadTrades())
     setNotes(loadNotes())
     setCustomTags(loadCustomTags())
+    // Check URL params for pre-fill
+    try {
+      const params = new URLSearchParams(window.location.search)
+      const sym = params.get('symbol')
+      const price = params.get('price')
+      const asset = params.get('asset')
+      if (sym) {
+        setPrefillParams({ symbol: sym, price: price || undefined, asset: asset || undefined })
+        // Clean the URL
+        window.history.replaceState({}, '', '/journal')
+      }
+    } catch {}
   }, [])
 
   const handleImportTrades = (importedTrades: Record<string, unknown>[]) => {
@@ -2368,7 +2637,7 @@ export default function JournalPage() {
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
         {activeTab === 'dashboard' && <TabDashboard trades={trades} />}
-        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} customTags={customTags} onAddCustomTag={handleAddCustomTag} />}
+        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} customTags={customTags} onAddCustomTag={handleAddCustomTag} prefill={prefillParams} />}
         {activeTab === 'calendar'  && <TabCalendar  trades={trades} />}
         {activeTab === 'analytics' && <TabAnalytics trades={trades} />}
         {activeTab === 'notebook'  && <TabNotebook  notes={notes}   setNotes={setNotes} />}
@@ -2389,5 +2658,13 @@ export default function JournalPage() {
         <ImportBackupModal onClose={() => setShowBackupImport(false)} onRestore={handleBackupRestore} />
       )}
     </div>
+  )
+}
+
+export default function JournalPage() {
+  return (
+    <Suspense fallback={<div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)' }}>Loading journal…</div>}>
+      <JournalPageInner />
+    </Suspense>
   )
 }

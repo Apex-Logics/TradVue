@@ -1,6 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
+import dynamic from 'next/dynamic'
 import {
   IconArrowLeft, IconAlert, IconDownload, IconBriefcase,
   IconChart, IconFolder, IconDollar, IconEye, IconEyeOff, IconReceiptTax,
@@ -9,6 +10,8 @@ import {
 import Link from 'next/link'
 import PersistentNav from '../components/PersistentNav'
 import Tooltip from '../components/Tooltip'
+
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 
 // ─── Types ───────────────────────────────────────────────────────────────────
 
@@ -557,6 +560,7 @@ function PortfolioExportButton() {
 export default function PortfolioPage() {
   const [activeTab, setActiveTab] = useState<'dashboard' | 'holdings' | 'dividends' | 'sold' | 'watchlist' | 'tax'>('dashboard')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
+  const [authModalOpen, setAuthModalOpen] = useState(false)
   const [showImportBanner, setShowImportBanner] = useState(false)
 
   // Privacy mode — hides all dollar amounts, shows only percentages
@@ -1022,7 +1026,7 @@ export default function PortfolioPage() {
           Portfolio
         </div>
         {isLoggedIn && <span style={{ fontSize: 10, color: 'var(--green)', background: 'var(--green-dim)', padding: '2px 8px', borderRadius: 10 }}>☁ Cloud Sync</span>}
-        {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <Link href="/login" style={{ color: 'var(--accent)' }}>Sign in to save</Link></span>}
+        {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <button onClick={() => setAuthModalOpen(true)} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 10 }}>Sign in to save</button></span>}
         <div style={{ flex: 1 }} />
         {loadingPrices && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>↻ Updating prices…</span>}
         {/* Privacy toggle */}
@@ -1186,6 +1190,9 @@ export default function PortfolioPage() {
           </p>
         </div>
       </footer>
+
+      {/* Auth Modal */}
+      {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
     </div>
   )
 }
@@ -1215,6 +1222,7 @@ function DashboardTab({
   setActiveTab: (tab: 'dashboard' | 'holdings' | 'dividends' | 'sold' | 'watchlist' | 'tax') => void;
 })
 {
+  const [dashAuthOpen, setDashAuthOpen] = useState(false)
   const pv = (n: number) => privacyMode ? '•••••' : fmtDollar(n)
   if (holdings.length === 0) {
     return (
@@ -1281,7 +1289,8 @@ function DashboardTab({
         </div>
 
         <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center' }}>
-          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconSave size={11} />No account required — data saves locally in your browser. <a href="/login" style={{ color: 'var(--accent)' }}>Sign in</a> to enable cloud sync.</span>
+          <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconSave size={11} />No account required — data saves locally in your browser. <button onClick={() => setDashAuthOpen(true)} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 11 }}>Sign in</button> to enable cloud sync.</span>
+          {dashAuthOpen && <AuthModal onClose={() => setDashAuthOpen(false)} />}
         </div>
       </div>
     )
@@ -1346,6 +1355,9 @@ function DashboardTab({
         <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>PORTFOLIO GROWTH (MONTHLY SNAPSHOTS)</div>
         <LineChart data={snapshots} />
       </div>
+
+      {/* Portfolio Risk Score */}
+      <PortfolioRiskScore holdingsEnriched={holdingsEnriched} stockInfos={stockInfos} totalMarketValue={totalMarketValue} />
 
       {/* DRIP Summary */}
       <DRIPSummary holdingsEnriched={holdingsEnriched} stockInfos={stockInfos} portfolioSettings={portfolioSettings} />
@@ -3166,6 +3178,137 @@ function ExDivAlerts({ holdingsEnriched, stockInfos }: {
 
 // ─── Feature: DRIP Summary ────────────────────────────────────────────────────
 
+// ─── Portfolio Risk Score ─────────────────────────────────────────────────────
+
+function PortfolioRiskScore({ holdingsEnriched, stockInfos, totalMarketValue }: {
+  holdingsEnriched: HoldingEnrichedWithDiv[]
+  stockInfos: Record<string, StockInfo>
+  totalMarketValue: number
+}) {
+  if (holdingsEnriched.length === 0 || totalMarketValue <= 0) return null
+
+  // Calculate components
+  // 1. Concentration risk (0-30 pts): top holding weight
+  const weights = holdingsEnriched.map(h => h.marketValue / totalMarketValue)
+  const maxWeight = Math.max(...weights)
+  const concentrationScore = Math.round(Math.min(30, maxWeight * 100 * 0.5))
+
+  // 2. Sector risk (0-20 pts): HHI index
+  const sectorPcts: Record<string, number> = {}
+  holdingsEnriched.forEach(h => {
+    const s = h.sector || 'Other'
+    sectorPcts[s] = (sectorPcts[s] || 0) + h.marketValue / totalMarketValue * 100
+  })
+  const hhi = Object.values(sectorPcts).reduce((s, p) => s + Math.pow(p / 100, 2), 0)
+  const sectorScore = Math.round(hhi * 20)
+
+  // 3. Beta risk (0-25 pts): portfolio beta
+  let betaSum = 0, betaWeight = 0
+  holdingsEnriched.forEach(h => {
+    const beta = stockInfos[h.ticker]?.beta
+    if (beta != null && h.marketValue > 0) {
+      betaSum += beta * (h.marketValue / totalMarketValue)
+      betaWeight += h.marketValue / totalMarketValue
+    }
+  })
+  const portfolioBeta = betaWeight > 0 ? betaSum / betaWeight : 1
+  const betaScore = Math.round(Math.min(25, Math.max(0, (portfolioBeta - 0.5) * 25)))
+
+  // 4. Diversification (0-25 pts): number of holdings
+  const numHoldings = holdingsEnriched.length
+  const divScore = numHoldings <= 2 ? 20 : numHoldings <= 4 ? 12 : numHoldings <= 7 ? 6 : 2
+
+  const totalScore = Math.min(100, concentrationScore + sectorScore + betaScore + divScore)
+
+  const level = totalScore <= 25 ? 'Low' : totalScore <= 50 ? 'Moderate' : totalScore <= 75 ? 'High' : 'Extreme'
+  const levelColor = { Low: 'var(--green)', Moderate: 'var(--yellow)', High: '#f97316', Extreme: 'var(--red)' }[level]
+
+  // Generate recommendations
+  const recs: string[] = []
+  if (maxWeight > 0.30) recs.push(`${holdingsEnriched.find(h => h.marketValue / totalMarketValue >= maxWeight - 0.001)?.ticker || 'Top holding'} is ${(maxWeight * 100).toFixed(0)}% of portfolio — consider trimming`)
+  const dominantSector = Object.entries(sectorPcts).sort((a, b) => b[1] - a[1])[0]
+  if (dominantSector && dominantSector[1] > 50) recs.push(`${dominantSector[1].toFixed(0)}% in ${dominantSector[0]} — diversify across sectors`)
+  if (portfolioBeta > 1.4) recs.push(`Beta ${portfolioBeta.toFixed(2)} is elevated — portfolio moves more than the market`)
+  if (numHoldings < 5) recs.push(`Only ${numHoldings} holding${numHoldings > 1 ? 's' : ''} — consider adding uncorrelated assets`)
+  if (recs.length === 0) recs.push('Portfolio risk profile looks balanced. Continue monitoring.')
+
+  // SVG Gauge
+  const gaugeAngle = (totalScore / 100) * 180
+  const cx = 80, cy = 80, r = 60
+  const toRad = (a: number) => (a - 180) * Math.PI / 180
+  const gaugeX = cx + r * Math.cos(toRad(gaugeAngle))
+  const gaugeY = cy + r * Math.sin(toRad(gaugeAngle))
+
+  return (
+    <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>PORTFOLIO RISK SCORE</div>
+      <div style={{ display: 'grid', gridTemplateColumns: '160px 1fr', gap: 20, alignItems: 'center' }}>
+        {/* Gauge */}
+        <div style={{ textAlign: 'center' }}>
+          <svg viewBox="0 0 160 100" width="160" height="100">
+            {/* Background arc */}
+            <path d={`M ${cx - r} ${cy} A ${r} ${r} 0 0 1 ${cx + r} ${cy}`} fill="none" stroke="var(--bg-1)" strokeWidth="14" />
+            {/* Colored arc segments */}
+            {[
+              { from: 0, to: 25, color: 'var(--green)' },
+              { from: 25, to: 50, color: 'var(--yellow)' },
+              { from: 50, to: 75, color: '#f97316' },
+              { from: 75, to: 100, color: 'var(--red)' },
+            ].map((seg, i) => {
+              const startAngle = (seg.from / 100) * 180
+              const endAngle = (seg.to / 100) * 180
+              const x1 = cx + r * Math.cos(toRad(startAngle))
+              const y1 = cy + r * Math.sin(toRad(startAngle))
+              const x2 = cx + r * Math.cos(toRad(endAngle))
+              const y2 = cy + r * Math.sin(toRad(endAngle))
+              return (
+                <path key={i}
+                  d={`M ${x1} ${y1} A ${r} ${r} 0 0 1 ${x2} ${y2}`}
+                  fill="none" stroke={seg.color} strokeWidth="14" opacity="0.7" />
+              )
+            })}
+            {/* Needle */}
+            <line x1={cx} y1={cy} x2={gaugeX} y2={gaugeY} stroke="var(--text-0)" strokeWidth="2.5" strokeLinecap="round" />
+            <circle cx={cx} cy={cy} r="5" fill="var(--text-0)" />
+            {/* Score */}
+            <text x={cx} y={cy + 22} textAnchor="middle" fontSize="20" fontWeight="800" fill={levelColor} fontFamily="var(--mono)">{totalScore}</text>
+            <text x={cx} y={cy + 34} textAnchor="middle" fontSize="9" fill="var(--text-3)">out of 100</text>
+          </svg>
+          <div style={{ fontSize: 14, fontWeight: 800, color: levelColor, marginTop: -4 }}>{level} Risk</div>
+        </div>
+
+        {/* Breakdown + recs */}
+        <div>
+          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 12 }}>
+            {[
+              { label: 'Concentration', score: concentrationScore, max: 30 },
+              { label: 'Sector exposure', score: sectorScore, max: 20 },
+              { label: 'Beta', score: betaScore, max: 25 },
+              { label: 'Diversification', score: divScore, max: 25 },
+            ].map(c => (
+              <div key={c.label} style={{ fontSize: 11 }}>
+                <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 3 }}>
+                  <span style={{ color: 'var(--text-2)' }}>{c.label}</span>
+                  <span style={{ color: 'var(--text-1)', fontFamily: 'var(--mono)' }}>{c.score}/{c.max}</span>
+                </div>
+                <div style={{ height: 4, background: 'var(--bg-1)', borderRadius: 2 }}>
+                  <div style={{ height: '100%', width: `${(c.score / c.max) * 100}%`, background: c.score > c.max * 0.66 ? 'var(--red)' : c.score > c.max * 0.33 ? 'var(--yellow)' : 'var(--green)', borderRadius: 2 }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 4, fontWeight: 700, letterSpacing: '0.05em' }}>RECOMMENDATIONS</div>
+          {recs.map((r, i) => (
+            <div key={i} style={{ fontSize: 11, color: 'var(--text-2)', padding: '3px 0', borderBottom: '1px solid var(--border)' }}>
+              {totalScore > 50 ? '⚠ ' : '• '}{r}
+            </div>
+          ))}
+        </div>
+      </div>
+    </div>
+  )
+}
+
 function DRIPSummary({ holdingsEnriched, stockInfos, portfolioSettings }: {
   holdingsEnriched: HoldingEnrichedWithDiv[]
   stockInfos: Record<string, StockInfo>
@@ -3199,7 +3342,7 @@ function DRIPSummary({ holdingsEnriched, stockInfos, portfolioSettings }: {
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>
-        🔄 DRIP REINVESTMENT SUMMARY
+        DRIP REINVESTMENT SUMMARY
       </div>
       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10, marginBottom: 12 }}>
         {items.map(x => (
@@ -3464,7 +3607,7 @@ function RiskMetricsSection({ holdingsEnriched, stockInfos, totalMarketValue }: 
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>📉 RISK METRICS</div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)', marginBottom: 12 }}>RISK METRICS</div>
       <div className="kpi-grid">
         {cards.map((c, i) => (
           <div key={i} style={{ background: 'var(--bg-3)', borderRadius: 6, padding: '12px 14px' }}>

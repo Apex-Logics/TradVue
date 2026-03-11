@@ -79,14 +79,14 @@ const CONTRACTS: FuturesContract[] = [
 
 const CONTRACT_MAP = new Map(CONTRACTS.map(c => [c.symbol, c]))
 
-const CONTRACT_GROUPS: { label: string; key: string; emoji: string }[] = [
-  { label: 'Indices',     key: 'indices',     emoji: '📊' },
-  { label: 'Energy',      key: 'energy',      emoji: '⛽' },
-  { label: 'Metals',      key: 'metals',      emoji: '🥇' },
-  { label: 'Agriculture', key: 'agriculture', emoji: '🌾' },
-  { label: 'Currencies',  key: 'currencies',  emoji: '💱' },
-  { label: 'Rates',       key: 'rates',       emoji: '📈' },
-  { label: 'Crypto',      key: 'crypto',      emoji: '₿'  },
+const CONTRACT_GROUPS: { label: string; key: string }[] = [
+  { label: 'Indices',     key: 'indices'     },
+  { label: 'Energy',      key: 'energy'      },
+  { label: 'Metals',      key: 'metals'      },
+  { label: 'Agriculture', key: 'agriculture' },
+  { label: 'Currencies',  key: 'currencies'  },
+  { label: 'Rates',       key: 'rates'       },
+  { label: 'Crypto',      key: 'crypto'      },
 ]
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -392,9 +392,9 @@ function SessionIndicators() {
   // London: 3am–12pm ET (Mon–Fri)
   // New York: 9:30am–5pm ET (Mon–Fri)
   const sessions = [
-    { name: 'Asian',    flag: '🌏', open: 18,  close: 3,  color: '#f59e0b', hours: '6pm–3am ET' },
-    { name: 'London',   flag: '🇬🇧', open: 3,   close: 12, color: '#3b82f6', hours: '3am–12pm ET' },
-    { name: 'New York', flag: '🗽', open: 9.5, close: 17, color: '#22c55e', hours: '9:30am–5pm ET' },
+    { name: 'Asian',    regionLabel: 'AS', open: 18,  close: 3,  color: '#f59e0b', hours: '6pm–3am ET' },
+    { name: 'London',   regionLabel: 'EU', open: 3,   close: 12, color: '#3b82f6', hours: '3am–12pm ET' },
+    { name: 'New York', regionLabel: 'NY', open: 9.5, close: 17, color: '#22c55e', hours: '9:30am–5pm ET' },
   ]
 
   return (
@@ -423,7 +423,7 @@ function SessionIndicators() {
               background: active ? s.color + '15' : 'var(--bg-3)',
               flex: '1 1 auto', minWidth: 140,
             }}>
-              <span style={{ fontSize: 14 }}>{s.flag}</span>
+              <span style={{ fontSize: 11, fontWeight: 700, color: active ? s.color : 'var(--text-3)', fontFamily: 'var(--mono)', minWidth: 20, textAlign: 'center' }}>{s.regionLabel}</span>
               <div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
                   <span style={{ width: 6, height: 6, borderRadius: '50%', background: active ? s.color : 'var(--text-3)', display: 'inline-block', flexShrink: 0 }} />
@@ -714,7 +714,7 @@ export default function FuturesCalculator() {
               className="ds-select"
             >
               {CONTRACT_GROUPS.map(group => (
-                <optgroup key={group.key} label={`${group.emoji} ${group.label}`}>
+                <optgroup key={group.key} label={group.label}>
                   {CONTRACTS.filter(c => c.category === group.key).map(c => (
                     <option key={c.symbol} value={c.symbol}>
                       {c.symbol} — {c.name}

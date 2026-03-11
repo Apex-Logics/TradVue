@@ -1202,7 +1202,7 @@ export default function LandingPage() {
                   {[
                     { label: 'Features', href: '#features' },
                     { label: 'Pricing', href: '#pricing' },
-                    { label: 'Roadmap', href: '/roadmap' },
+                    { label: 'Roadmap', href: '/changelog' },
                     { label: 'Changelog', href: '/changelog' },
                     { label: 'Dashboard', href: '/' },
                   ].map(l => (
@@ -1225,10 +1225,7 @@ export default function LandingPage() {
                 </div>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '10px' }}>
                   {[
-                    { label: 'About', href: '/about' },
-                    { label: 'Contact', href: '/contact' },
-                    { label: 'Team', href: '/team' },
-                    { label: 'Blog', href: '/blog' },
+                    { label: 'Contact', href: 'mailto:support@tradvue.com' },
                     { label: 'Help Center', href: '/help' },
                     { label: 'System Status', href: '/status' },
                   ].map(l => (

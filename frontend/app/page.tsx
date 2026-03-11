@@ -1486,6 +1486,85 @@ function PortfolioPanel({ quotes, onOpenStock }: { quotes: Record<string, Quote>
   )
 }
 
+// ─── Smart Alerts Bar ────────────────────────────────────────────────────────
+
+function SmartAlertsBar({ watchlist }: { watchlist: string[] }) {
+  const [alerts, setAlerts] = useState<{ id: string; text: string; type: 'info' | 'warning' | 'success'; link?: string }[]>([])
+  const [dismissed, setDismissed] = useState<Set<string>>(new Set())
+  const [todayPnl, setTodayPnl] = useState<{ pnl: number; wins: number; losses: number } | null>(null)
+
+  useEffect(() => {
+    const newAlerts: typeof alerts = []
+
+    // Today's P&L from journal
+    try {
+      const trades = JSON.parse(localStorage.getItem('cg_trades') || '[]')
+      const today = new Date().toISOString().slice(0, 10)
+      const todayTrades = trades.filter((t: { date: string; pnl: number }) => t.date === today)
+      if (todayTrades.length > 0) {
+        const pnl = todayTrades.reduce((s: number, t: { pnl: number }) => s + t.pnl, 0)
+        const wins = todayTrades.filter((t: { pnl: number }) => t.pnl > 0).length
+        const losses = todayTrades.filter((t: { pnl: number }) => t.pnl < 0).length
+        setTodayPnl({ pnl, wins, losses })
+      }
+    } catch {}
+
+    // Watchlist earnings in next 2 days (from localStorage cache)
+    try {
+      const cal = JSON.parse(localStorage.getItem('cg_cal_cache') || '[]')
+      const today = new Date()
+      const in2days = new Date(today)
+      in2days.setDate(today.getDate() + 2)
+      const upcoming = cal.filter((e: { date: string; symbol: string; type: string }) => {
+        if (e.type?.toLowerCase() !== 'earnings') return false
+        const d = new Date(e.date)
+        return d >= today && d <= in2days && watchlist.includes(e.symbol?.toUpperCase())
+      })
+      upcoming.slice(0, 3).forEach((e: { symbol: string; date: string }) => {
+        const days = Math.round((new Date(e.date).getTime() - today.getTime()) / 86400000)
+        newAlerts.push({ id: `earn_${e.symbol}`, text: `${e.symbol} earnings in ${days === 0 ? 'today' : `${days}d`} — you hold this`, type: 'warning', link: '/calendar' })
+      })
+    } catch {}
+
+    // Win rate drop alert
+    try {
+      const trades = JSON.parse(localStorage.getItem('cg_trades') || '[]')
+      const weekAgo = new Date(); weekAgo.setDate(weekAgo.getDate() - 7)
+      const weekTrades = trades.filter((t: { date: string; pnl: number }) => new Date(t.date) >= weekAgo)
+      if (weekTrades.length >= 5) {
+        const wr = weekTrades.filter((t: { pnl: number }) => t.pnl > 0).length / weekTrades.length
+        if (wr < 0.40) newAlerts.push({ id: 'winrate_drop', text: `Win rate this week: ${(wr * 100).toFixed(0)}% — consider reviewing your setups`, type: 'warning', link: '/journal' })
+      }
+    } catch {}
+
+    setAlerts(newAlerts)
+  }, [watchlist])
+
+  const visible = alerts.filter(a => !dismissed.has(a.id))
+  if (visible.length === 0 && !todayPnl) return null
+
+  return (
+    <div style={{ maxWidth: '100%', padding: '6px 16px', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center', borderBottom: '1px solid var(--border)', background: 'var(--bg-1)' }}>
+      {todayPnl && (
+        <div style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', background: todayPnl.pnl >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${todayPnl.pnl >= 0 ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, borderRadius: 20, fontSize: 11 }}>
+          <span style={{ fontWeight: 700, color: todayPnl.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
+            Today: {todayPnl.pnl >= 0 ? '+' : ''}{todayPnl.pnl.toFixed(2)} USD
+          </span>
+          <span style={{ color: 'var(--text-3)', fontSize: 10 }}>{todayPnl.wins}W/{todayPnl.losses}L</span>
+        </div>
+      )}
+      {visible.map(a => (
+        <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 6, padding: '3px 10px', background: a.type === 'warning' ? 'rgba(245,158,11,0.1)' : a.type === 'success' ? 'rgba(34,197,94,0.1)' : 'var(--bg-3)', border: `1px solid ${a.type === 'warning' ? 'rgba(245,158,11,0.3)' : a.type === 'success' ? 'rgba(34,197,94,0.3)' : 'var(--border)'}`, borderRadius: 20, fontSize: 11 }}>
+          <span style={{ color: a.type === 'warning' ? '#f59e0b' : a.type === 'success' ? 'var(--green)' : 'var(--text-2)' }}>
+            {a.link ? <a href={a.link} style={{ color: 'inherit', textDecoration: 'none' }}>{a.text}</a> : a.text}
+          </span>
+          <button onClick={() => setDismissed(d => new Set([...d, a.id]))} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 10, padding: '0 2px' }}>✕</button>
+        </div>
+      ))}
+    </div>
+  )
+}
+
 // ─── Main Component ───────────────────────────────────────────────────────────
 
 export default function Home() {
@@ -2287,6 +2366,9 @@ export default function Home() {
         <div className="offline-banner">⊗ OFFLINE — displaying cached data. Reconnect for live prices.</div>
       )}
 
+      {/* ── Smart Alerts Bar + Daily P&L Ticker ───────────────────────────── */}
+      <SmartAlertsBar watchlist={watchlist} />
+
       {/* ── 3-Column Main Layout ───────────────────────────────────────────── */}
       <div style={{ position: 'relative' }}>
       <div
@@ -2385,6 +2467,7 @@ export default function Home() {
                     key={sym}
                     className="watchlist-row"
                     onClick={() => openStockDetail(sym)}
+                    style={{ position: 'relative' }}
                   >
                     <div className="watchlist-row-left">
                       <span className="watchlist-sym">{sym}</span>
@@ -2414,6 +2497,20 @@ export default function Home() {
                         <span style={{ fontSize: 9, color: 'var(--text-3)' }}>n/a</span>
                       </div>
                     )}
+                    <button
+                      onClick={e => {
+                        e.stopPropagation()
+                        const q = getWatchlistQuote(sym)
+                        const price = q?.current
+                        const params = new URLSearchParams({ symbol: sym, asset: 'Stock' })
+                        if (price) params.set('price', price.toFixed(2))
+                        window.location.href = `/journal?${params.toString()}`
+                      }}
+                      title={`Log trade for ${sym}`}
+                      style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', color: 'var(--text-3)', padding: '1px 5px', fontSize: 9, fontWeight: 700, marginRight: 2 }}
+                    >
+                      +LOG
+                    </button>
                     <button
                       onClick={e => { e.stopPropagation(); toggleWatch(sym) }}
                       className="watchlist-remove-btn"

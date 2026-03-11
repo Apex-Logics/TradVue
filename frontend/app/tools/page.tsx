@@ -2,9 +2,21 @@
 
 import { useState, useEffect, useCallback } from 'react'
 import Tooltip from '../components/Tooltip'
-import { ToolIcon, IconArrowLeft, IconTool } from '../components/Icons'
+import { ToolIcon, IconArrowLeft, IconTool, IconInfo, IconCheck, IconAlert, IconZap, IconBarChart } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import FuturesCalculator from './FuturesCalculator'
+import dynamic from 'next/dynamic'
+
+const OptionsCalculator = dynamic(() => import('./OptionsCalculator'), { ssr: false })
+const CompoundCalculator = dynamic(() => import('./CompoundCalculator'), { ssr: false })
+const RiskOfRuinCalculator = dynamic(() => import('./RiskOfRuinCalculator'), { ssr: false })
+const ForexCalculator = dynamic(() => import('./ForexCalculator'), { ssr: false })
+const PositionSizer = dynamic(() => import('./PositionSizer'), { ssr: false })
+const DividendPlanner = dynamic(() => import('./DividendPlanner'), { ssr: false })
+const EconHeatmap = dynamic(() => import('./EconHeatmap'), { ssr: false })
+const CorrelationMatrixEnhanced = dynamic(() => import('./CorrelationMatrix'), { ssr: false })
+const ExpectancyCalculator = dynamic(() => import('./ExpectancyCalculator'), { ssr: false })
+const SessionClock = dynamic(() => import('./SessionClock'), { ssr: false })
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
@@ -137,7 +149,7 @@ function PositionSizeCalc() {
         </div>
       </div>
       <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-        💡 Example: Account $25,000 | Risk 2% | Entry $150 | Stop $145 → Buy <strong>100 shares</strong> ($500 at risk)
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Example: Account $25,000 | Risk 2% | Entry $150 | Stop $145 → Buy <strong>100 shares</strong> ($500 at risk)</span>
       </div>
     </Card>
   )
@@ -202,7 +214,12 @@ function RiskRewardCalc() {
             <ResultRow label="Min Win Rate to Profit" value={winRateNeeded > 0 ? fmt(winRateNeeded) + '%' : '—'} tooltip="You need to win this % of trades just to break even with this setup. Lower is better." color="var(--yellow)" />
           </div>
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)' }}>
-            {ratio >= 2 ? '✅ Great setup — reward outweighs risk' : ratio >= 1 ? '⚠️ Acceptable — consider a better target' : '❌ Poor setup — risk exceeds reward'}
+            {ratio >= 2
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconCheck size={12} style={{ color: 'var(--green)' }} />Great setup — reward outweighs risk</span>
+              : ratio >= 1
+              ? <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconAlert size={12} style={{ color: 'var(--yellow)' }} />Acceptable — consider a better target</span>
+              : <span style={{ display: 'inline-flex', alignItems: 'center', gap: 4 }}><IconAlert size={12} style={{ color: 'var(--red)' }} />Poor setup — risk exceeds reward</span>
+            }
           </div>
         </div>
       </div>
@@ -374,7 +391,7 @@ function OptionsGreeksCalc() {
             <ResultRow label="Vega (V)" value={`${fmt(greeks.vega, 4)} per 1% IV`} tooltip="How much the option price changes per 1% change in implied volatility. High vega means the option is very sensitive to volatility changes." />
           </div>
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 Black-Scholes assumes constant volatility and European-style exercise. Real prices may differ.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Black-Scholes assumes constant volatility and European-style exercise. Real prices may differ.</span>
           </div>
         </div>
       </div>
@@ -449,7 +466,7 @@ function PipCalc() {
         </div>
       </div>
       <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-        💡 A pip is 0.0001 for EUR/USD. If EUR/USD moves from 1.1000 to 1.1010, that&apos;s 10 pips. With 1 standard lot, that&apos;s $100 profit or loss.
+        <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />A pip is 0.0001 for EUR/USD. If EUR/USD moves from 1.1000 to 1.1010, that&apos;s 10 pips. With 1 standard lot, that&apos;s $100 profit or loss.</span>
       </div>
     </Card>
   )
@@ -498,7 +515,7 @@ function LotSizeCalc() {
             <ResultRow label="Micro Lots" value={fmt(microLots, 1)} tooltip="Micro lot = 1,000 units. 1/100th of a standard lot. Best for beginners and small accounts." />
           </div>
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 Standard = 100,000 units | Mini = 10,000 | Micro = 1,000. Start with micro lots while learning.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Standard = 100,000 units | Mini = 10,000 | Micro = 1,000. Start with micro lots while learning.</span>
           </div>
         </div>
       </div>
@@ -639,7 +656,7 @@ function FibonacciCalc() {
           <InputField label="Swing Low Price" tooltip="The lowest price in the recent move or swing. This is the bottom of the range you're measuring." value={low} onChange={setLow} placeholder="e.g. 150.00" />
           <SelectField label="Trend Direction" tooltip="Uptrend: price moved UP and may pull back to these levels. Downtrend: price moved DOWN and may bounce to these levels." value={direction} onChange={setDirection} options={[{ value: 'up', label: '⬆️ Uptrend (retracing down from high)' }, { value: 'down', label: '⬇️ Downtrend (bouncing up from low)' }]} />
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 The 61.8% level (Golden Ratio) is considered the most significant. Price often respects the 38.2% and 61.8% levels strongly.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />The 61.8% level (Golden Ratio) is considered the most significant. Price often respects the 38.2% and 61.8% levels strongly.</span>
           </div>
         </div>
         <div>
@@ -738,7 +755,7 @@ function StockScreener() {
         <SelectField label="Sector" tooltip="Industry sector helps group similar companies. Technology companies behave differently from Energy or Healthcare stocks." value={sector} onChange={setSector} options={SECTORS.map(s => ({ value: s, label: s }))} />
       </div>
       <button onClick={runScreener} disabled={loading} style={{ padding: '10px 24px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.4)', borderRadius: 8, color: 'var(--accent)', fontSize: 13, fontWeight: 700, cursor: 'pointer', marginBottom: 16 }}>
-        {loading ? '⏳ Scanning...' : '🔍 Run Screener'}
+        {loading ? 'Scanning...' : 'Run Screener'}
       </button>
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Market data is temporarily unavailable. Please try again.</div>}
       {searched && !loading && (
@@ -841,7 +858,7 @@ function EarningsCalendar() {
         <input value={search} onChange={e => setSearch(e.target.value)} placeholder="Search symbol..." style={{ flex: 1, minWidth: 120, background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', color: 'var(--text-0)', fontSize: 12, outline: 'none' }} />
         <button onClick={fetchEarnings} style={{ padding: '5px 12px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, color: 'var(--text-2)', fontSize: 12, cursor: 'pointer' }}>↻ Refresh</button>
       </div>
-      {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading earnings...</div>}
+      {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading earnings…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Earnings data temporarily unavailable.</div>}
       {!loading && (
         <div style={{ overflowX: 'auto' }}>
@@ -878,7 +895,7 @@ function EarningsCalendar() {
         </div>
       )}
       <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-        💡 <strong>BMO</strong> = Before Market Open (pre-9:30 AM ET) | <strong>AMC</strong> = After Market Close (post-4 PM ET). Options traders often avoid holding positions through earnings due to volatility risk.
+        <span style={{ display: 'inline-flex', alignItems: 'flex-start', gap: 5 }}><IconInfo size={12} style={{ flexShrink: 0, marginTop: 1 }} /><span><strong>BMO</strong> = Before Market Open (pre-9:30 AM ET) | <strong>AMC</strong> = After Market Close (post-4 PM ET). Options traders often avoid holding positions through earnings due to volatility risk.</span></span>
       </div>
     </Card>
   )
@@ -902,12 +919,21 @@ function MarketHeatmap() {
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState('')
   const [lastUpdated, setLastUpdated] = useState<string>('')
+  const [isMockData, setIsMockData] = useState(false)
 
   const fetchHeatmap = useCallback(async () => {
     setLoading(true); setError('')
     const json = await apiFetchSafe<{ success: boolean; data: Record<string, unknown> }>(`${API_BASE}/api/market-data/batch?symbols=${ALL_HEATMAP_SYMBOLS.join(',')}`)
     if (!json?.success) setError('unavailable')
-    else { setQuotes(json.data || {}); setLastUpdated(new Date().toLocaleTimeString()) }
+    else {
+      const d = json.data || {}
+      setQuotes(d)
+      setLastUpdated(new Date().toLocaleTimeString())
+      // Detect if data might be cached/mock (check if any stock's pc == c, which happens with cached data)
+      const vals = Object.values(d as Record<string, { pc?: number; c?: number }>)
+      const allSame = vals.length > 0 && vals.every(v => v?.c === v?.pc)
+      setIsMockData(allSame)
+    }
     setLoading(false)
   }, [])
 
@@ -940,8 +966,9 @@ function MarketHeatmap() {
           <Tooltip text="Heatmap shows market performance at a glance. Green = up, Red = down. Size = relative market cap. Darker = bigger move." position="left" />
         </div>
       </div>
-      {loading && Object.keys(quotes).length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading heatmap...</div>}
+      {loading && Object.keys(quotes).length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading heatmap…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Market data temporarily unavailable.</div>}
+      {isMockData && !loading && <div style={{ padding: '5px 10px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 6, marginBottom: 8, fontSize: 11, color: '#f59e0b' }}>Sample data — live prices require market hours (9:30AM–4PM ET)</div>}
       {/* Legend */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Scale:</span>
@@ -1029,7 +1056,7 @@ function FearGreedIndex() {
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Why does this matter?</span>
         <Tooltip text="Measures market sentiment. Extreme Fear (0-25) can signal buying opportunities — others are panicking. Extreme Greed (75-100) may signal overvaluation — everyone is euphoric. Made famous by Warren Buffett: 'Be fearful when others are greedy and greedy when others are fearful.'" position="right" />
       </div>
-      {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading...</div>}
+      {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Market sentiment data temporarily unavailable.</div>}
       {data && (
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
@@ -1151,14 +1178,14 @@ function GasFeeTracker() {
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>What are gas fees?</span>
         <Tooltip text="Gas fees are the cost to execute transactions on Ethereum. Think of it like a tip to miners/validators who process your transaction. Higher fees = faster confirmation. Measured in 'Gwei' (billionths of ETH)." position="right" />
       </div>
-      {loading && !gasData && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Fetching gas prices...</div>}
+      {loading && !gasData && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Fetching gas prices…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Gas fee data temporarily unavailable.</div>}
       {gasData && (
         <>
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
             {[
               { label: '🐢 Slow', key: 'slow', desc: '~5-10 min', color: '#60a5fa' },
-              { label: '⚡ Standard', key: 'standard', desc: '~1-3 min', color: '#a78bfa' },
+              { label: 'Standard', key: 'standard', desc: '~1-3 min', color: '#a78bfa' },
               { label: 'Fast', key: 'fast', desc: '~15-30 sec', color: 'var(--yellow)' },
             ].map(({ label, key, desc, color }) => {
               const d = gasData.prices[key]
@@ -1198,7 +1225,7 @@ function GasFeeTracker() {
             </table>
           </div>
           <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 1 Gwei = 0.000000001 ETH. ETH price used: ~${gasData.ethPrice.toLocaleString()}. Gas prices update every 30 seconds.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />1 Gwei = 0.000000001 ETH. ETH price used: ~${gasData.ethPrice.toLocaleString()}. Gas prices update every 30 seconds.</span>
           </div>
         </>
       )}
@@ -1271,7 +1298,7 @@ function StakingRewards() {
             </label>
           </div>
           <div style={{ background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px', fontSize: 11, color: 'var(--text-3)' }}>
-            📊 {amountN} {coin} ≈ <strong style={{ color: 'var(--text-1)' }}>${(principal).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong> at ~${price.toLocaleString()}/{coin}
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconBarChart size={12} />{amountN} {coin} ≈ <strong style={{ color: 'var(--text-1)' }}>${(principal).toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</strong> at ~${price.toLocaleString()}/{coin}</span>
           </div>
         </div>
         <div>
@@ -1467,7 +1494,7 @@ function CurrencyStrengthMeter() {
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>How to use this?</span>
         <Tooltip text="Shows which currencies are gaining or losing value relative to others. Strategy: trade strong vs weak pairs. E.g., if GBP is strongest and JPY is weakest, consider buying GBP/JPY." position="right" />
       </div>
-      {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading rates...</div>}
+      {loading && <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading rates…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Currency data temporarily unavailable.</div>}
       {scores.length > 0 && (
         <>
@@ -1496,7 +1523,7 @@ function CurrencyStrengthMeter() {
           </div>
           {lastUpdated && <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Rates updated: {lastUpdated} · Source: open.er-api.com</div>}
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 Strength is relative to USD exchange rates. A trader looking for trend trades would buy the #1 currency against the #8 currency.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Strength is relative to USD exchange rates. A trader looking for trend trades would buy the #1 currency against the #8 currency.</span>
           </div>
         </>
       )}
@@ -1545,7 +1572,7 @@ function CorrelationMatrix() {
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>How to read this?</span>
         <Tooltip text="Correlation shows how assets move together. +1.0 = always move together. -1.0 = always move opposite. 0 = no relationship. Green = positive correlation, Red = negative. Diversification works best with low/negative correlations." position="right" />
       </div>
-      {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Calculating correlations...</div>}
+      {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Calculating correlations…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Correlation data temporarily unavailable.</div>}
       {matrix && (
         <>
@@ -1585,7 +1612,7 @@ function CorrelationMatrix() {
             ))}
           </div>
           <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 Data: {matrix.dataSource === 'live' ? 'Live 90-day returns' : 'Historical average estimates'} · {matrix.period} period. Add uncorrelated assets to your portfolio to reduce risk.
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Data: {matrix.dataSource === 'live' ? 'Live 90-day returns' : 'Historical average estimates'} · {matrix.period} period. Add uncorrelated assets to your portfolio to reduce risk.</span>
           </div>
         </>
       )}
@@ -1671,7 +1698,10 @@ function ProfitTargetCalc() {
               color={ev >= 0 ? 'var(--green)' : 'var(--red)'}
               tooltip="Expected value tells you how much you expect to make per $1 risked, on average. Positive = profitable system. Negative = losing system." />
             <div style={{ marginTop: 8, padding: '8px 10px', background: ev >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 6, fontSize: 11, color: ev >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {ev >= 0 ? '✅ Positive expectancy — this system has an edge!' : '❌ Negative expectancy — adjust win rate or R:R ratio'}
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                {ev >= 0 ? <IconCheck size={12} /> : <IconAlert size={12} />}
+                {ev >= 0 ? 'Positive expectancy — this system has an edge!' : 'Negative expectancy — adjust win rate or R:R ratio'}
+              </span>
             </div>
           </div>
           {/* Growth chart */}
@@ -1704,33 +1734,108 @@ function ProfitTargetCalc() {
 
 // ─── Tools Hub Page ───────────────────────────────────────────────────────────
 
-const TOOL_CATEGORIES = ['All', 'Futures', 'Stocks', 'Options', 'Forex', 'Crypto', 'Universal']
+const TOOL_CATEGORIES = ['All', 'Trading Calculators', 'Risk & Analytics', 'Planning', 'Market Overview', 'Stocks', 'Options', 'Futures', 'Forex', 'Crypto']
+
+// Section group for organized display
+const TOOL_SECTION_GROUPS: Record<string, string> = {
+  'positionsizer': 'Trading Calculators',
+  'futures':       'Trading Calculators',
+  'optionscalc':   'Trading Calculators',
+  'forexcalc':     'Trading Calculators',
+  'riskreward':    'Trading Calculators',
+  'ruin':          'Risk & Analytics',
+  'expectancy':    'Risk & Analytics',
+  'correlationv2': 'Risk & Analytics',
+  'compound2':     'Planning',
+  'dividend':      'Planning',
+  'sessionclock':  'Market Overview',
+  'econheatmap':   'Market Overview',
+  'feargreed':     'Market Overview',
+  'heatmap':       'Market Overview',
+  // Legacy tools keep original categories
+}
 
 const TOOL_CATALOG = [
-  // ── Futures ──
-  { id: 'futures', category: 'Futures', title: 'Futures Risk/Reward Calculator', desc: '39 contracts with accurate tick/margin data. Position sizing, multi-target R:R, risk matrix, visual P&L bar, session indicators, and contract specs.' },
-  // ── Phase 1 Tools ──
-  { id: 'position',    category: 'Stocks',   title: 'Position Size Calculator',      desc: 'Calculate how many shares to buy based on your risk tolerance.' },
-  { id: 'riskreward',  category: 'Stocks',   title: 'Risk/Reward Calculator',         desc: 'Evaluate trade setups by comparing potential profit vs loss.' },
-  { id: 'optionspl',   category: 'Options',  title: 'Options P&L Calculator',         desc: 'Calculate profit/loss and break-even for options trades.' },
+  // ── NEW: Trading Calculators ──
+  { id: 'positionsizer', category: 'Trading Calculators', title: 'Universal Position Sizer',         desc: 'Size positions for any asset class — stocks, futures, forex, crypto — based on exact dollar risk. Slider, scenarios, buying power bar.' },
+  { id: 'futures',       category: 'Trading Calculators', title: 'Futures Risk/Reward Calculator',   desc: '39 contracts with accurate tick/margin data. Position sizing, multi-target R:R, risk matrix, session indicators.' },
+  { id: 'optionscalc',   category: 'Trading Calculators', title: 'Options Profit Calculator',        desc: 'P&L chart across price range, break-even, range scenarios table, optional Greeks (Delta, Gamma, Theta, Vega).' },
+  { id: 'forexcalc',     category: 'Trading Calculators', title: 'Forex Position Calculator',        desc: 'Pip value, margin requirements, risk/reward for 21 pairs. Lot size presets, leverage comparison, swap rates.' },
+  { id: 'riskreward',    category: 'Trading Calculators', title: 'Risk/Reward Calculator',           desc: 'Visual ratio bar, break-even win rate. Immediate verdict on trade quality.' },
+  // ── NEW: Risk & Analytics ──
+  { id: 'ruin',          category: 'Risk & Analytics',    title: 'Risk of Ruin Calculator',          desc: 'Monte Carlo simulation with 500 equity curves. Kelly criterion, ruin probability, doubling odds, recommendations.' },
+  { id: 'expectancy',    category: 'Risk & Analytics',    title: 'Trade Expectancy Calculator',      desc: 'Is your system profitable? Expected P&L per trade, monthly/annual projections, equity curve simulation.' },
+  { id: 'correlationv2', category: 'Risk & Analytics',    title: 'Correlation Matrix',               desc: 'Enter 2–8 custom tickers or use presets. Color-coded grid shows which assets diversify your portfolio.' },
+  // ── NEW: Planning ──
+  { id: 'compound2',     category: 'Planning',            title: 'Compound Growth Calculator',       desc: 'Monthly contributions, area chart, year-by-year table, monthly/weekly compounding, "if you started N years ago" comparison.' },
+  { id: 'dividend',      category: 'Planning',            title: 'Dividend Income Planner',          desc: 'Plan passive income from 16+ preset dividend stocks. DRIP simulation over 5/10/20yr. Reverse calculator for income goals.' },
+  // ── NEW: Market Overview ──
+  { id: 'sessionclock',  category: 'Market Overview',     title: 'Market Session World Clock',       desc: '7 global markets, 24h timeline, overlap heatmap, "best time to trade" recommendations per asset class.' },
+  { id: 'econheatmap',   category: 'Market Overview',     title: 'Economic Calendar Heatmap',        desc: 'Weekly grid of economic events by impact. Red = dangerous day, green = quiet. Plan which days to trade vs sit out.' },
+  { id: 'heatmap',       category: 'Market Overview',     title: 'Market Heatmap',                   desc: 'Visual overview of S&P 500 sectors. Green = up, red = down. Spot market trends instantly.' },
+  { id: 'feargreed',     category: 'Market Overview',     title: 'Fear & Greed Index',               desc: "Measure crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed). 30-day history." },
+  // ── Legacy Tools ──
+  { id: 'position',    category: 'Stocks',   title: 'Position Size (Basic)',          desc: 'Simple position sizing by risk %. For advanced universal sizing, use Universal Position Sizer.' },
+  { id: 'optionspl',   category: 'Options',  title: 'Options P&L (Simple)',           desc: 'Quick break-even and profit/loss for options. For full P&L chart, use Options Profit Calculator.' },
   { id: 'greeks',      category: 'Options',  title: 'Options Greeks Calculator',      desc: 'Get Delta, Gamma, Theta, Vega using Black-Scholes model.' },
   { id: 'pip',         category: 'Forex',    title: 'Pip Calculator',                 desc: 'Find the dollar value of each pip for any forex pair.' },
   { id: 'lotsize',     category: 'Forex',    title: 'Lot Size Calculator',            desc: 'Determine the right position size for forex trades.' },
-  { id: 'compound',    category: 'Universal',title: 'Compound Interest Calculator',   desc: 'See how your investments grow over time with compounding.' },
-  { id: 'fibonacci',   category: 'Universal',title: 'Fibonacci Retracement',          desc: 'Calculate key support/resistance levels using Fibonacci ratios.' },
-  { id: 'journal',     category: 'Universal',title: 'Trading Journal',                desc: 'Log trades, track performance, analyze patterns. Complete journal with analytics.', href: '/journal' },
-  // ── Phase 2 Tools ──
-  { id: 'screener',    category: 'Stocks',   title: 'Stock Screener',                 desc: 'Filter stocks by P/E, dividend yield, sector, market cap, and price. Find your next investment.' },
+  { id: 'compound',    category: 'Planning', title: 'Compound Interest (Basic)',      desc: 'Simple compound interest without contributions. For monthly contributions + chart, use Compound Growth Calculator.' },
+  { id: 'fibonacci',   category: 'Stocks',   title: 'Fibonacci Retracement',          desc: 'Calculate key support/resistance levels using Fibonacci ratios.' },
+  { id: 'journal',     category: 'Planning', title: 'Trading Journal',                desc: 'Log trades, track performance, analyze patterns. Complete journal with analytics.', href: '/journal' },
+  { id: 'screener',    category: 'Stocks',   title: 'Stock Screener',                 desc: 'Filter stocks by P/E, dividend yield, sector, market cap, and price.' },
   { id: 'earnings',    category: 'Stocks',   title: 'Earnings Calendar',              desc: "See which companies report earnings this week or next. BMO/AMC timing, EPS & revenue estimates." },
-  { id: 'heatmap',     category: 'Stocks',   title: 'Market Heatmap',                 desc: 'Visual overview of S&P 500 sectors. Green = up, red = down. Spot market trends instantly.' },
-  { id: 'feargreed',   category: 'Crypto',   title: 'Fear & Greed Index',             desc: "Measure crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed). 30-day history." },
   { id: 'gas',         category: 'Crypto',   title: 'Gas Fee Tracker',                desc: 'Live Ethereum gas prices in Gwei and USD. Slow/Standard/Fast tiers for common tx types.' },
   { id: 'staking',     category: 'Crypto',   title: 'Staking Rewards Calculator',     desc: 'Calculate daily, weekly, monthly, and yearly staking rewards for ETH, SOL, ADA, DOT, and more.' },
   { id: 'sessions',    category: 'Forex',    title: 'Forex Session Timer',            desc: 'Live countdown to Sydney, Tokyo, London, and New York open/close. Highlights peak overlap periods.' },
-  { id: 'strength',    category: 'Forex',    title: 'Currency Strength Meter',        desc: 'Rank USD, EUR, GBP, JPY, CHF, AUD, CAD, NZD by relative strength. Find the best pairs to trade.' },
-  { id: 'correlation', category: 'Universal',title: 'Correlation Matrix',             desc: 'See how SPY, QQQ, BTC, ETH, Gold, Oil correlate. Build a diversified, uncorrelated portfolio.' },
-  { id: 'profit',      category: 'Universal',title: 'Profit Target Calculator',       desc: 'Set daily/weekly/monthly dollar targets. Calculate required win rate and projects account growth.' },
+  { id: 'strength',    category: 'Forex',    title: 'Currency Strength Meter',        desc: 'Rank USD, EUR, GBP, JPY, CHF, AUD, CAD, NZD by relative strength.' },
+  { id: 'correlation', category: 'Risk & Analytics', title: 'Correlation Matrix (Built-in)', desc: 'Fixed matrix of SPY, QQQ, BTC, ETH, Gold, Oil. For custom tickers, use Correlation Matrix.' },
+  { id: 'profit',      category: 'Risk & Analytics', title: 'Profit Target Calculator', desc: 'Set daily/weekly/monthly dollar targets. Calculate required win rate and account growth.' },
 ]
+
+// ─── Tool Card ─────────────────────────────────────────────────────────────────
+
+function ToolCard({ tool, activeTool, setActiveTool }: {
+  tool: typeof TOOL_CATALOG[number]
+  activeTool: string | null
+  setActiveTool: (id: string) => void
+}) {
+  const isActive = activeTool === tool.id
+  return (
+    <div
+      className="ds-card"
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 10,
+        transition: 'border-color var(--transition), box-shadow var(--transition), transform var(--transition)',
+        cursor: 'pointer',
+        borderColor: isActive ? 'var(--accent)' : undefined,
+        boxShadow: isActive ? '0 4px 16px rgba(74,158,255,0.15)' : undefined,
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = 'var(--accent)'; el.style.transform = 'translateY(-2px)'
+        el.style.boxShadow = '0 4px 16px rgba(74,158,255,0.12)'
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)'; el.style.transform = 'none'
+        el.style.boxShadow = isActive ? '0 4px 16px rgba(74,158,255,0.15)' : 'var(--card-shadow)'
+      }}
+      onClick={() => { if ((tool as { href?: string }).href) window.location.href = (tool as { href?: string }).href!; else setActiveTool(tool.id) }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+          <ToolIcon id={tool.id} size={18} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.3 }}>{tool.title}</div>
+          <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.04em', marginTop: 2, display: 'inline-block' }}>{tool.category}</span>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.6, flex: 1 }}>{tool.desc}</div>
+    </div>
+  )
+}
 
 export default function ToolsPage() {
   const [activeCategory, setActiveCategory] = useState('All')
@@ -1740,7 +1845,18 @@ export default function ToolsPage() {
 
   const renderTool = () => {
     switch (activeTool) {
-      // Phase 1
+      // New tools
+      case 'positionsizer': return <PositionSizer />
+      case 'optionscalc':   return <OptionsCalculator />
+      case 'forexcalc':     return <ForexCalculator />
+      case 'ruin':          return <RiskOfRuinCalculator />
+      case 'expectancy':    return <ExpectancyCalculator />
+      case 'correlationv2': return <CorrelationMatrixEnhanced />
+      case 'compound2':     return <CompoundCalculator />
+      case 'dividend':      return <DividendPlanner />
+      case 'sessionclock':  return <SessionClock />
+      case 'econheatmap':   return <EconHeatmap />
+      // Legacy tools
       case 'position':    return <PositionSizeCalc />
       case 'riskreward':  return <RiskRewardCalc />
       case 'optionspl':   return <OptionsPLCalc />
@@ -1749,7 +1865,6 @@ export default function ToolsPage() {
       case 'lotsize':     return <LotSizeCalc />
       case 'compound':    return <CompoundCalc />
       case 'fibonacci':   return <FibonacciCalc />
-      // Phase 2
       case 'screener':    return <StockScreener />
       case 'earnings':    return <EarningsCalendar />
       case 'heatmap':     return <MarketHeatmap />
@@ -1810,10 +1925,10 @@ export default function ToolsPage() {
               </div>
               <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
                 {[
-                  { label: '⚡ Real-time', desc: 'Results update as you type' },
-                  { label: '🔒 Private', desc: 'All calculations run locally' },
-                  { label: '💡 Explained', desc: 'Every field has a tooltip' },
-                  { label: '📱 Responsive', desc: 'Works on mobile & desktop' },
+                  { label: 'Real-time', desc: 'Results update as you type' },
+                  { label: 'Private', desc: 'All calculations run locally' },
+                  { label: 'Explained', desc: 'Every field has a tooltip' },
+                  { label: 'Responsive', desc: 'Works on mobile & desktop' },
                 ].map(f => (
                   <div key={f.label} style={{ fontSize: 11, color: 'var(--text-2)' }}>
                     <strong style={{ color: 'var(--text-1)' }}>{f.label}</strong> — {f.desc}
@@ -1823,74 +1938,41 @@ export default function ToolsPage() {
             </div>
 
             {/* Category tabs */}
-            <div className="tools-filter-tabs" style={{ display: 'flex', gap: 8, marginBottom: 12 }}>
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
               {TOOL_CATEGORIES.map(cat => (
                 <button
                   key={cat}
                   onClick={() => setActiveCategory(cat)}
                   className={'btn btn-sm' + (activeCategory === cat ? ' btn-accent' : ' btn-secondary')}
-                  style={{ borderRadius: 20 }}
+                  style={{ borderRadius: 20, fontSize: 11 }}
                 >{cat}</button>
               ))}
             </div>
 
-            {/* Category description */}
-            {activeCategory !== 'All' && (
-              <div style={{ marginBottom: 20, fontSize: 13, color: 'var(--text-2)', padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8, border: '1px solid var(--border)' }}>
-                {activeCategory === 'Futures' && '📊 Futures trading tools — 39 contracts with accurate tick data, position sizing by risk %, multi-target R:R calculator, margin requirements, session timers, and risk matrices.'}
-                {activeCategory === 'Stocks' && '📈 Tools for US equity traders — position sizing, risk/reward, stock screening, earnings, and market heatmaps.'}
-                {activeCategory === 'Options' && '📋 Options-specific calculators — P&L scenarios, break-even prices, and Black-Scholes Greeks (Delta, Gamma, Theta, Vega).'}
-                {activeCategory === 'Forex' && '💱 Forex trading tools — pip value, lot sizing, session timers, and currency strength rankings across 8 major pairs.'}
-                {activeCategory === 'Crypto' && '₿ Crypto market tools — Fear & Greed Index, live Ethereum gas fees, and staking reward projections for major chains.'}
-                {activeCategory === 'Universal' && '🔧 Works for any market or asset class — compound interest, Fibonacci retracement, correlation matrix, and profit target planning.'}
+            {/* Tools grid — with section headers for All view */}
+            {activeCategory === 'All' ? (
+              <>
+                {['Trading Calculators', 'Risk & Analytics', 'Planning', 'Market Overview', 'Stocks', 'Options', 'Futures', 'Forex', 'Crypto'].map(section => {
+                  const sectionTools = TOOL_CATALOG.filter(t => t.category === section)
+                  if (sectionTools.length === 0) return null
+                  return (
+                    <div key={section} style={{ marginBottom: 28 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {section}
+                        <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '1px 6px', borderRadius: 10 }}>{sectionTools.length}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                        {sectionTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={setActiveTool} />)}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                {filteredTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={setActiveTool} />)}
               </div>
             )}
-
-
-            {/* Tools grid */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(280px, 1fr))', gap: 16 }}>
-              {filteredTools.map(tool => (
-                <div
-                  key={tool.id}
-                  className="ds-card"
-                  style={{
-                    display: 'flex', flexDirection: 'column', gap: 12,
-                    transition: 'border-color var(--transition), box-shadow var(--transition), transform var(--transition)',
-                    cursor: 'pointer',
-                  }}
-                  onMouseEnter={e => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.borderColor = 'var(--accent)'
-                    el.style.transform = 'translateY(-2px)'
-                    el.style.boxShadow = '0 4px 16px rgba(74,158,255,0.12)'
-                  }}
-                  onMouseLeave={e => {
-                    const el = e.currentTarget as HTMLDivElement
-                    el.style.borderColor = 'var(--border)'
-                    el.style.transform = 'none'
-                    el.style.boxShadow = 'var(--card-shadow)'
-                  }}
-                  onClick={() => { if ((tool as any).href) window.location.href = (tool as any).href; else setActiveTool(tool.id) }}
-                >
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
-                    <div style={{
-                      width: 40, height: 40, borderRadius: '50%',
-                      background: 'var(--accent-dim)',
-                      border: '1px solid rgba(74,158,255,0.15)',
-                      display: 'flex', alignItems: 'center', justifyContent: 'center',
-                      color: 'var(--accent)', flexShrink: 0,
-                    }}>
-                      <ToolIcon id={tool.id} size={20} />
-                    </div>
-                    <div>
-                      <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-0)', lineHeight: 1.3 }}>{tool.title}</div>
-                      <span className="tag tag-blue" style={{ marginTop: 3 }}>{tool.category}</span>
-                    </div>
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6, flex: 1 }}>{tool.desc}</div>
-                </div>
-              ))}
-            </div>
           </div>
         )}
       </div>

@@ -365,9 +365,10 @@ function WeekGrid({
 // Event Row Component
 // ─────────────────────────────────────────────────────────────────────────────
 
-function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolean }) {
+function EventRow({ event, showDate, watchlistSymbols }: { event: CalendarEvent; showDate?: boolean; watchlistSymbols?: string[] }) {
   const [expanded, setExpanded] = useState(false)
   const bm = beatsMiss(event.actual, event.forecast)
+  const isInWatchlist = watchlistSymbols && event.symbol && watchlistSymbols.includes(event.symbol.toUpperCase())
 
   return (
     <div
@@ -408,6 +409,11 @@ function EventRow({ event, showDate }: { event: CalendarEvent; showDate?: boolea
               }}>
                 {event.impact}
               </span>
+              {isInWatchlist && (
+                <span style={{ fontSize: 9, fontWeight: 700, padding: '1px 5px', borderRadius: 2, background: 'rgba(74,158,255,0.2)', color: 'var(--accent)', border: '1px solid rgba(74,158,255,0.4)' }}>
+                  ★ Watchlist
+                </span>
+              )}
             </div>
           </div>
         </div>
@@ -601,6 +607,15 @@ export default function CalendarPage() {
   const [impactFilter, setImpactFilter] = useState('All')
   const [countryFilter, setCountryFilter] = useState('All')
   const [search, setSearch] = useState('')
+  const [watchlistFilter, setWatchlistFilter] = useState(false)
+  const [watchlistSymbols, setWatchlistSymbols] = useState<string[]>([])
+
+  useEffect(() => {
+    try {
+      const wl = JSON.parse(localStorage.getItem('cg_wl') || '[]') as string[]
+      setWatchlistSymbols(wl.map(s => s.toUpperCase()))
+    } catch {}
+  }, [])
   const [selectedDay, setSelectedDay] = useState<string | null>(
     new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
   )
@@ -693,9 +708,10 @@ export default function CalendarPage() {
       if (impactFilter !== 'All' && e.impact !== impactFilter) return false
       if (countryFilter !== 'All' && e.country !== countryFilter) return false
       if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false
+      if (watchlistFilter && e.type === 'earnings' && e.symbol && !watchlistSymbols.includes(e.symbol.toUpperCase())) return false
       return true
     })
-  }, [events, typeFilter, impactFilter, countryFilter, search])
+  }, [events, typeFilter, impactFilter, countryFilter, search, watchlistFilter, watchlistSymbols])
 
   // Group by day for calendar
   const eventsByDay = useMemo(() => {
@@ -853,6 +869,17 @@ export default function CalendarPage() {
               {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
             </button>
           ))}
+          {watchlistSymbols.length > 0 && (
+            <button onClick={() => { setWatchlistFilter(f => !f); if (!watchlistFilter) setTypeFilter('earnings') }} style={{
+              fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+              border: watchlistFilter ? '1px solid var(--accent)' : '1px solid var(--border)',
+              background: watchlistFilter ? 'var(--accent-dim)' : 'var(--bg-2)',
+              color: watchlistFilter ? 'var(--accent)' : 'var(--text-2)',
+              cursor: 'pointer',
+            }}>
+              ★ My Watchlist Earnings
+            </button>
+          )}
         </div>
 
         {/* Impact filters */}
@@ -1044,6 +1071,7 @@ export default function CalendarPage() {
                               const bm = beatsMiss(event.actual, event.forecast)
                               const impactColor = IMPACT_COLORS[event.impact] || 'var(--text-3)'
                               const isSpeech = event.type === 'speech'
+                              const isWatchlistEarning = event.type === 'earnings' && event.symbol && watchlistSymbols.includes(event.symbol.toUpperCase())
                               return (
                                 <div key={event.id} style={{
                                   display: 'grid',
@@ -1051,8 +1079,8 @@ export default function CalendarPage() {
                                   gap: 8, padding: '8px 12px',
                                   borderBottom: '1px solid var(--border)',
                                   alignItems: 'center',
-                                  borderLeft: isSpeech ? '3px solid #f59e0b' : `3px solid ${impactColor}`,
-                                  background: event.impact === 'High'
+                                  borderLeft: isWatchlistEarning ? '3px solid var(--accent)' : isSpeech ? '3px solid #f59e0b' : `3px solid ${impactColor}`,
+                                  background: isWatchlistEarning ? 'rgba(74,158,255,0.05)' : event.impact === 'High'
                                     ? 'rgba(255,69,96,0.03)'
                                     : isSpeech ? 'rgba(245,158,11,0.03)' : 'transparent',
                                 }}>
