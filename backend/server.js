@@ -85,6 +85,7 @@ const cachePrivate    = (_, res, next) => { res.set('Cache-Control', 'private, n
 
 // ── Routes ────────────────────────────────────────────────────────────────────
 app.use('/api/auth',       cachePrivate, require('./routes/auth'));
+app.use('/api/user',       cachePrivate, require('./routes/userData'));
 app.use('/api/markets',    cachePublic30s, require('./routes/markets'));   // Legacy mock routes (kept for compat)
 app.use('/api/news',       cachePublic2m,  require('./routes/news'));      // Legacy mock news (kept for compat)
 app.use('/api/watchlist',  cachePrivate, require('./routes/watchlist'));

@@ -1,52 +1,73 @@
 /**
- * Auth Routes — PostgreSQL-backed
+ * Auth Routes — Supabase Auth integration
  *
- * POST /api/auth/register   - Create account
- * POST /api/auth/login      - Get JWT
- * GET  /api/auth/profile    - Current user (requires token)
+ * POST   /api/auth/signup    - Create account
+ * POST   /api/auth/login     - Sign in, returns session tokens
+ * POST   /api/auth/logout    - Invalidate session (requires auth)
+ * POST   /api/auth/refresh   - Refresh expired access token
+ * POST   /api/auth/forgot    - Send password reset email
+ * POST   /api/auth/reset     - Update password (requires valid reset token)
+ * GET    /api/auth/me        - Get current user profile (requires auth)
+ * PUT    /api/auth/me        - Update profile name/preferences (requires auth)
+ * DELETE /api/auth/me        - Delete account (requires auth)
+ *
+ * Auth is OPTIONAL for basic app use — this is only for cloud sync.
+ *
+ * Rate limiting:
+ *   signup/login: 5 attempts per 15 minutes (brute-force protection)
+ *   everything else: standard general limiter
  */
 
 const express = require('express');
-const bcrypt = require('bcryptjs');
-const jwt = require('jsonwebtoken');
+const rateLimit = require('express-rate-limit');
 const router = express.Router();
-const db = require('../services/db');
-const { strictLimiter } = require('../services/rateLimit');
 
-// ──────────────────────────────────────────
-// Helpers
-// ──────────────────────────────────────────
+const authService = require('../services/authService');
+const { requireAuth } = require('../middleware/auth');
 
-const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+// ── Auth-specific rate limiter ─────────────────────────────────────────────
+// 5 attempts per 15 minutes per IP — tight enough to stop brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many attempts',
+    message: 'Please wait 15 minutes before trying again',
+  },
+  skipSuccessfulRequests: true, // only count failures against the limit
+});
 
-function signToken(user) {
-  return jwt.sign(
-    {
-      userId: user.id,
-      email: user.email,
-      subscription_tier: user.subscription_tier,
-    },
-    process.env.JWT_SECRET,
-    { expiresIn: process.env.JWT_EXPIRE || '24h' }
-  );
-}
-
-function sanitizeUser(user) {
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function sanitizeSession(session) {
+  if (!session) return null;
   return {
-    id: user.id,
-    email: user.email,
-    subscription_tier: user.subscription_tier,
-    verified: user.verified,
-    created_at: user.created_at,
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_in: session.expires_in,
+    token_type: session.token_type,
   };
 }
 
-// ──────────────────────────────────────────
-// POST /api/auth/register
-// ──────────────────────────────────────────
-router.post('/register', strictLimiter, async (req, res) => {
+function sanitizeUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.user_metadata?.name || null,
+    email_verified: user.email_confirmed_at !== null,
+    created_at: user.created_at,
+    tier: user.app_metadata?.tier || 'free',
+  };
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ── POST /api/auth/signup ─────────────────────────────────────────────────────
+router.post('/signup', authLimiter, async (req, res) => {
   try {
-    const { email: rawEmail, password, subscription_tier = 'free' } = req.body;
+    const { email: rawEmail, password, name } = req.body;
 
     if (!rawEmail || !password) {
       return res.status(400).json({ error: 'Email and password are required' });
@@ -62,44 +83,47 @@ router.post('/register', strictLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Password must be at least 8 characters' });
     }
 
-    // Check if user exists
-    const { rows: existing } = await db.query(
-      'SELECT id FROM users WHERE email = $1',
-      [email]
-    );
-    if (existing.length > 0) {
-      return res.status(409).json({ error: 'User already exists' });
+    const metadata = {};
+    if (name) metadata.name = name.trim();
+
+    const { data, error } = await authService.signUp(email, password, metadata);
+
+    if (error) {
+      // Supabase returns "User already registered" for duplicates
+      if (error.message?.toLowerCase().includes('already registered') ||
+          error.message?.toLowerCase().includes('already exists')) {
+        return res.status(409).json({ error: 'An account with this email already exists' });
+      }
+      console.error('[Auth] Signup error:', error.message);
+      return res.status(400).json({ error: error.message });
     }
 
-    // Hash password
-    const password_hash = await bcrypt.hash(password, 12);
+    // If email confirmation is required, session will be null
+    const needsConfirmation = !data.session;
 
-    // Insert user
-    const { rows } = await db.query(
-      `INSERT INTO users (email, password_hash, subscription_tier, verified, created_at, updated_at)
-       VALUES ($1, $2, $3, false, NOW(), NOW())
-       RETURNING *`,
-      [email, password_hash, subscription_tier]
-    );
-
-    const user = rows[0];
-    const token = signToken(user);
+    // Create profile row for the new user
+    if (data.user) {
+      await authService.upsertProfile(data.user.id, { name, tier: 'free' }).catch(err => {
+        console.warn('[Auth] Profile creation failed (non-fatal):', err.message);
+      });
+    }
 
     res.status(201).json({
-      message: 'User registered successfully',
-      token,
-      user: sanitizeUser(user),
+      message: needsConfirmation
+        ? 'Account created. Please check your email to confirm your account.'
+        : 'Account created successfully',
+      session: sanitizeSession(data.session),
+      user: sanitizeUser(data.user),
+      needs_confirmation: needsConfirmation,
     });
-  } catch (error) {
-    console.error('[Auth] Registration error:', error);
+  } catch (err) {
+    console.error('[Auth] Signup error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ──────────────────────────────────────────
-// POST /api/auth/login
-// ──────────────────────────────────────────
-router.post('/login', strictLimiter, async (req, res) => {
+// ── POST /api/auth/login ──────────────────────────────────────────────────────
+router.post('/login', authLimiter, async (req, res) => {
   try {
     const { email: rawEmail, password } = req.body;
 
@@ -113,79 +137,224 @@ router.post('/login', strictLimiter, async (req, res) => {
       return res.status(400).json({ error: 'Invalid email format' });
     }
 
-    const { rows } = await db.query(
-      'SELECT * FROM users WHERE email = $1',
-      [email]
-    );
+    const { data, error } = await authService.signIn(email, password);
 
-    if (rows.length === 0) {
-      console.warn(`[Auth] Failed login attempt for ${email} from ${req.ip}`);
-      return res.status(401).json({ error: 'Invalid credentials' });
+    if (error) {
+      // Don't reveal whether email or password was wrong
+      if (error.message?.toLowerCase().includes('invalid') ||
+          error.message?.toLowerCase().includes('not found') ||
+          error.message?.toLowerCase().includes('credentials')) {
+        console.warn(`[Auth] Failed login for ${email} from ${req.ip}`);
+        return res.status(401).json({ error: 'Invalid email or password' });
+      }
+      if (error.message?.toLowerCase().includes('confirm')) {
+        return res.status(403).json({ error: 'Please confirm your email before signing in' });
+      }
+      console.error('[Auth] Login error:', error.message);
+      return res.status(400).json({ error: error.message });
     }
-
-    const user = rows[0];
-    const isValid = await bcrypt.compare(password, user.password_hash);
-    if (!isValid) {
-      console.warn(`[Auth] Failed login attempt for ${email} from ${req.ip}`);
-      return res.status(401).json({ error: 'Invalid credentials' });
-    }
-
-    // Update last_sign_in equivalent
-    await db.query('UPDATE users SET updated_at = NOW() WHERE id = $1', [user.id]);
-
-    const token = signToken(user);
 
     res.json({
       message: 'Login successful',
-      token,
-      user: sanitizeUser(user),
+      session: sanitizeSession(data.session),
+      user: sanitizeUser(data.user),
     });
-  } catch (error) {
-    console.error('[Auth] Login error:', error);
+  } catch (err) {
+    console.error('[Auth] Login error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ──────────────────────────────────────────
-// GET /api/auth/profile  (authenticated)
-// ──────────────────────────────────────────
-router.get('/profile', authenticateToken, async (req, res) => {
+// ── POST /api/auth/logout ─────────────────────────────────────────────────────
+router.post('/logout', requireAuth, async (req, res) => {
   try {
-    const { rows } = await db.query(
-      'SELECT * FROM users WHERE id = $1',
-      [req.user.userId]
-    );
+    const token = req.headers['authorization']?.slice(7).trim();
+    const { error } = await authService.signOut(token);
 
-    if (rows.length === 0) {
-      return res.status(404).json({ error: 'User not found' });
+    if (error) {
+      console.warn('[Auth] Logout warning:', error.message);
+      // Non-fatal — token may already be expired
     }
 
-    res.json({ user: sanitizeUser(rows[0]) });
-  } catch (error) {
-    console.error('[Auth] Profile error:', error);
+    res.json({ message: 'Logged out successfully' });
+  } catch (err) {
+    console.error('[Auth] Logout error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-// ──────────────────────────────────────────
-// Middleware — exported so other routes can use it
-// ──────────────────────────────────────────
-function authenticateToken(req, res, next) {
-  const authHeader = req.headers['authorization'];
-  const token = authHeader && authHeader.split(' ')[1];
+// ── POST /api/auth/refresh ────────────────────────────────────────────────────
+router.post('/refresh', async (req, res) => {
+  try {
+    const { refreshToken } = req.body;
 
-  if (!token) {
-    return res.status(401).json({ error: 'Access token required' });
-  }
-
-  jwt.verify(token, process.env.JWT_SECRET, (err, user) => {
-    if (err) {
-      return res.status(403).json({ error: 'Invalid or expired token' });
+    if (!refreshToken) {
+      return res.status(400).json({ error: 'refreshToken is required' });
     }
-    req.user = user;
-    next();
-  });
-}
+
+    const { data, error } = await authService.refreshSession(refreshToken);
+
+    if (error || !data?.session) {
+      return res.status(401).json({ error: 'Invalid or expired refresh token' });
+    }
+
+    res.json({
+      message: 'Token refreshed',
+      session: sanitizeSession(data.session),
+      user: sanitizeUser(data.user),
+    });
+  } catch (err) {
+    console.error('[Auth] Refresh error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/auth/forgot ─────────────────────────────────────────────────────
+router.post('/forgot', authLimiter, async (req, res) => {
+  try {
+    const { email: rawEmail } = req.body;
+
+    if (!rawEmail) {
+      return res.status(400).json({ error: 'Email is required' });
+    }
+
+    const email = rawEmail.trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    const { error } = await authService.resetPassword(email);
+
+    if (error) {
+      console.error('[Auth] Forgot password error:', error.message);
+      // Don't expose whether email exists or not — always return success
+    }
+
+    // Always respond with success to prevent email enumeration
+    res.json({
+      message: 'If an account exists with that email, a password reset link has been sent',
+    });
+  } catch (err) {
+    console.error('[Auth] Forgot password error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/auth/reset ──────────────────────────────────────────────────────
+// Called after user clicks the reset link from email
+// The token here is the access_token from the reset email deep link
+router.post('/reset', async (req, res) => {
+  try {
+    const { token, newPassword } = req.body;
+
+    if (!token || !newPassword) {
+      return res.status(400).json({ error: 'token and newPassword are required' });
+    }
+
+    if (newPassword.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const { data, error } = await authService.updatePassword(token, newPassword);
+
+    if (error) {
+      console.error('[Auth] Password reset error:', error.message);
+      return res.status(400).json({ error: error.message });
+    }
+
+    res.json({ message: 'Password updated successfully' });
+  } catch (err) {
+    console.error('[Auth] Reset error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── GET /api/auth/me ──────────────────────────────────────────────────────────
+router.get('/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+
+    // Get auth user + profile in parallel
+    const [userResult, profileResult] = await Promise.allSettled([
+      authService.getUser(req.headers['authorization']?.slice(7).trim()),
+      authService.getProfile(userId),
+    ]);
+
+    const user = userResult.status === 'fulfilled' ? userResult.value.data?.user : null;
+    const profile = profileResult.status === 'fulfilled' ? profileResult.value.data : null;
+
+    res.json({
+      user: {
+        ...sanitizeUser(user),
+        name: profile?.name || req.user.name || null,
+        tier: profile?.tier || 'free',
+        preferences: profile?.preferences || {},
+      },
+    });
+  } catch (err) {
+    console.error('[Auth] Get profile error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── PUT /api/auth/me ──────────────────────────────────────────────────────────
+router.put('/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { name, preferences } = req.body;
+
+    // Validate inputs
+    if (name !== undefined && typeof name !== 'string') {
+      return res.status(400).json({ error: 'name must be a string' });
+    }
+    if (preferences !== undefined && typeof preferences !== 'object') {
+      return res.status(400).json({ error: 'preferences must be an object' });
+    }
+
+    const fields = {};
+    if (name !== undefined)        fields.name = name.trim();
+    if (preferences !== undefined) fields.preferences = preferences;
+
+    const { data: profile, error } = await authService.upsertProfile(userId, fields);
+
+    if (error) {
+      console.error('[Auth] Update profile error:', error.message);
+      return res.status(500).json({ error: 'Failed to update profile' });
+    }
+
+    res.json({
+      message: 'Profile updated',
+      profile: {
+        id: profile?.id || userId,
+        name: profile?.name || null,
+        tier: profile?.tier || 'free',
+        preferences: profile?.preferences || {},
+        updated_at: profile?.updated_at,
+      },
+    });
+  } catch (err) {
+    console.error('[Auth] Update profile error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── DELETE /api/auth/me ───────────────────────────────────────────────────────
+router.delete('/me', requireAuth, async (req, res) => {
+  try {
+    const userId = req.user.id;
+    const { error } = await authService.deleteUser(userId);
+
+    if (error) {
+      console.error('[Auth] Delete account error:', error.message);
+      return res.status(500).json({ error: 'Failed to delete account' });
+    }
+
+    res.json({ message: 'Account deleted successfully' });
+  } catch (err) {
+    console.error('[Auth] Delete account error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
 
 module.exports = router;
-module.exports.authenticateToken = authenticateToken;
