@@ -2,8 +2,9 @@
 
 import React, { useState, useEffect, useCallback, useMemo } from 'react'
 import Link from 'next/link'
-import { IconTrendingUp, IconChart, IconMic, IconFlag, IconCalendar, IconArrowLeft } from '../components/Icons'
+import { IconTrendingUp, IconChart, IconMic, IconFlag, IconCalendar, IconArrowLeft, IconClock } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
+import { formatEventTime, formatEventDate, getUserTimezone, getTimezoneAbbr } from '../lib/timezone'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
@@ -70,15 +71,11 @@ const COUNTRY_FLAGS: Record<string, string> = {
 }
 
 function fmtTime(dateStr: string): string {
-  try {
-    return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: true })
-  } catch { return '' }
+  return formatEventTime(dateStr) || ''
 }
 
 function fmtDate(dateStr: string): string {
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  } catch { return dateStr }
+  return formatEventDate(dateStr) || dateStr
 }
 
 function fmtRevenue(val: number | null | undefined): string {
@@ -696,6 +693,16 @@ export default function CalendarPage() {
         </div>
 
         <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+          {/* Timezone badge */}
+          <span style={{
+            display: 'flex', alignItems: 'center', gap: 4,
+            fontSize: 10, color: 'var(--text-3)',
+            background: 'var(--bg-3)', border: '1px solid var(--border)',
+            padding: '2px 8px', borderRadius: 4,
+          }}>
+            <IconClock size={11} />
+            {getTimezoneAbbr(getUserTimezone())}
+          </span>
           {lastRefresh && (
             <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
               Updated {lastRefresh.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
@@ -715,8 +722,7 @@ export default function CalendarPage() {
         padding: '8px 16px', background: 'var(--accent-dim)', borderBottom: '1px solid rgba(74,158,255,0.2)',
         fontSize: '10px', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 6,
       }}>
-        <span style={{ color: 'var(--accent)', display: 'flex' }}><IconArrowLeft size={12} style={{ display: 'none' }} /></span>
-        <span>Event data from third-party sources. May be delayed or incomplete. Always verify critical events with official sources.</span>
+        <span>Event data from third-party sources. May be delayed or incomplete. Always verify critical events with official sources. Times shown in {getTimezoneAbbr(getUserTimezone())}.</span>
       </div>
 
       {/* ── Controls Bar ── */}

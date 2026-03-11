@@ -3,7 +3,7 @@
 import { useState, useEffect, useMemo, useRef } from 'react'
 import Link from 'next/link'
 import Tooltip from '../components/Tooltip'
-import { IconChart, IconArrowLeft, IconUpload, IconDownload } from '../components/Icons'
+import { IconChart, IconArrowLeft, IconUpload, IconDownload, IconBook } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import ImportModal from './ImportModal'
 import AdvancedReports from './AdvancedReports'
@@ -2213,49 +2213,28 @@ export default function JournalPage() {
       {/* Persistent Navigation */}
       <PersistentNav />
       {/* Header */}
-      <div style={{
-        borderBottom: '1px solid var(--border)',
-        padding: '16px 24px',
-        display: 'flex',
-        alignItems: 'center',
-        gap: 16,
-        background: 'var(--bg-2)',
-        position: 'sticky',
-        top: 'var(--apn-height, 48px)',
-        zIndex: 100,
-      }}>
-        <Link href="/" className="back-link"><IconArrowLeft size={16} />Back</Link>
-        <div>
-          <div style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-0)' }}>
-            📒 Trading Journal
-          </div>
-          <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
-            Track, analyze, and improve your trading — all in one place
-          </div>
+      <header className="page-header">
+        <Link href="/" className="back-link">
+          <IconArrowLeft size={16} />
+          TradVue
+        </Link>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <div className="page-header-title">
+          <span style={{ color: 'var(--accent)' }}><IconBook size={18} /></span>
+          Trading Journal
         </div>
+        <div className="page-header-desc">Track, analyze, and improve your trading</div>
         <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
-            {trades.length} trades logged
-          </div>
-          <button onClick={() => setShowImportModal(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: 'var(--bg-1)', border: '1px solid var(--border)',
-            borderRadius: 'var(--btn-radius)', padding: '7px 12px',
-            color: 'var(--text-0)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-          }}>
-            <IconUpload size={14} /> Import CSV
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{trades.length} trades</span>
+          <button onClick={() => setShowImportModal(true)} className="btn btn-secondary btn-sm">
+            <IconUpload size={13} /> Import CSV
           </button>
           <ExportButton trades={trades} notes={notes} variant="journal" />
-          <button onClick={() => setShowBackupImport(true)} style={{
-            display: 'flex', alignItems: 'center', gap: 5,
-            background: 'var(--bg-1)', border: '1px solid var(--border)',
-            borderRadius: 'var(--btn-radius)', padding: '7px 12px',
-            color: 'var(--text-0)', fontSize: 12, fontWeight: 600, cursor: 'pointer',
-          }}>
+          <button onClick={() => setShowBackupImport(true)} className="btn btn-secondary btn-sm">
             💾 Backup
           </button>
         </div>
-      </div>
+      </header>
 
       {/* Tab Bar */}
       <div style={{

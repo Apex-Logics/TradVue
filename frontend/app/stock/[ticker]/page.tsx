@@ -516,11 +516,12 @@ export default function StockDetailPage() {
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-1)', color: 'var(--text-0)', paddingBottom: 60 }}>
       {/* Header */}
-      <div className="page-header">
-        <Link href="/tools" className="back-link">
+      <header className="page-header">
+        <Link href="/" className="back-link">
           <IconArrowLeft size={16} />
-          Back
+          TradVue
         </Link>
+        <span style={{ color: 'var(--border)' }}>|</span>
         <div className="page-header-title" style={{ display: 'flex', alignItems: 'center', gap: 12 }}>
           <span style={{ fontFamily: 'var(--mono)', color: 'var(--accent)' }}>{ticker}</span>
           {info?.companyName && info.companyName !== ticker && (
@@ -534,7 +535,7 @@ export default function StockDetailPage() {
         <div className="page-header-desc">
           Stock analysis · Analyst ratings · Composite score
         </div>
-      </div>
+      </header>
 
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>

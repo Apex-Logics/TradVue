@@ -7,6 +7,7 @@ import { useSettings } from './context/SettingsContext'
 import { useOnboarding } from './context/OnboardingContext'
 import { useToast } from './context/ToastContext'
 import { trackWatchlistAdd, trackWatchlistRemove, trackStockSearch } from './utils/analytics'
+import { formatEventTime, formatEventDate } from './lib/timezone'
 
 // Lazy-load modals so they don't bloat initial bundle
 const AuthModal    = dynamic(() => import('./components/AuthModal'),    { ssr: false })
@@ -137,6 +138,41 @@ const DEFAULT_WATCHLIST = [
   'EURUSD', 'GBPUSD',
   'VIX',
 ]
+
+// ─── Watchlist quote cache ────────────────────────────────────────────────────
+
+const WL_CACHE_KEY = 'tv_wl_quotes_v1'
+const WL_CACHE_TTL = 60_000 // 60 seconds
+
+interface WlCacheEntry {
+  data: Record<string, Quote>
+  ts: number
+}
+
+function loadWlCache(): Record<string, Quote> | null {
+  if (typeof window === 'undefined') return null
+  try {
+    const raw = localStorage.getItem(WL_CACHE_KEY)
+    if (!raw) return null
+    const entry: WlCacheEntry = JSON.parse(raw)
+    if (Date.now() - entry.ts > WL_CACHE_TTL) return null
+    return entry.data
+  } catch {
+    return null
+  }
+}
+
+function saveWlCache(data: Record<string, Quote>): void {
+  try {
+    const entry: WlCacheEntry = { data, ts: Date.now() }
+    localStorage.setItem(WL_CACHE_KEY, JSON.stringify(entry))
+  } catch {}
+}
+
+/** Returns which symbols in the watchlist should go to the stock batch endpoint. */
+function stockSymbolsFromWatchlist(wl: string[]): string[] {
+  return wl.filter(s => !CRYPTO_SYMBOL_MAP[s.toUpperCase()])
+}
 
 const NEWS_ARTICLE_COUNTS = [5, 10, 25, 50]
 
@@ -324,15 +360,11 @@ function fmtTime(dateStr: string) {
 }
 
 function fmtEventTime(dateStr: string) {
-  try {
-    return new Date(dateStr).toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit', hour12: false })
-  } catch { return dateStr }
+  return formatEventTime(dateStr) || dateStr
 }
 
 function fmtEventDate(dateStr: string) {
-  try {
-    return new Date(dateStr).toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' })
-  } catch { return dateStr }
+  return formatEventDate(dateStr) || dateStr
 }
 
 function symbolName(sym: string): string {
@@ -1340,10 +1372,13 @@ export default function Home() {
   // Portfolio collapsed
   const [portfolioCollapsed, setPortfolioCollapsed] = useState(false)
 
-  // Sidebar quotes
-  const [quotes, setQuotes] = useState<Record<string, Quote>>({})
-  const [loadingQuotes, setLoadingQuotes] = useState(true)
+  // Sidebar quotes (stock batch — used by analysis, ticker, watchlist)
+  const [quotes, setQuotes] = useState<Record<string, Quote>>(() => loadWlCache() || {})
+  const [loadingQuotes, setLoadingQuotes] = useState(() => !loadWlCache())
   const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null)
+  // Track symbols that came back from the API (to distinguish "not returned" from "loading")
+  const watchlistFetchedRef = useRef<Set<string>>(new Set())
+  const watchlistFetchStartRef = useRef<number>(0)
 
   // Watchlist
   const [watchlist, setWatchlist] = useState<string[]>(DEFAULT_WATCHLIST)
@@ -1519,14 +1554,53 @@ export default function Home() {
     fetchTickerQuotes(customTickerSymbols)
   }, [customTickerSymbols, fetchTickerQuotes])
 
-  // ── Fetch sidebar quotes ───────────────────────────────────────────────────
-  const fetchQuotes = useCallback(async () => {
+  // ── Fetch watchlist quotes (batch, with cache) ─────────────────────────────
+  const fetchQuotes = useCallback(async (symbols?: string[]) => {
     if (isOffline) return
+
+    // Always include SIDEBAR_SYMBOLS for the analysis widgets + whatever is in the watchlist
+    const toFetch = symbols
+      ? [...new Set([...SIDEBAR_SYMBOLS, ...symbols])]
+      : SIDEBAR_SYMBOLS
+
+    // Record start time (for timeout-aware skeleton display)
+    watchlistFetchStartRef.current = Date.now()
+
+    // Mark all symbols as pending
+    watchlistFetchedRef.current = new Set()
+
     try {
-      const j = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${SIDEBAR_SYMBOLS.join(',')}`)
-      if (j?.success && j.data) setQuotes(j.data)
+      // One batch call — split into chunks of 50 if needed
+      const chunks: string[][] = []
+      for (let i = 0; i < toFetch.length; i += 50) {
+        chunks.push(toFetch.slice(i, i + 50))
+      }
+
+      const allData: Record<string, Quote> = {}
+      await Promise.all(
+        chunks.map(async chunk => {
+          const j = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(
+            `${API_BASE}/api/market-data/batch?symbols=${chunk.join(',')}`
+          )
+          if (j?.success && j.data) {
+            Object.assign(allData, j.data)
+            // Track which symbols came back
+            Object.keys(j.data).forEach(s => watchlistFetchedRef.current.add(s))
+          }
+        })
+      )
+
+      if (Object.keys(allData).length > 0) {
+        setQuotes(prev => {
+          const merged = { ...prev, ...allData }
+          saveWlCache(merged)
+          return merged
+        })
+      }
     } finally {
       setLoadingQuotes(false)
+      // Mark all requested symbols as "fetched" (even if no data returned — they get "—")
+      toFetch.forEach(s => watchlistFetchedRef.current.add(s))
     }
   }, [isOffline])
 
@@ -1544,18 +1618,24 @@ export default function Home() {
     if (j?.success && j.data) setCryptoCoins(j.data)
   }, [isOffline])
 
-  // ── Fetch economic calendar (upcoming week) ────────────────────────────────
+  // ── Fetch economic calendar — HIGH IMPACT only for dashboard widget ─────────
+  // Dashboard shows: FOMC, CPI, GDP, Jobs + major earnings (same source as Calendar page)
+  // Full calendar page shows everything.
   const fetchCalendar = useCallback(async () => {
     if (isOffline) return
     setLoadingCalendar(true)
     try {
-      // Try upcoming week first for better coverage
-      const j = await apiFetchSafe<{ success: boolean; data: CalendarEvent[] }>(`${API_BASE}/api/calendar/upcoming?days=5&minImpact=1`)
+      // Fetch high-impact economic events only (impact = 3 = High)
+      const j = await apiFetchSafe<{ success: boolean; data: CalendarEvent[] }>(
+        `${API_BASE}/api/calendar/upcoming?days=7&minImpact=3`
+      )
       if (j?.success && j.data) {
         setCalendarEvents(j.data)
       } else {
-        // Fallback to today
-        const j2 = await apiFetchSafe<{ success: boolean; data: CalendarEvent[] }>(`${API_BASE}/api/calendar/today`)
+        // Fallback: fetch today's high-impact events
+        const j2 = await apiFetchSafe<{ success: boolean; data: CalendarEvent[] }>(
+          `${API_BASE}/api/calendar/today?minImpact=3`
+        )
         if (j2?.success) setCalendarEvents(j2.data || [])
       }
     } finally {
@@ -1598,8 +1678,9 @@ export default function Home() {
 
   // ── Initial load ───────────────────────────────────────────────────────────
   useEffect(() => {
+    const stockSyms = stockSymbolsFromWatchlist(DEFAULT_WATCHLIST)
     fetchTickerQuotes(customTickerSymbols)
-    fetchQuotes()
+    fetchQuotes(stockSyms)
     fetchStatus()
     fetchCalendar()
     fetchNews('All')
@@ -1614,9 +1695,21 @@ export default function Home() {
   }, [fetchTickerQuotes, customTickerSymbols])
 
   useEffect(() => {
-    const t = setInterval(fetchQuotes, 30_000)
+    const t = setInterval(() => fetchQuotes(stockSymbolsFromWatchlist(watchlist)), 30_000)
     return () => clearInterval(t)
-  }, [fetchQuotes])
+  }, [fetchQuotes, watchlist])
+
+  // ── Re-fetch when watchlist gains new stock symbols ────────────────────────
+  const prevWatchlistRef = useRef<string[]>(DEFAULT_WATCHLIST)
+  useEffect(() => {
+    const prev = prevWatchlistRef.current
+    const added = watchlist.filter(s => !prev.includes(s) && !CRYPTO_SYMBOL_MAP[s.toUpperCase()])
+    prevWatchlistRef.current = watchlist
+    if (added.length > 0) {
+      // Fetch just the new symbols (merged into existing quotes state)
+      fetchQuotes(stockSymbolsFromWatchlist(watchlist))
+    }
+  }, [watchlist, fetchQuotes])
 
   // ── News category change ───────────────────────────────────────────────────
   const handleNewsCategory = useCallback((cat: string) => {
@@ -2052,6 +2145,15 @@ export default function Home() {
               watchlist.map(sym => {
                 const q = getWatchlistQuote(sym)
                 const isCrypto = !!CRYPTO_SYMBOL_MAP[sym.toUpperCase()]
+                // Determine if we should show skeleton vs dash
+                // - skeleton: still loading (< 5s since fetch started) and no data yet
+                // - dash: either timed out (>5s) or symbol not in the batch response
+                const fetchAge = watchlistFetchStartRef.current
+                  ? Date.now() - watchlistFetchStartRef.current
+                  : 99999
+                const isFetched = watchlistFetchedRef.current.has(sym)
+                const showSkeleton = !q && loadingQuotes && fetchAge < 5000 && !isFetched
+                const isForex = sym.length === 6 && /^[A-Z]{6}$/.test(sym) && !isCrypto
                 return (
                   <div
                     key={sym}
@@ -2061,6 +2163,7 @@ export default function Home() {
                     <div className="watchlist-row-left">
                       <span className="watchlist-sym">{sym}</span>
                       {isCrypto && <span className="watchlist-tag-crypto">crypto</span>}
+                      {isForex && <span className="watchlist-tag-crypto" style={{ background: 'rgba(99,102,241,0.15)', color: 'var(--purple)' }}>fx</span>}
                     </div>
                     {q ? (
                       <div className="watchlist-row-right">
@@ -2075,9 +2178,15 @@ export default function Home() {
                           {q.changePct >= 0 ? '+' : ''}{q.changePct.toFixed(2)}%
                         </span>
                       </div>
+                    ) : showSkeleton ? (
+                      <div className="watchlist-row-right" style={{ gap: 4 }}>
+                        <span className="shimmer" style={{ width: 44, height: 11, borderRadius: 3, display: 'inline-block' }} />
+                        <span className="shimmer" style={{ width: 36, height: 10, borderRadius: 3, display: 'inline-block' }} />
+                      </div>
                     ) : (
                       <div className="watchlist-row-right">
-                        <span style={{ color: 'var(--text-3)', fontSize: 10 }}>loading…</span>
+                        <span className="watchlist-price" style={{ color: 'var(--text-3)' }}>—</span>
+                        <span style={{ fontSize: 9, color: 'var(--text-3)' }}>n/a</span>
                       </div>
                     )}
                     <button

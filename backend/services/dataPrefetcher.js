@@ -26,8 +26,25 @@ const axios        = require('axios');
 
 // ─── Config ──────────────────────────────────────────────────────────────────
 
-/** Default watchlist used for batch-quote prefetching */
-const WATCHLIST = ['SPY', 'QQQ', 'DIA', 'IWM', 'AAPL', 'GOOGL', 'TSLA', 'MSFT', 'META', 'NVDA', 'AMZN'];
+/**
+ * Default watchlist — mirrors DEFAULT_WATCHLIST in the frontend (app/page.tsx).
+ * All 18 symbols are pre-warmed so the first user to load the app hits the cache
+ * instead of waiting for live Finnhub calls.
+ *
+ * Crypto (BTC, ETH) and forex pairs (EURUSD, GBPUSD) are intentionally excluded
+ * here because they come from different endpoints (CoinGecko / OANDA).
+ * They are warmed separately in prefetchLowFrequency().
+ */
+const WATCHLIST = [
+  // Index ETFs
+  'SPY', 'QQQ', 'DIA', 'IWM',
+  // Big tech
+  'AAPL', 'GOOGL', 'TSLA', 'MSFT', 'META', 'NVDA', 'AMZN',
+  // Metals (NYSE ETFs)
+  'GLD', 'SLV',
+  // Volatility
+  'VIX',
+];
 
 /** Top coins tracked by CoinGecko prefetch */
 const TOP_COINS_LIMIT = 10;
@@ -72,8 +89,9 @@ async function prefetchHighFrequency() {
   let quotesCount = 0;
   let cryptoCount = 0;
 
-  // Batch quotes — getQuote already caches individually; calling getBatchQuotes
-  // ensures all 11 symbols are refreshed in one pass.
+  // Batch quotes — getQuote() caches each symbol individually under `finnhub:quote:SYM`.
+  // Calling getBatchQuotes() on the full default watchlist ensures all symbols are fresh
+  // before any user requests them.  Shared cache: 1 refresh serves all concurrent users.
   await safe('batch quotes', async () => {
     const quotes = await finnhub.getBatchQuotes(WATCHLIST);
     quotesCount = Object.keys(quotes).length;
@@ -88,7 +106,7 @@ async function prefetchHighFrequency() {
     cryptoCount = Array.isArray(coins) ? coins.length : 0;
   });
 
-  console.log(`[Prefetch] 60s cycle — updated ${quotesCount} quotes, ${cryptoCount} crypto prices`);
+  console.log(`[Prefetch] 60s cycle — warmed ${quotesCount}/${WATCHLIST.length} stock quotes, ${cryptoCount} crypto prices`);
 }
 
 /**
@@ -168,16 +186,19 @@ async function prefetchLowFrequency() {
     calCount = Array.isArray(events) ? events.length : 0;
   });
 
-  // Forex rates — Finnhub uses OANDA symbols like "OANDA:EUR_USD"
+  // Forex rates — Finnhub uses OANDA symbols ("OANDA:EUR_USD" → stored as "EURUSD" on frontend).
+  // Warming these means the first user to load the watchlist gets a cached forex rate.
   await safe('forex rates', () =>
-    finnhub.getBatchQuotes(['OANDA:EUR_USD', 'OANDA:GBP_USD'])
+    finnhub.getBatchQuotes(['OANDA:EUR_USD', 'OANDA:GBP_USD', 'OANDA:USD_JPY'])
   );
 
-  // Metals (traded as ETFs on NYSE)
+  // Metals — GLD and SLV are NYSE ETFs and come through the stock batch endpoint.
+  // Already in WATCHLIST but explicitly refreshed here to ensure 30-min cadence
+  // even outside market hours.
   await safe('metals (GLD/SLV)', () => finnhub.getBatchQuotes(['GLD', 'SLV']));
 
-  // VIX
-  await safe('VIX', () => finnhub.getQuote('^VIX'));
+  // VIX index
+  await safe('VIX', () => finnhub.getQuote('VIX'));
 
   console.log(`[Prefetch] 30m cycle — updated calendar (${calCount} events), forex, metals, VIX`);
 }

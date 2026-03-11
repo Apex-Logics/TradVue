@@ -136,13 +136,41 @@ class CacheService {
    */
   async cacheAPICall(key, apiCall, ttlSeconds = 300) {
     const cached = await this.get(key);
-    if (cached) {
+    if (cached !== null) {
       return cached;
     }
 
     const result = await apiCall();
-    await this.set(key, result, ttlSeconds);
+    if (result !== null && result !== undefined) {
+      await this.set(key, result, ttlSeconds);
+    }
     return result;
+  }
+
+  /**
+   * Returns cache stats for a list of keys (useful for /cache-stats endpoint).
+   * Only works accurately with in-memory cache; Redis returns remaining TTL via PTTL.
+   *
+   * @param {string[]} keys
+   * @returns {Promise<Record<string, 'cached'|'miss'>>}
+   */
+  async multiGet(keys) {
+    const results = {};
+    await Promise.all(
+      keys.map(async key => {
+        const val = await this.get(key);
+        results[key] = val !== null ? 'cached' : 'miss';
+      })
+    );
+    return results;
+  }
+
+  /**
+   * Returns the number of entries currently in the in-memory cache.
+   * Useful for monitoring.
+   */
+  memoryCacheSize() {
+    return this.memoryCache.size;
   }
 }
 

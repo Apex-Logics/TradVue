@@ -4,13 +4,16 @@ import { useEffect, useRef } from 'react'
 import { useSettings, type Theme, type DefaultMarket } from '../context/SettingsContext'
 import { useAuth } from '../context/AuthContext'
 import { trackSettingsChanged } from '../utils/analytics'
+import { TIMEZONES, getUserTimezone, getTimezoneAbbr } from '../lib/timezone'
 
 interface SettingsPanelProps {
   onClose: () => void
 }
 
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { settings, setTheme, setDefaultMarket, requestNotifications, setNotificationsEnabled } = useSettings()
+  const { settings, setTheme, setDefaultMarket, requestNotifications, setNotificationsEnabled, setTimezone } = useSettings()
+  const detectedTz = typeof window !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC'
+  const activeTz = settings.timezone || detectedTz
   const { user, logout } = useAuth()
   const panelRef = useRef<HTMLDivElement>(null)
 
@@ -160,6 +163,50 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               <span>🔔 You'll receive alerts for price movements and major market events.</span>
             </div>
           )}
+        </div>
+
+        {/* Timezone */}
+        <div className="settings-section">
+          <div className="settings-section-label">Timezone</div>
+
+          <div className="settings-row settings-row-col">
+            <span className="settings-row-desc" style={{ marginBottom: 8 }}>
+              All event times and timestamps use this timezone.
+              {!settings.timezone && (
+                <span style={{ color: 'var(--green)', marginLeft: 4 }}>
+                  Auto: {getTimezoneAbbr(detectedTz)}
+                </span>
+              )}
+            </span>
+
+            <select
+              value={activeTz}
+              onChange={e => {
+                const val = e.target.value
+                setTimezone(val === detectedTz && !settings.timezone ? null : val)
+                trackSettingsChanged('timezone', val)
+              }}
+              className="ds-select"
+              style={{ marginBottom: 8 }}
+            >
+              {TIMEZONES.map(tz => (
+                <option key={tz.value} value={tz.value}>
+                  {tz.label}
+                  {tz.value === detectedTz ? ' (device)' : ''}
+                </option>
+              ))}
+            </select>
+
+            {settings.timezone && (
+              <button
+                onClick={() => { setTimezone(null); trackSettingsChanged('timezone', 'auto') }}
+                className="btn btn-secondary btn-sm"
+                style={{ alignSelf: 'flex-start' }}
+              >
+                ↩ Use device timezone
+              </button>
+            )}
+          </div>
         </div>
 
         {/* Footer */}

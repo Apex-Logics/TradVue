@@ -4,6 +4,7 @@ import { useState, useEffect, useCallback, useRef } from 'react'
 import Link from 'next/link'
 import PersistentNav from '../components/PersistentNav'
 import { apiFetchSafe } from '../lib/apiFetch'
+import { formatRelativeTime } from '../lib/timezone'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -42,16 +43,7 @@ const ARTICLE_COUNTS = [10, 25, 50, 100]
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function fmtTime(dateStr: string) {
-  try {
-    const diff = Date.now() - new Date(dateStr).getTime()
-    const m = Math.floor(diff / 60_000)
-    if (m < 1) return 'just now'
-    if (m < 60) return `${m}m ago`
-    const h = Math.floor(m / 60)
-    if (h < 24) return `${h}h ago`
-    const d = Math.floor(h / 24)
-    return `${d}d ago`
-  } catch { return '' }
+  return formatRelativeTime(dateStr) || ''
 }
 
 function fmtDate(dateStr: string) {
@@ -226,33 +218,36 @@ export default function NewsPage() {
       <PersistentNav />
 
       {/* Page Header */}
-      <div className="news-page-header">
-        <div className="news-page-header-inner">
-          <div className="news-page-header-title">
-            <span className="live-dot" style={{ width: 7, height: 7 }} />
-            LIVE NEWS FEED
-          </div>
-          <span className="news-page-header-count">
-            {filtered.length} articles
-          </span>
-
-          {/* Search */}
+      <header className="page-header">
+        <Link href="/" className="back-link">
+          <span style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 13 }}>← TradVue</span>
+        </Link>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <div className="page-header-title">
+          <span className="live-dot" style={{ width: 7, height: 7, flexShrink: 0 }} />
+          News Feed
+        </div>
+        <div className="page-header-desc">{filtered.length} articles</div>
+        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
           <input
             type="text"
             className="news-page-search"
-            placeholder="Search by headline, source, or ticker…"
+            placeholder="Search headline, source, ticker…"
             value={search}
             onChange={e => handleSearchChange(e.target.value)}
+            style={{ minWidth: 220 }}
           />
-
           <button
-            className="refresh-btn"
+            className="btn btn-secondary btn-sm"
             onClick={() => { setPage(1); setArticles([]); fetchNews(category, symbolFilter, 1) }}
           >
             ↻ Refresh
           </button>
         </div>
+      </header>
 
+      {/* Category filters + count selector */}
+      <div className="news-page-header" style={{ paddingTop: 0, borderTop: 'none', borderBottom: '1px solid var(--border)', background: 'var(--bg-1)' }}>
         {/* Category filters + count selector */}
         <div className="news-page-cats">
           {CATEGORIES.map(cat => (

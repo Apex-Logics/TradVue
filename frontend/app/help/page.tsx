@@ -4,6 +4,8 @@ import { useState, useMemo } from 'react'
 import Link from 'next/link'
 import Script from 'next/script'
 import Breadcrumbs from '../components/Breadcrumbs'
+import PersistentNav from '../components/PersistentNav'
+import { IconArrowLeft } from '../components/Icons'
 
 // ─────────────────────────────────────────────────────────────────────────────
 // FAQ data (sourced from docs/HELP_CENTER_FAQ.md)
@@ -453,66 +455,22 @@ export default function HelpPage() {
           minHeight: '100vh',
         }}
       >
-        {/* ── Top nav ── */}
-        <nav
-          style={{
-            position: 'sticky',
-            top: 0,
-            zIndex: 100,
-            borderBottom: '1px solid var(--border)',
-            background: 'rgba(10,10,12,0.92)',
-            backdropFilter: 'blur(12px)',
-            WebkitBackdropFilter: 'blur(12px)',
-          }}
-        >
-          <div
-            style={{
-              maxWidth: '1100px',
-              margin: '0 auto',
-              padding: '0 24px',
-              height: '56px',
-              display: 'flex',
-              alignItems: 'center',
-              justifyContent: 'space-between',
-            }}
-          >
-            <Link
-              href="/"
-              style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}
-            >
-              {/* eslint-disable-next-line @next/next/no-img-element */}
-              <img
-                src="/logo-header.svg"
-                alt="TradVue"
-                style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
-              />
-            </Link>
+        {/* ── Persistent Navigation ── */}
+        <PersistentNav />
 
-            <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
-              <span style={{ fontSize: '13px', color: 'var(--text-3)' }}>Help Center</span>
-              <Link
-                href="/"
-                style={{
-                  display: 'inline-flex',
-                  alignItems: 'center',
-                  gap: '6px',
-                  fontSize: '13px',
-                  color: 'var(--text-2)',
-                  textDecoration: 'none',
-                  padding: '6px 14px',
-                  border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                }}
-              >
-                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                  <line x1="19" y1="12" x2="5" y2="12" />
-                  <polyline points="12 19 5 12 12 5" />
-                </svg>
-                Back to Home
-              </Link>
-            </div>
+        {/* ── Page Header ── */}
+        <header className="page-header">
+          <Link href="/" className="back-link">
+            <IconArrowLeft size={16} />
+            TradVue
+          </Link>
+          <span style={{ color: 'var(--border)' }}>|</span>
+          <div className="page-header-title">
+            <span>❓</span>
+            Help Center
           </div>
-        </nav>
+          <div className="page-header-desc">Find answers, guides, and support</div>
+        </header>
 
         {/* ── Breadcrumbs ── */}
         <Breadcrumbs

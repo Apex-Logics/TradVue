@@ -1,7 +1,7 @@
 'use client'
 
 import { useState, useEffect, useCallback, useMemo, useRef } from 'react'
-import { IconArrowLeft, IconAlert, IconDownload } from '../components/Icons'
+import { IconArrowLeft, IconAlert, IconDownload, IconBriefcase } from '../components/Icons'
 import Link from 'next/link'
 import PersistentNav from '../components/PersistentNav'
 import Tooltip from '../components/Tooltip'
@@ -1004,18 +1004,16 @@ export default function PortfolioPage() {
       {/* Persistent Navigation */}
       <PersistentNav />
       {/* Header */}
-      <header style={{
-        background: 'var(--bg-1)', borderBottom: '1px solid var(--border)', padding: '0 20px',
-        display: 'flex', alignItems: 'center', gap: 16, height: 52, position: 'sticky', top: 'var(--apn-height, 48px)', zIndex: 100,
-      }}>
+      <header className="page-header">
         <Link href="/" className="back-link">
           <IconArrowLeft size={16} />
-          Back
+          TradVue
         </Link>
-        <div style={{ width: 1, height: 20, background: 'var(--border)' }} />
-        {/* eslint-disable-next-line @next/next/no-img-element */}
-        <img src="/logo-header.svg" alt="TradVue" style={{ height: 36, width: 'auto', objectFit: 'contain' }} />
-        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--accent)', letterSpacing: '0.05em' }}>PORTFOLIO</span>
+        <span style={{ color: 'var(--border)' }}>|</span>
+        <div className="page-header-title">
+          <span style={{ color: 'var(--accent)' }}><IconBriefcase size={18} /></span>
+          Portfolio
+        </div>
         {isLoggedIn && <span style={{ fontSize: 10, color: 'var(--green)', background: 'var(--green-dim)', padding: '2px 8px', borderRadius: 10 }}>☁ Cloud Sync</span>}
         {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <Link href="/login" style={{ color: 'var(--accent)' }}>Sign in to save</Link></span>}
         <div style={{ flex: 1 }} />

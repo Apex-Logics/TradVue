@@ -1,6 +1,7 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback } from 'react'
+import { setManualTimezone } from '../lib/timezone'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -12,6 +13,8 @@ export interface Settings {
   notificationsEnabled: boolean
   notificationPermission: NotificationPermission | 'unknown'
   defaultMarket: DefaultMarket
+  /** IANA timezone override (null = use device auto-detection) */
+  timezone: string | null
 }
 
 interface SettingsContextValue {
@@ -20,6 +23,8 @@ interface SettingsContextValue {
   setDefaultMarket: (m: DefaultMarket) => void
   requestNotifications: () => Promise<boolean>
   setNotificationsEnabled: (v: boolean) => void
+  /** Set a manual timezone override. Pass null to use device timezone. */
+  setTimezone: (tz: string | null) => void
   settingsOpen: boolean
   openSettings: () => void
   closeSettings: () => void
@@ -30,6 +35,7 @@ const DEFAULT_SETTINGS: Settings = {
   notificationsEnabled: false,
   notificationPermission: 'unknown',
   defaultMarket: 'US',
+  timezone: null,
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
@@ -99,6 +105,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
   const setTheme = useCallback((t: Theme) => update({ theme: t }), [])
   const setDefaultMarket = useCallback((m: DefaultMarket) => update({ defaultMarket: m }), [])
   const setNotificationsEnabled = useCallback((v: boolean) => update({ notificationsEnabled: v }), [])
+  const setTimezone = useCallback((tz: string | null) => {
+    setManualTimezone(tz)
+    update({ timezone: tz })
+  }, [])
 
   const requestNotifications = useCallback(async (): Promise<boolean> => {
     if (!('Notification' in window)) return false
@@ -118,6 +128,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       setDefaultMarket,
       requestNotifications,
       setNotificationsEnabled,
+      setTimezone,
       settingsOpen,
       openSettings: () => setSettingsOpen(true),
       closeSettings: () => setSettingsOpen(false),
