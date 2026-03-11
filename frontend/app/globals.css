@@ -5110,9 +5110,14 @@ a.alert-row-title:hover {
     display: none !important;
   }
 
+  /* Stop header from being sticky — let it scroll away */
+  .app-persistent-nav {
+    position: relative !important;
+  }
+
   /* Show hamburger button */
   .apn-hamburger {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
   }
@@ -5125,9 +5130,14 @@ a.alert-row-title:hover {
     display: none !important;
   }
 
+  /* Stop header from being sticky — let it scroll away */
+  .app-persistent-nav {
+    position: relative !important;
+  }
+
   /* Show hamburger button */
   .apn-hamburger {
-    display: flex;
+    display: flex !important;
     align-items: center;
     justify-content: center;
   }
