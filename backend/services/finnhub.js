@@ -24,7 +24,11 @@ const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
 class FinnhubService {
   constructor() {
-    this.apiKey = process.env.FINNHUB_API_KEY;
+    // Read lazily — env vars may not be available at require time (Render, etc.)
+    Object.defineProperty(this, 'apiKey', {
+      get() { return process.env.FINNHUB_API_KEY; },
+      configurable: true
+    });
     this.alphaVantageKey = process.env.ALPHA_VANTAGE_API_KEY;
 
     // WebSocket for real-time price subscriptions
