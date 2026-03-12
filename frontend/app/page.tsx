@@ -1608,7 +1608,7 @@ function MarketAlertBar() {
   const hasContent = priceAlerts.length > 0 || upcomingEvents.length > 0
 
   return (
-    <div style={{
+    <div className="market-alert-bar" style={{
       borderBottom: '1px solid var(--border)',
       background: '#0a0a0e',
       minHeight: 34,

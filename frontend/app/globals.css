@@ -5477,4 +5477,13 @@ a.alert-row-title:hover {
   }
 }
 
-/* v2026.03.12.1 */
+/* ── MarketAlertBar: cap height on mobile to prevent pushing content off screen ── */
+@media (max-width: 768px) {
+  .market-alert-bar {
+    max-height: 96px;
+    overflow-y: auto;
+    align-items: flex-start !important;
+  }
+}
+
+/* v2026.03.12.2 */
