@@ -56,6 +56,10 @@ let activeAlerts = [];
 
 let _intervalId = null;
 let _running    = false;
+let _startedAt  = 0;  // timestamp of when monitoring began
+
+/** Minimum warmup period before firing alerts (prevent startup false positives) */
+const WARMUP_MS = 5 * 60 * 1000;  // 5 minutes
 
 // ─── Price History Helpers ────────────────────────────────────────────────────
 
@@ -155,6 +159,8 @@ async function runCheckCycle() {
   _running = true;
 
   try {
+    // Don't fire alerts during warmup period — need price history to be meaningful
+    const inWarmup = (Date.now() - _startedAt) < WARMUP_MS;
     const newAlerts = [];
 
     for (const symbol of ALERT_SYMBOLS) {
@@ -178,7 +184,16 @@ async function runCheckCycle() {
         const changePct = ((currentPrice - oldPrice) / oldPrice) * 100;
         const absChange = Math.abs(changePct);
 
+        // Sanity check: reject absurd moves (>20%) — likely bad data or cache startup artifact
+        if (absChange > 20) {
+          console.warn(`[MarketAlerts] Ignoring ${symbol} ${changePct.toFixed(2)}% move — likely bad data`);
+          continue;
+        }
+
         if (absChange < minChangePct) continue;
+
+        // Skip alerts during warmup period
+        if (inWarmup) continue;
 
         const direction = changePct > 0 ? 'up' : 'down';
         const key = alertKey(symbol, label, direction);
@@ -274,9 +289,10 @@ async function getUpcomingHighImpactEvents(hours = 2) {
  */
 function start() {
   if (_intervalId) return;
-  console.info('[MarketAlerts] Starting market alert monitor (30s interval)...');
+  _startedAt = Date.now();
+  console.info('[MarketAlerts] Starting market alert monitor (30s interval, 5min warmup)...');
 
-  // Run once immediately
+  // Run once immediately (warmup — collects prices but won't fire alerts)
   runCheckCycle().catch(() => {});
 
   _intervalId = setInterval(() => {
