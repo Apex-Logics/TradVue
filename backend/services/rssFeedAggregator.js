@@ -279,10 +279,24 @@ const SENTIMENT_NEGATIVE = [
 ];
 
 const HIGH_IMPACT_KEYWORDS = [
+  // Central banks & monetary policy
   'federal reserve', 'fed rate', 'interest rate', 'central bank', 'rate hike', 'rate cut',
-  'cpi', 'inflation', 'gdp', 'non-farm payroll', 'nfp', 'unemployment',
-  'earnings beat', 'earnings miss', 'bankruptcy', 'merger', 'acquisition',
-  'war', 'sanctions', 'crisis', 'bailout', 'default', 'emergency'
+  'fomc', 'powell', 'quantitative', 'tapering', 'dovish', 'hawkish',
+  // Economic data
+  'cpi', 'inflation', 'gdp', 'non-farm payroll', 'nfp', 'unemployment', 'ppi', 'retail sales',
+  'jobless claims', 'consumer confidence', 'housing starts', 'trade deficit',
+  // Market moves
+  'tumble', 'plunge', 'crash', 'selloff', 'sell-off', 'rally', 'surge', 'soar',
+  'correction', 'bear market', 'bull market', 'all-time high', 'record high', 'circuit breaker',
+  // Major indices
+  'dow jones', 's&p 500', 'sp500', 'nasdaq', 'russell 2000',
+  // Corporate events
+  'earnings beat', 'earnings miss', 'bankruptcy', 'merger', 'acquisition', 'layoff', 'recall',
+  // Geopolitical
+  'war', 'sanctions', 'crisis', 'bailout', 'default', 'emergency', 'tariff', 'trade war',
+  'geopolitical', 'strait of hormuz', 'invasion', 'ceasefire',
+  // Regulatory
+  'sec ', 'regulate', 'antitrust', 'indictment', 'investigation'
 ];
 
 const SYMBOL_KEYWORD_MAP = {

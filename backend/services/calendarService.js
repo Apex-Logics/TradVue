@@ -162,9 +162,11 @@ async function fetchForexFactoryWeek(week = 'thisweek') {
       };
     });
 
-    // Longer TTL for next week (less likely to change)
-    const ttl = week === 'thisweek' ? 1800 : 3600;
+    // Cache aggressively — FF data rarely changes intraday
+    const ttl = week === 'thisweek' ? 7200 : 14400; // 2h this week, 4h next week
     await cache.set(CACHE_KEY, events, ttl).catch(() => {});
+    // Keep a long-lived stale copy for 429 fallback (24h)
+    await cache.set(CACHE_KEY + ':stale', events, 86400).catch(() => {});
     return events;
   } catch (err) {
     const status = err.response?.status;
@@ -172,7 +174,10 @@ async function fetchForexFactoryWeek(week = 'thisweek') {
       // Next week not published yet — cache empty result briefly
       await cache.set(CACHE_KEY, [], 600).catch(() => {});
     } else if (status === 429) {
-      console.warn(`[CalendarService] ForexFactory ${week} rate limited (429) — using cached data if available`);
+      console.warn(`[CalendarService] ForexFactory ${week} rate limited (429) — keeping stale cache`);
+      // Don't overwrite cache with empty — return stale data if we had any
+      const stale = await cache.get(CACHE_KEY + ':stale').catch(() => null);
+      if (stale) return stale;
     } else {
       console.error(`[CalendarService] ForexFactory ${week} fetch failed:`, err.message);
     }
