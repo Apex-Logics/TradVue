@@ -1,49 +1,68 @@
 /**
  * User Data Sync Routes — cloud save/load for authenticated users
  *
- * GET  /api/user/data              - Get all user data (journal, portfolio, settings, watchlist)
- * PUT  /api/user/data              - Save all user data (full sync)
+ * Uses Supabase REST API (HTTPS/IPv4) instead of direct PostgreSQL (IPv6-only).
+ * Creates a fresh Supabase client per request to avoid session bleeding.
+ *
+ * GET  /api/user/data              - Get all user data
+ * PUT  /api/user/data              - Save all user data
  * GET  /api/user/data/:type        - Get specific data type
  * PUT  /api/user/data/:type        - Save specific data type
- *
- * Supported data types: journal | portfolio | settings | watchlist
- *
- * All routes require auth (JWT validated by middleware → req.user.id).
- * Uses direct SQL via db.query (bypasses Supabase RLS, but auth middleware
- * ensures req.user.id is valid and queries filter by it).
- *
- * Data model: user_data table — one row per user per data_type.
- * See migrations/010_user_data.sql for schema.
  */
 
 const express = require('express');
 const router = express.Router();
-const db = require('../services/db');
+const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('../middleware/auth');
 
-// ── Constants ─────────────────────────────────────────────────────────────────
 const VALID_TYPES = ['journal', 'portfolio', 'settings', 'watchlist'];
+
+/**
+ * Create a fresh Supabase client scoped to a specific user's access token.
+ * MUST create a new client per request — never reuse or call setSession on a shared client.
+ */
+function createUserClient(accessToken) {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_ANON_KEY required');
+
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+    global: { headers: { Authorization: `Bearer ${accessToken}` } },
+  });
+}
+
+function getAccessToken(req) {
+  return req.headers['authorization']?.slice(7).trim() || null;
+}
 
 // ── GET /api/user/data — fetch ALL data types ─────────────────────────────────
 router.get('/data', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const token = getAccessToken(req);
+    const supabase = createUserClient(token);
+
     console.log(`[UserData] GET /data — userId: ${userId}`);
 
-    const { rows } = await db.query(
-      'SELECT data_type, data, updated_at FROM user_data WHERE user_id = $1',
-      [userId]
-    );
-    console.log(`[UserData] GET /data — found ${rows.length} rows for user ${userId}`);
+    const { data: rows, error } = await supabase
+      .from('user_data')
+      .select('data_type, data, updated_at')
+      .eq('user_id', userId);
+
+    if (error) {
+      console.error('[UserData] Fetch all error:', error.message);
+      return res.status(500).json({ error: 'Failed to fetch user data' });
+    }
 
     const result = { journal: null, portfolio: null, settings: null, watchlist: null };
     const meta = {};
-
-    rows.forEach(row => {
+    (rows || []).forEach(row => {
       result[row.data_type] = row.data;
       meta[row.data_type] = { updated_at: row.updated_at };
     });
 
+    console.log(`[UserData] GET /data — found ${(rows || []).length} rows`);
     res.json({ data: result, meta });
   } catch (err) {
     console.error('[UserData] Fetch all error:', err.message);
@@ -55,6 +74,8 @@ router.get('/data', requireAuth, async (req, res) => {
 router.put('/data', requireAuth, async (req, res) => {
   try {
     const userId = req.user.id;
+    const token = getAccessToken(req);
+    const supabase = createUserClient(token);
     const body = req.body;
 
     const toSave = {};
@@ -72,22 +93,21 @@ router.put('/data', requireAuth, async (req, res) => {
     }
 
     const upserts = Object.entries(toSave).map(([type, payload]) =>
-      db.query(
-        `INSERT INTO user_data (user_id, data_type, data, updated_at)
-         VALUES ($1, $2, $3, NOW())
-         ON CONFLICT (user_id, data_type)
-         DO UPDATE SET data = $3, updated_at = NOW()`,
-        [userId, type, JSON.stringify(payload)]
+      supabase.from('user_data').upsert(
+        { user_id: userId, data_type: type, data: payload, updated_at: new Date().toISOString() },
+        { onConflict: 'user_id,data_type' }
       )
     );
 
-    await Promise.all(upserts);
+    const results = await Promise.allSettled(upserts);
+    const errors = results.filter(r => r.status === 'rejected' || r.value?.error).length;
 
-    res.json({
-      message: 'Data saved successfully',
-      saved: Object.keys(toSave),
-      updated_at: new Date().toISOString(),
-    });
+    if (errors > 0) {
+      console.error('[UserData] Partial save errors');
+      return res.status(500).json({ error: 'Some data failed to save' });
+    }
+
+    res.json({ message: 'Data saved successfully', saved: Object.keys(toSave), updated_at: new Date().toISOString() });
   } catch (err) {
     console.error('[UserData] Full sync error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
@@ -98,24 +118,29 @@ router.put('/data', requireAuth, async (req, res) => {
 router.get('/data/:type', requireAuth, async (req, res) => {
   try {
     const { type } = req.params;
-
     if (!VALID_TYPES.includes(type)) {
       return res.status(400).json({ error: `Invalid data type: ${type}`, validTypes: VALID_TYPES });
     }
 
     const userId = req.user.id;
+    const token = getAccessToken(req);
+    const supabase = createUserClient(token);
+
     console.log(`[UserData] GET /data/${type} — userId: ${userId}`);
 
-    const { rows } = await db.query(
-      'SELECT data, updated_at FROM user_data WHERE user_id = $1 AND data_type = $2',
-      [userId, type]
-    );
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('data, updated_at')
+      .eq('user_id', userId)
+      .eq('data_type', type)
+      .maybeSingle();
 
-    if (rows.length === 0) {
-      return res.json({ type, data: null, updated_at: null });
+    if (error) {
+      console.error(`[UserData] Fetch ${type} error:`, error.message);
+      return res.status(500).json({ error: 'Internal server error' });
     }
 
-    res.json({ type, data: rows[0].data, updated_at: rows[0].updated_at });
+    res.json({ type, data: data?.data || null, updated_at: data?.updated_at || null });
   } catch (err) {
     console.error(`[UserData] Fetch ${req.params.type} error:`, err.message);
     res.status(500).json({ error: 'Internal server error' });
@@ -126,45 +151,49 @@ router.get('/data/:type', requireAuth, async (req, res) => {
 router.put('/data/:type', requireAuth, async (req, res) => {
   try {
     const { type } = req.params;
-
     if (!VALID_TYPES.includes(type)) {
       return res.status(400).json({ error: `Invalid data type: ${type}`, validTypes: VALID_TYPES });
     }
-
     if (typeof req.body !== 'object' || Array.isArray(req.body)) {
       return res.status(400).json({ error: 'Request body must be a JSON object' });
     }
 
     const userId = req.user.id;
-    console.log(`[UserData] PUT /data/${type} — userId: ${userId}, bodySize: ${JSON.stringify(req.body).length}`);
+    const token = getAccessToken(req);
+    const supabase = createUserClient(token);
 
-    await db.query(
-      `INSERT INTO user_data (user_id, data_type, data, updated_at)
-       VALUES ($1, $2, $3, NOW())
-       ON CONFLICT (user_id, data_type)
-       DO UPDATE SET data = $3, updated_at = NOW()`,
-      [userId, type, JSON.stringify(req.body)]
+    console.log(`[UserData] PUT /data/${type} — userId: ${userId}, size: ${JSON.stringify(req.body).length}`);
+
+    const { error } = await supabase.from('user_data').upsert(
+      { user_id: userId, data_type: type, data: req.body, updated_at: new Date().toISOString() },
+      { onConflict: 'user_id,data_type' }
     );
 
-    res.json({
-      message: `${type} saved successfully`,
-      type,
-      updated_at: new Date().toISOString(),
-    });
+    if (error) {
+      console.error(`[UserData] Save ${type} error:`, error.message);
+      return res.status(500).json({ error: `Failed to save ${type}` });
+    }
+
+    res.json({ message: `${type} saved successfully`, type, updated_at: new Date().toISOString() });
   } catch (err) {
     console.error(`[UserData] Save ${req.params.type} error:`, err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });
 
-module.exports = router;
-
-// Temporary debug endpoint — remove after testing
+// Debug endpoint — remove after testing
 router.get('/debug', async (req, res) => {
   try {
-    const { rows } = await db.query('SELECT COUNT(*) as cnt FROM user_data');
-    res.json({ version: 'direct-sql-v1', count: rows[0].cnt, timestamp: new Date().toISOString() });
+    const url = process.env.SUPABASE_URL;
+    const key = process.env.SUPABASE_ANON_KEY;
+    const supabase = createClient(url, key, {
+      auth: { autoRefreshToken: false, persistSession: false }
+    });
+    const { count, error } = await supabase.from('user_data').select('*', { count: 'exact', head: true });
+    res.json({ version: 'supabase-rest-v2', count, error: error?.message || null });
   } catch (err) {
-    res.json({ version: 'direct-sql-v1', error: err.message });
+    res.json({ version: 'supabase-rest-v2', error: err.message });
   }
 });
+
+module.exports = router;
