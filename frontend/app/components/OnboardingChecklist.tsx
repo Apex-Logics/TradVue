@@ -48,7 +48,7 @@ export default function OnboardingChecklist() {
         {/* Header */}
         <div className="checklist-header" onClick={toggleChecklistCollapsed}>
           <div className="checklist-header-left">
-            <span className="checklist-icon">🚀</span>
+            <svg className="checklist-icon" width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2L2 7l10 5 10-5-10-5zM2 17l10 5 10-5M2 12l10 5 10-5"/></svg>
             <span className="checklist-title">Getting Started</span>
             <span className="checklist-progress-badge">{completedCount}/5</span>
           </div>
@@ -119,14 +119,14 @@ export default function OnboardingChecklist() {
         {!state.checklistCollapsed && (
           <div className="checklist-footer">
             {isChecklistComplete ? (
-              <span className="checklist-complete-msg">🎉 You're all set!</span>
+              <span className="checklist-complete-msg">You're all set!</span>
             ) : (
               <span className="checklist-encouragement">
                 {completedCount === 0 && "Let's get you set up!"}
                 {completedCount === 1 && "Great start! Keep going."}
-                {completedCount === 2 && "You're on a roll! 🔥"}
+                {completedCount === 2 && "You're on a roll!"}
                 {completedCount === 3 && "Almost there — 2 more to go."}
-                {completedCount === 4 && "One last step! 💪"}
+                {completedCount === 4 && "One last step!"}
               </span>
             )}
 

@@ -46,11 +46,11 @@ const URGENCY_COLOR: Record<AlertUrgency, string> = {
 }
 
 const CATEGORY_ICON: Record<AlertCategory, string> = {
-  POLITICAL: '🏛',
-  FED:       '🏦',
-  ECONOMIC:  '📊',
-  EARNINGS:  '💰',
-  BREAKING:  '🔴',
+  POLITICAL: 'POL',
+  FED:       'FED',
+  ECONOMIC:  'ECO',
+  EARNINGS:  'ERN',
+  BREAKING:  'BRK',
 }
 
 const CATEGORY_LABEL: Record<AlertCategory, string> = {
@@ -454,7 +454,7 @@ export function AlertFeed({
               title="Clear all alerts"
               style={{ color: '#ff4560' }}
             >
-              🗑 Clear All
+              Clear All
             </button>
           )}
           <button
@@ -472,7 +472,7 @@ export function AlertFeed({
       {showPrefs && (
         <div className="alert-prefs">
           <div className="alert-prefs-row">
-            <span className="alert-prefs-label">🔔 Sound</span>
+            <span className="alert-prefs-label">Sound</span>
             <button
               className={`alert-prefs-toggle${prefs.soundEnabled ? ' active' : ''}`}
               onClick={() => onUpdatePrefs({ soundEnabled: !prefs.soundEnabled })}

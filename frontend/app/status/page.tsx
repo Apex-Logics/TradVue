@@ -18,10 +18,10 @@ interface Service {
 }
 
 const STATUS_CONFIG: Record<ServiceStatus, { emoji: string; label: string; color: string; bg: string }> = {
-  operational: { emoji: '🟢', label: 'Operational',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)'   },
-  degraded:    { emoji: '🟡', label: 'Degraded',      color: '#f59e0b', bg: 'rgba(245,158,11,0.08)'  },
-  down:        { emoji: '🔴', label: 'Down',          color: '#ef4444', bg: 'rgba(239,68,68,0.08)'   },
-  unknown:     { emoji: '⚪', label: 'Unknown',       color: '#6b7280', bg: 'rgba(107,114,128,0.08)' },
+  operational: { emoji: 'op',  label: 'Operational',   color: '#22c55e', bg: 'rgba(34,197,94,0.08)'   },
+  degraded:    { emoji: 'dg',  label: 'Degraded',      color: '#f59e0b', bg: 'rgba(245,158,11,0.08)'  },
+  down:        { emoji: 'dn',  label: 'Down',          color: '#ef4444', bg: 'rgba(239,68,68,0.08)'   },
+  unknown:     { emoji: 'uk',  label: 'Unknown',       color: '#6b7280', bg: 'rgba(107,114,128,0.08)' },
 }
 
 const INITIAL_SERVICES: Service[] = [
@@ -322,7 +322,7 @@ export default function StatusPage() {
                   flexShrink: 0,
                   transition: 'all 0.3s',
                 }}>
-                  <span style={{ fontSize: '11px' }}>{loading ? '⚪' : cfg.emoji}</span>
+                  <span style={{ fontSize: '11px' }}><svg width="10" height="10" viewBox="0 0 10 10"><circle cx="5" cy="5" r="4" fill={loading ? "#6b7280" : cfg.color}/></svg></span>
                   <span style={{
                     fontSize: '12px', fontWeight: 600,
                     color: loading ? 'var(--text-3, #555)' : cfg.color,
@@ -356,12 +356,12 @@ export default function StatusPage() {
         </p>
         <p style={{ fontSize: '12px', color: 'var(--text-3, #555)', margin: 0 }}>
           {overallStatus === 'operational'
-            ? '🟢 All systems operational'
+            ? 'All systems operational'
             : overallStatus === 'degraded'
-            ? '🟡 Some systems experiencing issues'
+            ? 'Some systems experiencing issues'
             : overallStatus === 'down'
-            ? '🔴 Service disruption detected'
-            : '⚪ Checking status…'}
+            ? 'Service disruption detected'
+            : 'Checking status...'}
         </p>
       </footer>
     </div>

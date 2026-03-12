@@ -58,9 +58,9 @@ const PRIORITY_COLOR: Record<Priority, string> = {
 }
 
 const PRIORITY_LABEL: Record<Priority, string> = {
-  high: '🔴 High',
-  medium: '🟡 Medium',
-  low: '🟢 Low',
+  high: 'High',
+  medium: 'Medium',
+  low: 'Low',
 }
 
 const PROJECT_COLORS: Record<string, string> = {
@@ -190,9 +190,9 @@ function AddTaskModal({
             </select>
             <select className="ds-input" value={form.priority}
               onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))}>
-              <option value="high">🔴 High</option>
-              <option value="medium">🟡 Medium</option>
-              <option value="low">🟢 Low</option>
+              <option value="high">High</option>
+              <option value="medium">Medium</option>
+              <option value="low">Low</option>
             </select>
             <select className="ds-input" value={form.project}
               onChange={e => {
@@ -204,9 +204,9 @@ function AddTaskModal({
             <select className="ds-input" value={form.agent}
               onChange={e => setForm(f => ({ ...f, agent: e.target.value as AgentName | '' }))}>
               <option value="">No agent</option>
-              <option value="Axle">⚙️ Axle</option>
-              <option value="Bolt">⚡ Bolt</option>
-              <option value="Zip">🏎️ Zip</option>
+              <option value="Axle">Axle</option>
+              <option value="Bolt">Bolt</option>
+              <option value="Zip">Zip</option>
             </select>
           </div>
           <input type="date" className="ds-input" value={form.dueDate}
@@ -257,7 +257,7 @@ const TaskCard = memo(function TaskCard({
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', gap: 8, marginBottom: 8 }}>
         <span style={{ fontSize: 13, fontWeight: 500, lineHeight: 1.3 }}>{task.title}</span>
         <span style={{ color: PRIORITY_COLOR[task.priority], flexShrink: 0, fontSize: 12 }}>
-          {task.priority === 'high' ? '🔴' : task.priority === 'medium' ? '🟡' : '🟢'}
+          {task.priority === 'high' ? '[H]' : task.priority === 'medium' ? '[M]' : '[L]'}
         </span>
       </div>
       {task.description && (
@@ -341,9 +341,9 @@ function TaskDetailModal({ task, onClose, onUpdate, onDelete }: {
                 <option value="done">Done</option>
               </select>
               <select className="ds-input" value={form.priority} onChange={e => setForm(f => ({ ...f, priority: e.target.value as Priority }))}>
-                <option value="high">🔴 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🟢 Low</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
               </select>
             </div>
             <textarea className="ds-input" placeholder="Notes" value={form.notes}
@@ -609,13 +609,13 @@ export default function DashboardPage() {
       }
 
   const navItems = [
-    { id: 'overview', label: 'Overview', emoji: '🏠' },
-    { id: 'tasks', label: 'Tasks', emoji: '📋' },
-    { id: 'companies', label: 'Companies', emoji: '🏢' },
-    { id: 'agents', label: 'Agents', emoji: '🤖' },
-    { id: 'notifications', label: 'Notifications', emoji: '🔔' },
-    { id: 'metrics', label: 'Metrics', emoji: '📊' },
-    { id: 'settings', label: 'Settings', emoji: '⚙️' },
+    { id: 'overview', label: 'Overview', emoji: 'home' },
+    { id: 'tasks', label: 'Tasks', emoji: 'tasks' },
+    { id: 'companies', label: 'Companies', emoji: 'co' },
+    { id: 'agents', label: 'Agents', emoji: 'bot' },
+    { id: 'notifications', label: 'Notifications', emoji: 'bell' },
+    { id: 'metrics', label: 'Metrics', emoji: 'chart' },
+    { id: 'settings', label: 'Settings', emoji: 'gear' },
   ]
 
   return (
@@ -637,7 +637,7 @@ export default function DashboardPage() {
               background: 'linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, flexShrink: 0,
-            }}>⚙️</div>
+            }}>TV</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>TradVue</div>
               <div style={{ fontSize: 10, color: 'var(--text-2)' }}>Ops Dashboard</div>
@@ -818,15 +818,15 @@ export default function DashboardPage() {
                   </div>
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                      <span style={{ color: 'var(--red)' }}>🔴 High</span>
+                      <span style={{ color: 'var(--red)' }}>High</span>
                       <span style={{ color: 'var(--text-1)' }}>{openTasks.filter(t => t.priority === 'high').length}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                      <span style={{ color: 'var(--yellow)' }}>🟡 Medium</span>
+                      <span style={{ color: 'var(--yellow)' }}>Medium</span>
                       <span style={{ color: 'var(--text-1)' }}>{openTasks.filter(t => t.priority === 'medium').length}</span>
                     </div>
                     <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11 }}>
-                      <span style={{ color: 'var(--green)' }}>🟢 Low</span>
+                      <span style={{ color: 'var(--green)' }}>Low</span>
                       <span style={{ color: 'var(--text-1)' }}>{openTasks.filter(t => t.priority === 'low').length}</span>
                     </div>
                   </div>
@@ -868,7 +868,7 @@ export default function DashboardPage() {
                           display: 'flex', alignItems: 'center', justifyContent: 'center',
                           fontSize: 12, color: item.agent ? AGENT_COLORS[item.agent] : 'var(--text-2)',
                         }}>
-                          {item.type === 'task_complete' ? '✓' : item.type === 'deploy' ? '🚀' : item.type === 'task_start' ? '▶' : '📝'}
+                          {item.type === 'task_complete' ? '✓' : item.type === 'deploy' ? '>' : item.type === 'task_start' ? '+' : '*'}
                         </div>
                         <div style={{ flex: 1, minWidth: 0 }}>
                           <p style={{ fontSize: 12, color: 'var(--text-0)', marginBottom: 2 }}>{item.message}</p>
@@ -924,7 +924,7 @@ export default function DashboardPage() {
                       </div>
                       <div style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
                         {notifications.slice(0, 4).map(notif => {
-                          const typeIcon: Record<string, string> = { info: 'ℹ️', warning: '⚠️', success: '✅', error: '❌' }
+                          const typeIcon: Record<string, string> = { info: '[i]', warning: '[!]', success: '[+]', error: '[x]' }
                           return (
                             <div key={notif.id} style={{
                               display: 'flex', gap: 8, alignItems: 'flex-start', padding: '6px 0',
@@ -990,9 +990,9 @@ export default function DashboardPage() {
                 <select className="ds-input" style={{ width: 'auto', fontSize: 12, padding: '6px 10px' }}
                   value={taskFilter.priority} onChange={e => setTaskFilter(f => ({ ...f, priority: e.target.value }))}>
                   <option value="">All priorities</option>
-                  <option value="high">🔴 High</option>
-                  <option value="medium">🟡 Medium</option>
-                  <option value="low">🟢 Low</option>
+                  <option value="high">High</option>
+                  <option value="medium">Medium</option>
+                  <option value="low">Low</option>
                 </select>
                 <select className="ds-input" style={{ width: 'auto', fontSize: 12, padding: '6px 10px' }}
                   value={taskFilter.project} onChange={e => setTaskFilter(f => ({ ...f, project: e.target.value }))}>
@@ -1056,7 +1056,7 @@ export default function DashboardPage() {
                           borderRadius: 8, border: expandedCompany === company.id ? '1px solid var(--border)' : '1px solid transparent',
                           color: 'var(--text-0)', fontSize: 13, fontWeight: 500, transition: '0.12s',
                         }}>
-                          <span style={{ fontSize: 16 }}>🏢</span>
+                          <span style={{ fontSize: 16 }}>[co]</span>
                           {company.name}
                           <IconChevronDown size={14} style={{
                             marginLeft: 'auto', color: 'var(--text-2)',
@@ -1164,7 +1164,7 @@ export default function DashboardPage() {
                   const currentTask = agentData?.currentTask || agentStatuses[agent]?.current || ''
                   const statusLabel = agentStatus === 'busy' ? 'Working' : agentStatus === 'online' ? 'Online' : 'Offline'
                   const statusColor = agentStatus === 'offline' ? 'var(--text-2)' : agentStatus === 'busy' ? 'var(--blue)' : 'var(--green)'
-                  const emoji = agent === 'Axle' ? '⚙️' : agent === 'Bolt' ? '⚡' : '🏎️'
+                  const emoji = agent === 'Axle' ? 'gear' : agent === 'Bolt' ? 'B' : 'Z'
                   const tokensUsed = agentData?.tokensUsedToday || 0
 
                   return (
@@ -1309,7 +1309,7 @@ export default function DashboardPage() {
 
               {notifications.length === 0 ? (
                 <div className="ds-card" style={{ padding: 40, textAlign: 'center' }}>
-                  <div style={{ fontSize: 32, marginBottom: 12 }}>🔔</div>
+                  <div style={{ fontSize: 24, marginBottom: 12 }}>( )</div>
                   <p style={{ fontSize: 14, color: 'var(--text-2)' }}>No notifications yet</p>
                   <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 4 }}>
                     Notifications will appear here when tasks are completed or important events occur.
@@ -1320,9 +1320,9 @@ export default function DashboardPage() {
                   {notifications.map((notif, idx) => {
                     const typeConfig: Record<string, { icon: string; color: string }> = {
                       info: { icon: 'ℹ️', color: 'var(--blue)' },
-                      warning: { icon: '⚠️', color: 'var(--yellow)' },
-                      success: { icon: '✅', color: 'var(--green)' },
-                      error: { icon: '❌', color: 'var(--red)' },
+                      warning: { icon: '[!]', color: 'var(--yellow)' },
+                      success: { icon: '[+]', color: 'var(--green)' },
+                      error: { icon: '[x]', color: 'var(--red)' },
                     }
                     const cfg = typeConfig[notif.type] || typeConfig.info
                     return (
@@ -1502,7 +1502,7 @@ export default function DashboardPage() {
                         width: 32, height: 32, borderRadius: 8, background: AGENT_COLORS[agent] + '20',
                         display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 16,
                       }}>
-                        {agent === 'Axle' ? '⚙️' : agent === 'Bolt' ? '⚡' : '🏎️'}
+                        {agent === 'Axle' ? 'gear' : agent === 'Bolt' ? 'B' : 'Z'}
                       </div>
                       <div style={{ flex: 1 }}>
                         <div style={{ fontSize: 13, fontWeight: 500, color: 'var(--text-0)' }}>{agent}</div>
@@ -1570,10 +1570,10 @@ export default function DashboardPage() {
                 <h3 style={{ fontSize: 13, fontWeight: 600, marginBottom: 16 }}>Data Management</h3>
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <button className="btn btn-primary" style={{ fontSize: 12, padding: '10px 16px' }} onClick={handleExport}>
-                    📥 Export All Data (JSON)
+                    Export All Data (JSON)
                   </button>
                   <button className="btn" style={{ fontSize: 12, padding: '10px 16px' }} onClick={() => setShowImport(!showImport)}>
-                    📤 Import Data (JSON)
+                    Import Data (JSON)
                   </button>
                   {showImport && (
                     <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
@@ -1593,7 +1593,7 @@ export default function DashboardPage() {
                         setCompanies(DEFAULT_COMPANIES); setSettings(DEFAULT_SETTINGS)
                       }
                     }}>
-                    🗑️ Reset to Defaults
+                    Reset to Defaults
                   </button>
                 </div>
               </div>

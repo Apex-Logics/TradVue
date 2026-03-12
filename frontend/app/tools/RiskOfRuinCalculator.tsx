@@ -133,6 +133,7 @@ export default function RiskOfRuinCalculator() {
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 24 }}>
+      <style>{`@media(max-width:640px){.ror-grid{grid-template-columns:1fr!important}}`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-0)' }}>Risk of Ruin Calculator</div>
@@ -149,7 +150,7 @@ export default function RiskOfRuinCalculator() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="ror-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         <div>
           <InputField label="Win Rate %" tooltip="Your historical or expected win rate." value={winRate} onChange={setWinRate} placeholder="45" step="1" min="1" />
           <InputField label="Average R:R Ratio" tooltip="Average win divided by average loss. 2.0 = you make $2 for every $1 lost." value={rr} onChange={setRr} placeholder="2" step="0.1" min="0.1" />

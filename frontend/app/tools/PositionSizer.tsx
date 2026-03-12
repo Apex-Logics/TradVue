@@ -104,7 +104,7 @@ export default function PositionSizer() {
         {ASSET_TIPS[asset]}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         <div>
           {/* Account balance */}
           <div style={{ marginBottom: 10 }}>

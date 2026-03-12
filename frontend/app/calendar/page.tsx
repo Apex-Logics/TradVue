@@ -65,9 +65,9 @@ const TYPE_ICON_COMPONENTS: Record<EventType, React.FC<{size?: number}>> = {
 }
 
 const COUNTRY_FLAGS: Record<string, string> = {
-  USD: '🇺🇸', EUR: '🇪🇺', GBP: '🇬🇧', JPY: '🇯🇵',
-  CAD: '🇨🇦', AUD: '🇦🇺', CHF: '🇨🇭', NZD: '🇳🇿',
-  CNY: '🇨🇳', CHN: '🇨🇳',
+  USD: 'US', EUR: 'EU', GBP: 'GB', JPY: 'JP',
+  CAD: 'CA', AUD: 'AU', CHF: 'CH', NZD: 'NZ',
+  CNY: 'CN', CHN: 'CN',
 }
 
 function fmtTime(dateStr: string): string {
@@ -400,7 +400,7 @@ function EventRow({ event, showDate, watchlistSymbols }: { event: CalendarEvent;
               {event.title}
             </div>
             <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginTop: 2 }}>
-              <span style={{ fontSize: 10 }}>{COUNTRY_FLAGS[event.country] || '🌐'}</span>
+              <span style={{ fontSize: 10 }}>{COUNTRY_FLAGS[event.country] || 'INT'}</span>
               <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 600 }}>{event.country}</span>
               <span style={{
                 fontSize: 9, fontWeight: 700, padding: '1px 4px', borderRadius: 2,
@@ -1090,7 +1090,7 @@ export default function CalendarPage() {
                                   </div>
                                   {/* Flag */}
                                   <div style={{ fontSize: 14 }}>
-                                    {COUNTRY_FLAGS[event.country] || '🌐'}
+                                    {COUNTRY_FLAGS[event.country] || 'INT'}
                                   </div>
                                   {/* Title + meta */}
                                   <div>
@@ -1231,7 +1231,7 @@ export default function CalendarPage() {
                         </div>
                         {/* Flag */}
                         <div style={{ fontSize: 11, paddingTop: 1 }}>
-                          {COUNTRY_FLAGS[event.country] || '🌐'}
+                          {COUNTRY_FLAGS[event.country] || 'INT'}
                         </div>
                         {/* Title + meta */}
                         <div>

@@ -129,7 +129,7 @@ export default function EconHeatmap() {
       {!loading && !error && (
         <>
           {/* Heatmap grid */}
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(5, 1fr)', gap: 8, marginBottom: 16 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(90px, 1fr))', gap: 8, marginBottom: 16 }}>
             {weekDates.map((date, i) => {
               const evs = byDate[date] || []
               const score = heatScore(date)
@@ -212,7 +212,7 @@ export default function EconHeatmap() {
 
           {/* Trading recommendations */}
           {riskiestDay && safestDay && (
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 12 }}>
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 10, marginBottom: 12 }}>
               <div style={{ background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)', borderRadius: 8, padding: '10px 14px' }}>
                 <div style={{ fontSize: 10, color: '#ef4444', fontWeight: 700, marginBottom: 4 }}>HIGHEST RISK DAY</div>
                 <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>

@@ -666,7 +666,7 @@ export default function FuturesCalculator() {
               color: 'var(--text-1)', fontSize: 13, fontWeight: 600,
             }}
           >
-            <span>📖 How to Use this Calculator</span>
+            <span>How to Use this Calculator</span>
             <span style={{ transform: showInstructions ? 'rotate(180deg)' : 'none', transition: 'transform 0.2s', color: 'var(--text-3)' }}>
               <IconChevronDown size={16} />
             </span>
@@ -694,7 +694,7 @@ export default function FuturesCalculator() {
                 ))}
               </div>
               <div style={{ marginTop: 12, padding: '8px 12px', background: 'var(--accent-dim)', borderRadius: 6, fontSize: 11, color: 'var(--text-2)' }}>
-                💡 <strong>Key terms:</strong> A <em>tick</em> is the smallest price increment. A <em>point</em> is 1 full price unit. Each tick = 1 tick value in P&L. Margin is the deposit required to hold 1 contract overnight.
+                <strong>Key terms:</strong> A <em>tick</em> is the smallest price increment. A <em>point</em> is 1 full price unit. Each tick = 1 tick value in P&L. Margin is the deposit required to hold 1 contract overnight.
               </div>
             </div>
           )}
@@ -1089,7 +1089,7 @@ export default function FuturesCalculator() {
           {c.ticksAtRisk > 0 && (
             <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 14, marginBottom: 14 }}>
               <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 10, letterSpacing: '0.06em' }}>RISK ANALYSIS</div>
-              <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 0 }}>
                 {[
                   { label: 'Points at Risk',          value: fmt2(c.pointsAtRisk),                     tooltip: 'Price distance from entry to stop loss.' },
                   { label: 'Ticks at Risk',            value: fmtInt(c.ticksAtRisk),                    tooltip: `Number of ticks from entry to stop. 1 tick = $${c.dollarRiskPerContr > 0 ? fmt2(contract.tickValue) : '—'}` },
@@ -1163,7 +1163,7 @@ export default function FuturesCalculator() {
           <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 12, letterSpacing: '0.06em', textTransform: 'uppercase' }}>
             {contract.symbol} Contract Specifications
           </div>
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 0 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))', gap: 0 }}>
             {[
               { label: 'Exchange',           value: contract.exchange,                         tooltip: 'The exchange where this contract trades.' },
               { label: 'Contract Size',       value: contract.contractSize,                    tooltip: 'The underlying asset quantity represented by 1 contract.' },
@@ -1185,7 +1185,7 @@ export default function FuturesCalculator() {
             ))}
           </div>
           <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            💡 <strong>Margin calls:</strong> If your account drops below maintenance margin, your broker will close your position automatically. Always keep extra capital as a buffer.
+            <strong>Margin calls:</strong> If your account drops below maintenance margin, your broker will close your position automatically. Always keep extra capital as a buffer.
           </div>
         </div>
       </div>
@@ -1193,7 +1193,7 @@ export default function FuturesCalculator() {
       {/* ── Footer disclaimer ─────────────────────────────────────────────── */}
       <div style={{ padding: '10px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-3)' }}>
         <p style={{ fontSize: 10, color: 'var(--text-3)', margin: 0 }}>
-          ⚠️ Contract specs and margins are approximate and change frequently. Verify with your broker before trading. Not financial advice. Futures trading involves substantial risk of loss.
+          Note: Contract specs and margins are approximate and change frequently. Verify with your broker before trading. Not financial advice. Futures trading involves substantial risk of loss.
         </p>
       </div>
     </div>

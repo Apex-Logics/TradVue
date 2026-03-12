@@ -237,7 +237,7 @@ export default function DividendPlanner() {
       </div>
 
       {/* Summary */}
-      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(4, 1fr)', gap: 10, marginBottom: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 10, marginBottom: 16 }}>
         {[
           { label: 'Monthly Income', value: fmt(totals.monthlyIncome), color: 'var(--green)' },
           { label: 'Quarterly Income', value: fmt(totals.quarterlyIncome), color: 'var(--accent)' },

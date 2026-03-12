@@ -115,6 +115,7 @@ export default function CompoundCalculator() {
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 24 }}>
+      <style>{`@media(max-width:640px){.cc-grid{grid-template-columns:1fr!important}.cc-wrap{flex-wrap:wrap}}`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div>
           <div style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-0)' }}>Compound Growth Calculator</div>
@@ -131,7 +132,7 @@ export default function CompoundCalculator() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="cc-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         <div>
           <InputField label="Starting Capital" tooltip="How much you're starting with today." value={start} onChange={setStart} placeholder="10000" prefix="$" />
           <InputField label="Monthly Contribution" tooltip="How much you add each month. Even small amounts compound dramatically over time." value={monthly} onChange={setMonthly} placeholder="500" prefix="$" />

@@ -155,6 +155,7 @@ export default function OptionsCalculator() {
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 24 }}>
+      <style>{`@media(max-width:640px){.oc-grid{grid-template-columns:1fr!important}}`}</style>
       {/* Header */}
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
@@ -186,7 +187,7 @@ export default function OptionsCalculator() {
         ))}
       </div>
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="oc-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         {/* Inputs */}
         <div>
           <InputField label="Current Stock Price" tooltip="The current market price of the underlying stock." value={stockPrice} onChange={setStockPrice} placeholder="e.g. 150.00" />

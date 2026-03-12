@@ -81,6 +81,39 @@ function IconChart() {
   )
 }
 
+function IconTools() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>
+    </svg>
+  )
+}
+
+function IconJournal() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/><path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+      <line x1="9" y1="8" x2="15" y2="8"/><line x1="9" y1="12" x2="13" y2="12"/>
+    </svg>
+  )
+}
+
+function IconPortfolio() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/>
+    </svg>
+  )
+}
+
+function IconShield() {
+  return (
+    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  )
+}
+
 function IconCheck() {
   return (
     <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
@@ -222,14 +255,14 @@ const features = [
   },
   {
     icon: <IconBell />,
-    title: 'Smart Custom Alerts',
-    desc: 'Price, volume, sentiment, and news triggers tailored to your strategy. Not your phone blowing up with noise.',
+    title: 'Smart Alerts',
+    desc: 'Price, volume, earnings proximity, and sector news triggers with context. Smart alerts tell you why, not just what.',
     color: 'var(--yellow)',
   },
   {
     icon: <IconEye />,
-    title: 'Watchlist Tracking',
-    desc: 'One dashboard, complete clarity. Monitor all your positions in real time with correlations and institutional flow.',
+    title: 'Watchlist + P&L Tracking',
+    desc: 'Live intraday P&L ticker, position sizing, and +/- delta from open — all in one dashboard.',
     color: 'var(--green)',
   },
   {
@@ -243,6 +276,30 @@ const features = [
     title: 'Chart + Context',
     desc: "Charts don't tell the full story. Real-time news and sentiment pinned to price action — see the why behind every move.",
     color: 'var(--yellow)',
+  },
+  {
+    icon: <IconTools />,
+    title: '10 Professional Trading Tools',
+    desc: 'Options Calculator, Position Sizer, Risk of Ruin, Forex Pip, Compound Growth, Expectancy, Correlation Matrix, Session Clock, Econ Heatmap, Dividend Planner — all free.',
+    color: 'var(--blue)',
+  },
+  {
+    icon: <IconJournal />,
+    title: 'Smart Trading Journal',
+    desc: 'Log trades with auto-filled entry prices, pattern detection, streak tracking, emotional tags, and auto-calculated expectancy.',
+    color: 'var(--purple)',
+  },
+  {
+    icon: <IconPortfolio />,
+    title: 'Portfolio Analytics',
+    desc: 'Risk score, DRIP simulator, dividend calendar, correlation analysis, and benchmark comparison — all in one view.',
+    color: 'var(--green)',
+  },
+  {
+    icon: <IconShield />,
+    title: 'Secure Cloud Sync',
+    desc: 'Account creation, email verification, and encrypted cloud sync. Your watchlists, journal, and portfolio follow you everywhere.',
+    color: 'var(--red)',
   },
 ]
 
@@ -538,11 +595,14 @@ export default function LandingPage() {
               gap: '32px', flexWrap: 'wrap',
             }}>
               {[
-                '✓ No credit card required',
-                '✓ 0-second data delay (Pro)',
-                '✓ 99.2% uptime',
+                'No credit card required',
+                '0-second data delay (Pro)',
+                '99.2% uptime',
               ].map(t => (
-                <span key={t} style={{ fontSize: '13px', color: 'var(--text-2)', fontWeight: 500 }}>{t}</span>
+                <span key={t} style={{ display: 'flex', alignItems: 'center', gap: '6px', fontSize: '13px', color: 'var(--text-2)', fontWeight: 500 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  {t}
+                </span>
               ))}
             </div>
           </div>
@@ -635,8 +695,8 @@ export default function LandingPage() {
               }}>
                 Everything You Need to Trade with Edge
               </h2>
-              <p style={{ fontSize: '16px', color: 'var(--text-2)', maxWidth: '500px', margin: '0 auto', lineHeight: 1.6 }}>
-                Six core tools that put institutional-grade intelligence in your hands.
+              <p style={{ fontSize: '16px', color: 'var(--text-2)', maxWidth: '540px', margin: '0 auto', lineHeight: 1.6 }}>
+                Real-time intelligence, a professional trading journal, portfolio analytics, and 10 built-in calculators — all in one platform.
               </p>
             </div>
 
@@ -808,7 +868,7 @@ export default function LandingPage() {
               textAlign: 'center', marginBottom: '40px',
               fontSize: '15px', color: 'var(--text-0)', fontWeight: 600,
             }}>
-              🎁 All early access users get free Pro access through beta. No credit card, no expiration date.
+              Free Pro access for all early beta users. No credit card, no expiration date.
             </div>
 
             {/* Pricing cards */}
@@ -889,7 +949,7 @@ export default function LandingPage() {
                     borderRadius: '6px', padding: '4px 10px', display: 'inline-block',
                     color: 'var(--blue)', fontWeight: 600,
                   }}>
-                    🎁 Free during beta
+                    Free during beta
                   </div>
                 </div>
 
@@ -950,7 +1010,11 @@ export default function LandingPage() {
                 background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.25)',
                 borderRadius: '12px', padding: '32px', textAlign: 'center',
               }}>
-                <div style={{ fontSize: '40px', marginBottom: '16px' }}>✓</div>
+                <div style={{ display: 'flex', justifyContent: 'center', marginBottom: '16px' }}>
+                  <div style={{ width: '56px', height: '56px', borderRadius: '50%', background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                  </div>
+                </div>
                 <h3 style={{ fontSize: '20px', fontWeight: 700, color: 'var(--green)', marginBottom: '10px' }}>
                   Check your email.
                 </h3>

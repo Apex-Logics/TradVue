@@ -103,7 +103,7 @@ function getScoreColor(score: number | null) {
 
 function getGradeEmoji(grade?: string) {
   if (!grade) return ''
-  const map: Record<string, string> = { A: '🟢', B: '🔵', C: '🟡', D: '🟠', F: '🔴' }
+  const map: Record<string, string> = { A: 'A', B: 'B', C: 'C', D: 'D', F: 'F' }
   return map[grade] || ''
 }
 
@@ -149,7 +149,7 @@ function AnalystRatingsCard({ ratings, loading }: { ratings: AnalystRatings | nu
   if (loading) {
     return (
       <div className="ds-card" style={{ minHeight: 200 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>📊 Analyst Ratings</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>Analyst Ratings</div>
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Loading ratings...</div>
       </div>
     )
@@ -158,7 +158,7 @@ function AnalystRatingsCard({ ratings, loading }: { ratings: AnalystRatings | nu
   if (!ratings || (!ratings.consensus.label && !ratings.distribution)) {
     return (
       <div className="ds-card" style={{ minHeight: 120 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>📊 Analyst Ratings</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>Analyst Ratings</div>
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
           No analyst coverage available for this stock.
         </div>
@@ -255,7 +255,7 @@ function AnalystRatingsCard({ ratings, loading }: { ratings: AnalystRatings | nu
   return (
     <div className="ds-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 700 }}>📊 Analyst Ratings</div>
+        <div style={{ fontSize: 14, fontWeight: 700 }}>Analyst Ratings</div>
         {analystCount && (
           <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>
             {analystCount} analyst{analystCount !== 1 ? 's' : ''}
@@ -306,7 +306,7 @@ function StockScoreCard({ score, loading }: { score: StockScore | null; loading:
   if (loading) {
     return (
       <div className="ds-card" style={{ minHeight: 200 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>🎯 TradVue Score</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 16 }}>TradVue Score</div>
         <div style={{ padding: 30, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>⏳ Calculating score...</div>
       </div>
     )
@@ -315,7 +315,7 @@ function StockScoreCard({ score, loading }: { score: StockScore | null; loading:
   if (!score || score.totalScore == null) {
     return (
       <div className="ds-card" style={{ minHeight: 120 }}>
-        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>🎯 TradVue Score</div>
+        <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>TradVue Score</div>
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
           {score?.error || 'Unable to calculate score for this stock.'}
         </div>
@@ -325,16 +325,16 @@ function StockScoreCard({ score, loading }: { score: StockScore | null; loading:
 
   const { totalScore, grade, breakdown } = score
   const dimensions = breakdown ? [
-    { key: 'value', label: 'Value', icon: '💰', desc: 'P/E ratio vs sector average', ...breakdown.value },
-    { key: 'growth', label: 'Growth', icon: '📈', desc: 'Revenue & earnings growth', ...breakdown.growth },
-    { key: 'momentum', label: 'Momentum', icon: '🚀', desc: '50d/200d MA, trend direction', ...breakdown.momentum },
-    { key: 'profitability', label: 'Profitability', icon: '💎', desc: 'Margins & return on equity', ...breakdown.profitability },
+    { key: 'value', label: 'Value', icon: '$', desc: 'P/E ratio vs sector average', ...breakdown.value },
+    { key: 'growth', label: 'Growth', icon: '+', desc: 'Revenue & earnings growth', ...breakdown.growth },
+    { key: 'momentum', label: 'Momentum', icon: '^', desc: '50d/200d MA, trend direction', ...breakdown.momentum },
+    { key: 'profitability', label: 'Profitability', icon: 'P', desc: 'Margins & return on equity', ...breakdown.profitability },
   ] : []
 
   return (
     <div className="ds-card">
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 16 }}>
-        <div style={{ fontSize: 14, fontWeight: 700 }}>🎯 TradVue Score</div>
+        <div style={{ fontSize: 14, fontWeight: 700 }}>TradVue Score</div>
         <ScoreBadge score={totalScore} grade={grade} size="large" />
       </div>
 
@@ -381,8 +381,8 @@ function StockScoreCard({ score, loading }: { score: StockScore | null; loading:
               )}
               {dim.key === 'momentum' && (
                 <>
-                  {(dim as any).goldenCross && <span className="tag tag-green" style={{ fontSize: 9 }}>✨ Golden Cross</span>}
-                  {(dim as any).deathCross && <span className="tag tag-red" style={{ fontSize: 9 }}>💀 Death Cross</span>}
+                  {(dim as any).goldenCross && <span className="tag tag-green" style={{ fontSize: 9 }}>Golden Cross</span>}
+                  {(dim as any).deathCross && <span className="tag tag-red" style={{ fontSize: 9 }}>Death Cross</span>}
                   {(dim as any).pctAbove200dMA != null && (
                     <span className="tag" style={{ fontSize: 9 }}>vs 200d: {(dim as any).pctAbove200dMA > 0 ? '+' : ''}{(dim as any).pctAbove200dMA}%</span>
                   )}
@@ -404,7 +404,7 @@ function StockScoreCard({ score, loading }: { score: StockScore | null; loading:
       })}
 
       <div style={{ marginTop: 8, fontSize: 10, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '6px 10px' }}>
-        💡 Score = 25% Value + 25% Growth + 25% Momentum + 25% Profitability. Updated daily.
+        Score = 25% Value + 25% Growth + 25% Momentum + 25% Profitability. Updated daily.
       </div>
     </div>
   )

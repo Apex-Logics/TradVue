@@ -494,7 +494,11 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
         {/* Step 3: Done */}
         {step === 'done' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
-            <div style={{ fontSize: 48, marginBottom: 12 }}>✅</div>
+            <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+              <div style={{ width: 56, height: 56, borderRadius: '50%', background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+                <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+              </div>
+            </div>
             <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>Import Complete!</h3>
             <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>
               {selectedRows.size} trades imported successfully.

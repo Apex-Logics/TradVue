@@ -1170,7 +1170,7 @@ export default function PortfolioPage() {
           {alertNotifications.map(a => (
             <div key={a.id} style={{ background: 'var(--bg-2)', border: '2px solid var(--yellow)', borderRadius: 8, padding: '12px 16px', minWidth: 260, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
-                <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--yellow)' }}>🔔 Price Alert Triggered</span>
+                <span style={{ fontWeight: 700, fontSize: 12, color: 'var(--yellow)' }}>Price Alert Triggered</span>
                 <button onClick={() => setAlertNotifications(prev => prev.filter(n => n.id !== a.id))} style={{ fontSize: 13, color: 'var(--text-3)', cursor: 'pointer' }}>✕</button>
               </div>
               <div style={{ fontSize: 12, color: 'var(--text-0)' }}>{a.symbol} is now <strong>{a.direction}</strong> ${a.target_price}</div>
@@ -1331,7 +1331,7 @@ function DashboardTab({
       {/* Currency & Home Currency indicator */}
       {homeCurrency !== 'USD' && exchangeRates && (
         <div style={{ fontSize: 11, color: 'var(--text-3)', background: 'var(--bg-2)', padding: '6px 12px', borderRadius: 6, border: '1px solid var(--border)' }}>
-          💱 Values shown in <strong>{homeCurrency}</strong> · Rate: 1 USD = {(exchangeRates.rates[homeCurrency] || 1).toFixed(4)} {homeCurrency}
+          Values shown in <strong>{homeCurrency}</strong> · Rate: 1 USD = {(exchangeRates.rates[homeCurrency] || 1).toFixed(4)} {homeCurrency}
         </div>
       )}
 
@@ -1702,7 +1702,7 @@ function HoldingsTab({
                         <button onClick={() => openEdit(h)} style={{ fontSize: 9.5, color: 'var(--accent)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
                         <button onClick={() => openAddShares(h)} style={{ fontSize: 9.5, color: 'var(--green)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>+Shares</button>
                         <button onClick={() => onSellPosition(h)} style={{ fontSize: 9.5, color: 'var(--yellow)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Sell</button>
-                        <button onClick={() => openAlertModal(h.ticker, h.currentPrice)} style={{ fontSize: 9.5, color: '#f59e0b', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>🔔</button>
+                        <button onClick={() => openAlertModal(h.ticker, h.currentPrice)} style={{ fontSize: 9.5, color: '#f59e0b', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Alert</button>
                         <button
                           onClick={() => toggleDRIP(h.ticker, !portfolioSettings.dripEnabled[h.ticker])}
                           title={portfolioSettings.dripEnabled[h.ticker] ? 'DRIP enabled — click to disable' : 'Enable DRIP'}
@@ -1834,7 +1834,7 @@ function HoldingsTab({
 
       {/* Price Alert Modal */}
       {showAlertModal && alertTarget && (
-        <Modal title={`🔔 Price Alert — ${alertTarget.symbol}`} onClose={() => setShowAlertModal(false)}>
+        <Modal title={`Price Alert — ${alertTarget.symbol}`} onClose={() => setShowAlertModal(false)}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
             <div style={{ fontSize: 11, color: 'var(--text-2)' }}>
               Current price: <strong style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>${fmt(alertTarget.currentPrice)}</strong>
@@ -1918,7 +1918,7 @@ function DividendsTab({
   if (holdings.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)' }}>
-        <div style={{ fontSize: 36, marginBottom: 12 }}>💰</div>
+        <div style={{ marginBottom: 12, fontSize: 28 }}>$</div>
         <div style={{ fontSize: 14, color: 'var(--text-2)' }}>Add holdings first to track dividends</div>
       </div>
     )
@@ -2241,7 +2241,11 @@ function SoldTab({
 
       {soldPositions.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)', border: '1px dashed var(--border)', borderRadius: 8 }}>
-          <div style={{ fontSize: 36, marginBottom: 12 }}>✅</div>
+          <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
+            <div style={{ width: 48, height: 48, borderRadius: '50%', background: 'rgba(34,197,94,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center' }}>
+              <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+            </div>
+          </div>
           <div style={{ fontSize: 14, color: 'var(--text-2)' }}>No closed positions yet</div>
           <div style={{ fontSize: 12, marginTop: 8 }}>Use the &quot;Sell&quot; button on a holding to auto-fill this form.</div>
         </div>
@@ -2451,7 +2455,7 @@ function WatchlistTab({
       </div>
       {watchlist.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '60px 20px', border: '1px dashed var(--border)', borderRadius: 12 }}>
-          <div style={{ fontSize: 40, marginBottom: 14 }}>👁</div>
+          <div style={{ marginBottom: 14, fontSize: 32 }}>?</div>
           <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-1)', marginBottom: 8 }}>Your watchlist is empty</div>
           <div style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 400, margin: '0 auto 20px', lineHeight: 1.65 }}>
             Track stocks you&apos;re watching but haven&apos;t bought yet. Monitor price, day change, P/E ratio, and dividend yield in one place.
@@ -2464,7 +2468,7 @@ function WatchlistTab({
               <strong style={{ color: 'var(--text-1)' }}>② Set a target price</strong> — your ideal buy price (optional but helpful)
             </div>
             <div style={{ fontSize: 12, color: 'var(--text-2)', background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px' }}>
-              <strong style={{ color: 'var(--text-1)' }}>③ Set a price alert</strong> — get notified when the stock hits your target (click the 🔔 icon)
+              <strong style={{ color: 'var(--text-1)' }}>③ Set a price alert</strong> — get notified when the stock hits your target (click Alert)
             </div>
           </div>
           <button onClick={openAdd} style={{
@@ -2531,7 +2535,7 @@ function WatchlistTab({
                         {price && <button onClick={() => {
                           const dir = w.targetPrice && price > w.targetPrice ? 'below' : 'above'
                           addPriceAlert(w.ticker, w.targetPrice || price, dir)
-                        }} style={{ fontSize: 10, color: '#f59e0b', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>🔔</button>}
+                        }} style={{ fontSize: 10, color: '#f59e0b', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Alert</button>}
                         <button onClick={() => handleDelete(w)} style={{ fontSize: 10, color: 'var(--red)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
                       </div>
                     </td>
@@ -2668,7 +2672,7 @@ function BenchmarkSection({ holdingsEnriched, totalCostBasis }: {
           </div>
           {diff !== null && (
             <div style={{ fontSize: 12, fontWeight: 700, color: diff >= 0 ? 'var(--green)' : 'var(--red)' }}>
-              {diff >= 0 ? `🏆 Beating ${benchmark} by ${fmtPct(Math.abs(diff))}` : `📉 Trailing ${benchmark} by ${fmtPct(Math.abs(diff))}`}
+              {diff >= 0 ? `Beating ${benchmark} by ${fmtPct(Math.abs(diff))}` : `Trailing ${benchmark} by ${fmtPct(Math.abs(diff))}`}
             </div>
           )}
         </div>
@@ -2960,7 +2964,7 @@ function TaxTab({ holdings, soldPositions, stockInfos }: {
     <div>
       {/* DISCLAIMER */}
       <div style={{ background: 'rgba(255,165,0,0.12)', border: '2px solid rgba(255,165,0,0.4)', borderRadius: 8, padding: '12px 16px', marginBottom: 20 }}>
-        <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>⚠️ Tax Estimation Tool — For informational purposes only</div>
+        <div style={{ fontSize: 12, fontWeight: 700, color: '#f59e0b', marginBottom: 4 }}>(!) Tax Estimation Tool — For informational purposes only</div>
         <div style={{ fontSize: 11, color: 'var(--text-1)', lineHeight: 1.5 }}>
           Not tax advice. Calculations are approximate and may not reflect your actual tax situation.
           Always consult a qualified tax professional before making financial decisions.{' '}
@@ -3167,7 +3171,7 @@ function ExDivAlerts({ holdingsEnriched, stockInfos }: {
         const label = a.daysAway === 0 ? 'today' : a.daysAway === 1 ? 'tomorrow' : `in ${a.daysAway} days`
         return (
           <div key={a.ticker} style={{ background: bg, border: `1px solid ${border}`, borderRadius: 6, padding: '8px 14px', fontSize: 12, color, display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span>📅</span>
+            <span>[cal]</span>
             <span><strong>{a.ticker}</strong> goes ex-dividend <strong>{label}</strong> ({a.date.toLocaleDateString('en-US', { month: 'short', day: 'numeric', year: 'numeric' })})</span>
           </div>
         )
@@ -3410,7 +3414,7 @@ function AllocationTargetsSection({ holdingsEnriched, totalMarketValue, portfoli
     return (
       <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 8 }}>
-          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🎯 ALLOCATION TARGETS</div>
+          <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>ALLOCATION TARGETS</div>
           <button onClick={startEdit} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>Set Targets</button>
         </div>
         <div style={{ fontSize: 12, color: 'var(--text-3)' }}>Set target allocation percentages by sector to track rebalancing needs.</div>
@@ -3423,7 +3427,7 @@ function AllocationTargetsSection({ holdingsEnriched, totalMarketValue, portfoli
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🎯 ALLOCATION TARGETS</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>ALLOCATION TARGETS</div>
         {!editing ? (
           <button onClick={startEdit} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>Edit Targets</button>
         ) : (
@@ -3684,13 +3688,13 @@ function AIAnalysisSection({ holdingsEnriched, totalMarketValue, projAnnualIncom
 
   if (insights.length === 0) insights.push({ level: 'info', text: 'Your portfolio looks well-structured based on current data.' })
 
-  const iconMap = { info: 'ℹ️', warn: '⚠️', alert: '🚨' }
+  const iconMap = { info: '(i)', warn: '(!)', alert: '(!)' }
   const colorMap = { info: 'var(--text-2)', warn: '#f59e0b', alert: 'var(--red)' }
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🤖 AI PORTFOLIO ANALYSIS</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>AI PORTFOLIO ANALYSIS</div>
         <button onClick={() => setExpanded(!expanded)} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>
           {expanded ? 'Collapse ↑' : 'View Analysis ↓'}
         </button>
@@ -3775,7 +3779,7 @@ function WhatIfSection({ holdingsEnriched, totalMarketValue, projAnnualIncome, s
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16 }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>🔮 WHAT-IF SCENARIOS</div>
+        <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>WHAT-IF SCENARIOS</div>
         <button onClick={() => setExpanded(!expanded)} style={{ fontSize: 11, cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)', background: 'var(--bg-3)', color: 'var(--text-1)' }}>
           {expanded ? 'Collapse ↑' : 'Try Scenario ↓'}
         </button>
@@ -3858,7 +3862,7 @@ function CurrencySettings({ portfolioSettings, savePortfolioSettings, exchangeRa
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 16, display: 'flex', alignItems: 'center', gap: 16, flexWrap: 'wrap' }}>
-      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>💱 DISPLAY CURRENCY</div>
+      <div style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>DISPLAY CURRENCY</div>
       <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
         {SUPPORTED_CURRENCIES.map(c => (
           <button key={c} onClick={() => handleChange(c)} style={{

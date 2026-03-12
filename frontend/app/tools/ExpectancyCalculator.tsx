@@ -98,6 +98,7 @@ export default function ExpectancyCalculator() {
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 24 }}>
+      <style>{`@media(max-width:640px){.ec-grid{grid-template-columns:1fr!important}.ec-grid3{grid-template-columns:1fr 1fr!important}}`}</style>
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
           <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)' }}>
@@ -119,7 +120,7 @@ export default function ExpectancyCalculator() {
         </div>
       )}
 
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+      <div className="ec-grid" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
         <div>
           <InputField label="Win Rate %" tooltip="What % of your trades end in profit. Use real historical data." value={winRate} onChange={setWinRate} placeholder="55" step="1" />
           <InputField label="Average Win ($)" tooltip="Your average profit on winning trades. Calculate from your trade log." value={avgWin} onChange={setAvgWin} placeholder="300" prefix="$" />
@@ -207,7 +208,7 @@ export default function ExpectancyCalculator() {
       {/* Trade count scenarios */}
       <div style={{ marginTop: 16 }}>
         <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em' }}>EXPECTED OUTCOME OVER N TRADES</div>
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 8 }}>
+        <div className="ec-grid3" style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(120px, 1fr))', gap: 8 }}>
           {tradeProjections.map(p => (
             <div key={p.trades} style={{ background: 'var(--bg-3)', borderRadius: 8, padding: '10px 14px', textAlign: 'center' }}>
               <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>{p.trades} trades (~{p.months} months)</div>

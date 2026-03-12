@@ -130,7 +130,7 @@ function PositionSizeCalc() {
         title="Position Size Calculator"
         desc="Determine how many shares to buy based on how much you're willing to risk on a trade. Never risk more than 1–2% of your account on any single trade."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <InputField label="Account Balance" tooltip="Total value of your trading account. This is the base for calculating how much to risk." value={balance} onChange={setBalance} placeholder="e.g. 25000" />
           <InputField label="Risk % Per Trade" tooltip="What % of your account you're willing to lose if this trade goes wrong. Most professional traders risk 1–2% max per trade." value={riskPct} onChange={setRiskPct} placeholder="e.g. 2" min="0" step="0.1" />
@@ -181,7 +181,7 @@ function RiskRewardCalc() {
         title="Risk/Reward Calculator"
         desc="Calculate the ratio between potential profit and potential loss. A good trade has at least a 1:2 risk/reward — meaning you risk $1 to make $2."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <InputField label="Entry Price" tooltip="Price you buy the asset." value={entry} onChange={setEntry} placeholder="e.g. 100.00" />
           <InputField label="Stop Loss Price" tooltip="Price at which you exit to limit losses. Set this BEFORE entering a trade." value={stop} onChange={setStop} placeholder="e.g. 95.00" />
@@ -271,7 +271,7 @@ function OptionsPLCalc() {
         title="Options Profit/Loss Calculator"
         desc="Calculate your potential profit or loss on an options trade. Options give you the right (but not the obligation) to buy or sell a stock at a specific price."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <SelectField label="Option Type" tooltip="A CALL option profits when stock price goes UP. A PUT option profits when stock price goes DOWN." value={optionType} onChange={setOptionType} options={[{ value: 'call', label: 'Call (Bullish — bet price rises)' }, { value: 'put', label: 'Put (Bearish — bet price falls)' }]} />
           <InputField label="Strike Price" tooltip="The price at which you have the right to buy (call) or sell (put) the stock. The key price level the option is based on." value={strike} onChange={setStrike} placeholder="e.g. 150.00" />
@@ -372,7 +372,7 @@ function OptionsGreeksCalc() {
         title="Options Greeks Calculator"
         desc="Calculate the sensitivity metrics (Greeks) of an options contract using the Black-Scholes model. Greeks help you understand how an option's price will change."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <SelectField label="Option Type" tooltip="Call options profit when stock goes up. Put options profit when stock goes down." value={optionType} onChange={v => setOptionType(v as 'call' | 'put')} options={[{ value: 'call', label: 'Call Option' }, { value: 'put', label: 'Put Option' }]} />
           <InputField label="Stock Price (S)" tooltip="Current market price of the underlying stock." value={stockPrice} onChange={setStockPrice} placeholder="e.g. 150.00" />
@@ -440,7 +440,7 @@ function PipCalc() {
         title="Pip Calculator (Forex)"
         desc="Calculate the value of a pip for any forex pair and lot size. A pip is the smallest standard price move in currency trading — usually 0.0001 for most pairs."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <SelectField label="Currency Pair" tooltip="The two currencies you're trading. EUR/USD means you're buying Euros and selling US Dollars (or vice versa)." value={pair} onChange={setPair} options={Object.keys(FOREX_PAIRS).map(k => ({ value: k, label: k }))} />
           <InputField label="Lot Size" tooltip="Standard lot = 100,000 units ($10/pip). Mini lot = 10,000 units ($1/pip). Micro lot = 1,000 units ($0.10/pip). Beginners often start with micro lots." value={lotSize} onChange={setLotSize} placeholder="e.g. 1" step="0.01" min="0.01" />
@@ -499,7 +499,7 @@ function LotSizeCalc() {
         title="Lot Size Calculator (Forex)"
         desc="Calculate the correct lot size for your trade based on your account size and risk tolerance. Always know your lot size BEFORE entering a trade."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <SelectField label="Currency Pair" tooltip="The forex pair you're trading." value={pair} onChange={setPair} options={Object.keys(FOREX_PAIRS).map(k => ({ value: k, label: k }))} />
           <InputField label="Account Balance" tooltip="Total value of your forex trading account in USD." value={balance} onChange={setBalance} placeholder="e.g. 10000" />
@@ -565,7 +565,7 @@ function CompoundCalc() {
         title="Compound Interest Calculator"
         desc="See how your money grows over time with compound interest — 'the eighth wonder of the world'. The earlier you start, the more powerful it becomes."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <InputField label="Initial Investment" tooltip="The lump sum you're starting with. Even starting small is better than waiting." value={initial} onChange={setInitial} placeholder="e.g. 10000" />
           <InputField label="Monthly Contribution" tooltip="How much you add every month. Consistent contributions dramatically accelerate growth over time." value={monthly} onChange={setMonthly} placeholder="e.g. 500" />
@@ -650,7 +650,7 @@ function FibonacciCalc() {
         title="Fibonacci Retracement Calculator"
         desc="Calculate key Fibonacci levels — mathematical ratios that often act as support and resistance areas where price may pause or reverse. Used by technical traders worldwide."
       />
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <InputField label="Swing High Price" tooltip="The highest price in the recent move or swing. This is the top of the range you're measuring." value={high} onChange={setHigh} placeholder="e.g. 200.00" />
           <InputField label="Swing Low Price" tooltip="The lowest price in the recent move or swing. This is the bottom of the range you're measuring." value={low} onChange={setLow} placeholder="e.g. 150.00" />
@@ -795,7 +795,7 @@ function StockScreener() {
       )}
       {!searched && (
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12, background: 'var(--bg-3)', borderRadius: 8 }}>
-          ☝️ Set your filters above and click <strong>Run Screener</strong> to find matching stocks
+          Set your filters above and click <strong>Run Screener</strong> to find matching stocks
         </div>
       )}
     </Card>
@@ -1059,7 +1059,7 @@ function FearGreedIndex() {
       {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Market sentiment data temporarily unavailable.</div>}
       {data && (
-        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 20 }}>
           {/* Gauge */}
           <div style={{ textAlign: 'center' }}>
             <svg width="220" height="130" viewBox="0 0 220 130" style={{ overflow: 'visible' }}>
@@ -1122,7 +1122,7 @@ function FearGreedIndex() {
               <span>30 days ago</span><span>Today</span>
             </div>
             {/* Zones reference */}
-            <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 4 }}>
+            <div style={{ marginTop: 10, display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: 4 }}>
               {[['0-25', 'Extreme Fear', '#ef4444'], ['25-45', 'Fear', '#f97316'], ['45-55', 'Neutral', '#eab308'], ['55-75', 'Greed', '#84cc16'], ['75-100', 'Extreme Greed', '#22c55e']].map(([r, l, c]) => (
                 <div key={r} style={{ display: 'flex', alignItems: 'center', gap: 4, fontSize: 10, color: 'var(--text-2)' }}>
                   <span style={{ width: 8, height: 8, borderRadius: 2, background: c, flexShrink: 0 }} />
@@ -1160,11 +1160,11 @@ function GasFeeTracker() {
   }, [fetchGas])
 
   const txTypes = [
-    { name: 'ETH Transfer', gas: 21000, icon: '💸' },
-    { name: 'ERC-20 Transfer', gas: 65000, icon: '🪙' },
-    { name: 'Uniswap Swap', gas: 150000, icon: '🔄' },
-    { name: 'NFT Mint', gas: 250000, icon: '🖼️' },
-    { name: 'Contract Deploy', gas: 500000, icon: '📄' },
+    { name: 'ETH Transfer', gas: 21000, icon: 'ETH' },
+    { name: 'ERC-20 Transfer', gas: 65000, icon: 'ERC' },
+    { name: 'Uniswap Swap', gas: 150000, icon: 'SWAP' },
+    { name: 'NFT Mint', gas: 250000, icon: 'NFT' },
+    { name: 'Contract Deploy', gas: 500000, icon: 'DEPL' },
   ]
 
   const calcTxCost = (gwei: number, gasUnits: number) => {
@@ -1186,9 +1186,9 @@ function GasFeeTracker() {
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Gas fee data temporarily unavailable.</div>}
       {gasData && (
         <>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(3, 1fr)', gap: 10, marginBottom: 20 }}>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(150px, 1fr))', gap: 10, marginBottom: 20 }}>
             {[
-              { label: '🐢 Slow', key: 'slow', desc: '~5-10 min', color: '#60a5fa' },
+              { label: 'Slow', key: 'slow', desc: '~5-10 min', color: '#60a5fa' },
               { label: 'Standard', key: 'standard', desc: '~1-3 min', color: '#a78bfa' },
               { label: 'Fast', key: 'fast', desc: '~15-30 sec', color: 'var(--yellow)' },
             ].map(({ label, key, desc, color }) => {
@@ -1289,7 +1289,7 @@ function StakingRewards() {
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>What is staking?</span>
         <Tooltip text="Staking locks your crypto to help secure the network. In return, you earn rewards (similar to interest). APY = Annual Percentage Yield. Compound = reinvesting rewards to earn even more over time." position="right" />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <SelectField label="Coin" tooltip="Select the cryptocurrency you want to stake. APY rates are approximate current averages — actual rates vary by validator and protocol." value={coin} onChange={v => { setCoin(v); setApy(String(STAKING_COINS[v]?.apy || 5)) }} options={Object.entries(STAKING_COINS).map(([k, v]) => ({ value: k, label: `${k} — ${v.name} (~${v.apy}% APY)` }))} />
           <InputField label="Amount to Stake (coins)" tooltip="How many coins you plan to stake. The more you stake, the more rewards you earn." value={amount} onChange={setAmount} placeholder="e.g. 10" step="0.1" min="0" />
@@ -1339,10 +1339,10 @@ function StakingRewards() {
 // ─── 15. Forex Session Timer ──────────────────────────────────────────────────
 
 const FOREX_SESSIONS = [
-  { name: 'Sydney',   open: 22, close: 7,  color: '#3b82f6', flag: '🇦🇺', desc: 'Sydney opens Sunday 10PM ET. Quietest session.' },
-  { name: 'Tokyo',    open: 0,  close: 9,  color: '#f59e0b', flag: '🇯🇵', desc: 'Tokyo / Asia session. JPY pairs most active.' },
-  { name: 'London',   open: 3,  close: 12, color: '#10b981', flag: '🇬🇧', desc: 'Highest liquidity. EUR, GBP pairs most active.' },
-  { name: 'New York', open: 8,  close: 17, color: '#ef4444', flag: '🇺🇸', desc: 'Overlaps with London 8-12 ET — most volatile.' },
+  { name: 'Sydney',   open: 22, close: 7,  color: '#3b82f6', flag: 'AU', desc: 'Sydney opens Sunday 10PM ET. Quietest session.' },
+  { name: 'Tokyo',    open: 0,  close: 9,  color: '#f59e0b', flag: 'JP', desc: 'Tokyo / Asia session. JPY pairs most active.' },
+  { name: 'London',   open: 3,  close: 12, color: '#10b981', flag: 'GB', desc: 'Highest liquidity. EUR, GBP pairs most active.' },
+  { name: 'New York', open: 8,  close: 17, color: '#ef4444', flag: 'US', desc: 'Overlaps with London 8-12 ET — most volatile.' },
 ]
 
 function ForexSessionTimer() {
@@ -1399,7 +1399,7 @@ function ForexSessionTimer() {
         </div>
         {overlap && (
           <div style={{ background: 'rgba(239,68,68,0.15)', border: '1px solid rgba(239,68,68,0.4)', borderRadius: 8, padding: '8px 14px', flex: 1, minWidth: 140 }}>
-            <div style={{ fontSize: 10, color: '#f87171', marginBottom: 2, fontWeight: 600 }}>🔥 PEAK HOURS</div>
+            <div style={{ fontSize: 10, color: '#f87171', marginBottom: 2, fontWeight: 600 }}>PEAK HOURS</div>
             <div style={{ fontSize: 13, fontWeight: 700, color: '#f87171' }}>London/NY Overlap</div>
             <div style={{ fontSize: 10, color: '#fca5a5' }}>Highest volume now!</div>
           </div>
@@ -1415,7 +1415,7 @@ function ForexSessionTimer() {
             <div key={session.name} style={{ background: active ? `${session.color}18` : 'var(--bg-3)', border: `1px solid ${active ? session.color : 'var(--border)'}`, borderRadius: 8, padding: 12, transition: 'all 0.3s' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
                 <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
-                  <span style={{ fontSize: 18 }}>{session.flag}</span>
+                  <span style={{ fontSize: 10, fontWeight: 700, padding: '1px 5px', borderRadius: 3, background: 'var(--bg-2)', color: 'var(--text-2)', border: '1px solid var(--border)', letterSpacing: '0.04em' }}>{session.flag}</span>
                   <span style={{ fontSize: 14, fontWeight: 700, color: active ? session.color : 'var(--text-1)' }}>{session.name}</span>
                 </div>
                 <span style={{ fontSize: 10, padding: '2px 7px', borderRadius: 10, fontWeight: 700, background: active ? `${session.color}30` : 'var(--bg-2)', color: active ? session.color : 'var(--text-3)' }}>
@@ -1510,7 +1510,7 @@ function CurrencyStrengthMeter() {
                     <span style={{ fontSize: 10, color: 'var(--text-3)', width: 16, textAlign: 'right' }}>#{i + 1}</span>
                     <span style={{ fontSize: 14, fontWeight: 700, color: getColor(i), fontFamily: 'var(--mono)', width: 36 }}>{item.currency}</span>
                     <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
-                      {i === 0 ? '💪 Strongest' : i === scores.length - 1 ? '📉 Weakest' : ''}
+                      {i === 0 ? 'Strongest' : i === scores.length - 1 ? 'Weakest' : ''}
                     </span>
                   </div>
                   <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
@@ -1668,7 +1668,7 @@ function ProfitTargetCalc() {
         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Why set profit targets?</span>
         <Tooltip text="Helps set realistic profit goals based on your account size and trading frequency. Without targets, traders often overtrade chasing gains. Professional traders aim for 1-3% monthly, compounded over years." position="right" />
       </div>
-      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
         <div>
           <InputField label="Account Size ($)" tooltip="Total capital in your trading account. Your risk calculations are based on this number." value={accountSize} onChange={setAccountSize} placeholder="e.g. 10000" />
           <div style={{ marginBottom: 12 }}>
