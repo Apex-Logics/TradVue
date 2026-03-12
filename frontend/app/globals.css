@@ -4414,10 +4414,11 @@ a.alert-row-title:hover {
 }
 .watchlist-row {
   display: grid;
-  grid-template-columns: 1fr auto auto;
+  grid-template-columns: 1fr auto auto auto;
   align-items: center;
-  gap: 6px;
-  padding: 7px 10px;
+  gap: 4px;
+  padding: 3px 10px;
+  min-height: 28px;
   border-bottom: 1px solid var(--border-b);
   cursor: pointer;
   transition: background 0.1s;
@@ -4426,12 +4427,12 @@ a.alert-row-title:hover {
 .watchlist-row-left {
   display: flex;
   align-items: center;
-  gap: 5px;
+  gap: 4px;
   min-width: 0;
 }
 .watchlist-sym {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--text-0);
 }
@@ -4447,25 +4448,25 @@ a.alert-row-title:hover {
 }
 .watchlist-row-right {
   display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  gap: 2px;
+  flex-direction: row;
+  align-items: center;
+  gap: 5px;
 }
 .watchlist-price {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: 10px;
   color: var(--text-0);
   font-weight: 500;
 }
 .watchlist-chg-up {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--green);
   font-weight: 600;
 }
 .watchlist-chg-down {
   font-family: var(--mono);
-  font-size: 10.5px;
+  font-size: 10px;
   color: var(--red);
   font-weight: 600;
 }
@@ -4479,6 +4480,52 @@ a.alert-row-title:hover {
 }
 .watchlist-row:hover .watchlist-remove-btn { color: var(--text-3); }
 .watchlist-remove-btn:hover { color: var(--red) !important; }
+
+/* Watchlist size controls */
+.wl-size-btn {
+  font-size: 12px;
+  line-height: 1;
+  color: var(--text-3);
+  background: none;
+  border: none;
+  cursor: pointer;
+  padding: 0 2px;
+  opacity: 0.7;
+  transition: opacity 0.15s, color 0.15s;
+  font-weight: 600;
+}
+.wl-size-btn:hover { opacity: 1; color: var(--text-1); }
+
+/* Watchlist size variants */
+.wl-compact .watchlist-row {
+  padding: 2px 8px;
+  min-height: 24px;
+  gap: 3px;
+}
+.wl-compact .watchlist-sym { font-size: 10px; }
+.wl-compact .watchlist-price { font-size: 9px; }
+.wl-compact .watchlist-chg-up,
+.wl-compact .watchlist-chg-down { font-size: 9px; }
+
+.wl-normal .watchlist-row {
+  padding: 3px 10px;
+  min-height: 28px;
+  gap: 4px;
+}
+.wl-normal .watchlist-sym { font-size: 11px; }
+.wl-normal .watchlist-price { font-size: 10px; }
+.wl-normal .watchlist-chg-up,
+.wl-normal .watchlist-chg-down { font-size: 10px; }
+
+.wl-large .watchlist-row {
+  padding: 5px 12px;
+  min-height: 34px;
+  gap: 5px;
+}
+.wl-large .watchlist-sym { font-size: 13px; }
+.wl-large .watchlist-price { font-size: 12px; }
+.wl-large .watchlist-chg-up,
+.wl-large .watchlist-chg-down { font-size: 12px; }
 
 /* CENTER column: news feed */
 .col-news {

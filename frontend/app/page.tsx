@@ -1624,6 +1624,15 @@ export default function Home() {
   // Watchlist
   const [watchlist, setWatchlist] = useState<string[]>(DEFAULT_WATCHLIST)
   const [watchlistSyncing, setWatchlistSyncing] = useState(false)
+  const [watchlistSize, setWatchlistSize] = useState<'compact' | 'normal' | 'large'>(() => {
+    if (typeof window !== 'undefined') {
+      try {
+        const v = localStorage.getItem('cg_watchlist_size')
+        if (v === 'compact' || v === 'large') return v
+      } catch {}
+    }
+    return 'normal'
+  })
 
   // Calendar
   const [calendarEvents, setCalendarEvents] = useState<CalendarEvent[]>([])
@@ -1701,6 +1710,10 @@ export default function Home() {
   useEffect(() => {
     try { localStorage.setItem('cg_wl', JSON.stringify(watchlist)) } catch {}
   }, [watchlist])
+
+  useEffect(() => {
+    try { localStorage.setItem('cg_watchlist_size', watchlistSize) } catch {}
+  }, [watchlistSize])
 
   // ── Backend watchlist sync on login ────────────────────────────────────────
   useEffect(() => {
@@ -2394,6 +2407,19 @@ export default function Home() {
               ★ WATCHLIST
             </span>
             <div className="watchlist-header-right">
+              {/* Size controls */}
+              <button
+                onClick={() => setWatchlistSize(s => s === 'large' ? 'normal' : s === 'normal' ? 'compact' : 'compact')}
+                className="wl-size-btn"
+                title="Smaller"
+                aria-label="Decrease watchlist size"
+              >−</button>
+              <button
+                onClick={() => setWatchlistSize(s => s === 'compact' ? 'normal' : s === 'normal' ? 'large' : 'large')}
+                className="wl-size-btn"
+                title="Larger"
+                aria-label="Increase watchlist size"
+              >+</button>
               {token && (
                 <span className={`watchlist-sync-badge${watchlistSyncing ? ' syncing' : ''}`}>
                   {watchlistSyncing ? '⟳' : '✓'}
@@ -2435,7 +2461,7 @@ export default function Home() {
           </div>
 
           {/* Watchlist items */}
-          <div className="watchlist-list">
+          <div className={`watchlist-list wl-${watchlistSize}`}>
             {watchlist.length === 0 ? (
               <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-3)', fontSize: 11 }}>
                 <div style={{ marginBottom: 8 }}>Your watchlist is empty</div>
