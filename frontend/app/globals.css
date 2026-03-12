@@ -773,9 +773,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 5px 10px;
   border-bottom: 1px solid var(--border);
   background: var(--bg-1);
-  position: sticky;
-  top: 88px; /* 28px ticker + 60px header */
-  z-index: 10;
+  position: relative;
   flex-wrap: nowrap;
   overflow-x: auto;
 }

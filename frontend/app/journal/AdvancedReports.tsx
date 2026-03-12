@@ -2,6 +2,10 @@
 
 import { useMemo } from 'react'
 import Tooltip from '../components/Tooltip'
+import {
+  IconChart, IconCalendar, IconClock, IconTag, IconTarget,
+  IconDollar, IconFlame, IconTrophy, IconSkull,
+} from '../components/Icons'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -329,7 +333,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
 
   if (trades.length < 2) return (
     <div style={{ textAlign: 'center', padding: '60px 20px' }}>
-      <div style={{ fontSize: 48, marginBottom: 12 }}>📊</div>
+      <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center', color: 'var(--text-3)' }}><IconChart size={48} /></div>
       <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>Need More Data</h3>
       <p style={{ color: 'var(--text-2)', fontSize: 14 }}>Log at least 2 trades to see advanced reports.</p>
     </div>
@@ -340,7 +344,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
       {/* Running Equity Curve */}
       <Card style={{ marginBottom: 16 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 12 }}>
-          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-0)' }}>📈 Running Equity Curve</span>
+          <span style={{ fontSize: 15, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 6 }}><IconChart size={15} />Running Equity Curve</span>
           <Tooltip text="Your cumulative P&L over time. An upward-sloping line means consistent profitability." position="right" />
         </div>
         <EquityCurve trades={trades} />
@@ -350,7 +354,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>📅 Win Rate by Day of Week</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}><IconCalendar size={13} />Win Rate by Day of Week</span>
             <Tooltip text="Find your best trading days. Consider taking lighter positions on your worst days." position="right" />
           </div>
           {byDow.map(d => (
@@ -371,7 +375,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
 
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🕐 Win Rate by Time of Day</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}><IconClock size={13} />Win Rate by Time of Day</span>
             <Tooltip text="Morning (9:30-11) is often the most volatile. Midday tends to be choppy. Find your edge." position="right" />
           </div>
           {byTimeOfDay.length > 0 ? byTimeOfDay.map(d => (
@@ -397,7 +401,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🏷️ Win Rate by Ticker</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}><IconTag size={13} />Win Rate by Ticker</span>
             <Tooltip text="Which symbols are you best at trading? Specialize in your winners." position="right" />
           </div>
           {byTicker.length === 0 ? (
@@ -429,7 +433,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
 
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🎯 Win Rate by Setup Type</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}><IconTarget size={13} />Win Rate by Setup Type</span>
             <Tooltip text="Which setups have the best win rate? Focus on what works." position="right" />
           </div>
           {bySetup.length === 0 ? (
@@ -455,7 +459,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>💰 Avg P&L by Day of Week</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}><IconDollar size={13} />Avg P&L by Day of Week</span>
             <Tooltip text="Average dollar P&L per trade for each day. Identifies which days you're making vs losing money." position="right" />
           </div>
           <HorizBar
@@ -466,7 +470,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
 
         <Card>
           <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
-            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>🔥 Streak Tracking</span>
+            <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}><IconFlame size={13} />Streak Tracking</span>
             <Tooltip text="Win/loss streaks. Long losing streaks may indicate emotional trading. Long winning streaks often precede overconfidence." position="right" />
           </div>
 
@@ -516,7 +520,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
       {/* Row 4: Best + Worst Trades */}
       <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, marginBottom: 12 }}>🏆 Best Trades</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: GREEN, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}><IconTrophy size={13} />Best Trades</div>
           {bestTrades.map((t, i) => (
             <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
               <div>
@@ -531,7 +535,7 @@ export default function AdvancedReports({ trades }: { trades: Trade[] }) {
         </Card>
 
         <Card>
-          <div style={{ fontSize: 13, fontWeight: 700, color: RED, marginBottom: 12 }}>💀 Worst Trades</div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: RED, marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }}><IconSkull size={13} />Worst Trades</div>
           {worstTrades.map((t, i) => (
             <div key={t.id} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
               <div>

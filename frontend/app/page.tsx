@@ -1607,7 +1607,7 @@ export default function Home() {
   })
 
   // Column widths (resizable)
-  const [colWidths, setColWidths] = useState<[number, number, number]>([32, 36, 32])
+  const [colWidths, setColWidths] = useState<[number, number, number]>([20, 56, 24])
   const layoutRef = useRef<HTMLDivElement>(null)
 
   // Portfolio collapsed

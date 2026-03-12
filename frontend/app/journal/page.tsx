@@ -993,7 +993,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }:
         const isWin = last.pnl > 0
         return (
           <div style={{ padding: '8px 14px', borderRadius: 8, background: isWin ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${isWin ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, marginBottom: 12, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 18 }}>🔥</span>
+            <IconFlame size={18} style={{ color: isWin ? 'var(--green)' : 'var(--red)' }} />
             <span style={{ color: isWin ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
               {streak} {isWin ? 'wins' : 'losses'} in a row{isWin ? '! Keep your discipline.' : ' — take a break and review your setups.'}
             </span>
@@ -1667,6 +1667,85 @@ function TabCalendar({ trades }: { trades: Trade[] }) {
   )
 }
 
+// ─── Journal Expectancy (auto-populated from trade data) ─────────────────────
+
+function JournalExpectancy({ trades }: { trades: Trade[] }) {
+  const calc = useMemo(() => {
+    if (trades.length < 3) return null
+    const wins = trades.filter(t => t.pnl > 0)
+    const losses = trades.filter(t => t.pnl < 0)
+    const winRate = wins.length / trades.length
+    const avgWin = wins.length > 0 ? wins.reduce((s, t) => s + t.pnl, 0) / wins.length : 0
+    const avgLoss = losses.length > 0 ? Math.abs(losses.reduce((s, t) => s + t.pnl, 0) / losses.length) : 0
+    const expectancy = winRate * avgWin - (1 - winRate) * avgLoss
+    // Estimate trades/month from date range
+    const dates = trades.map(t => new Date(t.date).getTime()).sort((a, b) => a - b)
+    const spanDays = dates.length > 1 ? (dates[dates.length - 1] - dates[0]) / 86400000 : 30
+    const tradesPerMonth = spanDays > 0 ? (trades.length / spanDays) * 30 : trades.length
+    const monthlyExpectancy = expectancy * tradesPerMonth
+    const annualExpectancy = monthlyExpectancy * 12
+    return { winRate, avgWin, avgLoss, expectancy, tradesPerMonth, monthlyExpectancy, annualExpectancy }
+  }, [trades])
+
+  if (!calc) return null
+
+  const isPositive = calc.expectancy > 0
+  const fmt = (n: number) => `${n >= 0 ? '+$' : '-$'}${Math.abs(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 14 }}>
+        <div className="tv-card-icon" style={{ width: 32, height: 32, fontSize: 15 }}>
+          <IconCalculator size={16} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>Trade Expectancy</div>
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Auto-calculated from your {trades.length} logged trades</div>
+        </div>
+        <Tooltip text="Expectancy = (Win Rate × Avg Win) − (Loss Rate × Avg Loss). A positive value means your system has a statistical edge over many trades." position="right" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, marginBottom: 14 }}>
+        {[
+          { label: 'Win Rate', value: `${(calc.winRate * 100).toFixed(1)}%`, color: calc.winRate >= 0.5 ? GREEN : YELLOW },
+          { label: 'Avg Win', value: `$${calc.avgWin.toFixed(2)}`, color: GREEN },
+          { label: 'Avg Loss', value: `-$${calc.avgLoss.toFixed(2)}`, color: RED },
+        ].map(s => (
+          <div key={s.label} style={{ background: 'var(--bg-1)', borderRadius: 8, padding: '10px 12px', textAlign: 'center' }}>
+            <div style={{ fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>{s.label}</div>
+            <div style={{ fontSize: 18, fontWeight: 800, fontFamily: 'var(--mono)', color: s.color }}>{s.value}</div>
+          </div>
+        ))}
+      </div>
+      <div style={{
+        background: isPositive ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)',
+        border: `1px solid ${isPositive ? 'rgba(34,197,94,0.4)' : 'rgba(239,68,68,0.4)'}`,
+        borderRadius: 10, padding: '14px 16px',
+        display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 12, alignItems: 'center',
+      }}>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Per Trade</div>
+          <div style={{ fontSize: 22, fontWeight: 800, fontFamily: 'var(--mono)', color: isPositive ? GREEN : RED }}>{fmt(calc.expectancy)}</div>
+          <div style={{ fontSize: 10, color: isPositive ? GREEN : RED, marginTop: 2, display: 'flex', alignItems: 'center', justifyContent: 'center', gap: 4 }}>
+            {isPositive ? <IconCheck size={11} /> : <IconAlert size={11} />}
+            {isPositive ? 'Positive edge' : 'Negative edge'}
+          </div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Monthly (~{calc.tradesPerMonth.toFixed(0)} trades)</div>
+          <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--mono)', color: calc.monthlyExpectancy >= 0 ? GREEN : RED }}>{fmt(calc.monthlyExpectancy)}</div>
+        </div>
+        <div style={{ textAlign: 'center' }}>
+          <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Annual</div>
+          <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--mono)', color: calc.annualExpectancy >= 0 ? GREEN : RED }}>{fmt(calc.annualExpectancy)}</div>
+        </div>
+      </div>
+      <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)' }}>
+        Use the standalone <strong>Trade Expectancy Calculator</strong> in Tools to run what-if scenarios with custom inputs.
+      </div>
+    </Card>
+  )
+}
+
 // ─── Tab 4: Analytics ─────────────────────────────────────────────────────────
 
 function TabAnalytics({ trades }: { trades: Trade[] }) {
@@ -1863,6 +1942,9 @@ function TabAnalytics({ trades }: { trades: Trade[] }) {
           </svg>
         </Card>
       </div>
+
+      {/* Auto-populated Trade Expectancy */}
+      <JournalExpectancy trades={trades} />
 
       {/* Pattern Detection */}
       {trades.length >= 5 && <PatternDetection trades={trades} />}
@@ -2462,7 +2544,7 @@ const TABS: { id: string; label: string; Icon: React.FC<{ size?: number; classNa
 ]
 
 function JournalPageInner() {
-  const [activeTab, setActiveTab] = useState('tradelog')
+  const [activeTab, setActiveTab] = useState('dashboard')
   const [trades, setTrades] = useState<Trade[]>([])
   const [notes, setNotes] = useState<Note[]>([])
   const [showImportModal, setShowImportModal] = useState(false)

@@ -1,6 +1,6 @@
 'use client'
 
-import { useState, useEffect, useCallback } from 'react'
+import { useState, useEffect, useCallback, useRef } from 'react'
 import Tooltip from '../components/Tooltip'
 import { ToolIcon, IconArrowLeft, IconTool, IconInfo, IconCheck, IconAlert, IconZap, IconBarChart } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
@@ -1065,33 +1065,37 @@ function FearGreedIndex() {
             <svg width="220" height="130" viewBox="0 0 220 130" style={{ overflow: 'visible' }}>
               {/* Background arc */}
               <path d="M 20 110 A 90 90 0 0 1 200 110" fill="none" stroke="var(--bg-3)" strokeWidth="18" strokeLinecap="round" />
-              {/* Color zones */}
+              {/* Color zones — map value ranges to arc positions
+                   Gauge: left=(20,110)=0%, top=(110,20)=50%, right=(200,110)=100%
+                   Point formula: x = cx + r*sin(rad), y = cy - r*cos(rad)
+                   where rad = (value/100 * 180 - 90) * PI/180  (-PI/2 at 0% → +PI/2 at 100%) */}
               {[
-                { start: -90, end: -54, color: '#ef4444' },
-                { start: -54, end: -18, color: '#f97316' },
-                { start: -18, end: 18, color: '#eab308' },
-                { start: 18, end: 54, color: '#84cc16' },
-                { start: 54, end: 90, color: '#22c55e' },
+                { vStart: 0,  vEnd: 25,  color: '#ef4444' },
+                { vStart: 25, vEnd: 45,  color: '#f97316' },
+                { vStart: 45, vEnd: 55,  color: '#eab308' },
+                { vStart: 55, vEnd: 75,  color: '#84cc16' },
+                { vStart: 75, vEnd: 100, color: '#22c55e' },
               ].map((zone, i) => {
                 const r = 90, cx = 110, cy = 110
-                const startRad = (zone.start * Math.PI) / 180
-                const endRad = (zone.end * Math.PI) / 180
-                const x1 = cx + r * Math.cos(startRad + Math.PI)
-                const y1 = cy - r * Math.sin(startRad + Math.PI) // flip
-                const x2 = cx + r * Math.cos(endRad + Math.PI)
-                const y2 = cy - r * Math.sin(endRad + Math.PI)
-                const large = Math.abs(zone.end - zone.start) > 90 ? 1 : 0
+                const toRad = (v: number) => (v / 100 * 180 - 90) * Math.PI / 180
+                const startRad = toRad(zone.vStart)
+                const endRad = toRad(zone.vEnd)
+                const x1 = cx + r * Math.sin(startRad)
+                const y1 = cy - r * Math.cos(startRad)
+                const x2 = cx + r * Math.sin(endRad)
+                const y2 = cy - r * Math.cos(endRad)
+                const large = (zone.vEnd - zone.vStart) > 50 ? 1 : 0
                 return (
-                  <path key={i} d={`M ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2}`}
-                    fill="none" stroke={zone.color} strokeWidth="18" strokeLinecap="butt" opacity="0.7" />
+                  <path key={i} d={`M ${x1.toFixed(2)} ${y1.toFixed(2)} A ${r} ${r} 0 ${large} 1 ${x2.toFixed(2)} ${y2.toFixed(2)}`}
+                    fill="none" stroke={zone.color} strokeWidth="18" strokeLinecap="butt" opacity="0.8" />
                 )
               })}
-              {/* Needle */}
+              {/* Needle — same sin/cos formula */}
               {(() => {
-                const needleAngle = ((value / 100) * 180 - 180) * Math.PI / 180
-                const nx = 110 + 72 * Math.cos(needleAngle)
-                const ny = 110 - 72 * Math.sin(needleAngle)
-                return <line x1="110" y1="110" x2={nx} y2={ny} stroke={color} strokeWidth="3" strokeLinecap="round" />
+                const needleRad = (value / 100 * 180 - 90) * Math.PI / 180
+                const nx = 110 + 72 * Math.sin(needleRad)
+                const ny = 110 - 72 * Math.cos(needleRad)
+                return <line x1="110" y1="110" x2={nx.toFixed(2)} y2={ny.toFixed(2)} stroke={color} strokeWidth="3" strokeLinecap="round" />
               })()}
               <circle cx="110" cy="110" r="8" fill={color} />
               {/* Value */}
@@ -1840,6 +1844,15 @@ function ToolCard({ tool, activeTool, setActiveTool }: {
 export default function ToolsPage() {
   const [activeCategory, setActiveCategory] = useState('All')
   const [activeTool, setActiveTool] = useState<string | null>(null)
+  const toolSectionRef = useRef<HTMLDivElement>(null)
+
+  const selectTool = (id: string) => {
+    setActiveTool(id)
+    // After state update, scroll to the tool section
+    setTimeout(() => {
+      toolSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 50)
+  }
 
   const filteredTools = TOOL_CATALOG.filter(t => activeCategory === 'All' || t.category === activeCategory)
 
@@ -1901,7 +1914,7 @@ export default function ToolsPage() {
 
         {activeTool ? (
           // Tool view
-          <div>
+          <div ref={toolSectionRef}>
             <button
               onClick={() => setActiveTool(null)}
               className="btn btn-secondary btn-sm"
@@ -1962,7 +1975,7 @@ export default function ToolsPage() {
                         <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '1px 6px', borderRadius: 10 }}>{sectionTools.length}</span>
                       </div>
                       <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-                        {sectionTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={setActiveTool} />)}
+                        {sectionTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={selectTool} />)}
                       </div>
                     </div>
                   )
@@ -1970,7 +1983,7 @@ export default function ToolsPage() {
               </>
             ) : (
               <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
-                {filteredTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={setActiveTool} />)}
+                {filteredTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={selectTool} />)}
               </div>
             )}
           </div>

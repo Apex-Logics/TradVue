@@ -15,24 +15,24 @@ interface MarketSession {
 }
 
 const SESSIONS: MarketSession[] = [
-  { city: 'Sydney',    country: 'AU', tz: 'Australia/Sydney',   openHour: 21, closeHour: 6,  color: '#f59e0b', assets: ['AUD pairs', 'NZD pairs'], exchange: 'ASX' },
-  { city: 'Tokyo',     country: 'JP', tz: 'Asia/Tokyo',         openHour: 0,  closeHour: 9,  color: '#ef4444', assets: ['JPY pairs', 'Asian stocks'], exchange: 'TSE' },
-  { city: 'Singapore', country: 'SG', tz: 'Asia/Singapore',     openHour: 1,  closeHour: 9,  color: '#f97316', assets: ['SGD', 'Asian futures'], exchange: 'SGX' },
-  { city: 'Frankfurt', country: 'DE', tz: 'Europe/Berlin',      openHour: 7,  closeHour: 15, color: '#8b5cf6', assets: ['EUR pairs', 'DAX', 'Bunds'], exchange: 'XETRA' },
-  { city: 'London',    country: 'GB', tz: 'Europe/London',      openHour: 8,  closeHour: 16, color: '#3b82f6', assets: ['GBP pairs', 'FTSE', 'Gilts'], exchange: 'LSE' },
-  { city: 'New York',  country: 'US', tz: 'America/New_York',   openHour: 13, closeHour: 20, color: '#22c55e', assets: ['S&P 500', 'USD pairs', 'US bonds'], exchange: 'NYSE/NASDAQ' },
-  { city: 'Chicago',   country: 'US', tz: 'America/Chicago',    openHour: 13, closeHour: 22, color: '#06b6d4', assets: ['Futures (ES,NQ,CL,GC)', 'Options'], exchange: 'CME Group' },
+  { city: 'Sydney',    country: 'AU', tz: 'Australia/Sydney',   openHour: 22,   closeHour: 7,    color: '#f59e0b', assets: ['AUD pairs', 'NZD pairs'], exchange: 'ASX' },      // 5PM–2AM ET
+  { city: 'Tokyo',     country: 'JP', tz: 'Asia/Tokyo',         openHour: 0,    closeHour: 9,    color: '#ef4444', assets: ['JPY pairs', 'Asian stocks'], exchange: 'TSE' },    // 7PM–4AM ET
+  { city: 'Singapore', country: 'SG', tz: 'Asia/Singapore',     openHour: 1,    closeHour: 9,    color: '#f97316', assets: ['SGD', 'Asian futures'], exchange: 'SGX' },
+  { city: 'Frankfurt', country: 'DE', tz: 'Europe/Berlin',      openHour: 7,    closeHour: 16,   color: '#8b5cf6', assets: ['EUR pairs', 'DAX', 'Bunds'], exchange: 'XETRA' },  // 2AM–11AM ET
+  { city: 'London',    country: 'GB', tz: 'Europe/London',      openHour: 8,    closeHour: 17,   color: '#3b82f6', assets: ['GBP pairs', 'FTSE', 'Gilts'], exchange: 'LSE' },   // 3AM–12PM ET
+  { city: 'New York',  country: 'US', tz: 'America/New_York',   openHour: 14.5, closeHour: 21,   color: '#22c55e', assets: ['S&P 500', 'USD pairs', 'US bonds'], exchange: 'NYSE/NASDAQ' }, // 9:30AM–4PM ET
+  { city: 'Chicago',   country: 'US', tz: 'America/Chicago',    openHour: 22,   closeHour: 21,   color: '#06b6d4', assets: ['Futures (ES,NQ,CL,GC)', 'Options'], exchange: 'CME Group' }, // 5PM–4PM ET (Sun-Fri, 23h)
 ]
 
 const ASSET_RECOMMENDATIONS: Record<string, { best: string; sessions: string[] }> = {
-  'EUR/USD': { best: 'London–NY overlap (8–12 UTC)', sessions: ['London', 'New York'] },
-  'USD/JPY': { best: 'Tokyo–London overlap (7–9 UTC)', sessions: ['Tokyo', 'London'] },
-  'GBP/USD': { best: 'London session (8–16 UTC)', sessions: ['London', 'New York'] },
-  'AUD/USD': { best: 'Sydney–Tokyo overlap (0–6 UTC)', sessions: ['Sydney', 'Tokyo'] },
-  'S&P 500': { best: 'New York session (13–20 UTC)', sessions: ['New York'] },
-  'Gold':    { best: 'London–NY overlap (13–16 UTC)', sessions: ['London', 'New York'] },
-  'BTC':     { best: 'Any time (24/7), highest volume NY hours', sessions: ['New York'] },
-  'Futures': { best: 'CME pre-open + NY session (13–22 UTC)', sessions: ['Chicago', 'New York'] },
+  'EUR/USD': { best: 'London+NY overlap: 8:00 AM–12:00 PM ET (highest forex liquidity)', sessions: ['London', 'New York'] },
+  'USD/JPY': { best: 'Tokyo–London overlap: 3:00–4:00 AM ET', sessions: ['Tokyo', 'London'] },
+  'GBP/USD': { best: 'London session: 3:00 AM–12:00 PM ET', sessions: ['London', 'New York'] },
+  'AUD/USD': { best: 'Sydney–Tokyo overlap: 7:00 PM–2:00 AM ET', sessions: ['Sydney', 'Tokyo'] },
+  'S&P 500': { best: 'NY open: 9:30–11:30 AM ET (highest volume)', sessions: ['New York'] },
+  'Gold':    { best: 'London+NY overlap: 9:30 AM–12:00 PM ET', sessions: ['London', 'New York'] },
+  'BTC':     { best: '24/7 market — highest volume during NY session', sessions: ['New York'] },
+  'Futures': { best: 'NY session hours: 9:30 AM–4:00 PM ET', sessions: ['Chicago', 'New York'] },
 }
 
 function isActive(session: MarketSession, utcHour: number): boolean {
@@ -101,7 +101,7 @@ export default function SessionClock() {
 
       {showHowTo && (
         <div style={{ background: 'rgba(6,182,212,0.1)', borderRadius: 8, padding: '12px 16px', marginBottom: 16, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.7 }}>
-          Market sessions show when each major exchange is open. Overlapping sessions have the highest liquidity and volatility — the London/New York overlap (13–17 UTC) is typically the best time to trade forex and equities. The 24h chart shows session hours with overlap periods highlighted.
+          Market sessions show when each major exchange is open. Overlapping sessions have the highest liquidity and volatility — the London/New York overlap (8 AM–12 PM ET) is typically the best time to trade forex and equities. The 24h chart shows session hours (UTC) with overlap periods highlighted.
         </div>
       )}
 
