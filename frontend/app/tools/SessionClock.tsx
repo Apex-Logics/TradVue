@@ -24,6 +24,23 @@ const SESSIONS: MarketSession[] = [
   { city: 'Chicago',   country: 'US', tz: 'America/Chicago',    openHour: 22,   closeHour: 21,   color: '#06b6d4', assets: ['Futures (ES,NQ,CL,GC)', 'Options'], exchange: 'CME Group' }, // 5PM–4PM ET (Sun-Fri, 23h)
 ]
 
+// ET open/close hours (EST = UTC-5) for the visual 0:00–24:00 ET timeline
+// Sessions that cross midnight in ET have openET > closeET
+const SESSION_ET: Record<string, { openET: number; closeET: number }> = {
+  Sydney:    { openET: 17,   closeET: 2   }, // 5:00 PM – 2:00 AM ET (wraps)
+  Tokyo:     { openET: 19,   closeET: 4   }, // 7:00 PM – 4:00 AM ET (wraps)
+  Singapore: { openET: 20,   closeET: 4   }, // 8:00 PM – 4:00 AM ET (wraps)
+  Frankfurt: { openET: 2,    closeET: 11  }, // 2:00 AM – 11:00 AM ET
+  London:    { openET: 3,    closeET: 12  }, // 3:00 AM – 12:00 PM ET
+  'New York':{ openET: 9.5,  closeET: 16  }, // 9:30 AM – 4:00 PM ET
+  Chicago:   { openET: 17,   closeET: 16  }, // 5:00 PM – 4:00 PM ET next day (wraps, ~23h)
+}
+
+function isActiveET(openET: number, closeET: number, etHour: number): boolean {
+  if (openET < closeET) return etHour >= openET && etHour < closeET
+  return etHour >= openET || etHour < closeET // crosses midnight
+}
+
 const ASSET_RECOMMENDATIONS: Record<string, { best: string; sessions: string[] }> = {
   'EUR/USD': { best: 'London+NY overlap: 8:00 AM–12:00 PM ET (highest forex liquidity)', sessions: ['London', 'New York'] },
   'USD/JPY': { best: 'Tokyo–London overlap: 3:00–4:00 AM ET', sessions: ['Tokyo', 'London'] },
@@ -66,7 +83,7 @@ export default function SessionClock() {
 
   const activeSessions = SESSIONS.filter(s => isActive(s, utcHour))
 
-  // Overlap analysis: sessions active at each hour
+  // Overlap analysis: sessions active at each UTC hour (used for session cards)
   const overlapMap = useMemo(() => {
     return Array.from({ length: 24 }, (_, h) => ({
       hour: h,
@@ -75,12 +92,26 @@ export default function SessionClock() {
     }))
   }, [])
 
+  // ET-based overlap map for the visual timeline
+  const overlapMapET = useMemo(() => {
+    return Array.from({ length: 24 }, (_, h) => ({
+      hour: h,
+      count: SESSIONS.filter(s => {
+        const et = SESSION_ET[s.city]
+        return et ? isActiveET(et.openET, et.closeET, h) : false
+      }).length,
+    }))
+  }, [])
+
   const rec = ASSET_RECOMMENDATIONS[selectedAsset]
 
   const utcString = now.toLocaleTimeString('en-US', { timeZone: 'UTC', hour: '2-digit', minute: '2-digit', hour12: false }) + ' UTC'
 
-  // 24h timeline: current position
-  const currentPct = (utcHour / 24) * 100
+  // Current ET hour fraction for the 24h ET timeline indicator
+  const etTimeStr = now.toLocaleTimeString('en-US', { timeZone: 'America/New_York', hour: '2-digit', minute: '2-digit', hour12: false })
+  const [etHStr, etMStr] = etTimeStr.split(':')
+  const etHourFraction = parseInt(etHStr, 10) + parseInt(etMStr, 10) / 60
+  const currentPctET = (etHourFraction / 24) * 100
 
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 24 }}>
@@ -139,22 +170,28 @@ export default function SessionClock() {
         })}
       </div>
 
-      {/* 24h timeline */}
+      {/* 24h ET timeline */}
       <div style={{ marginBottom: 20 }}>
-        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em' }}>24-HOUR SESSION TIMELINE (UTC)</div>
+        <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 8, letterSpacing: '0.06em' }}>24-HOUR SESSION TIMELINE (ET)</div>
         <div style={{ position: 'relative', height: 160, background: 'var(--bg-3)', borderRadius: 8, overflow: 'hidden' }}>
-          {/* Session bars */}
+          {/* Session bars — positioned using ET hours */}
           {SESSIONS.map((s, si) => {
-            const { openHour, closeHour } = s
-            const segments = openHour < closeHour
-              ? [{ l: (openHour / 24) * 100, w: ((closeHour - openHour) / 24) * 100 }]
-              : [{ l: (openHour / 24) * 100, w: ((24 - openHour) / 24) * 100 }, { l: 0, w: (closeHour / 24) * 100 }]
+            const et = SESSION_ET[s.city]
+            if (!et) return null
+            const { openET, closeET } = et
+            // Sessions crossing midnight get two segments; others get one
+            const segments = openET < closeET
+              ? [{ l: (openET / 24) * 100, w: ((closeET - openET) / 24) * 100 }]
+              : [
+                  { l: (openET / 24) * 100,  w: ((24 - openET) / 24) * 100 },
+                  { l: 0,                     w: (closeET / 24) * 100 },
+                ]
             const y = 12 + si * 20
             return segments.map((seg, i) => (
               <div key={`${s.city}-${i}`} style={{
                 position: 'absolute', top: y, height: 14,
                 left: `${seg.l}%`, width: `${seg.w}%`,
-                background: s.color + 'AA', borderRadius: 3,
+                background: s.color + 'BB', borderRadius: 3,
               }}>
                 {seg.w > 8 && (
                   <span style={{ fontSize: 9, color: '#fff', padding: '0 4px', lineHeight: '14px', whiteSpace: 'nowrap', overflow: 'hidden', display: 'block' }}>
@@ -164,35 +201,40 @@ export default function SessionClock() {
               </div>
             ))
           })}
-          {/* Overlap heatmap bar */}
+          {/* Overlap heatmap bar — uses ET hours */}
           <div style={{ position: 'absolute', bottom: 6, left: 0, right: 0, height: 10 }}>
-            {overlapMap.map(h => (
+            {overlapMapET.map(h => (
               <div key={h.hour} style={{
                 position: 'absolute', top: 0, height: '100%',
                 left: `${(h.hour / 24) * 100}%`, width: `${(1 / 24) * 100}%`,
-                background: h.count === 0 ? 'transparent' : h.count === 1 ? 'rgba(74,158,255,0.2)' : h.count === 2 ? 'rgba(74,158,255,0.5)' : 'rgba(74,158,255,0.85)',
+                background: h.count === 0 ? 'transparent'
+                  : h.count === 1 ? 'rgba(74,158,255,0.2)'
+                  : h.count === 2 ? 'rgba(74,158,255,0.55)'
+                  : 'rgba(74,158,255,0.9)',
               }} />
             ))}
           </div>
-          {/* Current time indicator */}
-          <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${currentPct}%`, width: 2, background: 'var(--yellow)', opacity: 0.9 }}>
+          {/* Current ET time indicator */}
+          <div style={{ position: 'absolute', top: 0, bottom: 0, left: `${currentPctET}%`, width: 2, background: 'var(--yellow)', opacity: 0.9 }}>
             <div style={{ position: 'absolute', top: -2, left: -3, width: 8, height: 8, background: 'var(--yellow)', borderRadius: '50%' }} />
           </div>
-          {/* Hour markers */}
-          {[0, 4, 8, 12, 16, 20].map(h => (
-            <div key={h} style={{ position: 'absolute', bottom: 18, left: `${(h / 24) * 100}%`, fontSize: 8, color: 'var(--text-3)', transform: 'translateX(-50%)' }}>{h.toString().padStart(2, '0')}:00</div>
+          {/* ET hour markers */}
+          {[0, 3, 6, 9, 12, 15, 18, 21].map(h => (
+            <div key={h} style={{ position: 'absolute', bottom: 18, left: `${(h / 24) * 100}%`, fontSize: 8, color: 'var(--text-3)', transform: 'translateX(-50%)' }}>
+              {h === 0 ? '12 AM' : h < 12 ? `${h} AM` : h === 12 ? '12 PM' : `${h - 12} PM`}
+            </div>
           ))}
         </div>
         <div style={{ display: 'flex', gap: 12, marginTop: 8, fontSize: 10, color: 'var(--text-3)', flexWrap: 'wrap' }}>
           {SESSIONS.map(s => (
             <span key={s.city} style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-              <span style={{ width: 12, height: 8, background: s.color + 'AA', borderRadius: 2, display: 'inline-block' }} />
+              <span style={{ width: 12, height: 8, background: s.color + 'BB', borderRadius: 2, display: 'inline-block' }} />
               {s.city}
             </span>
           ))}
           <span style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
             <span style={{ width: 12, height: 8, background: 'rgba(74,158,255,0.7)', borderRadius: 2, display: 'inline-block' }} />
-            Overlap (bottom bar)
+            Overlap zones
           </span>
         </div>
       </div>

@@ -2214,7 +2214,7 @@ export default function Home() {
       />
 
       {/* ── Ticker Bar ─────────────────────────────────────────────────────── */}
-      <div style={{ position: 'relative' }}>
+      <div className="ticker-bar-wrap">
         <TickerBar
           tickerQuotes={tickerQuotes}
           customSymbols={customTickerSymbols}

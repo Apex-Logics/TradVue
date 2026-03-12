@@ -388,8 +388,38 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .tag-purple { color: var(--purple); background: var(--purple-dim); border: 1px solid rgba(99,102,241,0.2); }
 
 /* ─────────────────────────────────────────────────────────────────────────────
+   FUTURES CALCULATOR — OUTPUT CARDS
+───────────────────────────────────────────────────────────────────────────── */
+
+/* Desktop: 4-column flex row (default — no class needed, handled inline).
+   Class used to override to 2-col grid on mobile (see @media 768px block). */
+.futures-result-cards {
+  display: grid;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 8px;
+  margin-bottom: 14px;
+}
+
+.result-card-value {
+  font-size: 20px;
+  font-weight: 700;
+  font-family: var(--mono);
+  color: var(--text-0);
+  line-height: 1.2;
+  word-break: break-word;
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
    TICKER BAR
 ───────────────────────────────────────────────────────────────────────────── */
+
+/* Sticky wrapper — sticks at top:0 so the ticker anchors the header below it.
+   Mobile media queries already override this to position:relative !important */
+.ticker-bar-wrap {
+  position: sticky;
+  top: 0;
+  z-index: 101; /* above .site-header (z-index:100) */
+}
 
 .ticker-bar {
   height: 28px;
@@ -5215,7 +5245,15 @@ a.alert-row-title:hover {
     min-height: unset;
   }
 
-  /* Calendar: right column, scrollable */
+  /* ── Futures Calculator: responsive output cards ───────────────────────── */
+  .futures-result-cards {
+    grid-template-columns: repeat(2, 1fr) !important;
+  }
+  .futures-result-cards .result-card-value {
+    font-size: 15px !important;
+  }
+
+/* Calendar: right column, scrollable */
   .col-calendar {
     grid-area: calendar;
     display: flex;

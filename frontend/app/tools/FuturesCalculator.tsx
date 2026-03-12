@@ -212,12 +212,12 @@ function ResultCard({ label, desc, value, sub, borderColor, badge }: {
     <div style={{
       background: 'var(--bg-3)', borderRadius: 10, padding: '14px 16px',
       borderLeft: borderColor ? `3px solid ${borderColor}` : '3px solid transparent',
-      flex: '1 1 0', minWidth: 0,
+      minWidth: 0, overflow: 'hidden',
     }}>
       <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 1, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{label}</div>
       {desc && <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 5, fontStyle: 'italic', lineHeight: 1.3 }}>{desc}</div>}
-      <div style={{ fontSize: 20, fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text-0)', lineHeight: 1.2 }}>{value}</div>
-      {sub && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3 }}>{sub}</div>}
+      <div className="result-card-value">{value}</div>
+      {sub && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 3, wordBreak: 'break-word' }}>{sub}</div>}
       {badge && (
         <span style={{
           display: 'inline-block', marginTop: 6, padding: '2px 8px', borderRadius: 10,
@@ -966,7 +966,7 @@ export default function FuturesCalculator() {
         <div style={{ padding: '16px 24px 20px' }}>
 
           {/* ── 4 Output Cards ─────────────────────────────────────────────── */}
-          <div style={{ display: 'flex', gap: 8, marginBottom: 14, flexWrap: 'wrap' }}>
+          <div className="futures-result-cards">
             <ResultCard
               label="Contracts"
               desc="Number of futures contracts in this trade"

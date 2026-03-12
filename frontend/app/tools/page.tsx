@@ -1851,7 +1851,7 @@ export default function ToolsPage() {
     // After state update, scroll to the tool section
     setTimeout(() => {
       toolSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
-    }, 50)
+    }, 100)
   }
 
   const filteredTools = TOOL_CATALOG.filter(t => activeCategory === 'All' || t.category === activeCategory)
