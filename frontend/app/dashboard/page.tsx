@@ -637,7 +637,7 @@ export default function DashboardPage() {
               background: 'linear-gradient(135deg, var(--purple) 0%, var(--blue) 100%)',
               display: 'flex', alignItems: 'center', justifyContent: 'center',
               fontSize: 14, flexShrink: 0,
-            }}>TV</div>
+            }}>{'TV'}</div>
             <div>
               <div style={{ fontSize: 13, fontWeight: 700, letterSpacing: '-0.01em' }}>TradVue</div>
               <div style={{ fontSize: 10, color: 'var(--text-2)' }}>Ops Dashboard</div>
