@@ -72,8 +72,15 @@ async function cloudGet<T>(token: string, type: string): Promise<T | null> {
     })
     if (!res.ok) return null
     const json = await res.json()
-    // Backend may wrap in { data: ... } or { [type]: ... } — handle both
-    return (json.data ?? json[type] ?? json) as T
+    // Backend returns { type, data: <JSONB>, updated_at }
+    // The JSONB column may itself be { data: ... } if cloudPut wrapped it.
+    // Unwrap both layers to get the actual payload.
+    let payload = json.data ?? json[type] ?? json
+    // If payload is { data: <actual> }, unwrap the inner layer
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+      payload = payload.data
+    }
+    return payload as T
   } catch {
     return null
   }
