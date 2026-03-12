@@ -783,6 +783,47 @@ function StarRating({ value, onChange }: { value: number; onChange: (v: number) 
   )
 }
 
+// ─── Streak Tracker ───────────────────────────────────────────────────────────
+function StreakTracker({ trades }: { trades: Trade[] }) {
+  const st = useMemo(() => {
+    if (!trades.length) return { cur: 0, bestWin: 0, bestLoss: 0 }
+    const sorted = [...trades].sort((a, b) => a.date.localeCompare(b.date))
+    let curWin = 0, curLoss = 0, bestWin = 0, bestLoss = 0
+    sorted.forEach(t => {
+      if (t.pnl > 0) { curWin++; curLoss = 0; bestWin = Math.max(bestWin, curWin) }
+      else { curLoss++; curWin = 0; bestLoss = Math.max(bestLoss, curLoss) }
+    })
+    const last = sorted[sorted.length - 1]
+    const cur = last?.pnl > 0 ? curWin : -curLoss
+    return { cur, bestWin, bestLoss }
+  }, [trades])
+
+  if (!trades.length) return null
+
+  const card: React.CSSProperties = { flex: 1, background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '10px 14px', minWidth: 0 }
+  return (
+    <div style={{ display: 'flex', gap: 10, marginBottom: 16 }}>
+      <div style={card}>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Current Streak</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: st.cur > 0 ? 'var(--green)' : st.cur < 0 ? 'var(--red)' : 'var(--text-2)' }}>
+          {st.cur > 0 ? `${st.cur}W` : st.cur < 0 ? `${Math.abs(st.cur)}L` : '—'}
+        </div>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>{st.cur > 0 ? 'Win streak' : st.cur < 0 ? 'Loss streak' : 'No streak'}</div>
+      </div>
+      <div style={card}>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Best Win Streak</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--green)' }}>{st.bestWin ? `${st.bestWin}W` : '—'}</div>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>All-time best</div>
+      </div>
+      <div style={card}>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>Worst Loss Streak</div>
+        <div style={{ fontSize: 22, fontWeight: 800, color: 'var(--red)' }}>{st.bestLoss ? `${st.bestLoss}L` : '—'}</div>
+        <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>All-time worst</div>
+      </div>
+    </div>
+  )
+}
+
 function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }: {
   trades: Trade[]; setTrades: (t: Trade[]) => void
   customTags: TagDefinition[]; onAddCustomTag: (tag: TagDefinition) => void
@@ -796,6 +837,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }:
   const [filterWL, setFilterWL] = useState('All')
   const [filterSymbol, setFilterSymbol] = useState('')
   const [filterSetup, setFilterSetup] = useState('All')
+  const [filterEmotion, setFilterEmotion] = useState('All')
   const [sortCol, setSortCol] = useState<string>('date')
   const [sortAsc, setSortAsc] = useState(false)
   // Multi-tag state for form
@@ -928,6 +970,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }:
     if (filterWL === 'Loss') list = list.filter(t => t.pnl <= 0)
     if (filterSymbol) list = list.filter(t => t.symbol.includes(filterSymbol.toUpperCase()))
     if (filterSetup !== 'All') list = list.filter(t => t.setupTag === filterSetup)
+    if (filterEmotion !== 'All') list = list.filter(t => (t.emotionTag || '') === filterEmotion)
     // Tag-based filters
     if (tagFilters.setup_types.length > 0) {
       list = list.filter(t => {
@@ -955,7 +998,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }:
       if (sortCol === 'symbol') return dir * a.symbol.localeCompare(b.symbol)
       return 0
     })
-  }, [trades, filterAsset, filterDir, filterWL, filterSymbol, filterSetup, tagFilters, sortCol, sortAsc])
+  }, [trades, filterAsset, filterDir, filterWL, filterSymbol, filterSetup, filterEmotion, tagFilters, sortCol, sortAsc])
 
   const toggleSort = (col: string) => {
     if (sortCol === col) setSortAsc(a => !a)
@@ -979,27 +1022,8 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }:
       {/* Weekly Summary */}
       <WeeklySummary trades={trades} />
 
-      {/* Streak Banner */}
-      {(() => {
-        if (trades.length < 2) return null
-        let streak = 0; const last = trades[0]
-        if (!last) return null
-        for (const t of trades) {
-          if (last.pnl > 0 && t.pnl > 0) streak++
-          else if (last.pnl < 0 && t.pnl < 0) streak++
-          else break
-        }
-        if (streak < 3) return null
-        const isWin = last.pnl > 0
-        return (
-          <div style={{ padding: '8px 14px', borderRadius: 8, background: isWin ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', border: `1px solid ${isWin ? 'rgba(34,197,94,0.3)' : 'rgba(239,68,68,0.3)'}`, marginBottom: 12, fontSize: 12, display: 'flex', alignItems: 'center', gap: 8 }}>
-            <IconFlame size={18} style={{ color: isWin ? 'var(--green)' : 'var(--red)' }} />
-            <span style={{ color: isWin ? 'var(--green)' : 'var(--red)', fontWeight: 700 }}>
-              {streak} {isWin ? 'wins' : 'losses'} in a row{isWin ? '! Keep your discipline.' : ' — take a break and review your setups.'}
-            </span>
-          </div>
-        )
-      })()}
+      {/* Streak Tracker */}
+      <StreakTracker trades={trades} />
 
       {/* Action bar */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
@@ -1311,14 +1335,43 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill }:
             <option value="All">All Setups</option>
             {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
           </select>
+          <select value={filterEmotion} onChange={e => setFilterEmotion(e.target.value)} style={{ ...inputSx, width: 120 }}>
+            <option value="All">All Emotions</option>
+            {EMOTION_TAGS.map(e => <option key={e.label} value={e.label}>{e.label}</option>)}
+          </select>
           <button
-            onClick={() => { setFilterAsset('All'); setFilterDir('All'); setFilterWL('All'); setFilterSymbol(''); setFilterSetup('All'); setTagFilters({ setup_types: [], mistakes: [], strategies: [] }) }}
+            onClick={() => { setFilterAsset('All'); setFilterDir('All'); setFilterWL('All'); setFilterSymbol(''); setFilterSetup('All'); setFilterEmotion('All'); setTagFilters({ setup_types: [], mistakes: [], strategies: [] }) }}
             style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 12px', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}
           >
             Clear
           </button>
         </div>
         <TagFilterBar customTags={customTags} activeFilters={tagFilters} onChange={setTagFilters} />
+        {/* Emotion summary */}
+        {trades.length >= 5 && (() => {
+          const map: Record<string, { w: number; l: number }> = {}
+          trades.forEach(t => {
+            const e = t.emotionTag; if (!e) return
+            if (!map[e]) map[e] = { w: 0, l: 0 }
+            if (t.pnl > 0) map[e].w++; else map[e].l++
+          })
+          const entries = Object.entries(map).filter(([, d]) => d.w + d.l >= 2)
+          if (!entries.length) return null
+          return (
+            <div style={{ display: 'flex', flexWrap: 'wrap', gap: 6, marginTop: 8 }}>
+              {entries.map(([tag, d]) => {
+                const total = d.w + d.l
+                const pct = Math.round(d.w / total * 100)
+                const color = pct > 55 ? 'var(--green)' : pct < 45 ? 'var(--red)' : 'var(--text-2)'
+                return (
+                  <span key={tag} style={{ fontSize: 10, padding: '2px 8px', borderRadius: 12, background: 'var(--bg-3)', border: '1px solid var(--border)', color }}>
+                    {tag}: {d.w}W/{d.l}L ({pct}%)
+                  </span>
+                )
+              })}
+            </div>
+          )
+        })()}
       </Card>
 
       {/* Trade Table */}
@@ -2048,25 +2101,92 @@ function PatternDetection({ trades }: { trades: Trade[] }) {
 
   if (trades.length < 5) return null
 
+  // Card-based day-of-week and asset class win rates
+  const DAYS = ['Sun', 'Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat']
+  const dowMap: Record<number, { w: number; total: number }> = {}
+  trades.forEach(t => {
+    const d = new Date(t.date + 'T12:00:00').getDay()
+    if (!dowMap[d]) dowMap[d] = { w: 0, total: 0 }
+    dowMap[d].total++
+    if (t.pnl > 0) dowMap[d].w++
+  })
+  const dowCards = Object.entries(dowMap).filter(([, d]) => d.total >= 3).map(([d, v]) => ({
+    label: DAYS[parseInt(d)], pct: Math.round(v.w / v.total * 100), n: v.total
+  })).sort((a, b) => a.label.localeCompare(b.label))
+
+  const acMap: Record<string, { w: number; total: number }> = {}
+  trades.forEach(t => {
+    if (!acMap[t.assetClass]) acMap[t.assetClass] = { w: 0, total: 0 }
+    acMap[t.assetClass].total++
+    if (t.pnl > 0) acMap[t.assetClass].w++
+  })
+  const acCards = Object.entries(acMap).filter(([, d]) => d.total >= 3).map(([ac, v]) => ({
+    label: ac, pct: Math.round(v.w / v.total * 100), n: v.total
+  }))
+
+  const winRateColor = (pct: number) => pct > 55 ? 'var(--green)' : pct < 45 ? 'var(--red)' : 'var(--text-2)'
+  const cardSx: React.CSSProperties = { padding: '8px 12px', borderRadius: 8, background: 'var(--bg-3)', border: '1px solid var(--border)', minWidth: 70, textAlign: 'center' }
+
   return (
     <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 'var(--card-radius)', padding: 20, marginTop: 20 }}>
       <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 6 }}>
         <IconBrain size={14} />Pattern Detection
       </div>
       <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 14 }}>Auto-detected from {trades.length} trades</div>
-      <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-        {patterns.map((p, i) => (
-          <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', borderRadius: 8, background: p.type === 'positive' ? 'rgba(34,197,94,0.1)' : p.type === 'negative' ? 'rgba(239,68,68,0.1)' : 'var(--bg-3)', border: `1px solid ${p.type === 'positive' ? 'rgba(34,197,94,0.3)' : p.type === 'negative' ? 'rgba(239,68,68,0.3)' : 'var(--border)'}` }}>
-            <span style={{ color: p.type === 'positive' ? 'var(--green)' : p.type === 'negative' ? 'var(--red)' : 'var(--text-3)', flexShrink: 0, marginTop: 1 }}>
-              {p.type === 'positive' ? <IconCheck size={13} /> : p.type === 'negative' ? <IconAlert size={13} /> : <IconInfo size={13} />}
-            </span>
-            <div>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-0)' }}>{p.text}</div>
-              {p.detail && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{p.detail}</div>}
+
+      {trades.length < 10 ? (
+        <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '12px 0' }}>Not enough data — log at least 10 trades to see patterns.</div>
+      ) : (
+        <>
+          {/* Day-of-week win rates */}
+          {dowCards.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Win Rate by Day</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {dowCards.map(c => (
+                  <div key={c.label} style={cardSx}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 2 }}>{c.label}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: winRateColor(c.pct) }}>{c.pct}%</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{c.n} trades</div>
+                  </div>
+                ))}
+              </div>
             </div>
+          )}
+
+          {/* Asset class win rates */}
+          {acCards.length > 0 && (
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Win Rate by Asset Class</div>
+              <div style={{ display: 'flex', gap: 8, flexWrap: 'wrap' }}>
+                {acCards.map(c => (
+                  <div key={c.label} style={cardSx}>
+                    <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 2 }}>{c.label}</div>
+                    <div style={{ fontSize: 18, fontWeight: 800, color: winRateColor(c.pct) }}>{c.pct}%</div>
+                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{c.n} trades</div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
+
+          {/* Narrative insights */}
+          <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Insights</div>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            {patterns.map((p, i) => (
+              <div key={i} style={{ display: 'flex', gap: 10, padding: '8px 12px', borderRadius: 8, background: p.type === 'positive' ? 'rgba(34,197,94,0.1)' : p.type === 'negative' ? 'rgba(239,68,68,0.1)' : 'var(--bg-3)', border: `1px solid ${p.type === 'positive' ? 'rgba(34,197,94,0.3)' : p.type === 'negative' ? 'rgba(239,68,68,0.3)' : 'var(--border)'}` }}>
+                <span style={{ color: p.type === 'positive' ? 'var(--green)' : p.type === 'negative' ? 'var(--red)' : 'var(--text-3)', flexShrink: 0, marginTop: 1 }}>
+                  {p.type === 'positive' ? <IconCheck size={13} /> : p.type === 'negative' ? <IconAlert size={13} /> : <IconInfo size={13} />}
+                </span>
+                <div>
+                  <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-0)' }}>{p.text}</div>
+                  {p.detail && <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 2 }}>{p.detail}</div>}
+                </div>
+              </div>
+            ))}
           </div>
-        ))}
-      </div>
+        </>
+      )}
     </div>
   )
 }
