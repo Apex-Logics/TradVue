@@ -378,8 +378,17 @@ class RSSFeedAggregator {
         ? deduped.filter(a => a.impactScore >= minImpact)
         : deduped;
 
-      // Sort by published date descending (newest first, always)
-      filtered.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+      // Top 3: highest-impact articles from the last hour, then rest newest-first
+      const oneHourAgo = Date.now() - 3600000;
+      const recentHigh = filtered
+        .filter(a => new Date(a.publishedAt).getTime() > oneHourAgo)
+        .sort((a, b) => b.impactScore - a.impactScore)
+        .slice(0, 3);
+      const recentHighIds = new Set(recentHigh.map(a => a.id));
+      const rest = filtered
+        .filter(a => !recentHighIds.has(a.id))
+        .sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
+      filtered = [...recentHigh, ...rest];
 
       return filtered.slice(0, limit);
     }, 600); // Cache 10 minutes
