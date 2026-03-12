@@ -2378,7 +2378,10 @@ export default function Home() {
       }
       const j = await apiFetchSafe<{ success: boolean; data: NewsArticle[]; error?: string }>(url)
       if (j?.success) {
-        setNewsArticles(j.data || [])
+        const sorted = (j.data || []).sort((a, b) =>
+          new Date(b.publishedAt).getTime() - new Date(a.publishedAt).getTime()
+        )
+        setNewsArticles(sorted)
       } else {
         // API responded but reported an error — show clean empty state
         setNewsError('unavailable')

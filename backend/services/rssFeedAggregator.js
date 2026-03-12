@@ -378,12 +378,8 @@ class RSSFeedAggregator {
         ? deduped.filter(a => a.impactScore >= minImpact)
         : deduped;
 
-      // Sort by published date descending, then impact
-      filtered.sort((a, b) => {
-        const timeDiff = new Date(b.publishedAt) - new Date(a.publishedAt);
-        if (Math.abs(timeDiff) > 3600000) return timeDiff; // 1-hour threshold
-        return b.impactScore - a.impactScore;
-      });
+      // Sort by published date descending (newest first, always)
+      filtered.sort((a, b) => new Date(b.publishedAt) - new Date(a.publishedAt));
 
       return filtered.slice(0, limit);
     }, 600); // Cache 10 minutes

@@ -96,7 +96,7 @@ router.get('/', async (req, res) => {
             published_at: a.publishedAt || new Date().toISOString(),
             tags: [symbol.toLowerCase(), 'stocks'],
             imageUrl: a.imageUrl || null,
-          }));
+          })).sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
           return res.json({
             articles: mapped,
             total: mapped.length,
@@ -129,7 +129,7 @@ router.get('/', async (req, res) => {
             sentiment_score: 0,
             published_at: a.publishedAt || new Date().toISOString(),
             tags: ['general', 'markets'],
-          }));
+          })).sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
           return res.json({
             articles: mapped,
             total: mapped.length,
