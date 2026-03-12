@@ -205,7 +205,7 @@ function uid() {
 const MONTHS = ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec']
 const YEARS = (() => {
   const cur = new Date().getFullYear()
-  return Array.from({ length: 8 }, (_, i) => cur - 7 + i).filter(y => y <= cur)
+  return Array.from({ length: cur - 2009 }, (_, i) => 2010 + i)
 })()
 
 const SECTOR_COLORS: Record<string, string> = {
@@ -1951,6 +1951,8 @@ function DividendsTab({
   persistDivOverride: (key: string, amount: number | null) => Promise<void>
   updateHoldingDivOverride: (ticker: string, val: number | undefined) => void
 }) {
+  const currentYear = new Date().getFullYear()
+  const [selectedYear, setSelectedYear] = useState<number>(currentYear)
   const [editingKey, setEditingKey] = useState<string | null>(null)
   const [editVal, setEditVal] = useState('')
   const [editingDivOverride, setEditingDivOverride] = useState<string | null>(null) // ticker
@@ -1999,16 +2001,24 @@ function DividendsTab({
   const thStyle: React.CSSProperties = { padding: '7px 10px', fontSize: 9, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-3)', textAlign: 'right', whiteSpace: 'nowrap', background: 'var(--bg-2)', position: 'sticky', top: 0, zIndex: 1 }
   const tdStyle: React.CSSProperties = { padding: '5px 8px', fontSize: 11, textAlign: 'right', fontFamily: 'var(--mono)', borderBottom: '1px solid var(--border-b)', cursor: 'pointer' }
 
-  const currentYear = new Date().getFullYear()
-  const visibleYears = YEARS.filter(yr => {
-    const hasData = tickers.some(tk => MONTHS.some((_, mi) => (effectiveDividendData[`${yr}-${mi}-${tk}`] || 0) > 0))
-    return hasData || yr >= currentYear - 1
-  })
+  // Build available years dynamically from data + always include current year
+  const availableYears = (() => {
+    const yearsWithData = new Set<number>([currentYear])
+    Object.keys(effectiveDividendData).forEach(key => {
+      const yr = parseInt(key.split('-')[0], 10)
+      if (!isNaN(yr) && yr >= 2000) yearsWithData.add(yr)
+    })
+    const minYear = Math.min(...yearsWithData)
+    const maxYear = Math.max(...yearsWithData, currentYear)
+    const result: number[] = []
+    for (let y = minYear; y <= maxYear; y++) result.push(y)
+    return result
+  })()
 
   const handleExportDivCSV = () => {
     const headers = ['Year', 'Month', ...tickers, 'Total']
     const rows: string[][] = []
-    visibleYears.forEach(yr => {
+    availableYears.forEach(yr => {
       MONTHS.forEach((month, mi) => {
         const rowTotal = tickers.reduce((s, tk) => s + (effectiveDividendData[`${yr}-${mi}-${tk}`] || 0), 0)
         rows.push([String(yr), month, ...tickers.map(tk => fmt(effectiveDividendData[`${yr}-${mi}-${tk}`] || 0)), fmt(rowTotal)])
@@ -2020,7 +2030,31 @@ function DividendsTab({
   return (
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 12 }}>
-        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>Dividend Tracker</span>
+        <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+          <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>Dividend Tracker</span>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 5 }}>
+            <label style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-3)' }}>YEAR</label>
+            <select
+              value={selectedYear}
+              onChange={e => setSelectedYear(Number(e.target.value))}
+              style={{
+                background: 'var(--bg-2)',
+                border: '1px solid var(--border)',
+                borderRadius: 4,
+                color: 'var(--text-1)',
+                fontSize: 12,
+                fontWeight: 600,
+                padding: '3px 6px',
+                cursor: 'pointer',
+                outline: 'none',
+              }}
+            >
+              {availableYears.map(yr => (
+                <option key={yr} value={yr}>{yr}</option>
+              ))}
+            </select>
+          </div>
+        </div>
         {tickers.length > 0 && <button onClick={handleExportDivCSV} style={{ fontSize: 11, color: 'var(--text-2)', cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>↓ Export CSV</button>}
       </div>
       {/* Per-ticker summary + override annual rate */}
@@ -2103,13 +2137,13 @@ function DividendsTab({
 
       {/* Grid */}
       <div style={{ overflowX: 'auto' }}>
-        {visibleYears.map(yr => {
+        {[selectedYear].map(yr => {
           const yearTotal = tickers.reduce((s, tk) =>
             s + MONTHS.reduce((ms, _, mi) => ms + (effectiveDividendData[`${yr}-${mi}-${tk}`] || 0), 0), 0)
           return (
             <div key={yr} style={{ marginBottom: 24 }}>
               <div style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-1)', marginBottom: 8, display: 'flex', justifyContent: 'space-between' }}>
-                <span>{yr}</span>
+                <span style={{ display: 'none' }}>{yr}</span>
                 <span style={{ color: 'var(--green)', fontFamily: 'var(--mono)' }}>Year Total: {fmtDollar(yearTotal)}</span>
               </div>
               <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 11 }}>
