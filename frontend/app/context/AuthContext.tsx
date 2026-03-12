@@ -26,7 +26,7 @@ interface AuthContextValue {
 
   // Auth actions
   login: (email: string, password: string) => Promise<{ error?: string }>
-  register: (email: string, password: string) => Promise<{ error?: string }>
+  register: (email: string, password: string) => Promise<{ error?: string; needsConfirmation?: boolean }>
   logout: () => void
 
   // Watchlist sync
@@ -114,10 +114,13 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await apiLogin(email, password)
       if (res.error) return { error: res.error }
-      if (!res.token || !res.user) return { error: 'Invalid response from server' }
-      setToken(res.token)
+      const accessToken = res.session?.access_token
+      if (!accessToken || !res.user) {
+        return { error: 'Invalid response from server — please try again' }
+      }
+      setToken(accessToken)
       setUser(res.user)
-      persistAuth(res.token, res.user)
+      persistAuth(accessToken, res.user)
       return {}
     } catch {
       return { error: 'Network error — please try again' }
@@ -129,10 +132,19 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     try {
       const res = await apiRegister(email, password)
       if (res.error) return { error: res.error }
-      if (!res.token || !res.user) return { error: 'Invalid response from server' }
-      setToken(res.token)
+
+      // Email confirmation required — session is null until user confirms
+      if (res.needs_confirmation) {
+        return { needsConfirmation: true }
+      }
+
+      const accessToken = res.session?.access_token
+      if (!accessToken || !res.user) {
+        return { error: 'Invalid response from server — please try again' }
+      }
+      setToken(accessToken)
       setUser(res.user)
-      persistAuth(res.token, res.user)
+      persistAuth(accessToken, res.user)
       return {}
     } catch {
       return { error: 'Network error — please try again' }

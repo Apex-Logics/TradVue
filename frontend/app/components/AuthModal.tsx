@@ -18,6 +18,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
   const [error, setError] = useState<string | null>(null)
+  const [successMessage, setSuccessMessage] = useState<string | null>(null)
   const [loading, setLoading] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
@@ -51,6 +52,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
     setError(null)
+    setSuccessMessage(null)
 
     const validationError = validate()
     if (validationError) { setError(validationError); return }
@@ -63,22 +65,39 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     setLoading(false)
 
     if (result.error) {
-      setError(result.error)
-    } else {
-      // Track login / signup
-      if (mode === 'login') {
-        trackLogin()
+      // Friendly rate-limit message
+      const errLower = result.error.toLowerCase()
+      if (errLower.includes('30 seconds') || errLower.includes('rate') || errLower.includes('too many') || errLower.includes('wait')) {
+        setError('Too many attempts. Please wait before trying again.')
       } else {
-        trackSignup('free')
+        setError(result.error)
       }
-      onSuccess?.()
-      onClose()
+      return
     }
+
+    if ('needsConfirmation' in result && result.needsConfirmation) {
+      // Signup successful but needs email verification
+      trackSignup('free')
+      setSuccessMessage(
+        'Account created! Check your email for a verification link. You\'ll be able to log in after confirming.'
+      )
+      return
+    }
+
+    // Fully logged in
+    if (mode === 'login') {
+      trackLogin()
+    } else {
+      trackSignup('free')
+    }
+    onSuccess?.()
+    onClose()
   }
 
   const switchMode = () => {
     setMode(m => m === 'login' ? 'register' : 'login')
     setError(null)
+    setSuccessMessage(null)
     setConfirmPassword('')
   }
 
@@ -110,67 +129,84 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="auth-form">
+          {successMessage && (
+            <div className="auth-success" role="status" style={{
+              background: 'rgba(0,192,106,0.12)',
+              border: '1px solid rgba(0,192,106,0.35)',
+              borderRadius: 6,
+              padding: '10px 12px',
+              fontSize: 13,
+              color: '#00c06a',
+              lineHeight: 1.4,
+            }}>
+              ✓ {successMessage}
+            </div>
+          )}
           {error && (
             <div className="auth-error" role="alert">
               <span>⚠</span> {error}
             </div>
           )}
 
-          <div className="auth-field">
-            <label htmlFor="auth-email">Email</label>
-            <input
-              id="auth-email"
-              ref={emailRef}
-              type="email"
-              placeholder="you@example.com"
-              value={email}
-              onChange={e => setEmail(e.target.value)}
-              autoComplete="email"
-              disabled={loading}
-              className="auth-input"
-            />
-          </div>
+          {!successMessage && (
+            <>
+              <div className="auth-field">
+                <label htmlFor="auth-email">Email</label>
+                <input
+                  id="auth-email"
+                  ref={emailRef}
+                  type="email"
+                  placeholder="you@example.com"
+                  value={email}
+                  onChange={e => setEmail(e.target.value)}
+                  autoComplete="email"
+                  disabled={loading}
+                  className="auth-input"
+                />
+              </div>
 
-          <div className="auth-field">
-            <label htmlFor="auth-password">Password</label>
-            <input
-              id="auth-password"
-              type="password"
-              placeholder={mode === 'register' ? 'At least 8 characters' : '••••••••'}
-              value={password}
-              onChange={e => setPassword(e.target.value)}
-              autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
-              disabled={loading}
-              className="auth-input"
-            />
-          </div>
+              <div className="auth-field">
+                <label htmlFor="auth-password">Password</label>
+                <input
+                  id="auth-password"
+                  type="password"
+                  placeholder={mode === 'register' ? 'At least 8 characters' : '••••••••'}
+                  value={password}
+                  onChange={e => setPassword(e.target.value)}
+                  autoComplete={mode === 'login' ? 'current-password' : 'new-password'}
+                  disabled={loading}
+                  className="auth-input"
+                />
+              </div>
 
-          {mode === 'register' && (
-            <div className="auth-field">
-              <label htmlFor="auth-confirm">Confirm Password</label>
-              <input
-                id="auth-confirm"
-                type="password"
-                placeholder="Repeat password"
-                value={confirmPassword}
-                onChange={e => setConfirmPassword(e.target.value)}
-                autoComplete="new-password"
+              {mode === 'register' && (
+                <div className="auth-field">
+                  <label htmlFor="auth-confirm">Confirm Password</label>
+                  <input
+                    id="auth-confirm"
+                    type="password"
+                    placeholder="Repeat password"
+                    value={confirmPassword}
+                    onChange={e => setConfirmPassword(e.target.value)}
+                    autoComplete="new-password"
+                    disabled={loading}
+                    className="auth-input"
+                  />
+                </div>
+              )}
+
+              <button
+                type="submit"
+                className={`auth-submit-btn${loading ? ' auth-submit-loading' : ''}`}
                 disabled={loading}
-                className="auth-input"
-              />
-            </div>
+              >
+                {loading
+                  ? <span className="auth-spinner" />
+                  : mode === 'login' ? 'Sign In' : 'Create Account'
+                }
+              </button>
+            </>
           )}
-
-          <button
-            type="submit"
-            className={`auth-submit-btn${loading ? ' auth-submit-loading' : ''}`}
-            disabled={loading}
-          >
-            {loading
-              ? <span className="auth-spinner" />
-              : mode === 'login' ? 'Sign In' : 'Create Account'
-            }
-          </button>
         </form>
 
         {/* Footer */}

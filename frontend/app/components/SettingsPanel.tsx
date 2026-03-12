@@ -107,7 +107,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               <div className="settings-user-info">
                 <span className="settings-user-email">{user.email}</span>
                 <span className="settings-user-tier">
-                  {user.subscription_tier === 'pro' ? <><IconStar size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Pro</> : 'Free Plan'}
+                  {user.tier === 'pro' ? <><IconStar size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} />Pro</> : 'Free Plan'}
                 </span>
               </div>
               <button className="settings-logout-btn" onClick={logout} title="Sign out">

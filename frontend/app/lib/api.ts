@@ -7,15 +7,24 @@ export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:300
 export interface AuthUser {
   id: string
   email: string
-  subscription_tier: 'free' | 'pro'
-  verified: boolean
+  name: string | null
+  email_verified: boolean
   created_at: string
+  tier: 'free' | 'pro'
+}
+
+export interface AuthSession {
+  access_token: string
+  refresh_token: string
+  expires_in: number
+  token_type: string
 }
 
 export interface AuthResponse {
-  token: string
-  user: AuthUser
   message?: string
+  session: AuthSession | null
+  user: AuthUser | null
+  needs_confirmation?: boolean
   error?: string
 }
 
@@ -38,27 +47,43 @@ export interface WatchlistResponse {
 // ── Auth ──────────────────────────────────────────────────────────────────────
 
 export async function apiLogin(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/api/auth/login`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  if (res.status === 503) {
-    return { token: '', user: null as any, error: 'Sign-in is coming soon! Stay tuned.' }
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/login`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (res.status === 503) {
+      return { session: null, user: null, error: 'Sign-in is coming soon! Stay tuned.' }
+    }
+    if (res.status === 429) {
+      return { session: null, user: null, error: 'Too many attempts. Please wait 15 minutes before trying again.' }
+    }
+    const data = await res.json()
+    return data
+  } catch {
+    return { session: null, user: null, error: 'Network error — could not reach server.' }
   }
-  return res.json()
 }
 
 export async function apiRegister(email: string, password: string): Promise<AuthResponse> {
-  const res = await fetch(`${API_BASE}/api/auth/signup`, {
-    method: 'POST',
-    headers: { 'Content-Type': 'application/json' },
-    body: JSON.stringify({ email, password }),
-  })
-  if (res.status === 503) {
-    return { token: '', user: null as any, error: 'Account creation is coming soon! Stay tuned.' }
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/signup`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ email, password }),
+    })
+    if (res.status === 503) {
+      return { session: null, user: null, error: 'Account creation is coming soon! Stay tuned.' }
+    }
+    if (res.status === 429) {
+      return { session: null, user: null, error: 'Too many attempts. Please wait 15 minutes before trying again.' }
+    }
+    const data = await res.json()
+    return data
+  } catch {
+    return { session: null, user: null, error: 'Network error — could not reach server.' }
   }
-  return res.json()
 }
 
 export async function apiGetWatchlist(token: string): Promise<WatchlistResponse> {
