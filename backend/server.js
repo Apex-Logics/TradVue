@@ -122,7 +122,8 @@ app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 
     timestamp: new Date().toISOString(),
-    service: 'TradVue API'
+    service: 'TradVue API',
+    build: '2026-03-12-v2'
   });
 });
 
