@@ -1,22 +1,21 @@
 /**
  * RSS Feed Aggregator
- * 
- * Pulls financial news from multiple RSS sources + optionally NewsAPI.
+ *
+ * Pulls financial news from multiple RSS sources.
  * Normalizes into a unified article schema with basic NLP (sentiment, tags, impact).
- * 
+ *
  * Free-tier sources (no API key needed):
  *   - Reuters Business/Markets RSS
  *   - MarketWatch
  *   - Investing.com
  *   - CoinDesk (crypto)
  *   - FXStreet (forex)
- * 
- * Paid (optional enhancement):
- *   - NewsAPI.org ($449/mo for production, $0 for dev)
+ *
+ * NOTE: NewsAPI.org has been removed — their free tier TOS prohibits production use.
+ * News is supplemented by Finnhub and Marketaux instead.
  */
 
 const RSSParser = require('rss-parser');
-const axios = require('axios');
 const cache = require('./cache');
 const finnhub = require('./finnhub');
 
@@ -319,9 +318,6 @@ const SYMBOL_KEYWORD_MAP = {
 // ─────────────────────────────────────────────
 class RSSFeedAggregator {
   constructor() {
-    const rawKey = process.env.NEWS_API_KEY || '';
-    // Only use NewsAPI key if it's been set (not placeholder)
-    this.newsAPIKey = (rawKey && !rawKey.startsWith('REPLACE_')) ? rawKey : null;
     this.feeds = RSS_FEEDS;
     this._articleCache = new Map(); // Dedup by URL across fetch cycles
   }
@@ -371,12 +367,6 @@ class RSSFeedAggregator {
         } catch (e) {
           console.warn('[RSS] Finnhub news supplement failed:', e.message);
         }
-      }
-
-      // If still no articles, fall back to NewsAPI (if key is properly configured)
-      if (allArticles.length === 0 && this.newsAPIKey) {
-        console.info('[RSS] All feeds failed, falling back to NewsAPI');
-        return await this._fetchFromNewsAPI({ limit });
       }
 
       // Deduplicate by URL
@@ -454,18 +444,6 @@ class RSSFeedAggregator {
         return deduped.slice(0, limit);
       } catch (e) {
         console.warn(`[RSS] Finnhub company news for ${symbol} failed:`, e.message);
-      }
-
-      // If NewsAPI available and we have fewer than 5 results, supplement
-      if (relevant.length < 5 && this.newsAPIKey && this.newsAPIKey !== 'REPLACE_WITH_YOUR_NEWSAPI_KEY') {
-        const supplemental = await this._fetchFromNewsAPI({ q: symbol, limit: 10 });
-        const merged = [...relevant, ...supplemental];
-        const seen = new Set(relevant.map(a => a.url));
-        return merged.filter(a => {
-          if (seen.has(a.url)) return false;
-          seen.add(a.url);
-          return true;
-        }).slice(0, limit);
       }
 
       return relevant.slice(0, limit);
@@ -571,45 +549,6 @@ class RSSFeedAggregator {
     return detected;
   }
 
-  /**
-   * NewsAPI fallback (when RSS fails or for symbol-specific deep search)
-   */
-  async _fetchFromNewsAPI({ q = 'finance markets trading', limit = 20 } = {}) {
-    if (!this.newsAPIKey) return [];
-
-    try {
-      const response = await axios.get('https://newsapi.org/v2/everything', {
-        params: {
-          q,
-          language: 'en',
-          sortBy: 'publishedAt',
-          pageSize: Math.min(limit, 100),
-          apiKey: this.newsAPIKey
-        },
-        timeout: 10000
-      });
-
-      return (response.data.articles || []).map(article => ({
-        id: article.url,
-        title: article.title || '',
-        summary: article.description || '',
-        url: article.url,
-        source: article.source?.name || 'NewsAPI',
-        category: 'general',
-        publishedAt: article.publishedAt,
-        sentimentScore: this._scoreSentiment((article.title + ' ' + article.description).toLowerCase()),
-        sentimentLabel: 'neutral',
-        impactScore: this._scoreImpact((article.title + ' ' + article.description).toLowerCase()),
-        impactLabel: 'Medium',
-        tags: this._extractTags((article.title + ' ' + article.description).toLowerCase()),
-        symbols: this._detectSymbols((article.title + ' ' + article.description).toLowerCase()),
-        imageUrl: article.urlToImage || null
-      }));
-    } catch (error) {
-      console.error('[RSS] NewsAPI error:', error.message);
-      return [];
-    }
-  }
 }
 
 module.exports = new RSSFeedAggregator();

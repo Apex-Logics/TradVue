@@ -1,18 +1,19 @@
-const axios = require('axios');
+/**
+ * NewsService — internal news helper
+ *
+ * NOTE: NewsAPI.org has been removed. Their free tier TOS prohibits production
+ * use. News is now sourced from Finnhub (routes/news.js) and Marketaux
+ * (services/marketaux.js).
+ *
+ * This service retains utility methods (sentiment analysis, tag extraction,
+ * mock data) used by other parts of the backend.
+ */
+
 const cache = require('./cache');
-const { externalAPILimiter } = require('./rateLimit');
 
 class NewsService {
   constructor() {
-    this.newsAPIKey = process.env.NEWS_API_KEY;
-    this.rssFeedURLs = [
-      'https://feeds.reuters.com/news/economy',
-      'https://feeds.reuters.com/news/markets',
-      'https://rss.cnn.com/rss/money_latest.rss',
-      'https://feeds.bloomberg.com/markets/news.rss'
-    ];
-    
-    // Mock news data for when APIs are rate limited
+    // Mock news data used as last-resort fallback
     this.mockNews = [
       {
         id: 1,
@@ -21,7 +22,7 @@ class NewsService {
         content: "Federal Reserve officials are considering policy adjustments as economic indicators show mixed signals...",
         url: "#",
         source: "Reuters",
-        publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(), // 2 hours ago
+        publishedAt: new Date(Date.now() - 2 * 60 * 60 * 1000).toISOString(),
         impact: 8.5,
         sentiment: "neutral",
         tags: ["federal-reserve", "interest-rates", "monetary-policy"]
@@ -33,7 +34,7 @@ class NewsService {
         content: "Bitcoin has reached its highest level this month as major institutional investors continue to expand their cryptocurrency holdings...",
         url: "#",
         source: "CoinDesk",
-        publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(), // 4 hours ago
+        publishedAt: new Date(Date.now() - 4 * 60 * 60 * 1000).toISOString(),
         impact: 7.2,
         sentiment: "positive",
         tags: ["bitcoin", "cryptocurrency", "institutional-investment"]
@@ -45,7 +46,7 @@ class NewsService {
         content: "The latest tech earnings season reveals a mixed landscape with some companies surpassing analyst expectations while others face challenges...",
         url: "#",
         source: "Bloomberg",
-        publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(), // 6 hours ago
+        publishedAt: new Date(Date.now() - 6 * 60 * 60 * 1000).toISOString(),
         impact: 6.8,
         sentiment: "neutral",
         tags: ["technology", "earnings", "stocks"]
@@ -57,7 +58,7 @@ class NewsService {
         content: "Oil markets continue to experience volatility as supply chain issues and geopolitical factors create uncertainty...",
         url: "#",
         source: "Energy News",
-        publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(), // 8 hours ago
+        publishedAt: new Date(Date.now() - 8 * 60 * 60 * 1000).toISOString(),
         impact: 7.5,
         sentiment: "negative",
         tags: ["oil", "commodities", "supply-chain"]
@@ -69,7 +70,7 @@ class NewsService {
         content: "European markets opened with positive momentum after the release of encouraging economic data from key eurozone countries...",
         url: "#",
         source: "Financial Times",
-        publishedAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(), // 10 hours ago
+        publishedAt: new Date(Date.now() - 10 * 60 * 60 * 1000).toISOString(),
         impact: 6.3,
         sentiment: "positive",
         tags: ["european-markets", "economic-data", "stocks"]
@@ -77,120 +78,76 @@ class NewsService {
     ];
   }
 
+  // ──────────────────────────────────────────
+  // Public API (consumed by other services)
+  // ──────────────────────────────────────────
+
   async getLatestNews(limit = 20, category = 'all') {
     const cacheKey = `news:latest:${category}:${limit}`;
-    
     return await cache.cacheAPICall(cacheKey, async () => {
-      try {
-        // Try to fetch from NewsAPI if available
-        if (this.newsAPIKey) {
-          await externalAPILimiter.canMakeRequest('newsapi', 100, 3600000); // 100 calls per hour
-          
-          const response = await axios.get('https://newsapi.org/v2/everything', {
-            params: {
-              q: 'finance OR economics OR trading OR markets OR crypto OR stocks',
-              language: 'en',
-              sortBy: 'publishedAt',
-              pageSize: limit,
-              apiKey: this.newsAPIKey
-            },
-            timeout: 10000
-          });
-
-          if (response.data.articles) {
-            return response.data.articles.map(this.transformNewsAPIArticle);
-          }
-        }
-        
-        // Fallback to mock data with some randomization
-        return this.getMockNewsData(limit);
-      } catch (error) {
-        if (error.message.includes('rate limit')) {
-          console.warn('News API rate limit reached, using cached/mock data');
-        } else {
-          console.error('News API error:', error.message);
-        }
-        return this.getMockNewsData(limit);
-      }
-    }, 600); // Cache for 10 minutes
+      return this.getMockNewsData(limit);
+    }, 600);
   }
 
   async getNewsBySymbol(symbol, limit = 10) {
     const cacheKey = `news:symbol:${symbol}:${limit}`;
-    
     return await cache.cacheAPICall(cacheKey, async () => {
-      try {
-        if (this.newsAPIKey) {
-          await externalAPILimiter.canMakeRequest('newsapi', 100, 3600000);
-          
-          const response = await axios.get('https://newsapi.org/v2/everything', {
-            params: {
-              q: `"${symbol}" OR ${this.getSymbolKeywords(symbol)}`,
-              language: 'en',
-              sortBy: 'publishedAt',
-              pageSize: limit,
-              apiKey: this.newsAPIKey
-            },
-            timeout: 10000
-          });
-
-          if (response.data.articles) {
-            return response.data.articles.map(this.transformNewsAPIArticle);
-          }
-        }
-        
-        // Return mock data filtered by symbol relevance
-        return this.getMockNewsData(limit).filter(article => 
-          article.tags.some(tag => 
-            tag.toLowerCase().includes(symbol.toLowerCase()) ||
-            symbol.toLowerCase().includes(tag)
-          )
-        );
-      } catch (error) {
-        console.error(`News API error for symbol ${symbol}:`, error.message);
-        return this.getMockNewsData(limit);
-      }
-    }, 900); // Cache for 15 minutes
+      return this.getMockNewsData(limit).filter(article =>
+        article.tags.some(tag =>
+          tag.toLowerCase().includes(symbol.toLowerCase()) ||
+          symbol.toLowerCase().includes(tag)
+        )
+      );
+    }, 900);
   }
 
-  transformNewsAPIArticle(article) {
-    return {
-      id: article.url.split('/').pop() || Math.random().toString(36),
-      title: article.title,
-      summary: article.description || '',
-      content: article.content || '',
-      url: article.url,
-      source: article.source.name,
-      publishedAt: article.publishedAt,
-      impact: Math.random() * 10, // Would use sentiment analysis in production
-      sentiment: this.analyzeSentiment(article.title + ' ' + article.description),
-      tags: this.extractTags(article.title + ' ' + article.description)
-    };
+  async getMarketMovingNews(impactThreshold = 7.0) {
+    const allNews = await this.getLatestNews(50);
+    return allNews
+      .filter(article => article.impact >= impactThreshold)
+      .sort((a, b) => b.impact - a.impact);
   }
+
+  async getBreakingNews(limit = 15) {
+    const cacheKey = `news:breaking:${limit}`;
+    return await cache.cacheAPICall(cacheKey, async () => {
+      return this.getMockNewsData(limit);
+    }, 60);
+  }
+
+  async refreshNewsForSymbol(symbol, limit = 10) {
+    const cacheKey = `news:symbol:${symbol}:${limit}`;
+    await cache.del(cacheKey);
+    return this.getNewsBySymbol(symbol, limit);
+  }
+
+  async forceRefreshBreaking() {
+    await cache.del('news:breaking:15');
+    return this.getBreakingNews(15);
+  }
+
+  // ──────────────────────────────────────────
+  // Utility helpers (used internally + by other services)
+  // ──────────────────────────────────────────
 
   analyzeSentiment(text) {
-    // Simple sentiment analysis - would use AI service in production
     const positiveWords = ['gain', 'rise', 'up', 'growth', 'positive', 'surge', 'bull', 'increase'];
     const negativeWords = ['fall', 'drop', 'down', 'decline', 'negative', 'crash', 'bear', 'decrease'];
-    
     const lowerText = text.toLowerCase();
-    const positiveCount = positiveWords.filter(word => lowerText.includes(word)).length;
-    const negativeCount = negativeWords.filter(word => lowerText.includes(word)).length;
-    
+    const positiveCount = positiveWords.filter(w => lowerText.includes(w)).length;
+    const negativeCount = negativeWords.filter(w => lowerText.includes(w)).length;
     if (positiveCount > negativeCount) return 'positive';
     if (negativeCount > positiveCount) return 'negative';
     return 'neutral';
   }
 
   extractTags(text) {
-    // Simple tag extraction - would use NLP in production
     const keywords = [
       'bitcoin', 'ethereum', 'crypto', 'cryptocurrency',
       'forex', 'trading', 'stocks', 'markets',
       'federal-reserve', 'interest-rates', 'inflation',
       'oil', 'gold', 'commodities', 'technology'
     ];
-    
     const lowerText = text.toLowerCase();
     return keywords.filter(keyword => lowerText.includes(keyword));
   }
@@ -207,85 +164,12 @@ class NewsService {
       'GOLD': 'gold precious metals',
       'OIL': 'oil crude energy'
     };
-    
     return keywordMap[symbol] || symbol;
   }
 
   getMockNewsData(limit) {
-    // Add some randomness to mock data
     const shuffled = [...this.mockNews].sort(() => Math.random() - 0.5);
     return shuffled.slice(0, Math.min(limit, shuffled.length));
-  }
-
-  async getMarketMovingNews(impactThreshold = 7.0) {
-    const allNews = await this.getLatestNews(50);
-    return allNews.filter(article => article.impact >= impactThreshold)
-                 .sort((a, b) => b.impact - a.impact);
-  }
-
-  /**
-   * Get breaking / market-moving news with a short 60-second cache TTL.
-   * Used for the real-time alert bar so users see news within a minute of publication.
-   *
-   * @param {number} limit - Max articles to return (default 15)
-   * @returns {Promise<Object[]>}
-   */
-  async getBreakingNews(limit = 15) {
-    const cacheKey = `news:breaking:${limit}`;
-
-    return await cache.cacheAPICall(cacheKey, async () => {
-      try {
-        if (this.newsAPIKey) {
-          await externalAPILimiter.canMakeRequest('newsapi', 100, 3600000);
-
-          const response = await axios.get('https://newsapi.org/v2/everything', {
-            params: {
-              q: 'market OR stocks OR fed OR inflation OR earnings OR economy',
-              language: 'en',
-              sortBy: 'publishedAt',
-              pageSize: limit,
-              apiKey: this.newsAPIKey
-            },
-            timeout: 10000
-          });
-
-          if (response.data.articles) {
-            return response.data.articles.map(this.transformNewsAPIArticle);
-          }
-        }
-
-        return this.getMockNewsData(limit);
-      } catch (error) {
-        console.error('[NewsService] Breaking news fetch error:', error.message);
-        return this.getMockNewsData(limit);
-      }
-    }, 60); // ← 60-second TTL (vs 600s for regular news)
-  }
-
-  /**
-   * Force-refresh news for a specific symbol by busting the cache key.
-   * Called when a market alert fires so users immediately see relevant news.
-   *
-   * @param {string} symbol - Stock ticker (e.g. 'NVDA')
-   * @param {number} limit
-   * @returns {Promise<Object[]>}
-   */
-  async refreshNewsForSymbol(symbol, limit = 10) {
-    // Bust the cached entry so the next call fetches fresh data
-    const cacheKey = `news:symbol:${symbol}:${limit}`;
-    await cache.del(cacheKey);
-    return this.getNewsBySymbol(symbol, limit);
-  }
-
-  /**
-   * Force-refresh the breaking news cache (bypass TTL).
-   * Called by the market alerts service when a significant price move is detected.
-   *
-   * @returns {Promise<Object[]>}
-   */
-  async forceRefreshBreaking() {
-    await cache.del('news:breaking:15');
-    return this.getBreakingNews(15);
   }
 }
 
