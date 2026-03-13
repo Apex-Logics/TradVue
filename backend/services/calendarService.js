@@ -490,11 +490,15 @@ function smartDeduplicate(events) {
  */
 async function getEvents({ from, to, type = 'all' } = {}) {
   const now = new Date();
-  const fromDate = from ? new Date(from) : now;
-  const toDate = to ? new Date(to) : new Date(now.getTime() + 30 * 24 * 3600 * 1000);
 
-  const fromStr = toDateStr(fromDate);
-  const toStr = toDateStr(toDate);
+  // If `from`/`to` are already YYYY-MM-DD strings, use them directly to avoid
+  // UTC→ET timezone drift (new Date("2026-03-13") = midnight UTC = 8pm ET Mar 12).
+  const fromStr = (typeof from === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(from))
+    ? from
+    : toDateStr(from ? new Date(from) : now);
+  const toStr = (typeof to === 'string' && /^\d{4}-\d{2}-\d{2}$/.test(to))
+    ? to
+    : toDateStr(to ? new Date(to) : new Date(now.getTime() + 30 * 24 * 3600 * 1000));
 
   // Fetch all sources in parallel
   const [ffEvents, finnhubEarnings, finnhubEcon, fedEvents, fxsEvents, fmpHolidays] = await Promise.all([

@@ -379,32 +379,16 @@ export default function HomeClient() {
   }, [isOffline])
 
   // ── Fetch economic calendar ──────────────────────────────────────────────────
+  // Let the EconomicCalendarWidget handle all filtering (today, earnings, impact).
+  // Just fetch today's full event list and pass it through.
   const fetchCalendar = useCallback(async () => {
     if (isOffline) return
     setLoadingCalendar(true)
     try {
-      const { MAJOR_CAP_SYMBOLS } = await import('./constants')
       const j = await apiFetchSafe<{ success: boolean; data?: CalendarEvent[]; events?: CalendarEvent[] }>(
-        `${API_BASE}/api/calendar/upcoming?days=2&minImpact=1`
+        `${API_BASE}/api/calendar/today`
       )
-      const raw = j?.success ? (j.data ?? j.events ?? []) : []
-      if (raw.length > 0) {
-        const filtered = raw.filter(e => {
-          if (e.type === 'speech') return true
-          if (e.type === 'earnings') {
-            const sym = (e.symbol || e.title?.split(' ')[0] || '').toUpperCase()
-            return MAJOR_CAP_SYMBOLS.has(sym)
-          }
-          const imp = e.impact
-          return imp === 'High' || imp === 3
-        })
-        setCalendarEvents(filtered)
-      } else {
-        const j2 = await apiFetchSafe<{ success: boolean; data?: CalendarEvent[]; events?: CalendarEvent[] }>(
-          `${API_BASE}/api/calendar/today`
-        )
-        setCalendarEvents(j2?.success ? (j2.data ?? j2.events ?? []) : [])
-      }
+      setCalendarEvents(j?.success ? (j.data ?? j.events ?? []) : [])
     } finally {
       setLoadingCalendar(false)
     }
