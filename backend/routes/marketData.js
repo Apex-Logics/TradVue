@@ -27,6 +27,7 @@
 const express = require('express');
 const router  = express.Router();
 const finnhub = require('../services/finnhub');
+const alpaca  = require('../services/alpaca');
 const cache   = require('../services/cache');
 
 // ─── Constants ───────────────────────────────────────────────────────────────
@@ -92,37 +93,62 @@ async function batchQuotesSharedCache(symbols, concurrency = BATCH_CONCURRENCY) 
     results[sym] = hit;
   }
 
-  // ── Phase 2: fetch only cache misses, up to `concurrency` in parallel ────
+  // ── Phase 2: fetch only cache misses ─────────────────────────────────────
   if (misses.length > 0) {
-    const chunks = [];
-    for (let i = 0; i < misses.length; i += concurrency) {
-      chunks.push(misses.slice(i, i + concurrency));
+    // Split misses: stock symbols go to Alpaca (one batch call), forex/crypto go to Finnhub
+    const stockMisses = misses.filter(s => alpaca.constructor.isStockSymbol(s));
+    const otherMisses = misses.filter(s => !alpaca.constructor.isStockSymbol(s));
+
+    // ── Phase 2a: Alpaca batch fetch for stock symbols (1 API call) ──────
+    if (stockMisses.length > 0) {
+      try {
+        const alpacaQuotes = await alpaca.getBatchQuotes(stockMisses);
+        for (const sym of stockMisses) {
+          if (alpacaQuotes[sym]) {
+            results[sym] = alpacaQuotes[sym];
+            // alpaca.getBatchQuotes() already cached under finnhub:quote:SYM
+          }
+        }
+      } catch (alpacaErr) {
+        console.warn('[MarketData/batch] Alpaca batch failed, falling back to Finnhub for stocks:', alpacaErr.message);
+      }
     }
 
-    for (const chunk of chunks) {
-      const settled = await Promise.allSettled(
-        chunk.map(sym => finnhub.getQuote(sym))
-      );
-      settled.forEach((r, idx) => {
-        const sym = chunk[idx];
-        if (r.status === 'fulfilled' && r.value) {
-          results[sym] = r.value;
-          // Note: finnhub.getQuote() already calls cache.set() internally via
-          // cache.cacheAPICall(), so we don't need to cache here again.
-        } else {
-          // Symbol unavailable — return a graceful stub so the UI shows "—"
-          results[sym] = {
-            symbol:    sym,
-            current:   null,
-            change:    null,
-            changePct: null,
-            source:    'unavailable',
-            error:     r.reason?.message || 'no data',
-          };
-        }
-      });
+    // ── Phase 2b: Finnhub for forex/crypto + any stocks Alpaca didn't return ──
+    const stillMissing = misses.filter(s => !results[s]);
+    if (stillMissing.length > 0) {
+      const chunks = [];
+      for (let i = 0; i < stillMissing.length; i += concurrency) {
+        chunks.push(stillMissing.slice(i, i + concurrency));
+      }
+
+      for (const chunk of chunks) {
+        const settled = await Promise.allSettled(
+          chunk.map(sym => finnhub.getQuote(sym))
+        );
+        settled.forEach((r, idx) => {
+          const sym = chunk[idx];
+          if (r.status === 'fulfilled' && r.value) {
+            results[sym] = r.value;
+            // Note: finnhub.getQuote() already calls cache.set() internally via
+            // cache.cacheAPICall(), so we don't need to cache here again.
+          } else {
+            // Symbol unavailable — return a graceful stub so the UI shows "—"
+            results[sym] = {
+              symbol:    sym,
+              current:   null,
+              change:    null,
+              changePct: null,
+              source:    'unavailable',
+              error:     r.reason?.message || 'no data',
+            };
+          }
+        });
+      }
     }
   }
+
+  const alpacaCallsMade = misses.filter(s => alpaca.constructor.isStockSymbol(s)).length > 0 ? 1 : 0;
 
   return {
     quotes:      results,

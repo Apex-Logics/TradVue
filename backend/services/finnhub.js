@@ -19,6 +19,7 @@ const axios = require('axios');
 const WebSocket = require('ws');
 const cache = require('./cache');
 const { externalAPILimiter } = require('./rateLimit');
+const alpacaService = require('./alpaca');
 
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
 
@@ -87,6 +88,21 @@ class FinnhubService {
     const cacheKey = `finnhub:quote:${upperSymbol}`;
 
     return await cache.cacheAPICall(cacheKey, async () => {
+      // ── Try Alpaca first for US equity symbols ──────────────────────────
+      // Alpaca doesn't support forex pairs, crypto, or VIX — those stay on Finnhub.
+      if (alpacaService.constructor.isStockSymbol(upperSymbol)) {
+        try {
+          const alpacaQuote = await alpacaService.getQuote(upperSymbol);
+          if (alpacaQuote && alpacaQuote.current != null) {
+            return alpacaQuote; // cacheAPICall will store this under finnhub:quote:SYM
+          }
+          console.warn(`[Finnhub] Alpaca returned no data for ${upperSymbol}, falling back to Finnhub`);
+        } catch (alpacaErr) {
+          console.warn(`[Finnhub] Alpaca error for ${upperSymbol}, falling back to Finnhub:`, alpacaErr.message);
+        }
+      }
+      // ── Fallback: Finnhub ───────────────────────────────────────────────
+
       if (!this.apiKey) {
         console.warn(`[Finnhub] No API key — using mock data for ${upperSymbol}`);
         return this._mockQuote(upperSymbol);

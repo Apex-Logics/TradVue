@@ -19,6 +19,7 @@
 
 const cache        = require('./cache');
 const finnhub      = require('./finnhub');
+const alpaca       = require('./alpaca');
 const coinGecko    = require('./coinGecko');
 const calendarService  = require('./calendarService');
 const { getAnalystRatings } = require('./analystRatings');
@@ -108,8 +109,25 @@ async function prefetchHighFrequency() {
     : WATCHLIST.slice(mid);
 
   await safe('batch quotes', async () => {
-    const quotes = await finnhub.getBatchQuotes(batch);
-    quotesCount = Object.keys(quotes).length;
+    // Separate stock symbols from anything Alpaca can't handle (VIX uses Yahoo, no Alpaca support)
+    const stockBatch   = batch.filter(s => alpaca.constructor.isStockSymbol(s));
+    const specialBatch = batch.filter(s => !alpaca.constructor.isStockSymbol(s));
+
+    // Use Alpaca's batch snapshot endpoint — ONE call for all stock symbols
+    // instead of N individual Finnhub calls. Major rate-limit savings.
+    let alpacaQuotes = {};
+    if (stockBatch.length > 0) {
+      alpacaQuotes = await alpaca.getBatchQuotes(stockBatch);
+      quotesCount += Object.keys(alpacaQuotes).length;
+    }
+
+    // Fall back to Finnhub for any stocks Alpaca missed + special symbols (VIX, etc.)
+    const alpacaMisses = stockBatch.filter(s => !alpacaQuotes[s]);
+    const finnhubBatch = [...alpacaMisses, ...specialBatch];
+    if (finnhubBatch.length > 0) {
+      const fallbackQuotes = await finnhub.getBatchQuotes(finnhubBatch);
+      quotesCount += Object.keys(fallbackQuotes).length;
+    }
   });
 
   // Market status every cycle
@@ -136,7 +154,21 @@ async function prefetchMediumFrequency() {
   let newsCount    = 0;
 
   // Market movers (top gainers/losers from watchlist)
-  await safe('market movers', () => finnhub.getBatchQuotes(WATCHLIST));
+  // Use Alpaca batch for stocks (1 call) + Finnhub fallback for specials (VIX etc.)
+  await safe('market movers', async () => {
+    const stockSymbols   = WATCHLIST.filter(s => alpaca.constructor.isStockSymbol(s));
+    const specialSymbols = WATCHLIST.filter(s => !alpaca.constructor.isStockSymbol(s));
+
+    const alpacaQuotes = stockSymbols.length > 0
+      ? await alpaca.getBatchQuotes(stockSymbols)
+      : {};
+
+    const alpacaMisses = stockSymbols.filter(s => !alpacaQuotes[s]);
+    const finnhubBatch = [...alpacaMisses, ...specialSymbols];
+    if (finnhubBatch.length > 0) {
+      await finnhub.getBatchQuotes(finnhubBatch);
+    }
+  });
 
   // General market news (uses finnhub general news; RSS aggregator has its own cache)
   await safe('news feed', async () => {
