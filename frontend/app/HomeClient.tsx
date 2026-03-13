@@ -916,7 +916,7 @@ export default function HomeClient() {
             {/* Calendar */}
             {!showAlerts && (
               <ErrorBoundary label="Economic Calendar">
-                <EconomicCalendarWidget events={calendarEvents} loading={loadingCalendar} />
+                <EconomicCalendarWidget events={calendarEvents} loading={loadingCalendar} watchlistSymbols={watchlist} />
               </ErrorBoundary>
             )}
           </div>

@@ -113,7 +113,13 @@ function toDateKey(d: Date): string {
 
 function getEventDateKey(event: CalendarEvent): string {
   try {
-    return new Date(event.date).toISOString().slice(0, 10)
+    if (!event.date) return ''
+    // Date-only strings: use as-is to avoid UTC timezone shifting
+    if (/^\d{4}-\d{2}-\d{2}$/.test(event.date)) return event.date
+    // Full datetime: convert to local date (matches toDateKey which also uses local time)
+    const d = new Date(event.date)
+    if (isNaN(d.getTime())) return ''
+    return d.toLocaleDateString('en-CA') // returns YYYY-MM-DD in local timezone
   } catch { return '' }
 }
 
@@ -722,7 +728,7 @@ export default function CalendarPage() {
     setError(null)
     const { from, to } = dateRange
     // Use limit=500 to ensure we get enough events; try pagination endpoint as well
-    const url = `${API_BASE}/api/calendar/events?from=${from}&to=${to}&type=all&limit=500&page=1`
+    const url = `${API_BASE}/api/calendar/events?from=${from}&to=${to}&limit=500`
     const j = await apiFetchSafe<{ success: boolean; events?: unknown[]; data?: unknown[] }>(url)
     if (j?.success) {
       const evts = (j.events ?? j.data ?? []) as typeof events
@@ -824,7 +830,7 @@ export default function CalendarPage() {
 
   const goToday = () => {
     setCurrentDate(new Date())
-    setSelectedDay(toDateKey(new Date()))
+    setSelectedDay(new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }))
   }
 
   const getWeekStart = () => {
@@ -848,7 +854,8 @@ export default function CalendarPage() {
   }
 
   // Today's key (stable reference used as fallback)
-  const todayKey = useMemo(() => toDateKey(new Date()), [])
+  // Use ET timezone so todayKey matches selectedDay (both ET-based)
+  const todayKey = useMemo(() => new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' }), [])
 
   // Selected day events — always falls back to today, holidays shown first
   const selectedDayEvents = useMemo(() => {

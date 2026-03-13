@@ -1,14 +1,19 @@
 'use client'
 
-import { useState } from 'react'
+import { useState, useMemo } from 'react'
 import { fmtEventTime, fmtEventDate } from '../utils/formatting'
 import { CALENDAR_IMPACT_FILTERS, CALENDAR_CURRENCIES } from '../constants'
 import { IconMic, IconChart, IconBuilding } from './Icons'
 import type { CalendarEvent } from '../types'
 
+const DEFAULT_WATCHLIST_SYMBOLS = [
+  'SPY', 'QQQ', 'DIA', 'IWM', 'AAPL', 'GOOGL', 'TSLA', 'MSFT', 'NVDA', 'AMZN', 'META',
+]
+
 interface Props {
   events: CalendarEvent[]
   loading: boolean
+  watchlistSymbols?: string[]
 }
 
 /** Normalize impact to a consistent string value */
@@ -34,31 +39,99 @@ function impactColorClass(impact: number | string): string {
   return 'ecal-impact-low'
 }
 
+/** Get today's date string (YYYY-MM-DD) in ET timezone */
+function getTodayET(): string {
+  return new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+}
+
+/** Get event's date in ET timezone (YYYY-MM-DD) */
+function getEventDateET(e: CalendarEvent): string {
+  const raw = e.datetime || e.date || ''
+  if (!raw) return ''
+  // Date-only string: use as-is (assumed ET date from API)
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) return raw
+  try {
+    return new Date(raw).toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+  } catch { return '' }
+}
+
+/** Get event timestamp for sorting / past-vs-upcoming split */
+function getEventMs(e: CalendarEvent): number {
+  const raw = e.datetime || e.date || ''
+  if (!raw) return 0
+  // For date-only strings, treat as noon ET so they don't accidentally fall into "past"
+  if (/^\d{4}-\d{2}-\d{2}$/.test(raw)) {
+    const [y, m, d] = raw.split('-').map(Number)
+    // noon ET = 16:00 UTC (EDT) or 17:00 UTC (EST) — use 16:30 as safe noon-ish
+    const approxNoon = new Date(`${raw}T16:30:00Z`)
+    return approxNoon.getTime()
+  }
+  const ms = new Date(raw).getTime()
+  return isNaN(ms) ? 0 : ms
+}
+
 /**
  * Economic / earnings / speech calendar widget.
- * Filterable by impact level and currency.
- * Grouped by day.
+ * - Filtered to TODAY (ET timezone)
+ * - Shows last 3 completed events + all upcoming events
+ * - Filters out earnings not in watchlist
+ * - Scrollable events list
  */
-export default function EconomicCalendarWidget({ events, loading }: Props) {
+export default function EconomicCalendarWidget({ events, loading, watchlistSymbols }: Props) {
   const [impactFilter, setImpactFilter]     = useState('All')
   const [currencyFilter, setCurrencyFilter] = useState('All')
 
-  const filtered = events.filter(e => {
-    const impStr = normalizeImpact(e.impact)
-    const matchImpact   = impactFilter === 'All' || impStr === impactFilter
-    const ccy           = (e.currency || e.country || '').toUpperCase()
-    const matchCurrency = currencyFilter === 'All' || ccy === currencyFilter
-    return matchImpact && matchCurrency
-  })
+  const watchlist = useMemo(
+    () => (watchlistSymbols && watchlistSymbols.length > 0 ? watchlistSymbols : DEFAULT_WATCHLIST_SYMBOLS),
+    [watchlistSymbols]
+  )
 
-  // Group by date
-  const groups: Record<string, CalendarEvent[]> = {}
-  filtered.forEach(e => {
-    const dateStr = e.datetime || e.date || ''
-    const dayKey  = dateStr ? fmtEventDate(dateStr) : 'Unknown'
-    if (!groups[dayKey]) groups[dayKey] = []
-    groups[dayKey].push(e)
-  })
+  const todayET = useMemo(getTodayET, [])
+
+  /**
+   * Filter pipeline:
+   * 1. Today only (ET)
+   * 2. Earnings → only if symbol in watchlist
+   * 3. Others → impact + currency filters
+   */
+  const filtered = useMemo(() => {
+    return events.filter(e => {
+      // Issue 1: Only today's events (ET timezone)
+      if (getEventDateET(e) !== todayET) return false
+
+      // Issue 3: Filter out earnings not in watchlist
+      if (e.type === 'earnings') {
+        const sym = (e.symbol || e.title?.split(' ')[0] || '').toUpperCase()
+        return watchlist.includes(sym)
+      }
+
+      // Impact + currency filter for non-earnings
+      const impStr = normalizeImpact(e.impact)
+      const matchImpact   = impactFilter === 'All' || impStr === impactFilter
+      const ccy           = (e.currency || e.country || '').toUpperCase()
+      const matchCurrency = currencyFilter === 'All' || ccy === currencyFilter
+      return matchImpact && matchCurrency
+    })
+  }, [events, todayET, watchlist, impactFilter, currencyFilter])
+
+  /**
+   * Issue 2: Sort by time, split into past (3 most recent) + upcoming (all)
+   * Past = has actual value OR time < now
+   */
+  const { pastEvents, upcomingEvents } = useMemo(() => {
+    const nowMs = Date.now()
+    const sorted = [...filtered].sort((a, b) => getEventMs(a) - getEventMs(b))
+
+    const isPast = (e: CalendarEvent) =>
+      (e.actual != null && e.actual !== '') || getEventMs(e) < nowMs
+
+    return {
+      pastEvents: sorted.filter(isPast).slice(-3),   // last 3 completed
+      upcomingEvents: sorted.filter(e => !isPast(e)), // all upcoming
+    }
+  }, [filtered])
+
+  const displayEvents = useMemo(() => [...pastEvents, ...upcomingEvents], [pastEvents, upcomingEvents])
 
   const getEventTime = (e: CalendarEvent) => fmtEventTime(e.datetime || e.date || '')
 
@@ -67,7 +140,7 @@ export default function EconomicCalendarWidget({ events, loading }: Props) {
 
   return (
     <div
-      style={{ display: 'flex', flexDirection: 'column', flex: 1 }}
+      style={{ display: 'flex', flexDirection: 'column', flex: 1, minHeight: 0 }}
       role="region"
       aria-label="Economic calendar"
     >
@@ -120,7 +193,9 @@ export default function EconomicCalendarWidget({ events, loading }: Props) {
         </div>
 
         <span style={{ fontSize: 9.5, color: 'var(--text-3)', marginLeft: 'auto' }}>
-          {filtered.length} events
+          {upcomingEvents.length > 0
+            ? `${pastEvents.length} past · ${upcomingEvents.length} upcoming`
+            : `${displayEvents.length} events`}
         </span>
       </div>
 
@@ -140,64 +215,139 @@ export default function EconomicCalendarWidget({ events, loading }: Props) {
         ))}
       </div>
 
-      {/* Events */}
-      <div style={{ flex: 1, overflowY: 'auto' }}>
+      {/* Events — Issue 4: scrollable with max-height */}
+      <div style={{
+        flex: 1,
+        overflowY: 'auto',
+        maxHeight: 420,
+        scrollbarWidth: 'thin',
+        scrollbarColor: 'var(--border) transparent',
+      }}>
         {loading ? (
           <div style={{ padding: 20, color: 'var(--text-3)', fontSize: 11, textAlign: 'center' }}>
             Loading calendar…
           </div>
-        ) : Object.keys(groups).length === 0 ? (
+        ) : displayEvents.length === 0 ? (
           <div style={{ padding: 20, color: 'var(--text-3)', fontSize: 11, textAlign: 'center' }}>
             No events match current filters.
           </div>
         ) : (
-          Object.entries(groups).map(([day, dayEvents]) => (
-            <div key={day} className="ecal-day-group">
-              <div className="ecal-day-label">{day}</div>
-              {dayEvents.map(ev => {
-                const icon = typeIcon(ev)
-                const ccy  = (ev.currency || ev.country || '').toUpperCase()
-                return (
-                  <div
-                    key={ev.id}
-                    className="ecal-event"
-                    style={
-                      ev.type === 'speech'   ? { borderLeft: '2px solid #f59e0b' } :
-                      ev.type === 'earnings' ? { borderLeft: '2px solid #8b5cf6' } : {}
-                    }
-                  >
-                    <span className="ecal-time">{getEventTime(ev)}</span>
-                    <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
-                      {icon ? (
-                        <span style={{ fontSize: 10 }}>{icon}</span>
-                      ) : (
-                        <span className={`ecal-impact-dot ${impactColorClass(ev.impact)}`} />
-                      )}
+          <>
+            {/* Past events (greyed out) */}
+            {pastEvents.length > 0 && (
+              <div>
+                <div style={{
+                  fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
+                  color: 'var(--text-3)', padding: '4px 12px 2px',
+                  background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
+                  textTransform: 'uppercase',
+                }}>
+                  ↑ Recent
+                </div>
+                {pastEvents.map(ev => {
+                  const icon = typeIcon(ev)
+                  const ccy  = (ev.currency || ev.country || '').toUpperCase()
+                  return (
+                    <div
+                      key={ev.id}
+                      className="ecal-event"
+                      style={{
+                        opacity: 0.6,
+                        ...(ev.type === 'speech'   ? { borderLeft: '2px solid #f59e0b' } :
+                            ev.type === 'earnings' ? { borderLeft: '2px solid #8b5cf6' } : {}),
+                      }}
+                    >
+                      <span className="ecal-time">{getEventTime(ev)}</span>
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {icon ? (
+                          <span style={{ fontSize: 10 }}>{icon}</span>
+                        ) : (
+                          <span className={`ecal-impact-dot ${impactColorClass(ev.impact)}`} />
+                        )}
+                      </div>
+                      <span className="ecal-currency">{ccy}</span>
+                      <div className="ecal-body">
+                        <span
+                          className="ecal-event-name"
+                          style={
+                            ev.type === 'speech'   ? { color: '#f59e0b' } :
+                            ev.type === 'earnings' ? { color: '#8b5cf6' } : {}
+                          }
+                        >
+                          {ev.title}
+                        </span>
+                        {(ev.actual || ev.forecast || ev.previous) && (
+                          <div className="ecal-values">
+                            {ev.actual   && <span className="ecal-actual">A: {ev.actual}</span>}
+                            {ev.forecast && <span className="ecal-forecast">F: {ev.forecast}</span>}
+                            {ev.previous && <span className="ecal-previous">P: {ev.previous}</span>}
+                          </div>
+                        )}
+                      </div>
                     </div>
-                    <span className="ecal-currency">{ccy}</span>
-                    <div className="ecal-body">
-                      <span
-                        className="ecal-event-name"
-                        style={
-                          ev.type === 'speech'   ? { color: '#f59e0b' } :
-                          ev.type === 'earnings' ? { color: '#8b5cf6' } : {}
-                        }
-                      >
-                        {ev.title}
-                      </span>
-                      {(ev.actual || ev.forecast || ev.previous) && (
-                        <div className="ecal-values">
-                          {ev.actual   && <span className="ecal-actual">A: {ev.actual}</span>}
-                          {ev.forecast && <span className="ecal-forecast">F: {ev.forecast}</span>}
-                          {ev.previous && <span className="ecal-previous">P: {ev.previous}</span>}
-                        </div>
-                      )}
-                    </div>
+                  )
+                })}
+              </div>
+            )}
+
+            {/* Upcoming events */}
+            {upcomingEvents.length > 0 && (
+              <div>
+                {pastEvents.length > 0 && (
+                  <div style={{
+                    fontSize: 9, fontWeight: 700, letterSpacing: '0.07em',
+                    color: 'var(--text-3)', padding: '4px 12px 2px',
+                    background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
+                    textTransform: 'uppercase',
+                  }}>
+                    ↓ Upcoming
                   </div>
-                )
-              })}
-            </div>
-          ))
+                )}
+                {upcomingEvents.map(ev => {
+                  const icon = typeIcon(ev)
+                  const ccy  = (ev.currency || ev.country || '').toUpperCase()
+                  return (
+                    <div
+                      key={ev.id}
+                      className="ecal-event"
+                      style={
+                        ev.type === 'speech'   ? { borderLeft: '2px solid #f59e0b' } :
+                        ev.type === 'earnings' ? { borderLeft: '2px solid #8b5cf6' } : {}
+                      }
+                    >
+                      <span className="ecal-time">{getEventTime(ev)}</span>
+                      <div style={{ display: 'flex', justifyContent: 'center', alignItems: 'center' }}>
+                        {icon ? (
+                          <span style={{ fontSize: 10 }}>{icon}</span>
+                        ) : (
+                          <span className={`ecal-impact-dot ${impactColorClass(ev.impact)}`} />
+                        )}
+                      </div>
+                      <span className="ecal-currency">{ccy}</span>
+                      <div className="ecal-body">
+                        <span
+                          className="ecal-event-name"
+                          style={
+                            ev.type === 'speech'   ? { color: '#f59e0b' } :
+                            ev.type === 'earnings' ? { color: '#8b5cf6' } : {}
+                          }
+                        >
+                          {ev.title}
+                        </span>
+                        {(ev.actual || ev.forecast || ev.previous) && (
+                          <div className="ecal-values">
+                            {ev.actual   && <span className="ecal-actual">A: {ev.actual}</span>}
+                            {ev.forecast && <span className="ecal-forecast">F: {ev.forecast}</span>}
+                            {ev.previous && <span className="ecal-previous">P: {ev.previous}</span>}
+                          </div>
+                        )}
+                      </div>
+                    </div>
+                  )
+                })}
+              </div>
+            )}
+          </>
         )}
       </div>
     </div>
