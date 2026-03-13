@@ -1,0 +1,2592 @@
+═══════════════════════════════════════════════════════════════════
+
+  TradVue — Trading Analytics Platform
+  Copyright Registration Deposit
+
+  Copyright © 2026 Apex Logics LLC
+  All Rights Reserved
+
+  Author: Erick Urbina / Apex Logics LLC
+  Date of First Publication: March 2026
+  Nation of First Publication: United States
+
+  This deposit contains the first 25 and last 25 pages of
+  source code for the TradVue platform, with trade secret
+  material redacted per Circular 61 guidelines.
+
+  Total source files: 174
+  Total lines of code: 56,726
+
+═══════════════════════════════════════════════════════════════════
+
+
+╔═══════════════════════════════════════════════════════════════════╗
+║  SECTION 1: FIRST 25 PAGES OF SOURCE CODE                       ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+========================================
+TradVue — Trading Analytics Platform
+Copyright © 2026 Apex Logics LLC
+All Rights Reserved
+========================================
+
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: backend/middleware/auth.js
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Auth Middleware — Supabase JWT validation
+ *
+ * Two middlewares exported:
+ *   requireAuth   — rejects requests without a valid token (401/403)
+ *   optionalAuth  — attaches user if token present, continues either way
+ *
+ * Both attach req.user = { id, email, role } on success.
+ *
+ * Token is read from:  Authorization: Bearer <access_token>
+ *
+ * Validation uses Supabase's getUser() which calls the Supabase Auth server
+ * to validate the JWT — this is the most reliable approach and handles
+ * token revocation automatically.
+ *
+ * Required env vars:
+ *   SUPABASE_URL      = https://<project>.supabase.co
+ *   SUPABASE_ANON_KEY = <from Supabase dashboard>
+ */
+
+const { getUser } = require('../services/authService');
+
+// ── Token Extractor ───────────────────────────────────────────────────────────
+function extractBearerToken(req) {
+  const authHeader = req.headers['authorization'];
+  if (!authHeader || !authHeader.startsWith('Bearer ')) return null;
+  const token = authHeader.slice(7).trim();
+  return token || null;
+}
+
+// ── Core Validator ────────────────────────────────────────────────────────────
+async function validateToken(token) {
+  if (!token) return null;
+
+  const { data, error } = await getUser(token);
+  if (error || !data?.user) return null;
+
+  const user = data.user;
+  return {
+    id: user.id,
+    email: user.email,
+    role: user.role || 'authenticated',
+    // Include app_metadata.role if set (for custom roles)
+    appRole: user.app_metadata?.role || null,
+    // User metadata (name, etc.)
+    name: user.user_metadata?.name || null,
+    emailVerified: user.email_confirmed_at !== null,
+  };
+}
+
+// ── requireAuth ───────────────────────────────────────────────────────────────
+/**
+ * Middleware: requires a valid Supabase JWT.
+ * Attaches req.user = { id, email, role, ... }
+ * Returns 401 if no token, 403 if invalid/expired.
+ */
+async function requireAuth(req, res, next) {
+  const token = extractBearerToken(req);
+
+  if (!token) {
+    return res.status(401).json({
+      error: 'Authentication required',
+      message: 'Provide a valid Bearer token in the Authorization header',
+    });
+  }
+
+  try {
+    const user = await validateToken(token);
+    if (!user) {
+      return res.status(403).json({
+        error: 'Invalid or expired token',
+        message: 'Please sign in again to get a new access token',
+      });
+    }
+
+    req.user = user;
+    next();
+  } catch (err) {
+    console.error('[Auth Middleware] Token validation error:', err.message);
+    return res.status(500).json({ error: 'Auth validation failed' });
+  }
+}
+
+// ── optionalAuth ──────────────────────────────────────────────────────────────
+/**
+ * Middleware: attaches user if token is present and valid.
+ * Never rejects — anonymous access is allowed.
+ * req.user will be null if no valid token.
+ */
+async function optionalAuth(req, res, next) {
+  const token = extractBearerToken(req);
+
+  if (!token) {
+    req.user = null;
+    return next();
+  }
+
+  try {
+    const user = await validateToken(token);
+    req.user = user; // null if invalid — that's fine for optional auth
+  } catch {
+    req.user = null;
+  }
+
+  next();
+}
+
+module.exports = { requireAuth, optionalAuth };
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: backend/routes/admin.js
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Admin Routes — TradVue internal admin dashboard API
+ *
+ * All routes require:
+ *   1. Valid Supabase JWT (requireAuth middleware)
+ *   2. Email in ADMIN_ALLOWLIST
+ *
+ * Uses Supabase REST API client (NOT direct PostgreSQL — IPv6-only on Render).
+ */
+
+const express = require('express');
+const router = express.Router();
+const { createClient } = require('@supabase/supabase-js');
+const { requireAuth } = require('../middleware/auth');
+
+// ADMIN_EMAILS env var: comma-separated list of admin email addresses.
+// Format: ADMIN_EMAILS=admin@example.com,admin2@example.com
+// If the env var is missing or empty, no admins are allowed (safe default).
+const ADMIN_ALLOWLIST = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
+
+// ── Admin Supabase client (service role) ──────────────────────────────────────
+function getAdminClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY /* [REDACTED] */ || process.env.SUPABASE_ANON_KEY /* [REDACTED] */;
+  if (!url || !key) throw new Error('SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY required');
+  if (!process.env.SUPABASE_SERVICE_ROLE_KEY /* [REDACTED] */) {
+    console.warn('[Admin] SUPABASE_SERVICE_ROLE_KEY not set — falling back to anon key. Some admin queries may fail due to RLS.');
+  }
+  return createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+}
+
+// ── Admin guard middleware ─────────────────────────────────────────────────────
+function requireAdmin(req, res, next) {
+  if (!req.user || !ADMIN_ALLOWLIST.includes(req.user.email)) {
+    return res.status(403).json({ error: 'Admin access required' });
+  }
+  next();
+}
+
+// Apply auth + admin guard to all routes
+router.use(requireAuth, requireAdmin);
+
+// ── GET /api/admin/stats ──────────────────────────────────────────────────────
+router.get('/stats', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+
+    let totalUsers = 0;
+    try {
+      const { data: usersData, error: usersErr } = await supabase.auth.admin.listUsers({ perPage: 1 });
+      if (!usersErr && usersData?.total) totalUsers = usersData.total;
+    } catch (e) {
+      console.warn('[Admin] auth.admin.listUsers failed:', e.message);
+    }
+
+    const { count: freeCount } = await supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('tier', 'free');
+    const { count: proCount } = await supabase.from('user_profiles').select('*', { count: 'exact', head: true }).eq('tier', 'pro');
+    const { count: totalFeedback } = await supabase.from('feedback').select('*', { count: 'exact', head: true });
+    const { count: newFeedback } = await supabase.from('feedback').select('*', { count: 'exact', head: true }).eq('status', 'new');
+    const { count: syncedUsers } = await supabase.from('user_data').select('*', { count: 'exact', head: true });
+
+    res.json({
+      users: { total: totalUsers, free: freeCount || 0, pro: proCount || 0, synced: syncedUsers || 0 },
+      feedback: { total: totalFeedback || 0, new: newFeedback || 0 },
+    });
+  } catch (err) {
+    console.error('[Admin] /stats error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/users ──────────────────────────────────────────────────────
+router.get('/users', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { search, tier } = req.query;
+
+    const { data: usersData, error: usersErr } = await supabase.auth.admin.listUsers({ perPage: 500 });
+    if (usersErr) throw usersErr;
+
+    let users = usersData.users.map(u => ({
+      id: u.id, email: u.email, created_at: u.created_at,
+      last_sign_in: u.last_sign_in_at, email_verified: !!u.email_confirmed_at, tier: 'free',
+    }));
+
+    const { data: profiles } = await supabase.from('user_profiles').select('user_id, tier');
+    if (profiles) {
+      const tierMap = {};
+      profiles.forEach(p => { tierMap[p.user_id] = p.tier; });
+      users = users.map(u => ({ ...u, tier: tierMap[u.id] || 'free' }));
+    }
+
+    if (search) {
+      const q = search.toLowerCase();
+      users = users.filter(u => u.email?.toLowerCase().includes(q));
+    }
+    if (tier === 'free' || tier === 'pro') {
+      users = users.filter(u => u.tier === tier);
+    }
+
+    res.json({ users, total: users.length });
+  } catch (err) {
+    console.error('[Admin] /users error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/users/:id ──────────────────────────────────────────────────
+router.get('/users/:id', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { id } = req.params;
+
+    const { data, error } = await supabase.auth.admin.getUserById(id);
+    if (error) throw error;
+
+    const { data: profile } = await supabase.from('user_profiles').select('*').eq('user_id', id).single();
+    const { data: userData } = await supabase.from('user_data').select('key, updated_at').eq('user_id', id);
+
+    res.json({
+      user: {
+        id: data.user.id, email: data.user.email, created_at: data.user.created_at,
+        last_sign_in: data.user.last_sign_in_at, email_verified: !!data.user.email_confirmed_at,
+        tier: profile?.tier || 'free', profile, syncedKeys: userData?.map(d => d.key) || [],
+      },
+    });
+  } catch (err) {
+    console.error('[Admin] /users/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/users/:id/data ────────────────────────────────────────────
+router.get('/users/:id/data', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { id } = req.params;
+
+    const { data, error } = await supabase
+      .from('user_data')
+      .select('key, updated_at, value')
+      .eq('user_id', id)
+      .order('updated_at', { ascending: false });
+
+    if (error) throw error;
+
+    // Return summary: key, size estimate, last updated (don't expose full value)
+    const summary = (data || []).map(row => ({
+      key: row.key,
+      updated_at: row.updated_at,
+      size_bytes: JSON.stringify(row.value || {}).length,
+    }));
+
+    res.json({ user_id: id, data: summary, total: summary.length });
+  } catch (err) {
+    console.error('[Admin] /users/:id/data error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE /api/admin/users/:id ───────────────────────────────────────────────
+router.delete('/users/:id', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { id } = req.params;
+    if (id === req.user.id) return res.status(400).json({ error: 'Cannot delete your own account' });
+    const { error } = await supabase.auth.admin.deleteUser(id);
+    if (error) throw error;
+    res.json({ success: true, message: `User ${id} deleted` });
+  } catch (err) {
+    console.error('[Admin] DELETE /users/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/feedback ───────────────────────────────────────────────────
+router.get('/feedback', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { status, type } = req.query;
+    let query = supabase.from('feedback').select('*').order('created_at', { ascending: false });
+    if (status) query = query.eq('status', status);
+    if (type) query = query.eq('type', type);
+    const { data, error } = await query;
+    if (error) throw error;
+    res.json({ feedback: data || [], total: data?.length || 0 });
+  } catch (err) {
+    console.error('[Admin] /feedback error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── PATCH /api/admin/feedback/:id ────────────────────────────────────────────
+router.patch('/feedback/:id', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { id } = req.params;
+    const { status } = req.body;
+    const validStatuses = ['new', 'reviewed', 'resolved', 'wontfix'];
+    if (!status || !validStatuses.includes(status)) {
+      return res.status(400).json({ error: 'status must be one of: new, reviewed, resolved, wontfix' });
+    }
+    const { data, error } = await supabase.from('feedback').update({ status }).eq('id', id).select().single();
+    if (error) throw error;
+    res.json({ feedback: data });
+  } catch (err) {
+    console.error('[Admin] PATCH /feedback/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE /api/admin/feedback/:id ───────────────────────────────────────────
+router.delete('/feedback/:id', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { id } = req.params;
+    const { error } = await supabase.from('feedback').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin] DELETE /feedback/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/activity ───────────────────────────────────────────────────
+router.get('/activity', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const limit = Math.min(parseInt(req.query.limit) || 50, 200);
+    const offset = parseInt(req.query.offset) || 0;
+    const { action, user_id } = req.query;
+
+    let query = supabase
+      .from('activity_log')
+      .select('*', { count: 'exact' })
+      .order('created_at', { ascending: false })
+      .range(offset, offset + limit - 1);
+
+    if (action) query = query.eq('action', action);
+    if (user_id) query = query.eq('user_id', user_id);
+
+    const { data, error, count } = await query;
+    if (error) throw error;
+
+    res.json({ activity: data || [], total: count || 0, limit, offset });
+  } catch (err) {
+    console.error('[Admin] /activity error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/analytics ──────────────────────────────────────────────────
+router.get('/analytics', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+
+    // Active users: synced in last 7 days
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+    const oneDayAgo = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { count: weeklyActive } = await supabase
+      .from('user_data')
+      .select('user_id', { count: 'exact', head: true })
+      .gte('updated_at', sevenDaysAgo);
+
+    const { count: dailyActive } = await supabase
+      .from('user_data')
+      .select('user_id', { count: 'exact', head: true })
+      .gte('updated_at', oneDayAgo);
+
+    // Page views from activity_log
+    const { count: totalPageViews } = await supabase
+      .from('activity_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('action', 'page_view');
+
+    // Most used actions (top 10)
+    const { data: actionData } = await supabase
+      .from('activity_log')
+      .select('action')
+      .order('created_at', { ascending: false })
+      .limit(1000);
+
+    const actionCounts = {};
+    (actionData || []).forEach(r => {
+      actionCounts[r.action] = (actionCounts[r.action] || 0) + 1;
+    });
+    const topActions = Object.entries(actionCounts)
+      .sort((a, b) => b[1] - a[1])
+      .slice(0, 10)
+      .map(([action, count]) => ({ action, count }));
+
+    // Signups over last 30 days — use activity_log signup actions
+    const thirtyDaysAgo = new Date(Date.now() - 30 * 24 * 60 * 60 * 1000).toISOString();
+    const { data: signupData } = await supabase
+      .from('activity_log')
+      .select('created_at')
+      .eq('action', 'signup')
+      .gte('created_at', thirtyDaysAgo)
+      .order('created_at', { ascending: true });
+
+    const signupsByDay = {};
+    (signupData || []).forEach(r => {
+      const day = r.created_at.slice(0, 10);
+      signupsByDay[day] = (signupsByDay[day] || 0) + 1;
+    });
+    // Build last 30 days array
+    const signupsChart = [];
+    for (let i = 29; i >= 0; i--) {
+      const d = new Date(Date.now() - i * 24 * 60 * 60 * 1000);
+      const day = d.toISOString().slice(0, 10);
+      signupsChart.push({ date: day, count: signupsByDay[day] || 0 });
+    }
+
+    // Peak hours from activity_log
+    const { data: hourData } = await supabase
+      .from('activity_log')
+      .select('created_at')
+      .limit(5000);
+
+    const hourCounts = new Array(24).fill(0);
+    (hourData || []).forEach(r => {
+      const h = new Date(r.created_at).getUTCHours();
+      hourCounts[h]++;
+    });
+    const peakHours = hourCounts.map((count, hour) => ({ hour, count }));
+
+    res.json({
+      active_users: { daily: dailyActive || 0, weekly: weeklyActive || 0 },
+      page_views: totalPageViews || 0,
+      top_actions: topActions,
+      signups_chart: signupsChart,
+      peak_hours: peakHours,
+    });
+  } catch (err) {
+    console.error('[Admin] /analytics error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/export/users ───────────────────────────────────────────────
+router.get('/export/users', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { data: usersData, error } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+    if (error) throw error;
+
+    const { data: profiles } = await supabase.from('user_profiles').select('user_id, tier');
+    const tierMap = {};
+    (profiles || []).forEach(p => { tierMap[p.user_id] = p.tier; });
+
+    const users = usersData.users.map(u => ({
+      id: u.id, email: u.email, tier: tierMap[u.id] || 'free',
+      created_at: u.created_at, last_sign_in: u.last_sign_in_at || '',
+      email_verified: u.email_confirmed_at ? 'yes' : 'no',
+    }));
+
+    const headers = ['id', 'email', 'tier', 'created_at', 'last_sign_in', 'email_verified'];
+    const rows = users.map(u => headers.map(h => `"${String(u[h] || '').replace(/"/g, '""')}"`).join(','));
+    const csv = [headers.join(','), ...rows].join('\n');
+
+    const today = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=tradvue-users-${today}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error('[Admin] /export/users error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/export/feedback ───────────────────────────────────────────
+router.get('/export/feedback', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { data, error } = await supabase.from('feedback').select('*').order('created_at', { ascending: false });
+    if (error) throw error;
+
+    const headers = ['id', 'type', 'status', 'message', 'email', 'page_url', 'created_at'];
+    const rows = (data || []).map(f =>
+      headers.map(h => `"${String(f[h] || '').replace(/"/g, '""')}"`).join(',')
+    );
+    const csv = [headers.join(','), ...rows].join('\n');
+
+    const today = new Date().toISOString().slice(0, 10);
+    res.setHeader('Content-Type', 'text/csv');
+    res.setHeader('Content-Disposition', `attachment; filename=tradvue-feedback-${today}.csv`);
+    res.send(csv);
+  } catch (err) {
+    console.error('[Admin] /export/feedback error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/email/history ─────────────────────────────────────────────
+router.get('/email/history', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { data, error } = await supabase.from('sent_emails').select('*').order('created_at', { ascending: false }).limit(100);
+    if (error) throw error;
+    res.json({ emails: data || [], total: data?.length || 0 });
+  } catch (err) {
+    console.error('[Admin] /email/history error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/admin/email/send ───────────────────────────────────────────────
+router.post('/email/send', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { to, subject, body } = req.body;
+
+    if (!to || !subject || !body) {
+      return res.status(400).json({ error: 'to, subject, and body are required' });
+    }
+
+    // Resolve recipients
+    let toAddresses = [];
+    let toSegment = typeof to === 'string' ? to : 'custom';
+
+    if (to === 'all' || to === 'free' || to === 'pro') {
+      const { data: usersData } = await supabase.auth.admin.listUsers({ perPage: 1000 });
+      let users = usersData?.users || [];
+      if (to !== 'all') {
+        const { data: profiles } = await supabase.from('user_profiles').select('user_id, tier');
+        const tierMap = {};
+        (profiles || []).forEach(p => { tierMap[p.user_id] = p.tier; });
+        users = users.filter(u => (tierMap[u.id] || 'free') === to);
+      }
+      toAddresses = users.map(u => u.email).filter(Boolean);
+    } else if (Array.isArray(to)) {
+      toAddresses = to;
+      toSegment = 'custom';
+    } else {
+      toAddresses = [to];
+      toSegment = 'custom';
+    }
+
+    let status = 'queued';
+    let sentCount = 0;
+
+    // Try Resend if API key is configured — send individually so recipients can't see each other
+    if (process.env.RESEND_API_KEY /* [REDACTED] */ && toAddresses.length > 0) {
+      try {
+        for (let idx = 0; idx < toAddresses.length; idx++) {
+          if (idx > 0) await new Promise(r => setTimeout(r, 600)); // Resend rate limit: 2/sec
+          const addr = toAddresses[idx];
+          try {
+            const response = await fetch('https://api.resend.com/emails', {
+              method: 'POST',
+              headers: {
+                'Authorization': `Bearer ${process.env.RESEND_API_KEY /* [REDACTED] */}`,
+                'Content-Type': 'application/json',
+              },
+              body: JSON.stringify({
+                from: 'TradVue <noreply@tradvue.com>',
+                to: [addr],
+                subject,
+                html: body.replace(/\n/g, '<br>'),
+                text: body,
+              }),
+            });
+            if (response.ok) {
+              sentCount++;
+              console.log(`[Admin] Email sent to ${addr}: OK`);
+            } else {
+              const errBody = await response.text();
+              console.error(`[Admin] Resend FAILED for ${addr}: ${response.status} — ${errBody}`);
+            }
+          } catch (e) {
+            console.error(`[Admin] Resend exception for ${addr}:`, e.message);
+          }
+        }
+        status = sentCount > 0 ? 'sent' : 'failed';
+      } catch (e) {
+        console.warn('[Admin] Resend batch error:', e.message);
+        status = 'failed';
+      }
+    } else {
+      sentCount = toAddresses.length;
+      status = process.env.RESEND_API_KEY /* [REDACTED] */ ? 'sent' : 'queued';
+    }
+
+    const { error: dbErr } = await supabase.from('sent_emails').insert({
+      to_segment: toSegment,
+      to_addresses: toAddresses,
+      subject,
+      body,
+      sent_count: sentCount,
+      status,
+      sent_by: req.user.email,
+    });
+    if (dbErr) console.warn('[Admin] sent_emails insert error:', dbErr.message);
+
+    res.json({ success: true, status, sent_count: sentCount, total_recipients: toAddresses.length });
+  } catch (err) {
+    console.error('[Admin] /email/send error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/announcements ─────────────────────────────────────────────
+router.get('/announcements', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('*')
+      .order('created_at', { ascending: false })
+      .limit(10);
+    if (error) throw error;
+    res.json({ announcements: data || [] });
+  } catch (err) {
+    console.error('[Admin] GET /announcements error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── POST /api/admin/announcements ────────────────────────────────────────────
+router.post('/announcements', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { message, type = 'info', active = true, expiresAt } = req.body;
+
+    if (!message) return res.status(400).json({ error: 'message is required' });
+    if (!['info', 'warning', 'success'].includes(type)) {
+      return res.status(400).json({ error: 'type must be info, warning, or success' });
+    }
+
+    // Deactivate previous announcements
+    await supabase.from('announcements').update({ active: false }).eq('active', true);
+
+    const { data, error } = await supabase.from('announcements').insert({
+      message, type, active,
+      expires_at: expiresAt || null,
+      created_by: req.user.email,
+    }).select().single();
+
+    if (error) throw error;
+    res.json({ announcement: data });
+  } catch (err) {
+    console.error('[Admin] POST /announcements error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE /api/admin/announcements ──────────────────────────────────────────
+router.delete('/announcements', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { error } = await supabase.from('announcements').update({ active: false }).eq('active', true);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin] DELETE /announcements error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/abuse ──────────────────────────────────────────────────────
+router.get('/abuse', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    // Top IPs last 24h
+    const { data: recentActivity } = await supabase
+      .from('activity_log')
+      .select('ip_address, action, created_at')
+      .gte('created_at', since24h)
+      .not('ip_address', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    const ipMap = {};
+    (recentActivity || []).forEach(r => {
+      if (!r.ip_address) return;
+      if (!ipMap[r.ip_address]) {
+        ipMap[r.ip_address] = { ip: r.ip_address, count: 0, last_action: r.action, last_seen: r.created_at };
+      }
+      ipMap[r.ip_address].count++;
+    });
+    const topIPs = Object.values(ipMap)
+      .sort((a, b) => b.count - a.count)
+      .slice(0, 50);
+
+    // Failed login attempts (all time, most recent first)
+    const { data: failedLogins } = await supabase
+      .from('activity_log')
+      .select('email, ip_address, created_at, details')
+      .eq('action', 'login_failed')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    res.json({
+      top_ips: topIPs,
+      failed_logins: failedLogins || [],
+      high_traffic_threshold: 100,
+    });
+  } catch (err) {
+    console.error('[Admin] /abuse error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/health ─────────────────────────────────────────────────────
+router.get('/health', async (req, res) => {
+  const startTime = Date.now();
+  let dbStatus = 'ok';
+  let dbLatencyMs = null;
+  try {
+    const supabase = getAdminClient();
+    const t0 = Date.now();
+    const { error } = await supabase.from('feedback').select('id').limit(1);
+    dbLatencyMs = Date.now() - t0;
+    if (error) dbStatus = 'error';
+  } catch (e) {
+    dbStatus = 'error';
+  }
+
+  res.json({
+    api: {
+      status: 'ok', uptime: process.uptime(),
+      uptimeFormatted: formatUptime(process.uptime()),
+      responseMs: Date.now() - startTime,
+      nodeVersion: process.version,
+      env: process.env.NODE_ENV || 'development',
+    },
+    database: {
+      status: dbStatus, latencyMs: dbLatencyMs,
+      provider: 'supabase',
+      url: process.env.SUPABASE_URL ? process.env.SUPABASE_URL.replace(/https?:\/\//, '').split('.')[0] + '.supabase.co' : 'unknown',
+    },
+    deploy: {
+      lastDeploy: process.env.LAST_DEPLOY || new Date().toISOString(),
+      version: process.env.APP_VERSION || '1.0.0',
+      renderService: process.env.RENDER_SERVICE_NAME || 'tradvue-api',
+    },
+  });
+});
+
+function formatUptime(seconds) {
+  const d = Math.floor(seconds / 86400);
+  const h = Math.floor((seconds % 86400) / 3600);
+  const m = Math.floor((seconds % 3600) / 60);
+  if (d > 0) return `${d}d ${h}h ${m}m`;
+  if (h > 0) return `${h}h ${m}m`;
+  return `${m}m`;
+}
+
+module.exports = router;
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: backend/routes/aggregatedNews.js
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Aggregated News Routes (RSS + NewsAPI backed)
+ * 
+ * GET /api/feed/news                     - Aggregated feed from all RSS sources
+ * GET /api/feed/news/symbol/:symbol      - Symbol-specific news
+ * GET /api/feed/news/sentiment/:symbol   - Sentiment analysis for symbol
+ * GET /api/feed/news/categories          - Available news categories
+ */
+
+const express = require('express');
+const router = express.Router();
+const rssFeedAggregator = require('../services/rssFeedAggregator');
+
+// GET /api/feed/news?limit=30&category=crypto&minImpact=4
+router.get('/', async (req, res) => {
+  try {
+    const { limit = 30, category, minImpact = 0 } = req.query;
+
+    const articles = await rssFeedAggregator.getAggregatedNews({
+      limit: Math.min(parseInt(limit) || 30, 100),
+      category: category || null,
+      minImpact: parseFloat(minImpact) || 0
+    });
+
+    res.json({
+      success: true,
+      count: articles.length,
+      data: articles,
+      sources: [...new Set(articles.map(a => a.source))],
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Feed] /news error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch news feed' });
+  }
+});
+
+// GET /api/feed/news/categories
+router.get('/categories', (req, res) => {
+  res.json({
+    success: true,
+    categories: ['business', 'markets', 'crypto', 'forex', 'economy', 'stocks', 'general']
+  });
+});
+
+// GET /api/feed/news/symbol/:symbol?limit=15
+router.get('/symbol/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const { limit = 15 } = req.query;
+
+    const articles = await rssFeedAggregator.getNewsBySymbol(symbol, {
+      limit: Math.min(parseInt(limit) || 15, 50)
+    });
+
+    res.json({
+      success: true,
+      symbol: symbol.toUpperCase(),
+      count: articles.length,
+      data: articles,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Feed] /news/symbol error:', error);
+    res.status(500).json({ success: false, error: 'Failed to fetch symbol news' });
+  }
+});
+
+// GET /api/feed/news/sentiment/:symbol
+router.get('/sentiment/:symbol', async (req, res) => {
+  try {
+    const { symbol } = req.params;
+    const sentiment = await rssFeedAggregator.getSymbolSentiment(symbol);
+
+    res.json({
+      success: true,
+      data: sentiment,
+      timestamp: new Date().toISOString()
+    });
+  } catch (error) {
+    console.error('[Feed] /news/sentiment error:', error);
+    res.status(500).json({ success: false, error: 'Failed to analyze sentiment' });
+  }
+});
+
+module.exports = router;
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: backend/routes/alerts.js
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Alerts Router
+ *
+ * GET  /api/alerts          - List recent market alerts
+ * GET  /api/alerts/count    - Unread HIGH-urgency count (for badge)
+ * GET  /api/alerts/live     - SSE stream for real-time alert push
+ * POST /api/alerts/subscribe - Upsert user alert preferences (auth required)
+ * GET  /api/alerts/subscription - Get user's current preferences (auth required)
+ * PATCH /api/alerts/read    - Mark alert IDs as read
+ */
+
+const express = require('express');
+const router = express.Router();
+const alertService = require('../services/alertService');
+const marketAlertsRouter = require('./marketAlerts');
+
+// ── Mount market-specific alert sub-routes ──────────────────────────────────
+// GET /api/alerts/market   — price-move alerts
+// GET /api/alerts/calendar — upcoming high-impact events
+router.use('/', marketAlertsRouter);
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Validation helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const VALID_CATEGORIES = ['POLITICAL', 'FED', 'ECONOMIC', 'EARNINGS', 'BREAKING'];
+const VALID_URGENCIES  = ['HIGH', 'MEDIUM', 'LOW'];
+
+function validateCategories(cats) {
+  if (!Array.isArray(cats)) return false;
+  return cats.every(c => VALID_CATEGORIES.includes(c));
+}
+
+function validateUrgencies(urgs) {
+  if (!Array.isArray(urgs)) return false;
+  return urgs.every(u => VALID_URGENCIES.includes(u));
+}
+
+// Simple auth guard — checks req.user (set by AuthContext middleware in server.js)
+function requireAuth(req, res, next) {
+  if (!req.user) {
+    return res.status(401).json({ success: false, error: 'Authentication required' });
+  }
+  next();
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/alerts
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/', async (req, res) => {
+  try {
+    const limit    = Math.min(parseInt(req.query.limit || '50', 10), 200);
+    const category = req.query.category?.toUpperCase() || null;
+    const urgency  = req.query.urgency?.toUpperCase()  || null;
+    const hours    = parseInt(req.query.hours || '24', 10);
+
+    if (category && !VALID_CATEGORIES.includes(category)) {
+      return res.status(400).json({ success: false, error: `Invalid category. Must be one of: ${VALID_CATEGORIES.join(', ')}` });
+    }
+
+    if (urgency && !VALID_URGENCIES.includes(urgency)) {
+      return res.status(400).json({ success: false, error: `Invalid urgency. Must be one of: ${VALID_URGENCIES.join(', ')}` });
+    }
+
+    const alerts = await alertService.getRecentAlerts({
+      limit,
+      category,
+      urgency,
+      offsetMinutes: hours * 60,
+    });
+
+    res.json({
+      success: true,
+      count: alerts.length,
+      data: alerts,
+      meta: { limit, category, urgency, hours },
+    });
+  } catch (err) {
+    console.error('[Alerts] GET / error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch alerts' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/alerts/count
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/count', async (req, res) => {
+  try {
+    const count = await alertService.getUnreadCount();
+    res.json({ success: true, count });
+  } catch (err) {
+    console.error('[Alerts] GET /count error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to get alert count' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/alerts/live  — Server-Sent Events
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/live', (req, res) => {
+  // SSE headers
+  res.setHeader('Content-Type', 'text/event-stream');
+  res.setHeader('Cache-Control', 'no-cache, no-transform');
+  res.setHeader('Connection', 'keep-alive');
+  res.setHeader('X-Accel-Buffering', 'no'); // Disable nginx buffering
+  res.flushHeaders();
+
+  // Register client
+  const clientId = alertService.registerSSEClient(res);
+
+  // Send initial heartbeat so client knows it's connected
+  res.write(`event: connected\ndata: ${JSON.stringify({
+    message: 'TradVue Alert Stream connected',
+    clientId,
+    timestamp: new Date().toISOString(),
+    connectedClients: alertService.getSSEClientCount(),
+  })}\n\n`);
+
+  // Heartbeat every 30s to prevent proxy timeouts
+  const heartbeat = setInterval(() => {
+    try {
+      res.write(`: heartbeat ${new Date().toISOString()}\n\n`);
+    } catch {
+      clearInterval(heartbeat);
+    }
+  }, 30_000);
+
+  req.on('close', () => {
+    clearInterval(heartbeat);
+  });
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// POST /api/alerts/subscribe
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.post('/subscribe', requireAuth, async (req, res) => {
+  try {
+    const {
+      categories,
+      urgencies,
+      sound_enabled,
+      email_enabled,
+      push_enabled,
+    } = req.body;
+
+    // Validate categories if provided
+    if (categories !== undefined && !validateCategories(categories)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid categories. Must be an array of: ${VALID_CATEGORIES.join(', ')}`,
+      });
+    }
+
+    // Validate urgencies if provided
+    if (urgencies !== undefined && !validateUrgencies(urgencies)) {
+      return res.status(400).json({
+        success: false,
+        error: `Invalid urgencies. Must be an array of: ${VALID_URGENCIES.join(', ')}`,
+      });
+    }
+
+    const subscription = await alertService.upsertSubscription(req.user.id, {
+      categories,
+      urgencies,
+      sound_enabled,
+      email_enabled,
+      push_enabled,
+    });
+
+    res.json({ success: true, data: subscription });
+  } catch (err) {
+    console.error('[Alerts] POST /subscribe error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to save subscription' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// GET /api/alerts/subscription
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.get('/subscription', requireAuth, async (req, res) => {
+  try {
+    const subscription = await alertService.getSubscription(req.user.id);
+    res.json({ success: true, data: subscription });
+  } catch (err) {
+    console.error('[Alerts] GET /subscription error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to get subscription' });
+  }
+});
+
+// ─────────────────────────────────────────────────────────────────────────────
+// PATCH /api/alerts/read
+// ─────────────────────────────────────────────────────────────────────────────
+
+router.patch('/read', async (req, res) => {
+  try {
+    const { ids } = req.body;
+
+    if (!ids || !Array.isArray(ids) || ids.length === 0) {
+      return res.status(400).json({ success: false, error: 'ids must be a non-empty array' });
+    }
+
+    await alertService.markAsRead(ids);
+    res.json({ success: true, marked: ids.length });
+  } catch (err) {
+    console.error('[Alerts] PATCH /read error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to mark alerts as read' });
+  }
+});
+
+module.exports = router;
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: backend/routes/announcements.js
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Public Announcements Route
+ * GET /api/announcements — returns the active announcement (if any)
+ */
+const express = require('express');
+const router = express.Router();
+const { createClient } = require('@supabase/supabase-js');
+
+function getClient() {
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_ANON_KEY /* [REDACTED] */;
+  if (!url || !key) return null;
+  return createClient(url, key, { auth: { autoRefreshToken: false, persistSession: false } });
+}
+
+// GET /api/announcements
+router.get('/', async (req, res) => {
+  try {
+    const supabase = getClient();
+    if (!supabase) return res.json({ announcement: null });
+
+    const now = new Date().toISOString();
+    const { data, error } = await supabase
+      .from('announcements')
+      .select('id, message, type, expires_at, created_at')
+      .eq('active', true)
+      .or(`expires_at.is.null,expires_at.gt.${now}`)
+      .order('created_at', { ascending: false })
+      .limit(1)
+      .single();
+
+    if (error && error.code !== 'PGRST116') throw error; // PGRST116 = no rows
+
+    res.json({ announcement: data || null });
+  } catch (err) {
+    console.error('[Announcements] GET error:', err);
+    res.json({ announcement: null }); // Never break public pages
+  }
+});
+
+module.exports = router;
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: backend/routes/auth.js
+// ═══════════════════════════════════════════════════════════════
+/**
+ * Auth Routes — Supabase Auth integration
+ *
+ * POST   /api/auth/signup    - Create account
+ * POST   /api/auth/login     - Sign in, returns session tokens
+ * POST   /api/auth/logout    - Invalidate session (requires auth)
+ * POST   /api/auth/refresh   - Refresh expired access token
+ * POST   /api/auth/forgot    - Send password reset email
+ * POST   /api/auth/reset     - Update password (requires valid reset token)
+ * GET    /api/auth/me        - Get current user profile (requires auth)
+ * PUT    /api/auth/me        - Update profile name/preferences (requires auth)
+ * DELETE /api/auth/me        - Delete account (requires auth)
+ *
+ * Auth is OPTIONAL for basic app use — this is only for cloud sync.
+ *
+ * Rate limiting:
+ *   signup/login: 5 attempts per 15 minutes (brute-force protection)
+ *   everything else: standard general limiter
+ */
+
+const express = require('express');
+const rateLimit = require('express-rate-limit');
+const router = express.Router();
+
+const authService = require('../services/authService');
+const { requireAuth } = require('../middleware/auth');
+const { logActivity, getIP } = require('../services/activityLogger');
+
+// ── Auth-specific rate limiter ─────────────────────────────────────────────
+// 5 attempts per 15 minutes per IP — tight enough to stop brute force
+const authLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000, // 15 minutes
+  max: 5,
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: {
+    error: 'Too many attempts',
+    message: 'Please wait 15 minutes before trying again',
+  },
+  skipSuccessfulRequests: true, // only count failures against the limit
+});
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+function sanitizeSession(session) {
+  if (!session) return null;
+  return {
+    access_token: session.access_token,
+    refresh_token: session.refresh_token,
+    expires_in: session.expires_in,
+    token_type: session.token_type,
+  };
+}
+
+function sanitizeUser(user) {
+  if (!user) return null;
+  return {
+    id: user.id,
+    email: user.email,
+    name: user.user_metadata?.name || null,
+    email_verified: user.email_confirmed_at !== null,
+    created_at: user.created_at,
+    tier: user.app_metadata?.tier || 'free',
+  };
+}
+
+const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+
+// ── POST /api/auth/signup ─────────────────────────────────────────────────────
+router.post('/signup', authLimiter, async (req, res) => {
+  // Guard: Supabase not configured (env vars missing on this deployment)
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY /* [REDACTED] */) {
+    return res.status(503).json({
+      error: 'Authentication service is not configured. Please try again later.',
+    });
+  }
+
+  try {
+    const { email: rawEmail, password, name } = req.body;
+
+    if (!rawEmail || !password) {
+      return res.status(400).json({ error: 'Email and password are required' });
+    }
+
+    const email = rawEmail.trim().toLowerCase();
+
+    if (!EMAIL_REGEX.test(email)) {
+      return res.status(400).json({ error: 'Invalid email format' });
+    }
+
+    if (password.length < 8) {
+      return res.status(400).json({ error: 'Password must be at least 8 characters' });
+    }
+
+    const metadata = {};
+    if (name) metadata.name = name.trim();
+
+    const { data, error } = await authService.signUp(email, password, metadata);
+
+    if (error) {
+      // Supabase returns "User already registered" for duplicates
+      if (error.message?.toLowerCase().includes('already registered') ||
+          error.message?.toLowerCase().includes('already exists')) {
+        return res.status(409).json({ error: 'An account with this email already exists' });
+      }
+      console.error('[Auth] Signup error:', error.message);
+      return res.status(400).json({ error: error.message });
+    }
+
+    // If email confirmation is required, session will be null
+    const needsConfirmation = !data.session;
+
+    // Create profile row for the new user
+    if (data.user) {
+      await authService.upsertProfile(data.user.id, { name, tier: 'free' }).catch(err => {
+        console.warn('[Auth] Profile creation failed (non-fatal):', err.message);
+      });
+    }
+
+    logActivity(data.user?.id, email, 'signup', { needs_confirmation: needsConfirmation }, getIP(req), req.headers['user-agent']);
+    res.status(201).json({
+      message: needsConfirmation
+        ? 'Account created. Please check your email to confirm your account.'
+        : 'Account created successfully',
+      session: sanitizeSession(data.session),
+      user: sanitizeUser(data.user),
+      needs_confirmation: needsConfirmation,
+    });
+  } catch (err) {
+    console.error('[Auth] Signup error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/auth/resend-verification ─────────────────────────────────────────
+router.post('/resend-verification', authLimiter, async (req, res) => {
+  if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY /* [REDACTED] */) {
+    return res.status(503).json({ error: 'Authentication service is not configured.' });
+  }
+  const { email } = req.body;
+  if (!email) return res.status(400).json({ error: 'Email is required' });
+
+  try {
+    const { createClient } = require('@supabase/supabase-js');
+    const supabase = createClient(process.env.SUPABASE_URL, process.env.SUPABASE_ANON_KEY /* [REDACTED] */, {
+      auth: { autoRefreshToken: false, persistSession: false }
+
+
+╔═══════════════════════════════════════════════════════════════════╗
+║  SECTION 2: LAST 25 PAGES OF SOURCE CODE                        ║
+╚═══════════════════════════════════════════════════════════════════╝
+
+========================================
+TradVue — Trading Analytics Platform
+Copyright © 2026 Apex Logics LLC
+All Rights Reserved
+========================================
+
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: frontend/app/utils/tierAccess.ts
+// ═══════════════════════════════════════════════════════════════
+/**
+ * tierAccess.ts — Free tier, trial, and paywall logic for TradVue
+ *
+ * Three-tier model:
+ *   demo  — Unauthenticated. Sample data only. No interactive features.
+ *   free  — Logged in. 3-week full trial → restricted after trial.
+ *           Post-trial: 30-day view window, limited CSV, no auto-sync.
+ *   paid  — $24/mo. Everything unlimited.
+ *
+ * Data is NEVER deleted. Free tier restricts VIEW, not storage.
+ */
+
+import { AuthUser } from '../lib/api'
+
+// ── Types ─────────────────────────────────────────────────────────────────────
+
+export type UserTier = 'demo' | 'free' | 'paid'
+
+export type GatedFeature =
+  | 'csv-import'
+  | 'csv-export'
+  | 'auto-sync'
+  | 'unlimited-history'
+  | 'advanced-reports'
+  | 'full-journal'
+  | 'full-portfolio'
+
+// ── Constants ─────────────────────────────────────────────────────────────────
+
+export const TRIAL_DAYS = 21          // 3 weeks from signup
+export const VIEW_WINDOW_DAYS = 30    // free tier post-trial view window
+export const MONTHLY_PRICE = 24       // $/mo
+export const ANNUAL_PRICE = 16.80     // $/mo billed annually
+
+// ── Core tier resolution ──────────────────────────────────────────────────────
+
+/**
+ * Returns the user's effective tier.
+ *   null user  → 'demo'
+ *   user.tier === 'pro'  → 'paid'
+ *   otherwise  → 'free'
+ */
+export function getUserTier(user: AuthUser | null): UserTier {
+  if (!user) return 'demo'
+  if (user.tier === 'pro') return 'paid'
+  return 'free'
+}
+
+// ── Trial logic ───────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the user is within the 3-week free trial window.
+ * Trial starts from user.created_at (Supabase signup timestamp).
+ */
+export function isTrialActive(user: AuthUser | null): boolean {
+  if (!user) return false
+  if (getUserTier(user) === 'paid') return false
+
+  const signupDate = new Date(user.created_at)
+  const now = new Date()
+  const diffDays = (now.getTime() - signupDate.getTime()) / (1000 * 60 * 60 * 24)
+  return diffDays < TRIAL_DAYS
+}
+
+/**
+ * Returns days remaining in trial (0 if expired or not applicable).
+ */
+export function getTrialDaysRemaining(user: AuthUser | null): number {
+  if (!user) return 0
+  if (getUserTier(user) === 'paid') return 0
+
+  const signupDate = new Date(user.created_at)
+  const now = new Date()
+  const diffDays = (now.getTime() - signupDate.getTime()) / (1000 * 60 * 60 * 24)
+  const remaining = TRIAL_DAYS - diffDays
+  return Math.max(0, Math.ceil(remaining))
+}
+
+// ── Feature gating ────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if the user can fully access a given feature.
+ *
+ * Gating matrix:
+ *   demo          → nothing (redirect to sign up)
+ *   free (trial)  → everything
+ *   free (post)   → csv-import/export limited to 30d; no auto-sync, history, advanced
+ *   paid          → everything
+ */
+export function canAccessFeature(user: AuthUser | null, feature: GatedFeature): boolean {
+  const tier = getUserTier(user)
+
+  if (tier === 'demo') return false
+  if (tier === 'paid') return true
+
+  // Free tier — full access during trial
+  if (isTrialActive(user)) return true
+
+  // Free tier post-trial
+  switch (feature) {
+    case 'csv-import':
+    case 'csv-export':
+      // Allowed but limited to VIEW_WINDOW_DAYS — enforced at data layer
+      return true
+    case 'auto-sync':
+    case 'unlimited-history':
+    case 'advanced-reports':
+    case 'full-journal':
+    case 'full-portfolio':
+      return false
+    default:
+      return true
+  }
+}
+
+// ── Data locking ──────────────────────────────────────────────────────────────
+
+/**
+ * Returns true if a given entry date is beyond the 30-day view window
+ * for a free-tier post-trial user.
+ *
+ * IMPORTANT: Data is NEVER deleted. Only the view is restricted.
+ */
+export function isDataLocked(user: AuthUser | null, entryDate: string | Date): boolean {
+  const tier = getUserTier(user)
+
+  if (tier === 'demo') return false   // demo shows sample data (never "locked")
+  if (tier === 'paid') return false   // paid = fully unlocked
+
+  // Free trial: no lock
+  if (isTrialActive(user)) return false
+
+  // Free post-trial: lock entries older than VIEW_WINDOW_DAYS
+  const date = typeof entryDate === 'string' ? new Date(entryDate + 'T12:00:00') : entryDate
+  const now = new Date()
+  const diffDays = (now.getTime() - date.getTime()) / (1000 * 60 * 60 * 24)
+  return diffDays > VIEW_WINDOW_DAYS
+}
+
+// ── CSV date filter ────────────────────────────────────────────────────────────
+
+/**
+ * Returns a Date cutoff for CSV import — rows before this date are filtered out.
+ * Returns null if no limit (paid or trial users).
+ */
+export function getCsvDateLimit(user: AuthUser | null): Date | null {
+  const tier = getUserTier(user)
+  if (tier === 'paid') return null
+  if (isTrialActive(user)) return null
+
+  // Free post-trial: last VIEW_WINDOW_DAYS only
+  const limit = new Date()
+  limit.setDate(limit.getDate() - VIEW_WINDOW_DAYS)
+  return limit
+}
+
+// ── Locked entry count helper ─────────────────────────────────────────────────
+
+/**
+ * Returns the number of entries that are locked for this user.
+ * Used for the conversion copy: "Your 847 trades are waiting."
+ */
+export function getLockedEntryCount(user: AuthUser | null, dates: string[]): number {
+  if (!dates.length) return 0
+  return dates.filter(d => isDataLocked(user, d)).length
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: frontend/app/utils/formatting.ts
+// ═══════════════════════════════════════════════════════════════
+import { formatEventTime, formatEventDate } from '../lib/timezone'
+
+/** Format a price number to a locale string with `dec` decimal places. */
+export function fmt(price: number | null | undefined, dec = 2): string {
+  if (price == null || isNaN(price)) return '—'
+  return price.toLocaleString('en-US', { minimumFractionDigits: dec, maximumFractionDigits: dec })
+}
+
+/** Format a percentage with sign prefix. */
+export function fmtPct(pct: number | null | undefined): string {
+  if (pct == null || isNaN(pct)) return '—'
+  return `${pct >= 0 ? '+' : ''}${pct.toFixed(2)}%`
+}
+
+/** Format a market-cap value as T/B/M suffix. */
+export function fmtMarketCap(val: number | null): string {
+  if (!val) return '—'
+  if (val >= 1e12) return `$${(val / 1e12).toFixed(2)}T`
+  if (val >= 1e9)  return `$${(val / 1e9).toFixed(2)}B`
+  if (val >= 1e6)  return `$${(val / 1e6).toFixed(2)}M`
+  return `$${val.toLocaleString()}`
+}
+
+/** Format a timestamp as a human-readable "time ago" string. */
+export function fmtTime(dateStr: string): string {
+  try {
+    const diff = Date.now() - new Date(dateStr).getTime()
+    const m = Math.floor(diff / 60_000)
+    if (m < 1) return 'now'
+    if (m < 60) return `${m}m`
+    const h = Math.floor(m / 60)
+    if (h < 24) return `${h}h`
+    return `${Math.floor(h / 24)}d`
+  } catch { return '' }
+}
+
+/** Format a calendar event time string. */
+export function fmtEventTime(dateStr: string): string {
+  return formatEventTime(dateStr) || dateStr
+}
+
+/** Format a calendar event date string. */
+export function fmtEventDate(dateStr: string): string {
+  return formatEventDate(dateStr) || dateStr
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: frontend/app/utils/cloudSync.ts
+// ═══════════════════════════════════════════════════════════════
+/**
+ * cloudSync.ts — localStorage ↔ cloud sync utility for TradVue
+ *
+ * Only activates when user is logged in (token in localStorage).
+ * Fails silently — localStorage-only flow always works.
+ */
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://tradvue-api.onrender.com'
+
+// ── Sync status (module-level, subscribable) ──────────────────────────────────
+
+export type SyncStatus = 'idle' | 'syncing' | 'synced' | 'error' | 'local-only'
+
+let _status: SyncStatus = 'idle'
+const _listeners = new Set<(s: SyncStatus) => void>()
+
+function setStatus(s: SyncStatus) {
+  _status = s
+  _listeners.forEach(fn => fn(s))
+}
+
+export function getSyncStatus(): SyncStatus {
+  return _status
+}
+
+export function subscribeSyncStatus(fn: (s: SyncStatus) => void): () => void {
+  _listeners.add(fn)
+  return () => _listeners.delete(fn)
+}
+
+// ── Helpers ───────────────────────────────────────────────────────────────────
+
+function getToken(): string | null {
+  try { return localStorage.getItem('cg_token') } catch { return null }
+}
+
+function authHeaders(token: string): Record<string, string> {
+  return {
+    'Content-Type': 'application/json',
+    Authorization: `Bearer ${token}`,
+  }
+}
+
+function lsGet<T>(key: string, fallback: T): T {
+  try {
+    const raw = localStorage.getItem(key)
+    return raw ? (JSON.parse(raw) as T) : fallback
+  } catch {
+    return fallback
+  }
+}
+
+function lsSet<T>(key: string, val: T): void {
+  try { localStorage.setItem(key, JSON.stringify(val)) } catch {}
+}
+
+// ── Journal keys (matching journal/page.tsx) ──────────────────────────────────
+
+const TRADES_KEY = 'cg_journal_trades'
+const NOTES_KEY  = 'cg_journal_notes'
+
+// ── Settings key ──────────────────────────────────────────────────────────────
+
+const SETTINGS_KEY = 'cg_settings'
+
+// ── Cloud API calls ───────────────────────────────────────────────────────────
+
+async function cloudGet<T>(token: string, type: string): Promise<T | null> {
+  try {
+    const res = await fetch(`${API_BASE}/api/user/data/${type}`, {
+      headers: authHeaders(token),
+    })
+    if (!res.ok) return null
+    const json = await res.json()
+    // Backend returns { type, data: <JSONB>, updated_at }
+    // The JSONB column may itself be { data: ... } if cloudPut wrapped it.
+    // Unwrap both layers to get the actual payload.
+    let payload = json.data ?? json[type] ?? json
+    // If payload is { data: <actual> }, unwrap the inner layer
+    if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+      payload = payload.data
+    }
+    return payload as T
+  } catch {
+    return null
+  }
+}
+
+async function cloudPut(token: string, type: string, data: unknown): Promise<boolean> {
+  try {
+    const res = await fetch(`${API_BASE}/api/user/data/${type}`, {
+      method: 'PUT',
+      headers: authHeaders(token),
+      body: JSON.stringify({ data }),
+    })
+    return res.ok
+  } catch {
+    return false
+  }
+}
+
+// ── Merge logic ───────────────────────────────────────────────────────────────
+
+/**
+ * Merge two arrays using entry count as the "more complete" heuristic.
+ * If both non-empty, pick the larger one.
+ * Cloud sync is ADDITIVE — never lose local data.
+ */
+function mergeArrays<T>(local: T[], cloud: T[]): T[] {
+  if (!local.length && !cloud.length) return []
+  if (!local.length) return cloud  // local empty → use cloud
+  if (!cloud.length) return local  // cloud empty → keep local (additive!)
+  // Both have data — use whichever has more entries (more complete)
+  return cloud.length > local.length ? cloud : local
+}
+
+// ── Journal sync ──────────────────────────────────────────────────────────────
+
+interface CloudJournalData {
+  trades?: unknown[]
+  notes?: unknown[]
+}
+
+/**
+ * Initial sync on login/app load.
+ * Fetches cloud journal and merges with localStorage.
+ */
+export async function initJournalSync(token: string): Promise<void> {
+  setStatus('syncing')
+  try {
+    const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
+
+    const localTrades = lsGet<unknown[]>(TRADES_KEY, [])
+    const localNotes  = lsGet<unknown[]>(NOTES_KEY,  [])
+    const cloudTrades = cloudData?.trades ?? []
+    const cloudNotes  = cloudData?.notes  ?? []
+
+    const mergedTrades = mergeArrays(localTrades, cloudTrades)
+    const mergedNotes  = mergeArrays(localNotes,  cloudNotes)
+
+    // Save merged to localStorage
+    lsSet(TRADES_KEY, mergedTrades)
+    lsSet(NOTES_KEY,  mergedNotes)
+
+    // If local had data the cloud didn't, push up
+    const needsCloudUpdate =
+      mergedTrades.length !== cloudTrades.length ||
+      mergedNotes.length  !== cloudNotes.length
+
+    if (needsCloudUpdate) {
+      await cloudPut(token, 'journal', { trades: mergedTrades, notes: mergedNotes })
+    }
+
+    setStatus('synced')
+  } catch {
+    setStatus('error')
+  }
+}
+
+/**
+ * Save journal data to cloud (call after every mutation).
+ * Debounced — fires 5 seconds after the last call.
+ */
+let _journalTimer: ReturnType<typeof setTimeout> | null = null
+
+export function debouncedSyncJournal(trades: unknown[], notes: unknown[]): void {
+  const token = getToken()
+  if (!token) {
+    setStatus('local-only')
+    return
+  }
+  if (_journalTimer) clearTimeout(_journalTimer)
+  setStatus('syncing')
+  _journalTimer = setTimeout(async () => {
+    _journalTimer = null
+    const ok = await cloudPut(token, 'journal', { trades, notes })
+    setStatus(ok ? 'synced' : 'error')
+  }, 5000)
+}
+
+// ── Settings sync ─────────────────────────────────────────────────────────────
+
+/**
+ * Initial sync for settings on login.
+ */
+export async function initSettingsSync(token: string): Promise<void> {
+  try {
+    const cloudSettings = await cloudGet<Record<string, unknown>>(token, 'settings')
+    const localSettings = lsGet<Record<string, unknown>>(SETTINGS_KEY, {})
+
+    if (cloudSettings && Object.keys(cloudSettings).length > 0 && Object.keys(localSettings).length === 0) {
+      // Cloud has settings, local is empty → populate local
+      lsSet(SETTINGS_KEY, cloudSettings)
+    } else if (Object.keys(localSettings).length > 0 && (!cloudSettings || Object.keys(cloudSettings).length === 0)) {
+      // Local has settings, cloud is empty → push to cloud
+      await cloudPut(token, 'settings', localSettings)
+    }
+    // Both have settings → keep local (user's current preferences win)
+  } catch {
+    // Fail silently
+  }
+}
+
+let _settingsTimer: ReturnType<typeof setTimeout> | null = null
+
+export function debouncedSyncSettings(settings: Record<string, unknown>): void {
+  const token = getToken()
+  if (!token) return
+  if (_settingsTimer) clearTimeout(_settingsTimer)
+  _settingsTimer = setTimeout(async () => {
+    _settingsTimer = null
+    await cloudPut(token, 'settings', settings)
+  }, 5000)
+}
+
+// ── Portfolio sync ────────────────────────────────────────────────────────────
+
+const PORTFOLIO_KEY = 'cg_portfolio_holdings'
+
+/**
+ * Initial sync for portfolio holdings on login/app load.
+ * Merges cloud holdings with localStorage holdings.
+ */
+export async function initPortfolioSync(token: string): Promise<void> {
+  try {
+    const cloudHoldings = await cloudGet<unknown[]>(token, 'portfolio')
+    const localHoldings = lsGet<unknown[]>(PORTFOLIO_KEY, [])
+    const cloud = Array.isArray(cloudHoldings) ? cloudHoldings : []
+
+    const merged = mergeArrays(localHoldings, cloud)
+    lsSet(PORTFOLIO_KEY, merged)
+
+    if (merged.length !== cloud.length) {
+      await cloudPut(token, 'portfolio', merged)
+    }
+  } catch {
+    // Fail silently — localStorage-only flow always works
+  }
+}
+
+let _portfolioTimer: ReturnType<typeof setTimeout> | null = null
+
+export function debouncedSyncPortfolio(holdings: unknown[]): void {
+  const token = getToken()
+  if (!token || !holdings.length) return  // Never push empty arrays to cloud
+  if (_portfolioTimer) clearTimeout(_portfolioTimer)
+  _portfolioTimer = setTimeout(async () => {
+    _portfolioTimer = null
+    await cloudPut(token, 'portfolio', holdings)
+  }, 5000)
+}
+
+// ── Watchlist sync ────────────────────────────────────────────────────────────
+
+const WATCHLIST_KEY = 'cg_wl'
+
+/**
+ * Initial sync for watchlist on login/app load.
+ * Merges cloud watchlist with localStorage watchlist.
+ */
+export async function initWatchlistSync(token: string): Promise<void> {
+  try {
+    const cloudWatchlist = await cloudGet<unknown[]>(token, 'watchlist')
+    const localWatchlist = lsGet<unknown[]>(WATCHLIST_KEY, [])
+    const cloud = Array.isArray(cloudWatchlist) ? cloudWatchlist : []
+
+    const merged = mergeArrays(localWatchlist, cloud)
+    lsSet(WATCHLIST_KEY, merged)
+
+    if (merged.length !== cloud.length) {
+      await cloudPut(token, 'watchlist', merged)
+    }
+  } catch {
+    // Fail silently — localStorage-only flow always works
+  }
+}
+
+let _watchlistTimer: ReturnType<typeof setTimeout> | null = null
+
+export function debouncedSyncWatchlist(tickers: unknown[]): void {
+  const token = getToken()
+  if (!token) return
+  if (_watchlistTimer) clearTimeout(_watchlistTimer)
+  _watchlistTimer = setTimeout(async () => {
+    _watchlistTimer = null
+    await cloudPut(token, 'watchlist', tickers)
+  }, 5000)
+}
+
+// ── Full initial sync (journal + settings + portfolio + watchlist) ─────────────
+
+export async function initFullSync(token: string): Promise<void> {
+  if (!token) {
+    setStatus('local-only')
+    return
+  }
+  // Run all 4 syncs in parallel
+  await Promise.all([
+    initJournalSync(token),
+    initSettingsSync(token),
+    initPortfolioSync(token),
+    initWatchlistSync(token),
+  ])
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: frontend/app/utils/analytics.ts
+// ═══════════════════════════════════════════════════════════════
+/**
+ * TradVue GA4 Analytics Utility
+ * Lightweight, privacy-first analytics tracking.
+ *
+ * All tracking is gated behind user consent (localStorage flag: cg_analytics_consent).
+ * No data is sent without consent.
+ */
+
+// ─── Consent ────────────────────────────────────────────────────────────────
+
+const CONSENT_KEY = 'cg_analytics_consent'
+
+/**
+ * Returns true if the user has given analytics consent.
+ * Defaults to false (opt-in model).
+ */
+export function hasAnalyticsConsent(): boolean {
+  if (typeof window === 'undefined') return false
+  try {
+    return localStorage.getItem(CONSENT_KEY) === 'true'
+  } catch {
+    return false
+  }
+}
+
+/** Grant analytics consent */
+export function grantAnalyticsConsent(): void {
+  try {
+    localStorage.setItem(CONSENT_KEY, 'true')
+  } catch {}
+}
+
+/** Revoke analytics consent */
+export function revokeAnalyticsConsent(): void {
+  try {
+    localStorage.setItem(CONSENT_KEY, 'false')
+  } catch {}
+}
+
+// ─── Core gtag wrapper ───────────────────────────────────────────────────────
+
+type GtagCommand = 'config' | 'event' | 'js' | 'set'
+
+function gtag(command: GtagCommand, target: string | Date, params?: Record<string, unknown>): void {
+  if (typeof window === 'undefined') return
+  // eslint-disable-next-line @typescript-eslint/no-explicit-any
+  const w = window as any
+  if (typeof w.gtag !== 'function') return
+  if (params !== undefined) {
+    w.gtag(command, target, params)
+  } else {
+    w.gtag(command, target)
+  }
+}
+
+// ─── Core tracking functions ─────────────────────────────────────────────────
+
+/**
+ * Track a custom GA4 event.
+ * No-op if user hasn't consented or GA4 isn't loaded.
+ */
+export function trackEvent(eventName: string, parameters: Record<string, unknown> = {}): void {
+  if (!hasAnalyticsConsent()) return
+  gtag('event', eventName, parameters)
+}
+
+/**
+ * Track a page view. Call this on route changes.
+ * GA4 auto-tracks the initial load; this is for SPA navigation.
+ */
+export function trackPageView(pagePath?: string): void {
+  if (!hasAnalyticsConsent()) return
+  const gaId = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID || process.env.NEXT_PUBLIC_GA_ID
+  if (!gaId) return
+  gtag('config', gaId, {
+    page_path: pagePath ?? (typeof window !== 'undefined' ? window.location.pathname : undefined),
+  })
+}
+
+// ─── Product-specific tracking events ────────────────────────────────────────
+
+/** Track signup form submission */
+export function trackSignup(plan: string = 'free'): void {
+  trackEvent('sign_up', {
+    method: 'email',
+    plan_selected: plan,
+    timestamp: new Date().toISOString(),
+  })
+}
+
+/** Track login */
+export function trackLogin(): void {
+  trackEvent('login', {
+    method: 'email',
+  })
+}
+
+/** Track logout */
+export function trackLogout(): void {
+  trackEvent('logout', {})
+}
+
+/** Track a symbol added to watchlist */
+export function trackWatchlistAdd(symbol: string): void {
+  trackEvent('watchlist_add', {
+    symbol,
+    asset_type: 'stock',
+  })
+}
+
+/** Track a symbol removed from watchlist */
+export function trackWatchlistRemove(symbol: string): void {
+  trackEvent('watchlist_remove', {
+    symbol,
+  })
+}
+
+/** Track an alert being created */
+export function trackAlertCreated(params: {
+  alertType?: string
+  symbol?: string
+  condition?: string
+}): void {
+  trackEvent('alert_create', {
+    alert_type: params.alertType ?? 'price',
+    symbol: params.symbol ?? 'unknown',
+    alert_condition: params.condition ?? 'unknown',
+  })
+}
+
+/** Track a stock search performed */
+export function trackStockSearch(query: string): void {
+  trackEvent('stock_search', {
+    search_term: query,
+  })
+}
+
+/** Track a settings change */
+export function trackSettingsChanged(settingName: string, newValue: string): void {
+  trackEvent('settings_changed', {
+    setting_name: settingName,
+    new_value: newValue,
+  })
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: frontend/app/types/index.ts
+// ═══════════════════════════════════════════════════════════════
+// ─── Shared types used across HomeClient components ───────────────────────────
+
+export interface Quote {
+  symbol: string
+  current: number
+  change: number
+  changePct: number
+  high: number
+  low: number
+  open: number
+  prevClose: number
+  timestamp: string
+  source: 'finnhub' | 'mock'
+}
+
+export interface CalendarEvent {
+  id: string
+  title: string
+  currency: string
+  country?: string
+  impact: number | string // supports both legacy numeric (1/2/3) and new string ('Low'/'Medium'/'High')
+  type?: 'economic' | 'earnings' | 'speech' | 'holiday'
+  symbol?: string // for earnings events
+  datetime?: string
+  date?: string
+  actual: string | null
+  forecast: string | null
+  previous: string | null
+  source: string
+}
+
+export interface MarketStatus {
+  exchange: string
+  isOpen: boolean
+  session?: string
+  source: string
+}
+
+export interface CryptoCoin {
+  id: string
+  symbol: string
+  name: string
+  price: number
+  change24h: number
+  change7d: number
+  marketCap: number
+  volume24h: number
+  marketCapRank: number
+  image: string | null
+}
+
+export interface NewsArticle {
+  id: string
+  title: string
+  summary: string
+  url: string | null
+  source: string
+  category: string
+  publishedAt: string
+  sentimentScore: number
+  sentimentLabel: 'bullish' | 'bearish' | 'neutral'
+  impactScore: number
+  impactLabel: 'High' | 'Medium' | 'Low'
+  tags: string[]
+  symbols: string[]
+  imageUrl: string | null
+}
+
+export interface CompanyProfile {
+  symbol: string
+  name: string
+  description: string | null
+  exchange: string
+  industry: string
+  sector: string
+  country: string
+  currency: string
+  marketCap: number | null
+  website: string | null
+  logo: string | null
+  ipo: string | null
+  peRatio: number | null
+  pbRatio: number | null
+  eps: number | null
+  dividendYield: number | null
+  week52High: number | null
+  week52Low: number | null
+  beta: number | null
+}
+
+export interface PortfolioPosition {
+  symbol: string
+  name: string
+  shares: number
+  buyPrice: number
+  buyDate: string
+}
+
+// ═══════════════════════════════════════════════════════════════
+// FILE: frontend/app/tools/page.tsx
+// ═══════════════════════════════════════════════════════════════
+                      {i === 0 ? 'Strongest' : i === scores.length - 1 ? 'Weakest' : ''}
+                    </span>
+                  </div>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <span style={{ fontSize: 12, fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>
+                      {rates && item.currency !== 'USD' ? `1 USD = ${(rates[item.currency] || 1).toFixed(4)} ${item.currency}` : 'Base Currency'}
+                    </span>
+                  </div>
+                </div>
+                <div style={{ height: 10, background: 'var(--bg-3)', borderRadius: 5, overflow: 'hidden' }}>
+                  <div style={{ height: '100%', width: `${(item.score / maxScore) * 100}%`, background: getColor(i), borderRadius: 5, transition: 'width 0.5s' }} />
+                </div>
+              </div>
+            ))}
+          </div>
+          {lastUpdated && <div style={{ fontSize: 10, color: 'var(--text-3)' }}>Rates updated: {lastUpdated} · Source: open.er-api.com</div>}
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Strength is relative to USD exchange rates. A trader looking for trend trades would buy the #1 currency against the #8 currency.</span>
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+// ─── 17. Correlation Matrix ───────────────────────────────────────────────────
+
+function CorrelationMatrix() {
+  const [matrix, setMatrix] = useState<any>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState('')
+
+  useEffect(() => {
+    const fetchCorr = async () => {
+      setLoading(true)
+      const json = await apiFetchSafe<{ success: boolean }>(`${API_BASE}/api/tools/correlation`)
+      if (!json?.success) setError('unavailable')
+      else setMatrix(json)
+      setLoading(false)
+    }
+    fetchCorr()
+  }, [])
+
+  const getColor = (val: number | null) => {
+    if (val === null || val === undefined) return 'var(--bg-3)'
+    if (val === 1) return 'rgba(74,158,255,0.6)'
+    if (val > 0.7) return 'rgba(34,197,94,0.7)'
+    if (val > 0.3) return 'rgba(34,197,94,0.35)'
+    if (val > -0.3) return 'rgba(148,163,184,0.2)'
+    if (val > -0.7) return 'rgba(239,68,68,0.3)'
+    return 'rgba(239,68,68,0.7)'
+  }
+
+  const getTextColor = (val: number | null) => {
+    if (val === null || val === undefined) return 'var(--text-3)'
+    if (Math.abs(val) > 0.5) return '#fff'
+    return 'var(--text-1)'
+  }
+
+  return (
+    <Card>
+      <SectionTitle toolId="correlation" title="Correlation Matrix" desc="See how major assets move in relation to each other. Use this for portfolio diversification — uncorrelated assets reduce overall risk." />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 16 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>How to read this?</span>
+        <Tooltip text="Correlation shows how assets move together. +1.0 = always move together. -1.0 = always move opposite. 0 = no relationship. Green = positive correlation, Red = negative. Diversification works best with low/negative correlations." position="right" />
+      </div>
+      {loading && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Calculating correlations…</div>}
+      {error && <div style={{ color: 'var(--text-3)', fontSize: 12 }}>Correlation data temporarily unavailable.</div>}
+      {matrix && (
+        <>
+          <div style={{ overflowX: 'auto' }}>
+            <table style={{ borderCollapse: 'collapse', fontSize: 11 }}>
+              <thead>
+                <tr>
+                  <th style={{ padding: '6px 8px', background: 'var(--bg-3)', width: 80, fontSize: 10, color: 'var(--text-3)' }}>Asset</th>
+                  {matrix.assets.map((a: string) => (
+                    <th key={a} style={{ padding: '6px 8px', background: 'var(--bg-3)', fontSize: 10, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap', textAlign: 'center', minWidth: 70 }}>{a}</th>
+                  ))}
+                </tr>
+              </thead>
+              <tbody>
+                {matrix.matrix.map((row: any) => (
+                  <tr key={row.asset}>
+                    <td style={{ padding: '6px 8px', background: 'var(--bg-3)', fontSize: 10, fontWeight: 600, color: 'var(--text-2)', whiteSpace: 'nowrap' }}>{row.asset}</td>
+                    {row.correlations.map((cell: any) => (
+                      <td key={cell.asset} style={{ padding: '6px 8px', background: getColor(cell.value), textAlign: 'center', border: '1px solid rgba(0,0,0,0.15)', borderRadius: 0 }}>
+                        <span style={{ fontSize: 11, fontWeight: cell.value === 1 ? 700 : 500, color: getTextColor(cell.value), fontFamily: 'var(--mono)' }}>
+                          {cell.value !== null && cell.value !== undefined ? cell.value.toFixed(2) : '—'}
+                        </span>
+                      </td>
+                    ))}
+                  </tr>
+                ))}
+              </tbody>
+            </table>
+          </div>
+          <div style={{ marginTop: 12, display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Scale:</span>
+            {[['Strong +', 'rgba(34,197,94,0.7)', '#fff'], ['Mild +', 'rgba(34,197,94,0.35)', 'var(--text-1)'], ['Neutral', 'rgba(148,163,184,0.2)', 'var(--text-1)'], ['Mild -', 'rgba(239,68,68,0.3)', 'var(--text-1)'], ['Strong -', 'rgba(239,68,68,0.7)', '#fff']].map(([l, bg, tc]) => (
+              <span key={l} style={{ display: 'flex', alignItems: 'center', gap: 3, fontSize: 10 }}>
+                <span style={{ width: 20, height: 14, background: bg, borderRadius: 2, display: 'inline-block' }} />
+                <span style={{ color: 'var(--text-3)' }}>{l}</span>
+              </span>
+            ))}
+          </div>
+          <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />Data: {matrix.dataSource === 'live' ? 'Live 90-day returns' : 'Historical average estimates'} · {matrix.period} period. Add uncorrelated assets to your portfolio to reduce risk.</span>
+          </div>
+        </>
+      )}
+    </Card>
+  )
+}
+
+// ─── 18. Profit Target Calculator ────────────────────────────────────────────
+
+function ProfitTargetCalc() {
+  const [accountSize, setAccountSize] = useState('10000')
+  const [targetPct, setTargetPct] = useState('5')
+  const [period, setPeriod] = useState<'daily' | 'weekly' | 'monthly'>('monthly')
+  const [tradingDays, setTradingDays] = useState('20')
+  const [winRate, setWinRate] = useState('55')
+  const [rr, setRr] = useState('2')
+  const [months, setMonths] = useState('12')
+
+  const acct = parseFloat(accountSize) || 0
+  const tPct = parseFloat(targetPct) || 0
+  const days = parseInt(tradingDays) || 20
+  const wr = parseFloat(winRate) / 100
+  const rrN = parseFloat(rr)
+  const monthsN = parseInt(months) || 12
+
+  const periodDays = period === 'daily' ? 1 : period === 'weekly' ? 5 : days
+  const periodTarget = acct * (tPct / 100)
+  const dailyTarget = periodTarget / (period === 'daily' ? 1 : period === 'weekly' ? 5 : days)
+
+  // Required win rate to breakeven at given R:R
+  const breakEvenWR = 1 / (1 + rrN)
+  // Expected value per trade
+  const ev = wr * rrN - (1 - wr) * 1 // ev per $1 risked
+
+  // Growth projection
+  const monthlyRate = period === 'daily' ? tPct * 22 / 100
+    : period === 'weekly' ? tPct * 4 / 100
+    : tPct / 100
+  const projectionData = Array.from({ length: monthsN + 1 }, (_, i) => ({
+    month: i,
+    value: acct * Math.pow(1 + monthlyRate, i),
+  }))
+  const maxValue = projectionData[projectionData.length - 1]?.value || acct
+
+  return (
+    <Card>
+      <SectionTitle toolId="profit" title="Profit Target Calculator" desc="Set realistic profit goals based on your account size, trading frequency, and edge. Most traders fail because they set unrealistic targets." />
+      <div style={{ display: 'flex', alignItems: 'center', gap: 4, marginBottom: 12 }}>
+        <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Why set profit targets?</span>
+        <Tooltip text="Helps set realistic profit goals based on your account size and trading frequency. Without targets, traders often overtrade chasing gains. Professional traders aim for 1-3% monthly, compounded over years." position="right" />
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 16 }}>
+        <div>
+          <InputField label="Account Size ($)" tooltip="Total capital in your trading account. Your risk calculations are based on this number." value={accountSize} onChange={setAccountSize} placeholder="e.g. 10000" />
+          <div style={{ marginBottom: 12 }}>
+            <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 4, letterSpacing: '0.05em', textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 4 }}>
+              Target Period
+              <Tooltip text="How often you want to hit your percentage target. Daily targets are hardest to sustain. Monthly targets are most realistic for most traders." position="right" />
+            </label>
+            <div style={{ display: 'flex', gap: 6 }}>
+              {(['daily', 'weekly', 'monthly'] as const).map(p => (
+                <button key={p} onClick={() => setPeriod(p)} style={{ flex: 1, padding: '7px 4px', borderRadius: 6, border: '1px solid ' + (period === p ? '#6366f1' : 'var(--border)'), background: period === p ? 'rgba(99,102,241,0.2)' : 'transparent', color: period === p ? '#818cf8' : 'var(--text-2)', fontSize: 12, cursor: 'pointer', fontWeight: 600, textTransform: 'capitalize' }}>
+                  {p}
+                </button>
+              ))}
+            </div>
+          </div>
+          <InputField label={`Target % (${period})`} tooltip={`Your ${period} return goal as a percentage. Industry benchmark: 1-3% monthly is excellent. 0.5-1% daily is elite level.`} value={targetPct} onChange={setTargetPct} placeholder="e.g. 5" step="0.1" min="0" />
+          <InputField label="Trading Days / Month" tooltip="How many days per month you actively trade. Standard = 20 trading days. Adjust down if you trade fewer days." value={tradingDays} onChange={setTradingDays} placeholder="e.g. 20" min="1" step="1" />
+          <InputField label="Win Rate %" tooltip="Your estimated win rate — how many trades are profitable. Most professional traders are at 40-60%." value={winRate} onChange={setWinRate} placeholder="e.g. 55" step="1" min="1" />
+          <InputField label="Risk:Reward Ratio" tooltip="Your average R:R per trade. 2 means you make $2 for every $1 risked. Higher R:R allows lower win rates." value={rr} onChange={setRr} placeholder="e.g. 2.0" step="0.1" min="0.1" />
+          <InputField label="Projection (months)" tooltip="How many months to project forward for the growth chart." value={months} onChange={setMonths} placeholder="e.g. 12" min="1" step="1" />
+        </div>
+        <div>
+          <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 16, marginBottom: 10 }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', marginBottom: 12, letterSpacing: '0.05em' }}>YOUR TARGETS</div>
+            <ResultRow label={`${period.charAt(0).toUpperCase() + period.slice(1)} $ Target`} value={`$${periodTarget.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`} color="var(--green)" tooltip={`Dollar amount you need to make ${period}.`} />
+            <ResultRow label="Daily $ Target" value={`$${dailyTarget.toFixed(2)}`} color="var(--accent)" tooltip="Breaking your target into a daily number helps you track progress." />
+            <ResultRow label="Break-Even Win Rate" value={`${(breakEvenWR * 100).toFixed(1)}%`} tooltip={`At ${rrN}:1 R:R, you only need to win ${(breakEvenWR * 100).toFixed(1)}% of trades to break even.`} />
+            <ResultRow
+              label="Expected Value/Trade"
+              value={`${ev >= 0 ? '+' : ''}${fmt(ev * 100, 1)}¢ per $1 risked`}
+              color={ev >= 0 ? 'var(--green)' : 'var(--red)'}
+              tooltip="Expected value tells you how much you expect to make per $1 risked, on average. Positive = profitable system. Negative = losing system." />
+            <div style={{ marginTop: 8, padding: '8px 10px', background: ev >= 0 ? 'rgba(34,197,94,0.1)' : 'rgba(239,68,68,0.1)', borderRadius: 6, fontSize: 11, color: ev >= 0 ? 'var(--green)' : 'var(--red)' }}>
+              <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}>
+                {ev >= 0 ? <IconCheck size={12} /> : <IconAlert size={12} />}
+                {ev >= 0 ? 'Positive expectancy — this system has an edge!' : 'Negative expectancy — adjust win rate or R:R ratio'}
+              </span>
+            </div>
+          </div>
+          {/* Growth chart */}
+          <div style={{ background: 'var(--bg-3)', borderRadius: 8, padding: 12 }}>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 6 }}>ACCOUNT GROWTH PROJECTION ({monthsN} months)</div>
+            <svg width="100%" height="100" viewBox="0 0 300 100" preserveAspectRatio="none">
+              <defs>
+                <linearGradient id="projGrad" x1="0" y1="0" x2="0" y2="1">
+                  <stop offset="0%" stopColor="#4a9eff" stopOpacity="0.5" />
+                  <stop offset="100%" stopColor="#4a9eff" stopOpacity="0" />
+                </linearGradient>
+              </defs>
+              <polygon
+                points={['0,100', ...projectionData.map((d, i) => `${i * (300 / monthsN)},${100 - ((d.value - acct) / (maxValue - acct || 1)) * 95}`), `${300},100`].join(' ')}
+                fill="url(#projGrad)" />
+              <polyline
+                points={projectionData.map((d, i) => `${i * (300 / monthsN)},${100 - ((d.value - acct) / (maxValue - acct || 1)) * 95}`).join(' ')}
+                fill="none" stroke="var(--accent)" strokeWidth="2" />
+            </svg>
+            <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 9, color: 'var(--text-3)', marginTop: 2 }}>
+              <span>Now: ${acct.toLocaleString()}</span>
+              <span>{monthsN}mo: ${maxValue.toLocaleString('en-US', { minimumFractionDigits: 0, maximumFractionDigits: 0 })}</span>
+            </div>
+          </div>
+        </div>
+      </div>
+    </Card>
+  )
+}
+
+// ─── Tools Hub Page ───────────────────────────────────────────────────────────
+
+const TOOL_CATEGORIES = ['All', 'Trading Calculators', 'Risk & Analytics', 'Planning', 'Market Overview', 'Stocks', 'Options', 'Futures', 'Forex', 'Crypto']
+
+// Section group for organized display
+const TOOL_SECTION_GROUPS: Record<string, string> = {
+  'positionsizer': 'Trading Calculators',
+  'futures':       'Trading Calculators',
+  'optionscalc':   'Trading Calculators',
+  'forexcalc':     'Trading Calculators',
+  'riskreward':    'Trading Calculators',
+  'ruin':          'Risk & Analytics',
+  'expectancy':    'Risk & Analytics',
+  'correlationv2': 'Risk & Analytics',
+  'compound2':     'Planning',
+  'dividend':      'Planning',
+  'sessionclock':  'Market Overview',
+  'econheatmap':   'Market Overview',
+  'feargreed':     'Market Overview',
+  'heatmap':       'Market Overview',
+  // Legacy tools keep original categories
+}
+
+const TOOL_CATALOG = [
+  // ── NEW: Trading Calculators ──
+  { id: 'positionsizer', category: 'Trading Calculators', title: 'Universal Position Sizer',         desc: 'Size positions for any asset class — stocks, futures, forex, crypto — based on exact dollar risk. Slider, scenarios, buying power bar.' },
+  { id: 'futures',       category: 'Trading Calculators', title: 'Futures Risk/Reward Calculator',   desc: '39 contracts with accurate tick/margin data. Position sizing, multi-target R:R, risk matrix, session indicators.' },
+  { id: 'optionscalc',   category: 'Trading Calculators', title: 'Options Profit Calculator',        desc: 'P&L chart across price range, break-even, range scenarios table, optional Greeks (Delta, Gamma, Theta, Vega).' },
+  { id: 'forexcalc',     category: 'Trading Calculators', title: 'Forex Position Calculator',        desc: 'Pip value, margin requirements, risk/reward for 21 pairs. Lot size presets, leverage comparison, swap rates.' },
+  { id: 'riskreward',    category: 'Trading Calculators', title: 'Risk/Reward Calculator',           desc: 'Visual ratio bar, break-even win rate. Immediate verdict on trade quality.' },
+  // ── NEW: Risk & Analytics ──
+  { id: 'ruin',          category: 'Risk & Analytics',    title: 'Risk of Ruin Calculator',          desc: 'Monte Carlo simulation with 500 equity curves. Kelly criterion, ruin probability, doubling odds, recommendations.' },
+  { id: 'expectancy',    category: 'Risk & Analytics',    title: 'Trade Expectancy Calculator',      desc: 'Is your system profitable? Expected P&L per trade, monthly/annual projections, equity curve simulation.' },
+  { id: 'correlationv2', category: 'Risk & Analytics',    title: 'Correlation Matrix',               desc: 'Enter 2–8 custom tickers or use presets. Color-coded grid shows which assets diversify your portfolio.' },
+  // ── NEW: Planning ──
+  { id: 'compound2',     category: 'Planning',            title: 'Compound Growth Calculator',       desc: 'Monthly contributions, area chart, year-by-year table, monthly/weekly compounding, "if you started N years ago" comparison.' },
+  { id: 'dividend',      category: 'Planning',            title: 'Dividend Income Planner',          desc: 'Plan passive income from 16+ preset dividend stocks. DRIP simulation over 5/10/20yr. Reverse calculator for income goals.' },
+  // ── NEW: Market Overview ──
+  { id: 'sessionclock',  category: 'Market Overview',     title: 'Market Session World Clock',       desc: '7 global markets, 24h timeline, overlap heatmap, "best time to trade" recommendations per asset class.' },
+  { id: 'econheatmap',   category: 'Market Overview',     title: 'Economic Calendar Heatmap',        desc: 'Weekly grid of economic events by impact. Red = dangerous day, green = quiet. Plan which days to trade vs sit out.' },
+  { id: 'heatmap',       category: 'Market Overview',     title: 'Market Heatmap',                   desc: 'Visual overview of S&P 500 sectors. Green = up, red = down. Spot market trends instantly.' },
+  { id: 'feargreed',     category: 'Market Overview',     title: 'Fear & Greed Index',               desc: "Measure crypto market sentiment from 0 (Extreme Fear) to 100 (Extreme Greed). 30-day history." },
+  // ── Legacy Tools ──
+  { id: 'position',    category: 'Stocks',   title: 'Position Size (Basic)',          desc: 'Simple position sizing by risk %. For advanced universal sizing, use Universal Position Sizer.' },
+  { id: 'optionspl',   category: 'Options',  title: 'Options P&L (Simple)',           desc: 'Quick break-even and profit/loss for options. For full P&L chart, use Options Profit Calculator.' },
+  { id: 'greeks',      category: 'Options',  title: 'Options Greeks Calculator',      desc: 'Get Delta, Gamma, Theta, Vega using Black-Scholes model.' },
+  { id: 'pip',         category: 'Forex',    title: 'Pip Calculator',                 desc: 'Find the dollar value of each pip for any forex pair.' },
+  { id: 'lotsize',     category: 'Forex',    title: 'Lot Size Calculator',            desc: 'Determine the right position size for forex trades.' },
+  { id: 'compound',    category: 'Planning', title: 'Compound Interest (Basic)',      desc: 'Simple compound interest without contributions. For monthly contributions + chart, use Compound Growth Calculator.' },
+  { id: 'fibonacci',   category: 'Stocks',   title: 'Fibonacci Retracement',          desc: 'Calculate key support/resistance levels using Fibonacci ratios.' },
+  { id: 'journal',     category: 'Planning', title: 'Trading Journal',                desc: 'Log trades, track performance, analyze patterns. Complete journal with analytics.', href: '/journal' },
+  { id: 'screener',    category: 'Stocks',   title: 'Stock Screener',                 desc: 'Filter stocks by P/E, dividend yield, sector, market cap, and price.' },
+  { id: 'earnings',    category: 'Stocks',   title: 'Earnings Calendar',              desc: "See which companies report earnings this week or next. BMO/AMC timing, EPS & revenue estimates." },
+  { id: 'gas',         category: 'Crypto',   title: 'Gas Fee Tracker',                desc: 'Live Ethereum gas prices in Gwei and USD. Slow/Standard/Fast tiers for common tx types.' },
+  { id: 'staking',     category: 'Crypto',   title: 'Staking Rewards Calculator',     desc: 'Calculate daily, weekly, monthly, and yearly staking rewards for ETH, SOL, ADA, DOT, and more.' },
+  { id: 'sessions',    category: 'Forex',    title: 'Forex Session Timer',            desc: 'Live countdown to Sydney, Tokyo, London, and New York open/close. Highlights peak overlap periods.' },
+  { id: 'strength',    category: 'Forex',    title: 'Currency Strength Meter',        desc: 'Rank USD, EUR, GBP, JPY, CHF, AUD, CAD, NZD by relative strength.' },
+  { id: 'correlation', category: 'Risk & Analytics', title: 'Correlation Matrix (Built-in)', desc: 'Fixed matrix of SPY, QQQ, BTC, ETH, Gold, Oil. For custom tickers, use Correlation Matrix.' },
+  { id: 'profit',      category: 'Risk & Analytics', title: 'Profit Target Calculator', desc: 'Set daily/weekly/monthly dollar targets. Calculate required win rate and account growth.' },
+]
+
+// ─── Tool Card ─────────────────────────────────────────────────────────────────
+
+function ToolCard({ tool, activeTool, setActiveTool }: {
+  tool: typeof TOOL_CATALOG[number]
+  activeTool: string | null
+  setActiveTool: (id: string) => void
+}) {
+  const isActive = activeTool === tool.id
+  return (
+    <div
+      className="ds-card"
+      style={{
+        display: 'flex', flexDirection: 'column', gap: 10,
+        transition: 'border-color var(--transition), box-shadow var(--transition), transform var(--transition)',
+        cursor: 'pointer',
+        borderColor: isActive ? 'var(--accent)' : undefined,
+        boxShadow: isActive ? '0 4px 16px rgba(74,158,255,0.15)' : undefined,
+      }}
+      onMouseEnter={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = 'var(--accent)'; el.style.transform = 'translateY(-2px)'
+        el.style.boxShadow = '0 4px 16px rgba(74,158,255,0.12)'
+      }}
+      onMouseLeave={e => {
+        const el = e.currentTarget as HTMLDivElement
+        el.style.borderColor = isActive ? 'var(--accent)' : 'var(--border)'; el.style.transform = 'none'
+        el.style.boxShadow = isActive ? '0 4px 16px rgba(74,158,255,0.15)' : 'var(--card-shadow)'
+      }}
+      onClick={() => { if ((tool as { href?: string }).href) window.location.href = (tool as { href?: string }).href!; else setActiveTool(tool.id) }}
+    >
+      <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
+        <div style={{ width: 36, height: 36, borderRadius: 8, background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.15)', display: 'flex', alignItems: 'center', justifyContent: 'center', color: 'var(--accent)', flexShrink: 0 }}>
+          <ToolIcon id={tool.id} size={18} />
+        </div>
+        <div>
+          <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', lineHeight: 1.3 }}>{tool.title}</div>
+          <span style={{ fontSize: 9, padding: '1px 6px', borderRadius: 10, background: 'var(--accent-dim)', color: 'var(--accent)', fontWeight: 700, letterSpacing: '0.04em', marginTop: 2, display: 'inline-block' }}>{tool.category}</span>
+        </div>
+      </div>
+      <div style={{ fontSize: 11, color: 'var(--text-2)', lineHeight: 1.6, flex: 1 }}>{tool.desc}</div>
+    </div>
+  )
+}
+
+export default function ToolsPage() {
+  const [activeCategory, setActiveCategory] = useState('All')
+  const [activeTool, setActiveTool] = useState<string | null>(null)
+  const toolSectionRef = useRef<HTMLDivElement>(null)
+
+  const selectTool = (id: string) => {
+    setActiveTool(id)
+    // After state update, scroll to the tool section
+    setTimeout(() => {
+      toolSectionRef.current?.scrollIntoView({ behavior: 'smooth', block: 'start' })
+    }, 100)
+  }
+
+  const filteredTools = TOOL_CATALOG.filter(t => activeCategory === 'All' || t.category === activeCategory)
+
+  const renderTool = () => {
+    switch (activeTool) {
+      // New tools
+      case 'positionsizer': return <PositionSizer />
+      case 'optionscalc':   return <OptionsCalculator />
+      case 'forexcalc':     return <ForexCalculator />
+      case 'ruin':          return <RiskOfRuinCalculator />
+      case 'expectancy':    return <ExpectancyCalculator />
+      case 'correlationv2': return <CorrelationMatrixEnhanced />
+      case 'compound2':     return <CompoundCalculator />
+      case 'dividend':      return <DividendPlanner />
+      case 'sessionclock':  return <SessionClock />
+      case 'econheatmap':   return <EconHeatmap />
+      // Legacy tools
+      case 'position':    return <PositionSizeCalc />
+      case 'riskreward':  return <RiskRewardCalc />
+      case 'optionspl':   return <OptionsPLCalc />
+      case 'greeks':      return <OptionsGreeksCalc />
+      case 'pip':         return <PipCalc />
+      case 'lotsize':     return <LotSizeCalc />
+      case 'compound':    return <CompoundCalc />
+      case 'fibonacci':   return <FibonacciCalc />
+      case 'screener':    return <StockScreener />
+      case 'earnings':    return <EarningsCalendar />
+      case 'heatmap':     return <MarketHeatmap />
+      case 'feargreed':   return <FearGreedIndex />
+      case 'gas':         return <GasFeeTracker />
+      case 'staking':     return <StakingRewards />
+      case 'sessions':    return <ForexSessionTimer />
+      case 'strength':    return <CurrencyStrengthMeter />
+      case 'correlation': return <CorrelationMatrix />
+      case 'profit':      return <ProfitTargetCalc />
+      case 'futures':     return <FuturesCalculator />
+      default: return null
+    }
+  }
+
+  return (
+    <div style={{ minHeight: '100vh', background: 'var(--bg-1)', color: 'var(--text-0)', paddingBottom: 60 }}>
+      {/* Persistent Navigation */}
+      <PersistentNav />
+      {/* Page header */}
+      <div className="page-header">
+        <a href="/" className="back-link">
+          <IconArrowLeft size={16} />
+          Back
+        </a>
+        <div className="page-header-title">
+          <span style={{ color: 'var(--accent)' }}><IconTool size={18} /></span>
+          Trading Tools
+        </div>
+        <div className="page-header-desc">Professional calculators for traders of all levels</div>
+      </div>
+
+      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '24px' }}>
+
+        {activeTool ? (
+          // Tool view
+          <div ref={toolSectionRef}>
+            <button
+              onClick={() => setActiveTool(null)}
+              className="btn btn-secondary btn-sm"
+              style={{ marginBottom: 20, gap: 6 }}
+            >
+              <IconArrowLeft size={14} />
+              Back to Tools
+            </button>
+            {renderTool()}
+          </div>
+        ) : (
+          // Hub view
+          <div>
+            {/* Intro banner */}
+            <div style={{ marginBottom: 24, padding: '20px 24px', background: 'var(--accent-dim)', border: '1px solid rgba(74,158,255,0.2)', borderRadius: 'var(--card-radius)' }}>
+              <div style={{ fontSize: 16, fontWeight: 700, color: 'var(--text-0)', marginBottom: 6, letterSpacing: '-0.02em' }}>Professional trading tools to sharpen your edge</div>
+              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.65, marginBottom: 12 }}>
+                Every tool updates in real-time as you type — no submit buttons. Hover the{' '}
+                <Tooltip text="Hover the ? icon next to any label to learn exactly what that field means. No jargon without explanation." position="right" />
+                {' '}icon next to any label for a plain-English explanation. All calculations run locally — your data never leaves your browser.
+              </div>
+              <div style={{ display: 'flex', gap: 16, flexWrap: 'wrap' }}>
+                {[
+                  { label: 'Real-time', desc: 'Results update as you type' },
+                  { label: 'Private', desc: 'All calculations run locally' },
+                  { label: 'Explained', desc: 'Every field has a tooltip' },
+                  { label: 'Responsive', desc: 'Works on mobile & desktop' },
+                ].map(f => (
+                  <div key={f.label} style={{ fontSize: 11, color: 'var(--text-2)' }}>
+                    <strong style={{ color: 'var(--text-1)' }}>{f.label}</strong> — {f.desc}
+                  </div>
+                ))}
+              </div>
+            </div>
+
+            {/* Category tabs */}
+            <div style={{ display: 'flex', gap: 6, marginBottom: 16, flexWrap: 'wrap' }}>
+              {TOOL_CATEGORIES.map(cat => (
+                <button
+                  key={cat}
+                  onClick={() => setActiveCategory(cat)}
+                  className={'btn btn-sm' + (activeCategory === cat ? ' btn-accent' : ' btn-secondary')}
+                  style={{ borderRadius: 20, fontSize: 11 }}
+                >{cat}</button>
+              ))}
+            </div>
+
+            {/* Tools grid — with section headers for All view */}
+            {activeCategory === 'All' ? (
+              <>
+                {['Trading Calculators', 'Risk & Analytics', 'Planning', 'Market Overview', 'Stocks', 'Options', 'Futures', 'Forex', 'Crypto'].map(section => {
+                  const sectionTools = TOOL_CATALOG.filter(t => t.category === section)
+                  if (sectionTools.length === 0) return null
+                  return (
+                    <div key={section} style={{ marginBottom: 28 }}>
+                      <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', letterSpacing: '0.08em', textTransform: 'uppercase', marginBottom: 12, paddingBottom: 8, borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+                        {section}
+                        <span style={{ fontSize: 10, fontWeight: 400, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '1px 6px', borderRadius: 10 }}>{sectionTools.length}</span>
+                      </div>
+                      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                        {sectionTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={selectTool} />)}
+                      </div>
+                    </div>
+                  )
+                })}
+              </>
+            ) : (
+              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 12 }}>
+                {filteredTools.map(tool => <ToolCard key={tool.id} tool={tool} activeTool={activeTool} setActiveTool={selectTool} />)}
+              </div>
+            )}
+          </div>
+        )}
+      </div>
+
+      {/* Footer */}
+      <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-1)', padding: '20px 24px', marginTop: 40 }}>
+        <div style={{ maxWidth: 1200, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 12 }}>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            © 2026 TradVue · <a href="/legal/disclaimer" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Disclaimer</a> · <a href="/help" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Help</a>
+          </p>
+          <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
+            All calculations for educational purposes only. Not financial advice.
+          </p>
+        </div>
+      </footer>
+    </div>
+  )
+}

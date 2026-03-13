@@ -2,6 +2,7 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { IconUpload, IconClose, IconFile } from '../components/Icons'
+import { parseBrokerCSV, type ParsedTrade } from '../utils/brokerParsers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -33,207 +34,96 @@ interface ImportModalProps {
   onImport: (trades: Record<string, unknown>[]) => void
 }
 
-type CSVFormat = 'generic' | 'robinhood' | 'ibkr'
+type BrokerOverride = 'auto' | 'Robinhood' | 'Fidelity' | 'Schwab' | 'Webull' | 'Tastytrade' | 'E*TRADE' | 'IBKR' | 'TradeStation'
 
-const FORMAT_INFO: Record<CSVFormat, { label: string; desc: string; columns: string }> = {
-  generic: {
-    label: 'Generic CSV',
-    desc: 'Standard format with basic columns',
-    columns: 'date, ticker/symbol, side (buy/sell), quantity, price, total, fees',
-  },
-  robinhood: {
-    label: 'Robinhood',
-    desc: 'Robinhood account activity export',
-    columns: 'Activity Date, Instrument, Description, Trans Code, Quantity, Price, Amount',
-  },
-  ibkr: {
-    label: 'Interactive Brokers',
-    desc: 'IB Activity Statement trades section',
-    columns: 'Symbol, Date/Time, Quantity, T. Price, Proceeds, Comm/Fee',
-  },
-}
+const BROKER_OPTIONS: { value: BrokerOverride; label: string }[] = [
+  { value: 'auto',         label: '✨ Auto-Detect' },
+  { value: 'Robinhood',    label: 'Robinhood' },
+  { value: 'Fidelity',     label: 'Fidelity' },
+  { value: 'Schwab',       label: 'Charles Schwab' },
+  { value: 'Webull',       label: 'Webull' },
+  { value: 'Tastytrade',   label: 'Tastytrade' },
+  { value: 'E*TRADE',      label: 'E*TRADE' },
+  { value: 'IBKR',         label: 'Interactive Brokers' },
+  { value: 'TradeStation', label: 'TradeStation' },
+]
 
-// ─── Client-side CSV Parser ──────────────────────────────────────────────────
+// ─── Trade Pairing Logic ──────────────────────────────────────────────────────
+// Converts raw buy/sell events from broker parsers into paired journal entries
 
-function parseCSVText(text: string): Record<string, string>[] {
-  const lines = text.split(/\r?\n/).filter(l => l.trim())
-  if (lines.length < 2) return []
-  
-  // Parse header
-  const headers = parseCSVLine(lines[0])
-  const rows: Record<string, string>[] = []
-  
-  for (let i = 1; i < lines.length; i++) {
-    const values = parseCSVLine(lines[i])
-    if (values.length === 0) continue
-    const row: Record<string, string> = {}
-    headers.forEach((h, idx) => { row[h.trim()] = (values[idx] || '').trim() })
-    rows.push(row)
-  }
-  return rows
-}
+function pairTrades(rawTrades: ParsedTrade[]): ImportedTrade[] {
+  const bySymbol: Record<string, ParsedTrade[]> = {}
+  rawTrades.forEach(t => {
+    if (!bySymbol[t.symbol]) bySymbol[t.symbol] = []
+    bySymbol[t.symbol].push(t)
+  })
 
-function parseCSVLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++; }
-      else if (ch === '"') { inQuotes = false; }
-      else { current += ch; }
-    } else {
-      if (ch === '"') { inQuotes = true; }
-      else if (ch === ',') { result.push(current); current = ''; }
-      else { current += ch; }
-    }
-  }
-  result.push(current)
-  return result
-}
-
-function normalizeDate(raw: string): string {
-  if (!raw) return ''
-  const cleaned = raw.trim()
-  if (/^\d{4}-\d{2}-\d{2}$/.test(cleaned)) return cleaned
-  const mdy = cleaned.match(/^(\d{1,2})\/(\d{1,2})\/(\d{4})$/)
-  if (mdy) return `${mdy[3]}-${mdy[1].padStart(2, '0')}-${mdy[2].padStart(2, '0')}`
-  const mdy2 = cleaned.match(/^(\d{1,2})-(\d{1,2})-(\d{4})$/)
-  if (mdy2) return `${mdy2[3]}-${mdy2[1].padStart(2, '0')}-${mdy2[2].padStart(2, '0')}`
-  try { const d = new Date(cleaned); if (!isNaN(d.getTime())) return d.toISOString().slice(0, 10) } catch {}
-  return cleaned
-}
-
-function getField(row: Record<string, string>, candidates: string[]): string {
-  for (const c of candidates) {
-    const found = Object.keys(row).find(k => k.toLowerCase().includes(c.toLowerCase()))
-    if (found && row[found]?.trim()) return row[found].trim()
-  }
-  return ''
-}
-
-function parseNumber(val: string): number {
-  return parseFloat(val.replace(/[$,()]/g, (m) => m === '(' ? '-' : m === ')' ? '' : '')) || 0
-}
-
-function parseGenericCSV(rows: Record<string, string>[]) {
-  const raw: { date: string; symbol: string; side: string; qty: number; price: number; fees: number }[] = []
-  for (const row of rows) {
-    const date = getField(row, ['date', 'trade_date', 'trade date'])
-    const symbol = getField(row, ['ticker', 'symbol', 'stock', 'instrument'])
-    const side = getField(row, ['side', 'direction', 'action', 'type', 'buy/sell'])
-    const qty = parseNumber(getField(row, ['quantity', 'qty', 'shares', 'size']))
-    const price = parseNumber(getField(row, ['price', 'fill_price', 'avg_price']))
-    const fees = parseNumber(getField(row, ['fees', 'commission', 'commissions', 'fee']))
-    if (!date || !symbol || !side) continue
-    raw.push({ date: normalizeDate(date), symbol: symbol.toUpperCase(), side: side.toLowerCase().includes('buy') || side.toLowerCase().includes('long') ? 'buy' : 'sell', qty, price, fees })
-  }
-  return pairTrades(raw)
-}
-
-function parseRobinhoodCSV(rows: Record<string, string>[]) {
-  const raw: { date: string; symbol: string; side: string; qty: number; price: number; fees: number }[] = []
-  for (const row of rows) {
-    const date = getField(row, ['activity date', 'activity'])
-    const instrument = getField(row, ['instrument', 'symbol'])
-    const transCode = getField(row, ['trans code', 'trans', 'transaction'])
-    const desc = getField(row, ['description', 'desc'])
-    const qty = Math.abs(parseNumber(getField(row, ['quantity', 'qty'])))
-    const price = parseNumber(getField(row, ['price']))
-    
-    const code = (transCode + ' ' + desc).toUpperCase()
-    const isTrade = code.includes('BUY') || code.includes('SELL') || code.includes('STO') || code.includes('STC') || code.includes('BOUGHT') || code.includes('SOLD')
-    if (!isTrade || !date || !instrument) continue
-    
-    const side = code.includes('SELL') || code.includes('STC') || code.includes('SOLD') ? 'sell' : 'buy'
-    raw.push({ date: normalizeDate(date), symbol: instrument.toUpperCase(), side, qty, price, fees: 0 })
-  }
-  return pairTrades(raw)
-}
-
-function parseIBKRCSV(rows: Record<string, string>[]) {
-  const raw: { date: string; symbol: string; side: string; qty: number; price: number; fees: number }[] = []
-  for (const row of rows) {
-    const header = getField(row, ['header', 'datadiscriminator'])
-    if (header && ['header', 'total', 'subtotal'].includes(header.toLowerCase())) continue
-    
-    const symbol = getField(row, ['symbol'])
-    const dateTime = getField(row, ['date/time', 'datetime', 'tradedate', 'date'])
-    const qty = parseNumber(getField(row, ['quantity', 'qty']))
-    const price = parseNumber(getField(row, ['t. price', 'trade price', 'price']))
-    const comm = Math.abs(parseNumber(getField(row, ['comm/fee', 'commission', 'comm'])))
-    
-    if (!symbol || !dateTime) continue
-    const datePart = dateTime.split(/[, ]/)[0]
-    
-    raw.push({
-      date: normalizeDate(datePart),
-      symbol: symbol.toUpperCase().split(' ')[0],
-      side: qty >= 0 ? 'buy' : 'sell',
-      qty: Math.abs(qty),
-      price,
-      fees: comm,
-    })
-  }
-  return pairTrades(raw)
-}
-
-function pairTrades(rawTrades: { date: string; symbol: string; side: string; qty: number; price: number; fees: number }[]): ImportedTrade[] {
-  const bySymbol: Record<string, typeof rawTrades> = {}
-  rawTrades.forEach(t => { if (!bySymbol[t.symbol]) bySymbol[t.symbol] = []; bySymbol[t.symbol].push(t) })
-  
   const paired: ImportedTrade[] = []
+
   for (const [symbol, trades] of Object.entries(bySymbol)) {
-    const buys = trades.filter(t => t.side === 'buy').sort((a, b) => a.date.localeCompare(b.date))
+    const buys  = trades.filter(t => t.side === 'buy').sort((a, b) => a.date.localeCompare(b.date))
     const sells = trades.filter(t => t.side === 'sell').sort((a, b) => a.date.localeCompare(b.date))
-    
+
     const minPairs = Math.min(buys.length, sells.length)
     for (let i = 0; i < minPairs; i++) {
       const buy = buys[i], sell = sells[i]
-      const qty = Math.min(buy.qty, sell.qty) || buy.qty || sell.qty
-      const pnl = (sell.price - buy.price) * qty - (buy.fees + sell.fees)
+      const qty = Math.min(buy.quantity, sell.quantity) || buy.quantity || sell.quantity
+      const totalFees = (buy.fees || 0) + (sell.fees || 0)
+      const pnl = (sell.price - buy.price) * qty - totalFees
       const pct = buy.price ? ((sell.price - buy.price) / buy.price) * 100 : 0
-      
+
       paired.push({
-        date: buy.date, time: '', symbol, assetClass: 'Stock', direction: 'Long',
+        date: buy.date, time: '',
+        symbol,
+        assetClass: buy.type === 'option' ? 'Option' : buy.type === 'crypto' ? 'Crypto' : 'Stock',
+        direction: 'Long',
         entryPrice: buy.price, exitPrice: sell.price, positionSize: qty,
-        stopLoss: 0, takeProfit: 0, commissions: buy.fees + sell.fees,
-        pnl: Math.round(pnl * 100) / 100, rMultiple: 0,
-        pctGainLoss: Math.round(pct * 100) / 100, holdMinutes: 0,
+        stopLoss: 0, takeProfit: 0, commissions: totalFees,
+        pnl: Math.round(pnl * 100) / 100,
+        rMultiple: 0,
+        pctGainLoss: Math.round(pct * 100) / 100,
+        holdMinutes: 0,
         setupTag: '', mistakeTag: 'None', rating: 3,
-        notes: 'Imported from CSV',
+        notes: buy.notes || `Imported from ${buy.broker}`,
       })
     }
-    
-    // Unmatched
+
+    // Unmatched trades (open positions or missing counterpart)
     ;[...buys.slice(minPairs), ...sells.slice(minPairs)].forEach(t => {
       paired.push({
-        date: t.date, time: '', symbol, assetClass: 'Stock',
+        date: t.date, time: '', symbol,
+        assetClass: t.type === 'option' ? 'Option' : t.type === 'crypto' ? 'Crypto' : 'Stock',
         direction: t.side === 'buy' ? 'Long' : 'Short',
-        entryPrice: t.price, exitPrice: 0, positionSize: t.qty,
-        stopLoss: 0, takeProfit: 0, commissions: t.fees,
+        entryPrice: t.price, exitPrice: 0, positionSize: t.quantity,
+        stopLoss: 0, takeProfit: 0, commissions: t.fees || 0,
         pnl: 0, rMultiple: 0, pctGainLoss: 0, holdMinutes: 0,
         setupTag: '', mistakeTag: 'None', rating: 3,
-        notes: `Imported from CSV (unmatched ${t.side})`,
+        notes: t.notes || `Imported from ${t.broker} (unmatched ${t.side})`,
         _unmatched: true,
       })
     })
   }
+
   return paired
 }
 
-// ─── Modal Component ─────────────────────────────────────────────────────────
+// ─── Modal Component ──────────────────────────────────────────────────────────
 
 export default function ImportModal({ onClose, onImport }: ImportModalProps) {
-  const [format, setFormat] = useState<CSVFormat>('generic')
+  const [brokerOverride, setBrokerOverride] = useState<BrokerOverride>('auto')
   const [file, setFile] = useState<File | null>(null)
-  const [csvText, setCsvText] = useState('')
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
   const [error, setError] = useState('')
-  const [parsedTrades, setParsedTrades] = useState<ImportedTrade[]>([])
+
+  // Parse results
+  const [detectedBroker, setDetectedBroker] = useState('')
+  const [rawTrades, setRawTrades] = useState<ParsedTrade[]>([])
+  const [parseErrors, setParseErrors] = useState<string[]>([])
+
+  // Paired trades for final import
+  const [pairedTrades, setPairedTrades] = useState<ImportedTrade[]>([])
   const [selectedRows, setSelectedRows] = useState<Set<number>>(new Set())
+
   const fileRef = useRef<HTMLInputElement>(null)
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -241,44 +131,48 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
     if (!f) return
     setFile(f)
     setError('')
-    const reader = new FileReader()
-    reader.onload = () => {
-      const text = reader.result as string
-      setCsvText(text)
-    }
-    reader.readAsText(f)
   }
 
   const handleParse = () => {
-    if (!csvText) { setError('Please select a CSV file'); return }
+    if (!file) { setError('Please select a CSV file'); return }
     setError('')
-    
-    try {
-      const rows = parseCSVText(csvText)
-      if (rows.length === 0) { setError('CSV file is empty or could not be parsed'); return }
-      
-      let trades: ImportedTrade[]
-      switch (format) {
-        case 'robinhood': trades = parseRobinhoodCSV(rows); break
-        case 'ibkr': trades = parseIBKRCSV(rows); break
-        default: trades = parseGenericCSV(rows); break
+
+    const reader = new FileReader()
+    reader.onload = () => {
+      try {
+        const text = reader.result as string
+        const result = parseBrokerCSV(text)
+
+        // Apply broker override if user selected one
+        const broker = brokerOverride !== 'auto' ? brokerOverride : result.broker
+
+        setDetectedBroker(broker)
+        setRawTrades(result.trades)
+        setParseErrors(result.errors)
+
+        if (result.trades.length === 0) {
+          setError(
+            result.errors.length > 0
+              ? result.errors[0]
+              : 'No valid trades found. Check the CSV format or try selecting your broker manually.'
+          )
+          return
+        }
+
+        // Pair the raw events into journal entries
+        const paired = pairTrades(result.trades)
+        setPairedTrades(paired)
+        setSelectedRows(new Set(paired.map((_, i) => i)))
+        setStep('preview')
+      } catch (err) {
+        setError(`Parse error: ${err instanceof Error ? err.message : 'Unknown error'}`)
       }
-      
-      if (trades.length === 0) {
-        setError(`No valid trades found. Detected columns: ${Object.keys(rows[0]).join(', ')}. Try a different format.`)
-        return
-      }
-      
-      setParsedTrades(trades)
-      setSelectedRows(new Set(trades.map((_, i) => i)))
-      setStep('preview')
-    } catch (err) {
-      setError(`Parse error: ${err instanceof Error ? err.message : 'Unknown error'}`)
     }
+    reader.readAsText(file)
   }
 
   const handleImport = () => {
-    const selected = parsedTrades.filter((_, i) => selectedRows.has(i))
+    const selected = pairedTrades.filter((_, i) => selectedRows.has(i))
     onImport(selected as unknown as Record<string, unknown>[])
     setStep('done')
   }
@@ -292,23 +186,19 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
   }
 
   const toggleAll = () => {
-    if (selectedRows.size === parsedTrades.length) setSelectedRows(new Set())
-    else setSelectedRows(new Set(parsedTrades.map((_, i) => i)))
+    if (selectedRows.size === pairedTrades.length) setSelectedRows(new Set())
+    else setSelectedRows(new Set(pairedTrades.map((_, i) => i)))
   }
 
   const fmtDollar = (n: number) => (n >= 0 ? '+$' : '-$') + Math.abs(n).toFixed(2)
 
-  const summaryPnl = useMemo(() => {
-    return parsedTrades.filter((_, i) => selectedRows.has(i)).reduce((s, t) => s + t.pnl, 0)
-  }, [parsedTrades, selectedRows])
+  const summaryPnl = useMemo(
+    () => pairedTrades.filter((_, i) => selectedRows.has(i)).reduce((s, t) => s + t.pnl, 0),
+    [pairedTrades, selectedRows]
+  )
 
-  const inputSx: React.CSSProperties = {
-    width: '100%', boxSizing: 'border-box',
-    background: 'var(--bg-1)', border: '1px solid var(--border)',
-    borderRadius: 8, padding: '10px 14px',
-    color: 'var(--text-0)', fontSize: 13, fontFamily: 'var(--mono)',
-    outline: 'none',
-  }
+  // First 5 raw trades for preview strip
+  const previewRaw = rawTrades.slice(0, 5)
 
   return (
     <>
@@ -320,6 +210,7 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
 
       {/* Modal */}
       <div className="import-modal-container">
+
         {/* Header */}
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <div>
@@ -327,7 +218,7 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
               <IconUpload size={22} /> Import Trades from CSV
             </h2>
             <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>
-              Upload your broker export to bulk-import trades
+              Upload your broker export — auto-detects Robinhood, Fidelity, Schwab, Webull, Tastytrade, E*TRADE, IBKR, TradeStation
             </p>
           </div>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', padding: 4 }}>
@@ -335,30 +226,31 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
           </button>
         </div>
 
-        {/* Step 1: Upload */}
+        {/* ── Step 1: Upload ── */}
         {step === 'upload' && (
           <>
-            {/* Format selector */}
+            {/* Broker selector */}
             <div style={{ marginBottom: 20 }}>
               <label style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8, display: 'block' }}>
                 Broker Format
               </label>
-              <div style={{ display: 'flex', gap: 8 }}>
-                {(Object.keys(FORMAT_INFO) as CSVFormat[]).map(f => (
-                  <button key={f} onClick={() => setFormat(f)} style={{
-                    flex: 1, padding: '12px 16px', borderRadius: 10,
-                    border: `2px solid ${format === f ? 'var(--accent)' : 'var(--border)'}`,
-                    background: format === f ? 'rgba(99,102,241,0.12)' : 'var(--bg-1)',
-                    color: format === f ? 'var(--accent)' : 'var(--text-1)',
-                    cursor: 'pointer', textAlign: 'left', transition: 'all 0.15s',
-                  }}>
-                    <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 2 }}>{FORMAT_INFO[f].label}</div>
-                    <div style={{ fontSize: 10, color: 'var(--text-2)' }}>{FORMAT_INFO[f].desc}</div>
-                  </button>
+              <select
+                value={brokerOverride}
+                onChange={e => setBrokerOverride(e.target.value as BrokerOverride)}
+                style={{
+                  width: '100%', boxSizing: 'border-box',
+                  background: 'var(--bg-1)', border: '1px solid var(--border)',
+                  borderRadius: 8, padding: '10px 14px',
+                  color: 'var(--text-0)', fontSize: 13,
+                  outline: 'none', cursor: 'pointer',
+                }}
+              >
+                {BROKER_OPTIONS.map(opt => (
+                  <option key={opt.value} value={opt.value}>{opt.label}</option>
                 ))}
-              </div>
-              <div style={{ marginTop: 8, fontSize: 11, color: 'var(--text-2)', fontFamily: 'var(--mono)' }}>
-                Expected: {FORMAT_INFO[format].columns}
+              </select>
+              <div style={{ marginTop: 6, fontSize: 11, color: 'var(--text-2)' }}>
+                Leave on Auto-Detect to let TradVue identify the broker from your CSV headers.
               </div>
             </div>
 
@@ -406,78 +298,157 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
               <button onClick={handleParse} disabled={!file} style={{
                 background: file ? 'var(--accent)' : 'var(--bg-1)',
                 border: 'none', borderRadius: 'var(--btn-radius)',
-                padding: '10px 24px', color: file ? '#0a0a0c' : 'var(--text-2)',
+                padding: '10px 24px',
+                color: file ? '#0a0a0c' : 'var(--text-2)',
                 fontSize: 13, fontWeight: 700, cursor: file ? 'pointer' : 'not-allowed',
               }}>Parse & Preview →</button>
             </div>
           </>
         )}
 
-        {/* Step 2: Preview */}
+        {/* ── Step 2: Preview ── */}
         {step === 'preview' && (
           <>
-            {/* Summary bar */}
+            {/* Detection badge */}
             <div style={{
-              display: 'flex', gap: 16, marginBottom: 16, padding: '12px 16px',
-              background: 'var(--bg-1)', borderRadius: 10, alignItems: 'center',
+              display: 'flex', alignItems: 'center', gap: 12, marginBottom: 16,
+              padding: '12px 16px', background: 'rgba(99,102,241,0.08)',
+              borderRadius: 10, border: '1px solid rgba(99,102,241,0.2)',
             }}>
-              <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                <strong style={{ color: 'var(--text-0)' }}>{selectedRows.size}</strong> of {parsedTrades.length} trades selected
-              </div>
-              <div style={{ fontSize: 12, fontFamily: 'var(--mono)', color: summaryPnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                Net P&L: {fmtDollar(summaryPnl)}
-              </div>
-              {parsedTrades.some(t => t._unmatched) && (
-                <div style={{ fontSize: 11, color: 'var(--yellow)', marginLeft: 'auto' }}>
-                  ⚠ Some trades are unmatched (missing buy/sell pair)
+              <div style={{ fontSize: 22 }}>📊</div>
+              <div>
+                <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)' }}>
+                  Found {rawTrades.length} trade{rawTrades.length !== 1 ? 's' : ''} from{' '}
+                  <span style={{ color: 'var(--accent)' }}>{detectedBroker}</span>
                 </div>
-              )}
+                <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>
+                  {pairedTrades.length} journal entries after pairing buy/sell legs
+                  {pairedTrades.some(t => t._unmatched) && ' (some unmatched)'}
+                </div>
+              </div>
             </div>
 
-            {/* Trade table */}
-            <div style={{ overflowX: 'auto', maxHeight: '50vh', overflowY: 'auto', marginBottom: 16, borderRadius: 8, border: '1px solid var(--border)' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                <thead>
-                  <tr style={{ background: 'var(--bg-1)', position: 'sticky', top: 0 }}>
-                    <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
-                      <input type="checkbox" checked={selectedRows.size === parsedTrades.length} onChange={toggleAll} />
-                    </th>
-                    {['Date', 'Symbol', 'Dir', 'Entry', 'Exit', 'Size', 'Fees', 'P&L'].map(h => (
-                      <th key={h} style={{
-                        padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 600,
-                        color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em',
-                        borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
-                      }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {parsedTrades.map((t, i) => (
-                    <tr key={i} style={{
-                      background: t._unmatched ? 'rgba(245,158,11,0.06)' : selectedRows.has(i) ? 'rgba(99,102,241,0.04)' : 'transparent',
-                      borderBottom: '1px solid var(--border)',
-                    }}>
-                      <td style={{ padding: '6px 8px', textAlign: 'center' }}>
-                        <input type="checkbox" checked={selectedRows.has(i)} onChange={() => toggleRow(i)} />
-                      </td>
-                      <td style={{ padding: '6px 10px' }}>{t.date}</td>
-                      <td style={{ padding: '6px 10px', fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{t.symbol}</td>
-                      <td style={{ padding: '6px 10px', color: t.direction === 'Long' ? 'var(--green)' : 'var(--red)' }}>{t.direction}</td>
-                      <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.entryPrice.toFixed(2)}</td>
-                      <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>{t.exitPrice ? `$${t.exitPrice.toFixed(2)}` : '—'}</td>
-                      <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>{t.positionSize}</td>
-                      <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.commissions.toFixed(2)}</td>
-                      <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                        {t._unmatched ? '⚠ Open' : fmtDollar(t.pnl)}
-                      </td>
+            {/* Parse errors */}
+            {parseErrors.length > 0 && (
+              <div style={{
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: 8, padding: '10px 14px', marginBottom: 16,
+              }}>
+                <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--yellow)', marginBottom: 4 }}>
+                  ⚠ {parseErrors.length} row{parseErrors.length !== 1 ? 's' : ''} had issues
+                </div>
+                {parseErrors.slice(0, 3).map((e, i) => (
+                  <div key={i} style={{ fontSize: 11, color: 'var(--text-2)', fontFamily: 'var(--mono)' }}>{e}</div>
+                ))}
+                {parseErrors.length > 3 && (
+                  <div style={{ fontSize: 11, color: 'var(--text-2)' }}>…and {parseErrors.length - 3} more</div>
+                )}
+              </div>
+            )}
+
+            {/* Raw trade preview (first 5) */}
+            {previewRaw.length > 0 && (
+              <div style={{ marginBottom: 16 }}>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 8 }}>
+                  Preview — first {previewRaw.length} of {rawTrades.length} raw trade events
+                </div>
+                <div style={{ borderRadius: 8, border: '1px solid var(--border)', overflow: 'hidden' }}>
+                  <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                    <thead>
+                      <tr style={{ background: 'var(--bg-1)' }}>
+                        {['Date', 'Symbol', 'Side', 'Qty', 'Price', 'Total', 'Fees', 'Type'].map(h => (
+                          <th key={h} style={{
+                            padding: '7px 10px', textAlign: 'left', fontSize: 10, fontWeight: 600,
+                            color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em',
+                            borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
+                          }}>{h}</th>
+                        ))}
+                      </tr>
+                    </thead>
+                    <tbody>
+                      {previewRaw.map((t, i) => (
+                        <tr key={i} style={{ borderBottom: i < previewRaw.length - 1 ? '1px solid var(--border)' : undefined }}>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontSize: 11 }}>{t.date}</td>
+                          <td style={{ padding: '6px 10px', fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{t.symbol}</td>
+                          <td style={{ padding: '6px 10px', fontWeight: 600, color: t.side === 'buy' ? 'var(--green)' : 'var(--red)', textTransform: 'uppercase' }}>{t.side}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>{t.quantity}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.price.toFixed(2)}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.total.toFixed(2)}</td>
+                          <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.fees.toFixed(2)}</td>
+                          <td style={{ padding: '6px 10px', fontSize: 10, color: 'var(--text-2)', textTransform: 'capitalize' }}>{t.type}</td>
+                        </tr>
+                      ))}
+                    </tbody>
+                  </table>
+                </div>
+                {rawTrades.length > 5 && (
+                  <div style={{ fontSize: 11, color: 'var(--text-2)', padding: '6px 0', textAlign: 'center' }}>
+                    +{rawTrades.length - 5} more trade events not shown
+                  </div>
+                )}
+              </div>
+            )}
+
+            {/* Paired trade selection table */}
+            <div style={{ marginBottom: 16 }}>
+              <div style={{ display: 'flex', gap: 16, marginBottom: 8, padding: '10px 14px', background: 'var(--bg-1)', borderRadius: 10, alignItems: 'center' }}>
+                <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
+                  <strong style={{ color: 'var(--text-0)' }}>{selectedRows.size}</strong> of {pairedTrades.length} journal entries selected
+                </div>
+                <div style={{ fontSize: 12, fontFamily: 'var(--mono)', color: summaryPnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                  Net P&L: {fmtDollar(summaryPnl)}
+                </div>
+                {pairedTrades.some(t => t._unmatched) && (
+                  <div style={{ fontSize: 11, color: 'var(--yellow)', marginLeft: 'auto' }}>
+                    ⚠ Some trades unmatched
+                  </div>
+                )}
+              </div>
+
+              <div style={{ overflowX: 'auto', maxHeight: '35vh', overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-1)', position: 'sticky', top: 0 }}>
+                      <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
+                        <input type="checkbox" checked={selectedRows.size === pairedTrades.length} onChange={toggleAll} />
+                      </th>
+                      {['Date', 'Symbol', 'Dir', 'Entry', 'Exit', 'Size', 'Fees', 'P&L'].map(h => (
+                        <th key={h} style={{
+                          padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 600,
+                          color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em',
+                          borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap',
+                        }}>{h}</th>
+                      ))}
                     </tr>
-                  ))}
-                </tbody>
-              </table>
+                  </thead>
+                  <tbody>
+                    {pairedTrades.map((t, i) => (
+                      <tr key={i} style={{
+                        background: t._unmatched ? 'rgba(245,158,11,0.06)' : selectedRows.has(i) ? 'rgba(99,102,241,0.04)' : 'transparent',
+                        borderBottom: '1px solid var(--border)',
+                      }}>
+                        <td style={{ padding: '6px 8px', textAlign: 'center' }}>
+                          <input type="checkbox" checked={selectedRows.has(i)} onChange={() => toggleRow(i)} />
+                        </td>
+                        <td style={{ padding: '6px 10px' }}>{t.date}</td>
+                        <td style={{ padding: '6px 10px', fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--blue)' }}>{t.symbol}</td>
+                        <td style={{ padding: '6px 10px', color: t.direction === 'Long' ? 'var(--green)' : 'var(--red)' }}>{t.direction}</td>
+                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.entryPrice.toFixed(2)}</td>
+                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>{t.exitPrice ? `$${t.exitPrice.toFixed(2)}` : '—'}</td>
+                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>{t.positionSize}</td>
+                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.commissions.toFixed(2)}</td>
+                        <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
+                          {t._unmatched ? '⚠ Open' : fmtDollar(t.pnl)}
+                        </td>
+                      </tr>
+                    ))}
+                  </tbody>
+                </table>
+              </div>
             </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => setStep('upload')} style={{
+              <button onClick={() => { setStep('upload'); setRawTrades([]); setPairedTrades([]) }} style={{
                 background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 'var(--btn-radius)',
                 padding: '10px 20px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer',
               }}>← Back</button>
@@ -491,7 +462,7 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
           </>
         )}
 
-        {/* Step 3: Done */}
+        {/* ── Step 3: Done ── */}
         {step === 'done' && (
           <div style={{ textAlign: 'center', padding: '20px 0' }}>
             <div style={{ display: 'flex', justifyContent: 'center', marginBottom: 12 }}>
@@ -500,8 +471,11 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
               </div>
             </div>
             <h3 style={{ color: 'var(--text-0)', marginBottom: 8 }}>Import Complete!</h3>
-            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 20 }}>
-              {selectedRows.size} trades imported successfully.
+            <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 4 }}>
+              {selectedRows.size} trades imported from <strong>{detectedBroker}</strong>.
+            </p>
+            <p style={{ color: 'var(--text-2)', fontSize: 13, marginBottom: 20 }}>
+              They&apos;ve been added to your journal.
             </p>
             <button onClick={onClose} style={{
               background: 'var(--accent)', border: 'none', borderRadius: 'var(--btn-radius)',
