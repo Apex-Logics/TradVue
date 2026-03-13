@@ -379,14 +379,19 @@ export default function HomeClient() {
   }, [isOffline])
 
   // ── Fetch economic calendar ──────────────────────────────────────────────────
-  // Let the EconomicCalendarWidget handle all filtering (today, earnings, impact).
-  // Just fetch today's full event list and pass it through.
+  // Fetch today + 3 days ahead so the widget can group and show multiple days.
+  // The EconomicCalendarWidget handles all filtering (earnings, impact, currency).
   const fetchCalendar = useCallback(async () => {
     if (isOffline) return
     setLoadingCalendar(true)
     try {
+      const todayET = new Date().toLocaleDateString('en-CA', { timeZone: 'America/New_York' })
+      // Compute today+3 days (handles month boundaries via JS Date)
+      const [ey, em, ed] = todayET.split('-').map(Number)
+      const plus3 = new Date(ey, em - 1, ed + 3)
+      const plus3ET = `${plus3.getFullYear()}-${String(plus3.getMonth() + 1).padStart(2, '0')}-${String(plus3.getDate()).padStart(2, '0')}`
       const j = await apiFetchSafe<{ success: boolean; data?: CalendarEvent[]; events?: CalendarEvent[] }>(
-        `${API_BASE}/api/calendar/today`
+        `${API_BASE}/api/calendar/events?from=${todayET}&to=${plus3ET}&limit=500`
       )
       setCalendarEvents(j?.success ? (j.data ?? j.events ?? []) : [])
     } finally {

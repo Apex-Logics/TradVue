@@ -676,7 +676,7 @@ export default function CalendarPage() {
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState<string | null>(null)
   const [view, setView] = useState<ViewMode>('month')
-  const [typeFilter, setTypeFilter] = useState<EventType | 'all'>('all')
+  const [typeFilters, setTypeFilters] = useState<Set<string>>(() => new Set(['economic', 'earnings', 'speech', 'holiday']))
   const [impactFilter, setImpactFilter] = useState('All')
   const [countryFilter, setCountryFilter] = useState('All')
   const [search, setSearch] = useState('')
@@ -786,17 +786,37 @@ export default function CalendarPage() {
     return () => clearInterval(t)
   }, [])
 
+  // Derived: are all types currently selected?
+  const allTypesSelected = useMemo(
+    () => ['economic', 'earnings', 'speech', 'holiday'].every(t => typeFilters.has(t)),
+    [typeFilters]
+  )
+
+  // Toggle a single type on/off; selecting the last one resets to all
+  const toggleTypeFilter = (t: string) => {
+    setTypeFilters(prev => {
+      const next = new Set(prev)
+      if (next.has(t)) {
+        next.delete(t)
+        if (next.size === 0) return new Set(['economic', 'earnings', 'speech', 'holiday'])
+      } else {
+        next.add(t)
+      }
+      return next
+    })
+  }
+
   // Filter events
   const filteredEvents = useMemo(() => {
     return events.filter(e => {
-      if (typeFilter !== 'all' && e.type !== typeFilter) return false
+      if (!typeFilters.has(e.type)) return false
       if (impactFilter !== 'All' && e.impact !== impactFilter) return false
       if (countryFilter !== 'All' && e.country !== countryFilter) return false
       if (search && !e.title.toLowerCase().includes(search.toLowerCase())) return false
       if (watchlistFilter && e.type === 'earnings' && e.symbol && !watchlistSymbols.includes(e.symbol.toUpperCase())) return false
       return true
     })
-  }, [events, typeFilter, impactFilter, countryFilter, search, watchlistFilter, watchlistSymbols])
+  }, [events, typeFilters, impactFilter, countryFilter, search, watchlistFilter, watchlistSymbols])
 
   // Group by day for calendar
   const eventsByDay = useMemo(() => {
@@ -950,26 +970,47 @@ export default function CalendarPage() {
         {/* Separator */}
         <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
 
-        {/* Type filters */}
+        {/* Type filters — multi-select */}
         <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
-          {TYPES.map(t => (
-            <button key={t} onClick={() => setTypeFilter(t)} style={{
-              fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
-              border: typeFilter === t ? `1px solid ${t === 'all' ? 'var(--accent)' : TYPE_COLORS[t as EventType]}` : '1px solid var(--border)',
-              background: typeFilter === t ? (t === 'all' ? 'var(--accent)' : `${TYPE_COLORS[t as EventType]}22`) : 'var(--bg-2)',
-              color: typeFilter === t ? (t === 'all' ? '#000' : TYPE_COLORS[t as EventType]) : 'var(--text-2)',
-              cursor: 'pointer',
-            }}>
-              {t === 'all' ? 'All' : t.charAt(0).toUpperCase() + t.slice(1)}
-            </button>
-          ))}
+          {/* All button: resets to all types selected */}
+          <button onClick={() => setTypeFilters(new Set(['economic', 'earnings', 'speech', 'holiday']))} style={{
+            fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+            border: allTypesSelected ? '1px solid var(--accent)' : '1px solid var(--border)',
+            background: allTypesSelected ? 'var(--accent)' : 'var(--bg-2)',
+            color: allTypesSelected ? '#000' : 'var(--text-2)',
+            cursor: 'pointer',
+            opacity: allTypesSelected ? 1 : 0.7,
+          }}>
+            All
+          </button>
+
+          {/* Individual type toggles */}
+          {(['economic', 'earnings', 'speech', 'holiday'] as EventType[]).map(t => {
+            const isActive = typeFilters.has(t)
+            const color = TYPE_COLORS[t]
+            return (
+              <button key={t} onClick={() => toggleTypeFilter(t)} style={{
+                fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
+                border: isActive ? `1px solid ${color}` : '1px solid var(--border)',
+                background: isActive ? `${color}22` : 'var(--bg-2)',
+                color: isActive ? color : 'var(--text-2)',
+                cursor: 'pointer',
+                opacity: isActive ? 1 : 0.55,
+              }}>
+                {t.charAt(0).toUpperCase() + t.slice(1)}
+              </button>
+            )
+          })}
+
+          {/* Watchlist earnings toggle — independent of type filter */}
           {watchlistSymbols.length > 0 && (
-            <button onClick={() => { setWatchlistFilter(f => !f); if (!watchlistFilter) setTypeFilter('earnings') }} style={{
+            <button onClick={() => setWatchlistFilter(f => !f)} style={{
               fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
               border: watchlistFilter ? '1px solid var(--accent)' : '1px solid var(--border)',
               background: watchlistFilter ? 'var(--accent-dim)' : 'var(--bg-2)',
               color: watchlistFilter ? 'var(--accent)' : 'var(--text-2)',
               cursor: 'pointer',
+              opacity: watchlistFilter ? 1 : 0.7,
             }}>
               ★ My Watchlist Earnings
             </button>
