@@ -202,11 +202,25 @@ router.patch('/feedback/:id', async (req, res) => {
     if (!status || !validStatuses.includes(status)) {
       return res.status(400).json({ error: 'status must be one of: new, reviewed, resolved, wontfix' });
     }
-    const { data, error } = await supabase.from('feedback').update({ status, updated_at: new Date().toISOString() }).eq('id', id).select().single();
+    const { data, error } = await supabase.from('feedback').update({ status }).eq('id', id).select().single();
     if (error) throw error;
     res.json({ feedback: data });
   } catch (err) {
     console.error('[Admin] PATCH /feedback/:id error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── DELETE /api/admin/feedback/:id ───────────────────────────────────────────
+router.delete('/feedback/:id', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { id } = req.params;
+    const { error } = await supabase.from('feedback').delete().eq('id', id);
+    if (error) throw error;
+    res.json({ success: true });
+  } catch (err) {
+    console.error('[Admin] DELETE /feedback/:id error:', err);
     res.status(500).json({ error: err.message });
   }
 });

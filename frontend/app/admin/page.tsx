@@ -297,6 +297,14 @@ export default function AdminPage() {
     finally { setDeleting(false) }
   }
 
+  const deleteFeedback = async (id: string) => {
+    if (!confirm('Delete this feedback?')) return
+    try {
+      await apiFetch(`/api/admin/feedback/${id}`, { method: 'DELETE' })
+      setFeedback(f => f.filter(x => x.id !== id))
+    } catch (err) { console.error('Delete feedback failed:', err) }
+  }
+
   const updateFeedbackStatus = async (id: string, status: string) => {
     try {
       await apiFetch(`/api/admin/feedback/${id}`, { method: 'PATCH', body: JSON.stringify({ status }) })
@@ -600,6 +608,12 @@ export default function AdminPage() {
                         <option value="resolved">Resolved</option>
                         <option value="wontfix">Won't Fix</option>
                       </select>
+                      <button onClick={() => deleteFeedback(f.id)} title="Delete feedback"
+                        style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 14, padding: '2px 6px', borderRadius: 4, opacity: 0.6, transition: 'opacity 0.15s' }}
+                        onMouseEnter={e => (e.currentTarget.style.opacity = '1', e.currentTarget.style.color = 'var(--red)')}
+                        onMouseLeave={e => (e.currentTarget.style.opacity = '0.6', e.currentTarget.style.color = 'var(--text-2)')}>
+                        🗑
+                      </button>
                     </div>
                   </div>
                   <p style={{ margin: '12px 0 8px', color: 'var(--text-0)', lineHeight: 1.5 }}>{f.message}</p>
