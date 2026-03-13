@@ -103,7 +103,7 @@ app.use('/api/watchlist',  cachePrivate, require('./routes/watchlist'));
 // so we don't add a blanket middleware here.
 app.use('/api/market-data',   require('./routes/marketData'));      // Finnhub-backed real market data
 app.use('/api/feed/news',     cachePublic2m,  require('./routes/aggregatedNews')); // RSS + NewsAPI aggregated feed
-app.use('/api/calendar',      cachePublic1h,  require('./routes/calendar'));        // Economic calendar
+app.use('/api/calendar',      cachePublic2m,  require('./routes/calendar'));        // Economic calendar (2m to avoid stale date issues)
 app.use('/api/waitlist',      cachePrivate,   require('./routes/waitlist'));        // Landing page waitlist
 app.use('/api/alerts',        cachePrivate,   require('./routes/alerts'));          // Real-time market alerts + SSE
 app.use('/api/crypto',        cachePublic30s, require('./routes/crypto'));          // CoinGecko crypto prices & trending
