@@ -67,7 +67,7 @@ router.get('/events', async (req, res) => {
   try {
     const { from, to, type = 'all' } = req.query;
     const page = Math.max(1, parseInt(req.query.page) || 1);
-    const limit = Math.min(500, Math.max(1, parseInt(req.query.limit) || 200));
+    const limit = Math.min(2000, Math.max(1, parseInt(req.query.limit) || 200));
 
     const now = new Date();
     const fromStr = from || toDateStr(now);

@@ -728,7 +728,7 @@ export default function CalendarPage() {
     setError(null)
     const { from, to } = dateRange
     // Use limit=500 to ensure we get enough events; try pagination endpoint as well
-    const url = `${API_BASE}/api/calendar/events?from=${from}&to=${to}&limit=500`
+    const url = `${API_BASE}/api/calendar/events?from=${from}&to=${to}&limit=2000`
     const j = await apiFetchSafe<{ success: boolean; events?: unknown[]; data?: unknown[] }>(url)
     if (j?.success) {
       const evts = (j.events ?? j.data ?? []) as typeof events
