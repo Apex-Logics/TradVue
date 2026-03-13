@@ -116,6 +116,7 @@ app.use('/api/dashboard',     cachePrivate,   require('./routes/dashboard'));   
 app.use('/api/stocks',        cachePublic1h,  require('./routes/stocks'));          // Analyst ratings + stock scoring
 app.use('/api/journal',       cachePrivate,   require('./routes/journal'));         // Journal CSV import & trade management
 app.use('/api/backup',        cachePrivate,   require('./routes/backup'));          // Data export/backup/restore
+app.use('/api/feedback',                      require('./routes/feedback'));        // User feedback & bug reports
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

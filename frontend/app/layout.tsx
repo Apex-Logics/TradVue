@@ -9,6 +9,7 @@ import CookieConsent from './components/CookieConsent'
 import ToastContainer from './components/Toast'
 import GoogleAnalytics from './components/GoogleAnalytics'
 import AppFooter from './components/AppFooter'
+import FeedbackWidget from './components/FeedbackWidget'
 
 // ─── Default Metadata ─────────────────────────────────────────────────────────
 
@@ -156,6 +157,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 <OnboardingOverlay />
                 <CookieConsent />
                 <AppFooter />
+                <FeedbackWidget />
               </OnboardingProvider>
             </AuthProvider>
           </SettingsProvider>
