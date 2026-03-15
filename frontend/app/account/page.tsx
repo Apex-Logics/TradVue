@@ -16,6 +16,7 @@
 
 import { useEffect, useState, Suspense } from 'react'
 import { useSearchParams, useRouter } from 'next/navigation'
+import { useAuth } from '../context/AuthContext'
 import { API_BASE } from '../lib/api'
 import PricingCard from '../components/PricingCard'
 
@@ -31,13 +32,6 @@ interface SubscriptionStatus {
   amount: number | null
   currency: string
   interval: 'month' | 'year' | null
-  customerId: string | null
-}
-
-interface StoredUser {
-  id: string
-  email: string
-  tier?: string
 }
 
 // ── Helpers ────────────────────────────────────────────────────────────────────
@@ -54,51 +48,37 @@ function fmtAmount(amount: number | null, currency: string, interval: string | n
   return `${sym}${amount.toFixed(2)}${periodLabel}`
 }
 
-function getStoredUser(): StoredUser | null {
-  if (typeof window === 'undefined') return null
-  try {
-    const raw = localStorage.getItem('tradvue_user')
-    if (!raw) return null
-    return JSON.parse(raw) as StoredUser
-  } catch {
-    return null
-  }
-}
-
 // ── Main component (wrapped in Suspense for useSearchParams) ───────────────────
 
 function AccountPageInner() {
   const searchParams = useSearchParams()
   const router = useRouter()
+  const { user, token, loading: authLoading } = useAuth()
 
   const sessionId = searchParams.get('session_id')
   const canceled = searchParams.get('canceled')
 
-  const [user, setUser] = useState<StoredUser | null>(null)
   const [sub, setSub] = useState<SubscriptionStatus | null>(null)
   const [loading, setLoading] = useState(true)
   const [portalLoading, setPortalLoading] = useState(false)
   const [portalError, setPortalError] = useState<string | null>(null)
 
-  // Load user from localStorage / auth context
+  // Fetch subscription status when we have an auth token
   useEffect(() => {
-    const stored = getStoredUser()
-    setUser(stored)
-  }, [])
-
-  // Fetch subscription status when we have a userId
-  useEffect(() => {
-    if (!user?.id) {
+    if (authLoading) return
+    if (!token) {
       setLoading(false)
       return
     }
 
-    fetch(`${API_BASE}/api/stripe/subscription-status?userId=${encodeURIComponent(user.id)}`)
+    fetch(`${API_BASE}/api/stripe/subscription-status`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
       .then(r => r.json())
       .then((data: SubscriptionStatus) => setSub(data))
       .catch(err => console.error('[Account] Failed to load subscription:', err))
       .finally(() => setLoading(false))
-  }, [user])
+  }, [token, authLoading])
 
   // Clean up URL params after showing the banners
   useEffect(() => {
@@ -111,15 +91,17 @@ function AccountPageInner() {
   }, [sessionId, canceled, router])
 
   async function handleManageSubscription() {
-    if (!sub?.customerId) return
+    if (!token) return
     setPortalError(null)
     setPortalLoading(true)
     try {
       const res = await fetch(`${API_BASE}/api/stripe/create-portal-session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
+        headers: {
+          'Content-Type': 'application/json',
+          Authorization: `Bearer ${token}`,
+        },
         body: JSON.stringify({
-          customerId: sub.customerId,
           returnUrl: `${window.location.origin}/account`,
         }),
       })
@@ -134,8 +116,19 @@ function AccountPageInner() {
     }
   }
 
+  // ── Auth loading ───────────────────────────────────────────────────────────
+  if (authLoading) {
+    return (
+      <div style={pageStyle}>
+        <div style={{ color: 'var(--text-2, #9ca3af)', padding: '40px 0', textAlign: 'center' }}>
+          Loading…
+        </div>
+      </div>
+    )
+  }
+
   // ── Not logged in ──────────────────────────────────────────────────────────
-  if (!user) {
+  if (!user || !token) {
     return (
       <div style={pageStyle}>
         <div style={cardWrap}>
@@ -223,15 +216,13 @@ function AccountPageInner() {
               </div>
             )}
 
-            {sub.customerId && (
-              <button
-                onClick={handleManageSubscription}
-                disabled={portalLoading}
-                style={{ ...primaryBtnStyle, marginTop: 8 }}
-              >
-                {portalLoading ? 'Opening portal…' : 'Manage Subscription →'}
-              </button>
-            )}
+            <button
+              onClick={handleManageSubscription}
+              disabled={portalLoading}
+              style={{ ...primaryBtnStyle, marginTop: 8 }}
+            >
+              {portalLoading ? 'Opening portal…' : 'Manage Subscription →'}
+            </button>
 
             <p style={{ fontSize: 12, color: 'var(--text-3, #6b7280)', marginTop: 12 }}>
               Change plan, cancel, or update payment info via the Stripe portal.
@@ -255,7 +246,7 @@ function AccountPageInner() {
             <h2 style={{ fontSize: 20, fontWeight: 700, marginBottom: 20, color: 'var(--text-0, #f9fafb)' }}>
               Upgrade to TradVue Pro
             </h2>
-            <PricingCard userId={user.id} email={user.email} />
+            <PricingCard userId={user.id} email={user.email} token={token} />
           </div>
         )}
       </div>

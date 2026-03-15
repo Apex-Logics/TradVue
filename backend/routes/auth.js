@@ -21,10 +21,58 @@
 const express = require('express');
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
+const { createClient } = require('@supabase/supabase-js');
 
 const authService = require('../services/authService');
 const { requireAuth } = require('../middleware/auth');
 const { logActivity, getIP } = require('../services/activityLogger');
+
+// ── Service-role client for trial expiry enforcement ──────────────────────────
+let _supabaseAdmin = null;
+function getSupabaseAdmin() {
+  if (_supabaseAdmin) return _supabaseAdmin;
+  const url = process.env.SUPABASE_URL;
+  const key = process.env.SUPABASE_SERVICE_ROLE_KEY;
+  if (!url || !key) return null;
+  _supabaseAdmin = createClient(url, key, {
+    auth: { autoRefreshToken: false, persistSession: false },
+  });
+  return _supabaseAdmin;
+}
+
+/**
+ * checkAndEnforceTrialExpiry — called on login.
+ * If user is free-tier and trial_ends_at is in the past, ensure tier stays 'free'.
+ * This is belt-and-suspenders: the trial is enforced at query time by requirePaid
+ * middleware too, but logging on expiry is useful for analytics.
+ */
+async function checkAndEnforceTrialExpiry(userId) {
+  try {
+    const supabase = getSupabaseAdmin();
+    if (!supabase) return; // service role key not configured
+
+    const { data: profile } = await supabase
+      .from('user_profiles')
+      .select('tier, trial_ends_at')
+      .eq('id', userId)
+      .single();
+
+    if (!profile) return;
+    if (profile.tier === 'pro') return; // paid user — nothing to do
+
+    const trialEnded =
+      profile.trial_ends_at && new Date(profile.trial_ends_at) < new Date();
+
+    if (trialEnded) {
+      console.log(`[Auth] Trial expired for user ${userId} — enforcing free tier`);
+      // tier is already 'free'; just log for analytics. In future: could trigger
+      // a "trial ended" email here if trial_ended_notified is not set.
+    }
+  } catch (err) {
+    // Non-fatal — don't block login
+    console.warn('[Auth] Trial expiry check failed (non-fatal):', err.message);
+  }
+}
 
 // ── Auth-specific rate limiter ─────────────────────────────────────────────
 // 5 attempts per 15 minutes per IP — tight enough to stop brute force
@@ -109,9 +157,14 @@ router.post('/signup', authLimiter, async (req, res) => {
     // If email confirmation is required, session will be null
     const needsConfirmation = !data.session;
 
-    // Create profile row for the new user
+    // Create profile row for the new user (with 3-week trial)
     if (data.user) {
-      await authService.upsertProfile(data.user.id, { name, tier: 'free' }).catch(err => {
+      const trialEndsAt = new Date(Date.now() + 21 * 24 * 60 * 60 * 1000).toISOString();
+      await authService.upsertProfile(data.user.id, {
+        name,
+        tier: 'free',
+        trial_ends_at: trialEndsAt,
+      }).catch(err => {
         console.warn('[Auth] Profile creation failed (non-fatal):', err.message);
       });
     }
@@ -198,10 +251,27 @@ router.post('/login', authLimiter, async (req, res) => {
     }
 
     logActivity(data.user?.id, email, 'login', {}, getIP(req), req.headers['user-agent']);
+
+    // Non-blocking: check/log trial expiry on each login
+    if (data.user?.id) {
+      checkAndEnforceTrialExpiry(data.user.id).catch(() => {});
+    }
+
+    // Fetch profile to include tier + trial_ends_at in response
+    let profile = null;
+    if (data.user?.id) {
+      const profileResult = await authService.getProfile(data.user.id).catch(() => null);
+      profile = profileResult?.data || null;
+    }
+
     res.json({
       message: 'Login successful',
       session: sanitizeSession(data.session),
-      user: sanitizeUser(data.user),
+      user: {
+        ...sanitizeUser(data.user),
+        tier: profile?.tier || 'free',
+        trial_ends_at: profile?.trial_ends_at || null,
+      },
     });
   } catch (err) {
     console.error('[Auth] Login error:', err.message);
@@ -334,6 +404,7 @@ router.get('/me', requireAuth, async (req, res) => {
         name: profile?.name || req.user.name || null,
         tier: profile?.tier || 'free',
         preferences: profile?.preferences || {},
+        trial_ends_at: profile?.trial_ends_at || null,
       },
     });
   } catch (err) {

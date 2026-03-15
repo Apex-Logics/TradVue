@@ -22,7 +22,7 @@ import UpgradePrompt from './UpgradePrompt'
 const SESSION_DISMISS_KEY = 'tv_trial_banner_dismissed'
 
 export default function TrialBanner() {
-  const { user, loading } = useAuth()
+  const { user, token, loading } = useAuth()
   const [dismissed, setDismissed] = useState(false)
   const [showUpgrade, setShowUpgrade] = useState(false)
 
@@ -173,6 +173,9 @@ export default function TrialBanner() {
             : 'Your free trial has ended. Upgrade to continue viewing your full history and all pro features.'
         }
         variant={trialActive ? 'trial' : 'upgrade'}
+        userId={user?.id}
+        email={user?.email}
+        token={token}
       />
     </>
   )

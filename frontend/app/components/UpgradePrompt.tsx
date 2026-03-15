@@ -31,6 +31,8 @@ export interface UpgradePromptProps {
   userId?: string
   /** Authenticated user email — required for checkout */
   email?: string
+  /** Bearer token for authenticated requests */
+  token?: string | null
 }
 
 // ── Feature metadata ──────────────────────────────────────────────────────────
@@ -73,6 +75,7 @@ export default function UpgradePrompt({
   variant = 'upgrade',
   userId,
   email,
+  token,
 }: UpgradePromptProps) {
   const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'annual' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
@@ -96,10 +99,12 @@ export default function UpgradePrompt({
 
       const priceId = plan === 'monthly' ? prices.monthly.priceId : prices.annual.priceId
 
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, userId, email }),
+        headers,
+        body: JSON.stringify({ priceId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Checkout failed')

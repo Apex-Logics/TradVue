@@ -25,6 +25,8 @@ interface PriceOption {
 interface PricingCardProps {
   userId: string
   email: string
+  /** Bearer token for authenticated requests */
+  token?: string | null
   /** Optional callback after successful redirect initiation */
   onCheckoutStart?: (plan: 'monthly' | 'annual') => void
 }
@@ -37,7 +39,7 @@ function fmt(n: number) {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function PricingCard({ userId, email, onCheckoutStart }: PricingCardProps) {
+export default function PricingCard({ userId, email, token, onCheckoutStart }: PricingCardProps) {
   const [prices, setPrices] = useState<{ monthly: PriceOption; annual: PriceOption } | null>(null)
   const [loadingPlan, setLoadingPlan] = useState<'monthly' | 'annual' | null>(null)
   const [error, setError] = useState<string | null>(null)
@@ -65,10 +67,12 @@ export default function PricingCard({ userId, email, onCheckoutStart }: PricingC
 
     try {
       const priceId = plan === 'monthly' ? prices.monthly.priceId : prices.annual.priceId
+      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
+      if (token) headers['Authorization'] = `Bearer ${token}`
       const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
         method: 'POST',
-        headers: { 'Content-Type': 'application/json' },
-        body: JSON.stringify({ priceId, userId, email }),
+        headers,
+        body: JSON.stringify({ priceId }),
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Checkout failed')

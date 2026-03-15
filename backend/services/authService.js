@@ -209,15 +209,16 @@ async function deleteUser(userId) {
  */
 async function upsertProfile(userId, fields = {}) {
   const supabase = getClient();
-  const { name, preferences, tier } = fields;
+  const { name, preferences, tier, trial_ends_at } = fields;
 
   const row = {
     id: userId,
     updated_at: new Date().toISOString(),
   };
-  if (name !== undefined)        row.name = name;
-  if (preferences !== undefined) row.preferences = preferences;
-  if (tier !== undefined)        row.tier = tier;
+  if (name !== undefined)          row.name = name;
+  if (preferences !== undefined)   row.preferences = preferences;
+  if (tier !== undefined)          row.tier = tier;
+  if (trial_ends_at !== undefined) row.trial_ends_at = trial_ends_at;
 
   const { data, error } = await supabase
     .from('user_profiles')
