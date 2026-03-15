@@ -1,9 +1,28 @@
 /**
- * PropFirmPresets — Rule presets for major prop trading firms
- * Firms: FTMO, TopStep, Apex Trader Funding, My Funded Futures, The 5%ers,
- *        Take Profit Trader, Earn2Trade, Bulenox, TradeDay, Leeloo Trading
+ * PropFirmPresets — Verified rule presets for prop trading firms
  *
- * ⚠️ Rule presets are approximate and may change. Always verify with your prop firm.
+ * All numbers sourced from official firm websites. Only firms with fully
+ * verified, specific dollar amounts are included. Firms with UNVERIFIED
+ * amounts are excluded — use "Custom Firm" to enter your own verified rules.
+ *
+ * Included firms (verified March 15, 2026):
+ *   TopStep, The 5%ers, My Funded Futures, Earn2Trade,
+ *   Leeloo Trading, FundedNext Futures (Rapid), Lucid Trading (LucidFlex),
+ *   Tradeify + Custom (9 total)
+ *
+ * Removed (unverified or forex-only):
+ *   FTMO              — forex only, NOT a futures prop firm
+ *   Apex Trader Funding — Cloudflare blocking; amounts unverifiable
+ *   Alpha Futures     — minimal website; official amounts not accessible
+ *   Alpha Funded      — vague/hidden terms; amounts UNVERIFIED
+ *   Take Profit Trader — profit target & drawdown amounts UNVERIFIED
+ *   Bulenox           — profit target & DLL amounts UNVERIFIED
+ *   TradeDay          — profit target & DLL amounts UNVERIFIED
+ *   LucidPro          — specific amounts not yet verified (TODO)
+ *   LucidDirect       — specific amounts not yet verified (TODO)
+ *
+ * Verification report: /docs/research/prop-firm-rules-verification.md
+ * Last updated: March 15, 2026
  */
 
 import type { FirmId, PhaseId, PropFirmRules } from './propFirmData'
@@ -20,51 +39,14 @@ export interface FirmPreset {
   getRules: (accountSize: number, phase: PhaseId) => PropFirmRules
 }
 
-// ─── FTMO ─────────────────────────────────────────────────────────────────────
-
-const ftmoPreset: FirmPreset = {
-  id: 'ftmo',
-  displayName: 'FTMO',
-  shortName: 'FTMO',
-  color: '#1a6dff',
-  accountSizes: [10000, 25000, 50000, 100000, 200000],
-  phases: ['phase1', 'phase2', 'funded'],
-  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    const drawdownLimit = accountSize * 0.10  // 10% max drawdown (trailing from peak)
-    const dailyLimit    = accountSize * 0.05  // 5% daily loss limit
-
-    if (phase === 'phase1') {
-      return {
-        maxDrawdown: { type: 'trailing', limit: drawdownLimit, current: 0 },
-        dailyLossLimit: { limit: dailyLimit, todayPnl: 0 },
-        profitTarget: { target: accountSize * 0.10, currentPnl: 0 }, // 10% target
-        minTradingDays: 4,
-        tradingDaysCompleted: 0,
-        newsTrading: true,
-      }
-    }
-    if (phase === 'phase2') {
-      return {
-        maxDrawdown: { type: 'trailing', limit: drawdownLimit, current: 0 },
-        dailyLossLimit: { limit: dailyLimit, todayPnl: 0 },
-        profitTarget: { target: accountSize * 0.05, currentPnl: 0 }, // 5% target
-        minTradingDays: 4,
-        tradingDaysCompleted: 0,
-        newsTrading: true,
-      }
-    }
-    // Funded
-    return {
-      maxDrawdown: { type: 'trailing', limit: drawdownLimit, current: 0 },
-      dailyLossLimit: { limit: dailyLimit, todayPnl: 0 },
-      profitTarget: { target: 0, currentPnl: 0 }, // No target for funded
-      tradingDaysCompleted: 0,
-      newsTrading: true,
-    }
-  },
-}
-
 // ─── TopStep ──────────────────────────────────────────────────────────────────
+// Source: topstep.com | Verified March 2026
+// Trailing EOD drawdown (floor rises as equity grows — harder than static drawdown)
+// No minimum trading days required
+// News trading: Allowed
+// Futures ONLY (CME, CBOT, NYMEX, COMEX)
+// Max payout per request: $6,000 or 50% of account balance (whichever is lower)
+// Monthly subscription model (~$375/month for $150K Combine)
 
 const topstepPreset: FirmPreset = {
   id: 'topstep',
@@ -74,22 +56,22 @@ const topstepPreset: FirmPreset = {
   accountSizes: [50000, 100000, 150000],
   phases: ['phase1', 'funded'],
   getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    // TopStep 150K: $9K profit, $4.5K trailing drawdown, $3K daily loss
+    // Profit target ~6%, trailing EOD drawdown, daily loss limit varies by plan
     const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
-      50000:  { profit: 3000,  drawdown: 2000,  daily: 1000 },
-      100000: { profit: 6000,  drawdown: 3000,  daily: 2000 },
-      150000: { profit: 9000,  drawdown: 4500,  daily: 3000 },
+      50000:  { profit: 3000, drawdown: 2000, daily: 1000 },
+      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
+      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
     }
     const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
 
     if (phase === 'phase1') {
       return {
-        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // EOD trailing
         dailyLossLimit: { limit: r.daily, todayPnl: 0 },
         profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 5,
+        // No minimum trading days required
         tradingDaysCompleted: 0,
-        newsTrading: false, // TopStep restricts news trading
+        newsTrading: true,
       }
     }
     // Funded
@@ -98,191 +80,138 @@ const topstepPreset: FirmPreset = {
       dailyLossLimit: { limit: r.daily, todayPnl: 0 },
       profitTarget: { target: 0, currentPnl: 0 },
       tradingDaysCompleted: 0,
-      newsTrading: false,
-    }
-  },
-}
-
-// ─── Apex Trader Funding ──────────────────────────────────────────────────────
-
-const apexPreset: FirmPreset = {
-  id: 'apex',
-  displayName: 'Apex Trader Funding',
-  shortName: 'Apex',
-  color: '#7c3aed',
-  accountSizes: [25000, 50000, 75000, 100000, 150000, 250000, 300000],
-  phases: ['phase1', 'funded'],
-  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    // Apex 150K: $9K profit target, $5.25K trailing drawdown, no daily loss limit, min 7 days
-    const ratios: Record<number, { profit: number; drawdown: number }> = {
-      25000:  { profit: 1500,  drawdown: 1500  },
-      50000:  { profit: 3000,  drawdown: 2500  },
-      75000:  { profit: 4250,  drawdown: 2750  },
-      100000: { profit: 6000,  drawdown: 3500  },
-      150000: { profit: 9000,  drawdown: 5250  },
-      250000: { profit: 15000, drawdown: 8750  },
-      300000: { profit: 20000, drawdown: 10500 },
-    }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.035 }
-
-    if (phase === 'phase1') {
-      return {
-        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No daily loss limit
-        profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 7,
-        tradingDaysCompleted: 0,
-        newsTrading: true,
-      }
-    }
-    // Funded
-    return {
-      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-      dailyLossLimit: { limit: 0, todayPnl: 0 },
-      profitTarget: { target: 0, currentPnl: 0 },
-      tradingDaysCompleted: 0,
       newsTrading: true,
     }
   },
 }
 
-// ─── My Funded Futures (MFF) ──────────────────────────────────────────────────
-
-const mffPreset: FirmPreset = {
-  id: 'mff',
-  displayName: 'My Funded Futures',
-  shortName: 'MFF',
-  color: '#059669',
-  accountSizes: [50000, 100000, 150000, 250000],
-  phases: ['phase1', 'funded'],
-  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    // MFF 150K: $9K profit, $5K static drawdown, $3K daily loss, min 5 days
-    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
-      50000:  { profit: 3000,  drawdown: 2000, daily: 1000 },
-      100000: { profit: 6000,  drawdown: 3500, daily: 2000 },
-      150000: { profit: 9000,  drawdown: 5000, daily: 3000 },
-      250000: { profit: 15000, drawdown: 7500, daily: 5000 },
-    }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.033, daily: accountSize * 0.02 }
-
-    if (phase === 'phase1') {
-      return {
-        maxDrawdown: { type: 'static', limit: r.drawdown, current: 0 },
-        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
-        profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 5,
-        tradingDaysCompleted: 0,
-        newsTrading: true,
-      }
-    }
-    // Funded
-    return {
-      maxDrawdown: { type: 'static', limit: r.drawdown, current: 0 },
-      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
-      profitTarget: { target: 0, currentPnl: 0 },
-      tradingDaysCompleted: 0,
-      newsTrading: true,
-    }
-  },
-}
-
-// ─── The 5%ers ────────────────────────────────────────────────────────────────
+// ─── The 5%ers Futures ────────────────────────────────────────────────────────
+// Source: the5ers.com/futures | Verified March 2026
+// Dedicated FUTURES program (not the standard forex 5%ers)
+// Static drawdown from initial balance (NOT trailing)
+// Consistency rule: 30% (best single day ≤ 30% of total profits)
+// Max contracts: 2 mini / 20 micro (eval & funded)
+// Scaling: 10% profit triggers scale; scales to $500K+ max allocation
+// Fees: $50 eval + $70 activation on pass (fees refundable on first payout)
 
 const fivePctersPreset: FirmPreset = {
   id: '5ers',
   displayName: 'The 5%ers',
   shortName: '5%ers',
   color: '#d97706',
-  accountSizes: [6000, 24000, 60000, 100000],
-  phases: ['phase1', 'phase2', 'funded'],
-  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    // 5%ers Hyper Growth $100K: 10% profit ($10K), 6% drawdown ($6K), no daily loss limit
-    const profitPct   = 0.10
-    const drawdownPct = 0.06
-
-    if (phase === 'phase1' || phase === 'phase2') {
-      return {
-        maxDrawdown: { type: 'static', limit: accountSize * drawdownPct, current: 0 },
-        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No daily loss limit
-        profitTarget: { target: accountSize * profitPct, currentPnl: 0 },
-        tradingDaysCompleted: 0,
-        newsTrading: true,
-      }
-    }
-    // Funded
-    return {
-      maxDrawdown: { type: 'static', limit: accountSize * drawdownPct, current: 0 },
-      dailyLossLimit: { limit: 0, todayPnl: 0 },
-      profitTarget: { target: 0, currentPnl: 0 },
-      tradingDaysCompleted: 0,
-      newsTrading: true,
-    }
-  },
-}
-
-// ─── Take Profit Trader ───────────────────────────────────────────────────────
-
-const tptPreset: FirmPreset = {
-  id: 'tpt',
-  displayName: 'Take Profit Trader',
-  shortName: 'TPT',
-  color: '#10b981',
-  accountSizes: [50000, 100000, 150000],
+  accountSizes: [25000],
   phases: ['phase1', 'funded'],
   getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
-      50000:  { profit: 3000, drawdown: 2000, daily: 1000 },
-      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
-      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
-    }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
+    // Eval: 6% profit target, 3% static max loss from initial balance, no DLL
+    // Funded stage: 4% profit target, 3% static max loss continues
+    const drawdown = accountSize * 0.03 // 3% static from initial balance (verified)
 
     if (phase === 'phase1') {
       return {
-        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
-        profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 5,
+        maxDrawdown: { type: 'static', limit: drawdown, current: 0 }, // Static (not trailing)
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No separate daily loss limit
+        profitTarget: { target: accountSize * 0.06, currentPnl: 0 }, // 6% eval target
+        // No minimum trading days explicitly stated
         tradingDaysCompleted: 0,
+        maxContracts: 2, // 2 mini / 20 micro (verified)
         newsTrading: true,
       }
     }
+    // Funded stage: 4% profit target, same 3% static max loss
     return {
-      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
-      profitTarget: { target: 0, currentPnl: 0 },
+      maxDrawdown: { type: 'static', limit: drawdown, current: 0 },
+      dailyLossLimit: { limit: 0, todayPnl: 0 },
+      profitTarget: { target: accountSize * 0.04, currentPnl: 0 }, // 4% funded target (verified)
       tradingDaysCompleted: 0,
+      maxContracts: 2,
       newsTrading: true,
     }
   },
 }
 
-// ─── Earn2Trade ───────────────────────────────────────────────────────────────
+// ─── My Funded Futures (MFF) — Rapid Plan ────────────────────────────────────
+// Source: myfundedfutures.com | Verified March 2026
+// "Rapid Plan" is the current standard model (streamlined 2025-2026)
+// EOD trailing drawdown — NO daily loss limit (major perk vs competitors)
+// Consistency rule: 50% (eval only)
+// Max contracts: 5 mini / 50 micro
+// First withdrawal requires $2,100+ in realized profits built up
+// NOTE: Only $50K Rapid plan has verified specific amounts (March 2026)
+//       Other sizes ($100K/$150K/$25K Flex) available but amounts unverified
+
+const mffPreset: FirmPreset = {
+  id: 'mff',
+  displayName: 'My Funded Futures',
+  shortName: 'MFF',
+  color: '#059669',
+  accountSizes: [50000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    // $50K Rapid: $3,000 profit, $2,000 EOD trailing drawdown, NO daily loss limit, min 2 days
+    const ratios: Record<number, { profit: number; drawdown: number }> = {
+      50000: { profit: 3000, drawdown: 2000 },
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.04 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // EOD trailing
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // NO daily loss limit — key MFF feature
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        minTradingDays: 2, // Reduced from legacy 5+ days (verified)
+        tradingDaysCompleted: 0,
+        maxContracts: 5, // 5 mini / 50 micro (verified)
+        newsTrading: true,
+      }
+    }
+    // Funded (Sim Funded): no DLL, EOD drawdown only; max loss lock trails to $100 above start
+    return {
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: 0, todayPnl: 0 }, // No DLL on funded either (verified)
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      maxContracts: 5,
+      newsTrading: true,
+    }
+  },
+}
+
+// ─── Earn2Trade — Gauntlet Mini ───────────────────────────────────────────────
+// Source: earn2trade.com | Verified March 2026
+// Gauntlet Mini: fast path to funding (10-day minimum)
+// EOD trailing drawdown (measured at end of each trading day)
+// Subscription-based monthly rebilling until pass or cancel
+// Activation fee: $139 on pass (deducted from first withdrawal)
+// Covers all 4 CME exchanges. Contract ladder applies by account balance.
 
 const earn2TradePreset: FirmPreset = {
   id: 'earn2trade',
   displayName: 'Earn2Trade',
   shortName: 'E2T',
   color: '#f59e0b',
-  accountSizes: [50000, 100000],
+  accountSizes: [50000, 100000, 150000, 200000],
   phases: ['phase1', 'funded'],
   getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    // All dollar amounts verified from earn2trade.com Gauntlet Mini page (March 2026)
     const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
-      50000:  { profit: 3000, drawdown: 2000, daily: 1000 },
-      100000: { profit: 6000, drawdown: 3500, daily: 2000 },
+      50000:  { profit: 3000,  drawdown: 2000, daily: 1100 }, // $50K: $3K profit, $2K EOD, $1.1K daily
+      100000: { profit: 6000,  drawdown: 3500, daily: 2200 }, // $100K: $6K, $3.5K EOD, $2.2K daily
+      150000: { profit: 9000,  drawdown: 4500, daily: 3300 }, // $150K: $9K, $4.5K EOD, $3.3K daily
+      200000: { profit: 11000, drawdown: 6000, daily: 4400 }, // $200K: $11K, $6K EOD, $4.4K daily
     }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.035, daily: accountSize * 0.02 }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.055, drawdown: accountSize * 0.03, daily: accountSize * 0.022 }
 
     if (phase === 'phase1') {
       return {
-        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // EOD trailing
         dailyLossLimit: { limit: r.daily, todayPnl: 0 },
         profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 10,
+        minTradingDays: 10, // 10-day minimum (verified — "Gauntlet Mini" emphasis)
         tradingDaysCompleted: 0,
         newsTrading: true,
       }
     }
+    // Funded
     return {
       maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
       dailyLossLimit: { limit: r.daily, todayPnl: 0 },
@@ -293,34 +222,91 @@ const earn2TradePreset: FirmPreset = {
   },
 }
 
-// ─── Bulenox ──────────────────────────────────────────────────────────────────
+// ─── Leeloo Trading — Foundation Accounts ─────────────────────────────────────
+// Source: leelootrading.com | Verified March 2026
+// Three Foundation accounts: LB Bundle Aspire ($25K), Kickstart ($75K), Leeloo Express ($100K)
+// Trailing drawdown (continues from evaluation into funded Performance Account)
+// NO separate daily loss limit (EOD trailing drawdown only)
+// Consistency rule: 30% (daily profits ≤ 30% of net profit from initial balance)
+// Min trading days: 10 U.S. market hours trading days for evaluation
+// Supports 12+ platforms (NinjaTrader, Rithmic Pro, EdgeProX, etc.)
 
-const bulenoxPreset: FirmPreset = {
-  id: 'bulenox',
-  displayName: 'Bulenox',
-  shortName: 'Bulenox',
-  color: '#ef4444',
-  accountSizes: [50000, 150000],
+const leelooPreset: FirmPreset = {
+  id: 'leeloo',
+  displayName: 'Leeloo Trading',
+  shortName: 'Leeloo',
+  color: '#06b6d4',
+  accountSizes: [25000, 75000, 100000],
   phases: ['phase1', 'funded'],
   getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    const ratios: Record<number, { profit: number; drawdown: number }> = {
-      50000:  { profit: 3000, drawdown: 2500 },
-      150000: { profit: 9000, drawdown: 5000 },
+    // All amounts verified from leelootrading.com Foundation account pages (March 2026)
+    // $25K = LB Bundle Aspire | $75K = Kickstart | $100K = Leeloo Express
+    const ratios: Record<number, { profit: number; drawdown: number; maxMini: number }> = {
+      25000:  { profit: 1500, drawdown: 1500, maxMini: 3  },  // LB Bundle Aspire (verified)
+      75000:  { profit: 4500, drawdown: 2750, maxMini: 10 },  // Kickstart (verified)
+      100000: { profit: 6000, drawdown: 3000, maxMini: 12 },  // Leeloo Express (verified)
     }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.033 }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, maxMini: 5 }
 
     if (phase === 'phase1') {
       return {
-        maxDrawdown: { type: 'static', limit: r.drawdown, current: 0 }, // EOD drawdown ≈ static
-        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No daily loss limit
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // Trailing from peak
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No separate daily loss limit
         profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 5,
+        minTradingDays: 10, // 10 U.S. market hours trading days (verified)
         tradingDaysCompleted: 0,
+        maxContracts: r.maxMini, // mini contracts (verified per size)
         newsTrading: true,
       }
     }
+    // Funded (Performance Account): trailing drawdown continues, 30% consistency rule
     return {
-      maxDrawdown: { type: 'static', limit: r.drawdown, current: 0 },
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: 0, todayPnl: 0 },
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      maxContracts: r.maxMini,
+      newsTrading: true,
+    }
+  },
+}
+
+// ─── FundedNext Futures — Rapid Challenge ────────────────────────────────────
+// Source: fundednext.com/futures + helpfutures.fundednext.com | Verified March 2026
+// Rapid path: EOD trailing drawdown, no DLL, unlimited time, 40% consistency rule
+// Funded: 80% profit split (up to 90%), first payout after 14 days, fees refundable
+// Max funded capital: $300K per account
+// Also offers Legacy and Bolt challenges — see fundednext.com/futures for details
+
+const fundednextPreset: FirmPreset = {
+  id: 'fundednext',
+  displayName: 'FundedNext Futures',
+  shortName: 'FundedNext',
+  color: '#6d28d9',
+  accountSizes: [25000, 50000, 100000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    // All amounts verified from helpfutures.fundednext.com Rapid Challenge (March 2026)
+    const ratios: Record<number, { profit: number; drawdown: number }> = {
+      25000:  { profit: 1500, drawdown: 1000 }, // $25K: $1,500 profit, $1,000 EOD trailing
+      50000:  { profit: 3000, drawdown: 2000 }, // $50K: $3,000 profit, $2,000 EOD trailing
+      100000: { profit: 5000, drawdown: 2500 }, // $100K: $5,000 profit, $2,500 EOD trailing
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.05, drawdown: accountSize * 0.025 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // EOD trailing
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No daily loss limit on Rapid (verified)
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        // No minimum trading days on Rapid challenge (verified: unlimited time)
+        tradingDaysCompleted: 0,
+        newsTrading: true, // News trading allowed (verified)
+      }
+    }
+    // Funded: no DLL, no consistency rule in funded phase, 80-90% profit split
+    return {
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
       dailyLossLimit: { limit: 0, todayPnl: 0 },
       profitTarget: { target: 0, currentPnl: 0 },
       tradingDaysCompleted: 0,
@@ -329,35 +315,46 @@ const bulenoxPreset: FirmPreset = {
   },
 }
 
-// ─── TradeDay ─────────────────────────────────────────────────────────────────
+// ─── Lucid Trading — LucidFlex ────────────────────────────────────────────────
+// Source: lucidtrading.com | Verified March 2026 (program launched Nov 2025)
+// KEY FEATURE: NO daily loss limit — during evaluation OR funded (major differentiator)
+// EOD trailing drawdown only; no time pressure on evaluation
+// Consistency rule: 50% (eval only; completely relaxed once funded)
+// Funded: 100% profit on first $10K payouts, then 90/10 split; no payout buffer
+// Claimed 2-minute payout processing
+// Also offers LucidPro (has DLL) and LucidDirect (instant funding) — see lucidtrading.com
 
-const tradeDayPreset: FirmPreset = {
-  id: 'tradeday',
-  displayName: 'TradeDay',
-  shortName: 'TradeDay',
-  color: '#8b5cf6',
-  accountSizes: [100000, 150000],
+const lucidFlexPreset: FirmPreset = {
+  id: 'lucidflex',
+  displayName: 'Lucid Trading (LucidFlex)',
+  shortName: 'LucidFlex',
+  color: '#14b8a6',
+  accountSizes: [25000, 50000, 100000, 150000],
   phases: ['phase1', 'funded'],
   getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
-      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
-      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
+    // All amounts verified from lucidtrading.com support docs (March 2026)
+    const ratios: Record<number, { profit: number; drawdown: number }> = {
+      25000:  { profit: 1250, drawdown: 1000 }, // $25K: $1,250 (5%), $1,000 EOD
+      50000:  { profit: 3000, drawdown: 2000 }, // $50K: $3,000 (6%), $2,000 EOD
+      100000: { profit: 6000, drawdown: 3000 }, // $100K: $6,000 (6%), $3,000 EOD
+      150000: { profit: 9000, drawdown: 4500 }, // $150K: $9,000 (6%), $4,500 EOD
     }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03 }
 
     if (phase === 'phase1') {
       return {
-        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // EOD trailing
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // NO daily loss limit — key LucidFlex feature (verified)
         profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 7,
+        // No time limit on evaluation (verified)
         tradingDaysCompleted: 0,
         newsTrading: true,
       }
     }
+    // Funded: no DLL, no consistency rule, max loss lock trails to starting balance + $100
     return {
       maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+      dailyLossLimit: { limit: 0, todayPnl: 0 }, // No DLL on funded either (verified)
       profitTarget: { target: 0, currentPnl: 0 },
       tradingDaysCompleted: 0,
       newsTrading: true,
@@ -365,35 +362,44 @@ const tradeDayPreset: FirmPreset = {
   },
 }
 
-// ─── Leeloo Trading ───────────────────────────────────────────────────────────
+// ─── Tradeify — Standard Evaluation ──────────────────────────────────────────
+// Source: tradeify.co | Verified March 2026
+// $150M+ verified payouts, 80,000+ active traders
+// EOD trailing drawdown, no daily loss limit during evaluation
+// No consistency rule during evaluation
+// Min 4 trading days to pass evaluation (1-hour payout guarantee on funded)
+// NOTE: Only $150K Standard Evaluation verified with specific amounts (March 2026)
+//       Other sizes may be available — verify at tradeify.co before using
+// Also offers Lightning Funded (instant, no eval) — see tradeify.co
 
-const leelooPreset: FirmPreset = {
-  id: 'leeloo',
-  displayName: 'Leeloo Trading',
-  shortName: 'Leeloo',
-  color: '#06b6d4',
-  accountSizes: [100000, 150000],
+const tradeifyPreset: FirmPreset = {
+  id: 'tradeify',
+  displayName: 'Tradeify',
+  shortName: 'Tradeify',
+  color: '#f97316',
+  accountSizes: [150000],
   phases: ['phase1', 'funded'],
   getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
-    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
-      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
-      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
+    // $150K Standard Evaluation verified from tradeify.co (March 2026)
+    const ratios: Record<number, { profit: number; drawdown: number }> = {
+      150000: { profit: 9000, drawdown: 4500 }, // $150K: $9,000 (6%), $4,500 EOD trailing
     }
-    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03 }
 
     if (phase === 'phase1') {
       return {
-        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 }, // EOD trailing
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No DLL during evaluation (verified)
         profitTarget: { target: r.profit, currentPnl: 0 },
-        minTradingDays: 10,
+        minTradingDays: 4, // Must complete 4 trading days minimum (verified)
         tradingDaysCompleted: 0,
         newsTrading: true,
       }
     }
+    // Funded (Daily Payout or Flex Payout paths — see tradeify.co for path-specific rules)
     return {
       maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
-      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+      dailyLossLimit: { limit: 0, todayPnl: 0 },
       profitTarget: { target: 0, currentPnl: 0 },
       tradingDaysCompleted: 0,
       newsTrading: true,
@@ -422,30 +428,26 @@ const customPreset: FirmPreset = {
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 export const FIRM_PRESETS: Record<FirmId, FirmPreset> = {
-  ftmo:       ftmoPreset,
   topstep:    topstepPreset,
-  apex:       apexPreset,
-  mff:        mffPreset,
   '5ers':     fivePctersPreset,
-  tpt:        tptPreset,
+  mff:        mffPreset,
   earn2trade: earn2TradePreset,
-  bulenox:    bulenoxPreset,
-  tradeday:   tradeDayPreset,
   leeloo:     leelooPreset,
+  fundednext: fundednextPreset,
+  lucidflex:  lucidFlexPreset,
+  tradeify:   tradeifyPreset,
   custom:     customPreset,
 }
 
 export const FIRM_LIST: FirmPreset[] = [
-  ftmoPreset,
   topstepPreset,
-  apexPreset,
-  mffPreset,
   fivePctersPreset,
-  tptPreset,
+  mffPreset,
   earn2TradePreset,
-  bulenoxPreset,
-  tradeDayPreset,
   leelooPreset,
+  fundednextPreset,
+  lucidFlexPreset,
+  tradeifyPreset,
   customPreset,
 ]
 

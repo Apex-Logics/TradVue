@@ -371,7 +371,7 @@ function AddAccountModal({ onClose, onAdd }: {
   onClose: () => void
   onAdd: (account: Omit<PropFirmAccount, 'id' | 'createdAt' | 'updatedAt'>) => void
 }) {
-  const [firmId, setFirmId]         = useState<FirmId>('ftmo')
+  const [firmId, setFirmId]         = useState<FirmId>('topstep')
   const [accountSize, setAccountSize] = useState<number>(100000)
   const [customSize, setCustomSize]  = useState<string>('')
   const [useCustomSize, setUseCustomSize] = useState(false)
@@ -773,7 +773,7 @@ function AddAccountModal({ onClose, onAdd }: {
 
         {/* Disclaimer */}
         <div style={{ fontSize: 10, color: 'var(--text-3)', fontStyle: 'italic' }}>
-          ⚠️ Rule presets are approximate and may change. Always verify with your prop firm.
+          Rules are sourced from official prop firm websites as of March 2026. Firms update rules frequently — always verify current rules on your firm&apos;s website before trading.
         </div>
 
         {error && (
@@ -1581,7 +1581,7 @@ export default function PropFirmPage() {
                   Track your prop firm challenges and funded account rules in one place.
                 </p>
                 <p style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4, fontStyle: 'italic' }}>
-                  ⚠️ Rule presets are approximate and may change. Always verify with your prop firm.
+                  Rules are sourced from official prop firm websites as of March 2026. Firms update rules frequently — always verify current rules on your firm&apos;s website before trading.
                 </p>
               </div>
               <button

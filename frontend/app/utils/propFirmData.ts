@@ -5,7 +5,21 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type FirmId = 'ftmo' | 'topstep' | '5ers' | 'apex' | 'mff' | 'tpt' | 'earn2trade' | 'bulenox' | 'tradeday' | 'leeloo' | 'custom'
+// Verified firms only (March 2026). See propFirmPresets.ts for verification notes.
+// Removed: ftmo (forex only), apex (unverified), tpt (amounts unverified),
+//          bulenox (amounts unverified), tradeday (amounts unverified),
+//          alphafutures (website too sparse), alphafunded (hidden terms),
+//          lucidpro/luciddirect (amounts not yet verified)
+export type FirmId =
+  | 'topstep'     // Verified: $50K/$100K/$150K, trailing EOD, min 0 days
+  | '5ers'        // Verified: $25K futures, 3% static, 6%/4% targets
+  | 'mff'         // Verified: $50K Rapid, $3K profit, $2K EOD, no DLL, min 2 days
+  | 'earn2trade'  // Verified: $50K-$200K, all 4 sizes with exact amounts, min 10 days
+  | 'leeloo'      // Verified: $25K/$75K/$100K Foundation, trailing, no DLL, min 10 days
+  | 'fundednext'  // Verified: $25K/$50K/$100K Rapid, trailing EOD, no DLL
+  | 'lucidflex'   // Verified: $25K-$150K, EOD trailing, NO DLL (eval & funded)
+  | 'tradeify'    // Verified: $150K Standard, $9K profit, $4.5K EOD, min 4 days
+  | 'custom'
 export type PhaseId = 'phase1' | 'phase2' | 'funded' | 'payout'
 export type AccountStatus = 'active' | 'passed' | 'failed' | 'withdrawn'
 export type DrawdownType = 'static' | 'trailing'
