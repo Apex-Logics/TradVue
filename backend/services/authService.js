@@ -74,21 +74,26 @@ async function signIn(email, password) {
 // ── Sign Out ──────────────────────────────────────────────────────────────────
 /**
  * Invalidate a session by access token.
- * Creates a scoped client so only that session is signed out.
+ * Creates a FRESH per-request client to avoid mutating the shared singleton.
+ * Never call setSession on the shared client — that bleeds state across requests.
  *
  * @param {string} accessToken
  * @returns {{ error }}
  */
 async function signOut(accessToken) {
-  const supabase = getClient();
-  // Set the session on a fresh client to scope the sign-out
-  const { error: setErr } = await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: '', // not needed for sign-out
-  });
-  if (setErr) return { error: setErr };
+  // SECURITY: Create a fresh client scoped to this request's token.
+  // Using the shared singleton + setSession would mutate global auth state,
+  // causing session bleeding between concurrent requests.
+  const scopedClient = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY,
+    {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    }
+  );
 
-  const { error } = await supabase.auth.signOut();
+  const { error } = await scopedClient.auth.signOut();
   return { error };
 }
 
@@ -129,18 +134,26 @@ async function resetPassword(email) {
  * Change password for the authenticated user.
  * Requires a valid access token.
  *
+ * SECURITY: Creates a fresh per-request client with the user's token in the
+ * Authorization header. Never uses the shared singleton — setSession on a
+ * shared client mutates global state and causes session bleeding.
+ *
  * @param {string} accessToken
  * @param {string} newPassword
  * @returns {{ data, error }}
  */
 async function updatePassword(accessToken, newPassword) {
-  const supabase = getClient();
-  // Set the session so the client operates as this user
-  await supabase.auth.setSession({
-    access_token: accessToken,
-    refresh_token: '',
-  });
-  const { data, error } = await supabase.auth.updateUser({ password: newPassword });
+  // SECURITY: Fresh client per request — do NOT use setSession on the singleton.
+  const scopedClient = createClient(
+    process.env.SUPABASE_URL,
+    process.env.SUPABASE_ANON_KEY,
+    {
+      auth: { autoRefreshToken: false, persistSession: false, detectSessionInUrl: false },
+      global: { headers: { Authorization: `Bearer ${accessToken}` } },
+    }
+  );
+
+  const { data, error } = await scopedClient.auth.updateUser({ password: newPassword });
   return { data, error };
 }
 
@@ -184,8 +197,14 @@ async function deleteUser(userId) {
  * Create or update the user_profiles row for the given user.
  * Used after signUp and on profile update.
  *
+ * SECURITY: The `tier` field in `fields` MUST only be passed from trusted
+ * server-side callers (signup defaulting to 'free', Stripe webhook, admin API).
+ * Never pass `tier` from user-supplied request body — that is a payment bypass.
+ * The profile PATCH endpoint enforces this at the route level.
+ *
  * @param {string} userId
  * @param {object} fields  - { name, preferences, tier }
+ *   tier: TRUSTED CALLERS ONLY — signup (always 'free'), Stripe webhook, admin
  * @returns {{ data, error }}
  */
 async function upsertProfile(userId, fields = {}) {

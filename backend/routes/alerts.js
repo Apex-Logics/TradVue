@@ -196,7 +196,7 @@ router.get('/subscription', requireAuth, async (req, res) => {
 // PATCH /api/alerts/read
 // ─────────────────────────────────────────────────────────────────────────────
 
-router.patch('/read', async (req, res) => {
+router.patch('/read', requireAuth, async (req, res) => {
   try {
     const { ids } = req.body;
 

@@ -348,6 +348,16 @@ router.put('/me', requireAuth, async (req, res) => {
     const userId = req.user.id;
     const { name, preferences } = req.body;
 
+    // SECURITY: `tier` is intentionally NOT extracted from req.body.
+    // Tier changes must go through the Stripe webhook or admin API only.
+    // Any attempt to pass `tier` in the request body is silently ignored.
+    if (req.body.tier !== undefined) {
+      return res.status(403).json({
+        error: 'Forbidden: tier cannot be updated through this endpoint',
+        message: 'Tier changes require a valid payment. Visit /pricing to upgrade.',
+      });
+    }
+
     // Validate inputs
     if (name !== undefined && typeof name !== 'string') {
       return res.status(400).json({ error: 'name must be a string' });

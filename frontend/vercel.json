@@ -4,6 +4,20 @@
   "outputDirectory": ".next",
   "installCommand": "npm install",
   "regions": ["iad1"],
+  "redirects": [
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "chartgenius.io" }],
+      "destination": "https://www.tradvue.com/$1",
+      "permanent": true
+    },
+    {
+      "source": "/(.*)",
+      "has": [{ "type": "host", "value": "www.chartgenius.io" }],
+      "destination": "https://www.tradvue.com/$1",
+      "permanent": true
+    }
+  ],
   "headers": [
     {
       "source": "/(.*)",
