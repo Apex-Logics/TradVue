@@ -28,6 +28,8 @@ import AdvancedReports from './AdvancedReports'
 import { TagPicker, TagFilterBar, TagChip, loadCustomTags, saveCustomTags, type TagDefinition } from './TagManager'
 import { ExportButton, ImportBackupModal } from './ExportImport'
 import WeeklySummary from './WeeklySummary'
+import { loadPlaybooks, initPlaybooks, type Playbook, CATEGORY_COLORS, CATEGORY_LABELS } from '../utils/playbookData'
+import { DEFAULT_PLAYBOOKS } from '../utils/playbookDefaults'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -94,6 +96,8 @@ interface Trade {
   tags_strategies?: string[]
   // Emotional tags
   emotionTag?: string
+  // Playbook tag
+  playbookId?: string
 
   // ── Futures fields (assetClass === 'Futures') ─────────────────────────────
   // assetClass 'Futures' already exists; these are additional detail fields.
@@ -405,6 +409,66 @@ const inputSx: React.CSSProperties = {
   borderRadius: 8, padding: '10px 14px',
   color: 'var(--text-0)', fontSize: 13, fontFamily: 'var(--mono)',
   outline: 'none',
+}
+
+// ─── Playbook Dropdown ────────────────────────────────────────────────────────
+
+function PlaybookDropdown({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [playbooks, setPlaybooks] = useState<Playbook[]>([])
+
+  useEffect(() => {
+    const pbs = initPlaybooks(DEFAULT_PLAYBOOKS)
+    setPlaybooks(pbs)
+  }, [])
+
+  if (playbooks.length === 0) return null
+
+  const selected = playbooks.find(p => p.id === value)
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <FieldLabel label="Playbook (optional)" tooltip="Tag this trade with a playbook strategy. Used to track per-strategy performance over time." />
+      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
+        <select
+          value={value}
+          onChange={e => onChange(e.target.value)}
+          style={{
+            flex: 1,
+            background: 'var(--bg-1)',
+            border: '1px solid var(--border)',
+            borderRadius: 8,
+            padding: '10px 14px',
+            color: value ? 'var(--text-0)' : 'var(--text-3)',
+            fontSize: 13,
+            fontFamily: 'var(--font)',
+            outline: 'none',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="">— No playbook —</option>
+          {playbooks.map(p => (
+            <option key={p.id} value={p.id}>{p.name}</option>
+          ))}
+        </select>
+        {selected && (
+          <span style={{
+            background: CATEGORY_COLORS[selected.category] + '22',
+            color: CATEGORY_COLORS[selected.category],
+            border: `1px solid ${CATEGORY_COLORS[selected.category]}55`,
+            borderRadius: 10,
+            padding: '3px 8px',
+            fontSize: 10,
+            fontWeight: 700,
+            textTransform: 'uppercase',
+            letterSpacing: '0.05em',
+            whiteSpace: 'nowrap',
+          }}>
+            {CATEGORY_LABELS[selected.category]}
+          </span>
+        )}
+      </div>
+    </div>
+  )
 }
 
 // ─── Analytics helpers ────────────────────────────────────────────────────────
@@ -828,6 +892,7 @@ const EMPTY_FORM = {
   notes: '',
   screenshot: '',
   emotionTag: '',
+  playbookId: '',
   // Option fields (legacy)
   strike: '', expiry: '', premium: '', contracts: '',
   // Forex fields
@@ -1065,6 +1130,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
       tags_mistakes: formMistakes,
       tags_strategies: formStrategies,
       emotionTag: form.emotionTag || '',
+      playbookId: form.playbookId || undefined,
     }
     const updated = [trade, ...trades]
     setTrades(updated)
@@ -1496,6 +1562,9 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
             </div>
           )}
 
+          {/* Playbook */}
+          <PlaybookDropdown value={form.playbookId} onChange={id => set('playbookId')(id)} />
+
           {/* Tags & Rating — Multi-select */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, marginBottom: 12 }}>
             <TagPicker
@@ -1775,6 +1844,23 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                           {(t.tags_strategies || []).map(tag => (
                             <TagChip key={tag} tag={{ name: tag, color: '#10b981', category: 'strategy', id: '', isPreset: true }} size="small" />
                           ))}
+                          {t.playbookId && (() => {
+                            const pbs = loadPlaybooks()
+                            const pb = pbs.find(p => p.id === t.playbookId)
+                            if (!pb) return null
+                            const col = CATEGORY_COLORS[pb.category]
+                            return (
+                              <span key={pb.id} style={{
+                                background: col + '22', color: col,
+                                border: `1px solid ${col}55`,
+                                borderRadius: 10, padding: '1px 6px',
+                                fontSize: 10, fontWeight: 700,
+                                textTransform: 'uppercase', letterSpacing: '0.04em',
+                              }}>
+                                📋 {pb.name}
+                              </span>
+                            )
+                          })()}
                         </div>
                       )}
                       {locked && (
@@ -2511,9 +2597,89 @@ function TabAnalytics({ trades }: { trades: Trade[] }) {
       {/* Auto-populated Trade Expectancy */}
       <JournalExpectancy trades={trades} />
 
+      {/* By Playbook breakdown */}
+      <PlaybookBreakdown trades={trades} />
+
       {/* Pattern Detection */}
       {trades.length >= 5 && <PatternDetection trades={trades} />}
     </div>
+  )
+}
+
+// ─── Playbook Breakdown ────────────────────────────────────────────────────────
+
+function PlaybookBreakdown({ trades }: { trades: Trade[] }) {
+  const data = useMemo(() => {
+    const tagged = trades.filter(t => t.playbookId)
+    if (tagged.length === 0) return null
+
+    const pbs = loadPlaybooks()
+    const map: Record<string, { pb: Playbook; trades: Trade[] }> = {}
+    tagged.forEach(t => {
+      if (!t.playbookId) return
+      if (!map[t.playbookId]) {
+        const pb = pbs.find(p => p.id === t.playbookId)
+        if (!pb) return
+        map[t.playbookId] = { pb, trades: [] }
+      }
+      map[t.playbookId].trades.push(t)
+    })
+
+    return Object.values(map).map(({ pb, trades: ts }) => {
+      const wins = ts.filter(t => t.pnl > 0)
+      const winRate = wins.length / ts.length
+      const totalPnl = ts.reduce((s, t) => s + t.pnl, 0)
+      return {
+        pb,
+        count: ts.length,
+        winRate,
+        totalPnl,
+      }
+    }).sort((a, b) => b.totalPnl - a.totalPnl)
+  }, [trades])
+
+  if (!data || data.length === 0) return null
+
+  return (
+    <Card style={{ marginBottom: 16 }}>
+      <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
+        <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}>
+          📋 Performance by Playbook
+        </span>
+        <Tooltip text="How each of your playbook strategies is performing. Win rate, trade count, and total P&L per strategy." position="right" />
+      </div>
+      <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
+        <thead>
+          <tr style={{ borderBottom: '1px solid var(--border)' }}>
+            {['Playbook', 'Category', 'Trades', 'Win Rate', 'Total P&L'].map(h => (
+              <th key={h} style={{ padding: '6px 10px', textAlign: 'left', color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em', fontSize: 10 }}>{h}</th>
+            ))}
+          </tr>
+        </thead>
+        <tbody>
+          {data.map(({ pb, count, winRate, totalPnl }) => {
+            const col = CATEGORY_COLORS[pb.category]
+            return (
+              <tr key={pb.id} style={{ borderBottom: '1px solid var(--border)' }}>
+                <td style={{ padding: '9px 10px', fontWeight: 600, color: 'var(--text-0)' }}>{pb.name}</td>
+                <td style={{ padding: '9px 10px' }}>
+                  <span style={{ background: col + '22', color: col, border: `1px solid ${col}55`, borderRadius: 10, padding: '2px 8px', fontSize: 10, fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.05em' }}>
+                    {CATEGORY_LABELS[pb.category]}
+                  </span>
+                </td>
+                <td style={{ padding: '9px 10px', color: 'var(--text-2)' }}>{count}</td>
+                <td style={{ padding: '9px 10px', fontFamily: 'var(--mono)', color: winRate >= 0.5 ? GREEN : RED, fontWeight: 700 }}>
+                  {(winRate * 100).toFixed(0)}%
+                </td>
+                <td style={{ padding: '9px 10px', fontFamily: 'var(--mono)', color: totalPnl >= 0 ? GREEN : RED, fontWeight: 700 }}>
+                  {totalPnl >= 0 ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}
+                </td>
+              </tr>
+            )
+          })}
+        </tbody>
+      </table>
+    </Card>
   )
 }
 
