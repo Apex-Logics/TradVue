@@ -133,6 +133,7 @@ app.use('/api/alerts/price',  cachePrivate,   require('./routes/priceAlerts')); 
 app.use('/api/tools',         cachePublic2m,  require('./routes/tools'));           // Trading tools (screener, fear-greed, gas, correlation)
 app.use('/api/dashboard',     cachePrivate,   require('./routes/dashboard'));       // CEO dashboard persistence
 app.use('/api/stocks',        cachePublic1h,  require('./routes/stocks'));          // Analyst ratings + stock scoring
+app.use('/api/sentiment',     cachePublic1h,  require('./routes/sentiment'));       // Marketaux sentiment by ticker
 app.use('/api/journal',       cachePrivate,   require('./routes/journal'));         // Journal CSV import & trade management
 app.use('/api/backup',        cachePrivate,   require('./routes/backup'));          // Data export/backup/restore
 app.use('/api/feedback',                      require('./routes/feedback'));        // User feedback & bug reports

@@ -805,6 +805,7 @@ export default function HomeClient() {
                 wlQuotes={quotes}
                 tickerQuotes={tickerQuotes}
                 calendarEvents={calendarEvents}
+                selectedTicker={selectedStock?.symbol ?? watchlist[0] ?? 'SPY'}
               />
             </ErrorBoundary>
           ) : (

@@ -18,9 +18,13 @@ jest.mock('../services/finnhub', () => ({
 }));
 
 // Bypass JWT auth: inject req.user
-jest.mock('../routes/auth', () => ({
-  authenticateToken: (req, _res, next) => {
-    req.user = { userId: 'user-uuid-1', subscription_tier: 'free' };
+jest.mock('../middleware/auth', () => ({
+  requireAuth: (req, _res, next) => {
+    req.user = { id: 'user-uuid-1', email: 'test@example.com', role: 'authenticated' };
+    next();
+  },
+  optionalAuth: (req, _res, next) => {
+    req.user = { id: 'user-uuid-1', email: 'test@example.com', role: 'authenticated' };
     next();
   },
 }));

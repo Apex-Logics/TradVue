@@ -1,7 +1,9 @@
 'use client'
 
-import { useMemo } from 'react'
+import { useMemo, useState, useEffect } from 'react'
 import type { Quote, CalendarEvent } from '../types'
+
+const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
@@ -9,6 +11,15 @@ interface AnalysisPanelProps {
   wlQuotes: Record<string, Quote>
   tickerQuotes: Record<string, Quote>
   calendarEvents: CalendarEvent[]
+  /** Optional ticker to show sentiment for. Defaults to 'SPY'. */
+  selectedTicker?: string
+}
+
+interface SentimentData {
+  symbol: string
+  score: number       // -1 to 1 approx; from Marketaux entity sentiment_score averages
+  label: 'Bullish' | 'Bearish' | 'Neutral'
+  articles: number
 }
 
 // ─── Helpers ───────────────────────────────────────────────────────────────────
@@ -184,6 +195,15 @@ const MoverIcon = () => (
 const BreadthIcon = () => (
   <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
     <circle cx="12" cy="12" r="10"/><line x1="12" y1="8" x2="12" y2="12"/><line x1="12" y1="16" x2="12.01" y2="16"/>
+  </svg>
+)
+
+const SentimentIcon = () => (
+  <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+    <circle cx="12" cy="12" r="10"/>
+    <path d="M8 14s1.5 2 4 2 4-2 4-2"/>
+    <line x1="9" y1="9" x2="9.01" y2="9"/>
+    <line x1="15" y1="9" x2="15.01" y2="9"/>
   </svg>
 )
 
@@ -605,9 +625,127 @@ function MarketBreadth({ wlQuotes }: { wlQuotes: Record<string, Quote> }) {
   )
 }
 
+// ─── Market Sentiment ──────────────────────────────────────────────────────────
+
+function MarketSentiment({ ticker }: { ticker: string }) {
+  const [sentiment, setSentiment] = useState<SentimentData | null>(null)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  useEffect(() => {
+    if (!ticker) return
+
+    let cancelled = false
+    setLoading(true)
+    setError(null)
+    setSentiment(null)
+
+    fetch(`${API_BASE}/api/sentiment/${encodeURIComponent(ticker)}`)
+      .then(r => r.json())
+      .then((json: { success: boolean; data?: SentimentData; error?: string }) => {
+        if (cancelled) return
+        if (json.success && json.data) {
+          setSentiment(json.data)
+        } else {
+          setError(json.error || 'No sentiment data available')
+        }
+      })
+      .catch(() => {
+        if (!cancelled) setError('Failed to load sentiment data')
+      })
+      .finally(() => {
+        if (!cancelled) setLoading(false)
+      })
+
+    return () => { cancelled = true }
+  }, [ticker])
+
+  const labelColor =
+    sentiment?.label === 'Bullish'  ? '#10b981' :
+    sentiment?.label === 'Bearish'  ? '#ef4444' :
+    '#f59e0b'
+
+  // Gauge: score ranges roughly -1 to +1, map to 0–100%
+  // Clamp to [-1, 1] then shift to [0, 100]
+  const gaugePercent = sentiment
+    ? Math.round((Math.min(1, Math.max(-1, sentiment.score)) + 1) / 2 * 100)
+    : 50
+
+  const positiveWidth = Math.max(0, gaugePercent)
+  const negativeWidth = Math.max(0, 100 - gaugePercent)
+
+  return (
+    <Card>
+      <SectionHeader icon={<SentimentIcon />} title={`Market Sentiment — ${ticker}`} />
+      <div style={{ padding: '12px 16px' }}>
+        {loading && (
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Loading sentiment…</span>
+        )}
+
+        {!loading && (error || (sentiment && sentiment.articles === 0)) && (
+          <span style={{ fontSize: 12, color: 'var(--text-3)' }}>No sentiment data available</span>
+        )}
+
+        {!loading && sentiment && sentiment.articles > 0 && (
+          <>
+            {/* Label + score */}
+            <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 12 }}>
+              <span style={{
+                fontSize: 18, fontWeight: 700, color: labelColor,
+              }}>
+                {sentiment.label}
+              </span>
+              <span style={{
+                fontSize: 10, fontWeight: 700, padding: '2px 8px', borderRadius: 99,
+                background: labelColor + '22', color: labelColor,
+              }}>
+                {sentiment.score >= 0 ? '+' : ''}{sentiment.score.toFixed(3)}
+              </span>
+              <span style={{ fontSize: 11, color: 'var(--text-3)', marginLeft: 'auto' }}>
+                {sentiment.articles} article{sentiment.articles !== 1 ? 's' : ''}
+              </span>
+            </div>
+
+            {/* Gauge bar: green (bullish) left, red (bearish) right */}
+            <div style={{ marginBottom: 8 }}>
+              <div style={{
+                height: 10, borderRadius: 5, overflow: 'hidden',
+                background: 'var(--bg-2)', border: '1px solid var(--border)',
+                display: 'flex',
+              }}>
+                <div style={{
+                  width: `${positiveWidth}%`,
+                  background: 'linear-gradient(90deg, #10b981, #34d399)',
+                  transition: 'width 0.4s ease',
+                }} />
+                <div style={{
+                  width: `${negativeWidth}%`,
+                  background: 'linear-gradient(90deg, #ef4444, #fca5a5)',
+                  transition: 'width 0.4s ease',
+                }} />
+              </div>
+              <div style={{ display: 'flex', justifyContent: 'space-between', marginTop: 4 }}>
+                <span style={{ fontSize: 10, color: '#10b981', fontWeight: 600 }}>Bullish</span>
+                <span style={{ fontSize: 10, color: '#ef4444', fontWeight: 600 }}>Bearish</span>
+              </div>
+            </div>
+
+            {/* Article count note */}
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)', lineHeight: 1.4 }}>
+              Score averaged from {sentiment.articles} recent news article{sentiment.articles !== 1 ? 's' : ''} via Marketaux.
+            </p>
+          </>
+        )}
+      </div>
+    </Card>
+  )
+}
+
 // ─── AnalysisPanel ─────────────────────────────────────────────────────────────
 
-export default function AnalysisPanel({ wlQuotes, tickerQuotes, calendarEvents }: AnalysisPanelProps) {
+export default function AnalysisPanel({ wlQuotes, tickerQuotes, calendarEvents, selectedTicker }: AnalysisPanelProps) {
+  const sentimentTicker = selectedTicker || 'SPY'
+
   return (
     <div
       role="region"
@@ -630,6 +768,7 @@ export default function AnalysisPanel({ wlQuotes, tickerQuotes, calendarEvents }
       </div>
 
       <MarketPulse     wlQuotes={wlQuotes}     tickerQuotes={tickerQuotes} />
+      <MarketSentiment ticker={sentimentTicker} />
       <SessionStatus />
       <VolatilityEvents tickerQuotes={tickerQuotes} calendarEvents={calendarEvents} />
       <IndexBars       wlQuotes={wlQuotes}     tickerQuotes={tickerQuotes} />

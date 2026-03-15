@@ -85,42 +85,51 @@ export default function CorrelationMatrixEnhanced() {
     fetch()
   }, [mode])
 
-  // Calculate custom matrix from live prices
+  // Calculate custom matrix from real historical prices
   const calcCustomMatrix = async () => {
     if (tickers.length < 2) return
     setCustomLoading(true); setCustomError('')
     try {
-      // Fetch batch quotes
-      const url = `${API_BASE}/api/market-data/batch?symbols=${tickers.join(',')}`
-      const j = await apiFetchSafe<{ success: boolean; data: Record<string, LiveQuote> }>(url)
-      if (!j?.success || !j.data) throw new Error('No data')
+      // Fetch real historical daily closing prices from the backend
+      const url = `${API_BASE}/api/stocks/history?symbols=${tickers.join(',')}&range=3mo`
+      const j = await apiFetchSafe<{ success: boolean; data: Record<string, number[]>; missing: string[] }>(url)
 
-      // Build synthetic price series from close/prevClose (simple 2-point series for each)
-      // Note: for proper correlation we'd need historical data; we'll use a seeded approach
-      const priceMap: Record<string, number[]> = {}
-      tickers.forEach(t => {
-        const q = j.data[t]
-        if (q) {
-          // Use close and prevClose to get a 2-point series + interpolate
-          const c = q.c || q.regularMarketPrice || 100
-          const pc = q.pc || q.previousClose || c * 0.99
-          // Generate 20-point synthetic series for better correlation
-          priceMap[t] = Array.from({ length: 20 }, (_, i) => pc + (c - pc) * i / 19 + (Math.sin(i * 0.7 + t.charCodeAt(0)) * 0.5))
+      if (!j?.success || !j.data) throw new Error('No data returned from history endpoint')
+
+      const priceMap: Record<string, number[]> = j.data
+
+      // Report any tickers that had no data
+      if (j.missing && j.missing.length > 0) {
+        const foundCount = Object.keys(priceMap).length
+        if (foundCount < 2) {
+          throw new Error(`No historical data found for: ${j.missing.join(', ')}. Check that the symbols are valid US equities.`)
         }
-      })
+      }
+
+      // Only compute correlations for tickers that returned data
+      const availableTickers = tickers.filter(t => priceMap[t] && priceMap[t].length >= 5)
+
+      if (availableTickers.length < 2) {
+        throw new Error('Need at least 2 tickers with historical data to compute correlations.')
+      }
 
       const matrix: Record<string, Record<string, number>> = {}
-      tickers.forEach(ta => {
+      availableTickers.forEach(ta => {
         matrix[ta] = {}
-        tickers.forEach(tb => {
+        availableTickers.forEach(tb => {
           if (ta === tb) { matrix[ta][tb] = 1; return }
-          const a = priceMap[ta]; const b = priceMap[tb]
-          matrix[ta][tb] = a && b ? parseFloat(pearson(a, b).toFixed(2)) : 0
+          matrix[ta][tb] = parseFloat(pearson(priceMap[ta], priceMap[tb]).toFixed(2))
         })
       })
       setCustomMatrix(matrix)
-    } catch {
-      setCustomError('Could not fetch market data. Check symbols and try again.')
+
+      // Warn about missing tickers but still show what we have
+      if (j.missing && j.missing.length > 0) {
+        setCustomError(`Note: No data for ${j.missing.join(', ')} — showing correlations for available tickers only.`)
+      }
+    } catch (err) {
+      const msg = err instanceof Error ? err.message : 'Could not fetch historical data. Check symbols and try again.'
+      setCustomError(msg)
     }
     setCustomLoading(false)
   }
@@ -214,7 +223,11 @@ export default function CorrelationMatrixEnhanced() {
             </button>
             {tickers.length < 2 && <span style={{ fontSize: 11, color: 'var(--text-3)', alignSelf: 'center' }}>Add at least 2 tickers</span>}
           </div>
-          {customError && <div style={{ marginTop: 8, fontSize: 11, color: 'var(--red)' }}>{customError}</div>}
+          {customError && (
+            <div style={{ marginTop: 8, fontSize: 11, color: customError.startsWith('Note:') ? 'var(--text-3)' : 'var(--red)' }}>
+              {customError}
+            </div>
+          )}
         </div>
       )}
 
@@ -236,9 +249,9 @@ export default function CorrelationMatrixEnhanced() {
       {/* Custom matrix */}
       {mode === 'custom' && Object.keys(customMatrix).length > 0 && (
         <CorrelationTable
-          assets={tickers}
+          assets={tickers.filter(t => customMatrix[t])}
           getVal={(a, b) => customMatrix[a]?.[b] ?? null}
-          footer="Based on current price and recent movement. For deeper analysis, use the built-in mode."
+          footer="Based on 3-month daily closing prices (real historical data via Alpaca)."
         />
       )}
     </div>

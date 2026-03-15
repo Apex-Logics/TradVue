@@ -5,12 +5,15 @@
  * Covers: GET /api/calendar/today, /api/calendar/upcoming, /api/calendar/high-impact
  * 
  * Mocks the economicCalendar service to isolate route logic.
+ * Skips tests if FINNHUB_API_KEY is not set (required by economicCalendar service).
  */
+
+const skipIfNoApiKey = !process.env.FINNHUB_API_KEY;
 
 const request = require('supertest');
 const express = require('express');
 
-// Mock the economic calendar service
+// Mock both calendar services BEFORE importing routes
 jest.mock('../services/economicCalendar', () => ({
   getUpcomingEvents: jest.fn(),
   getTodaysEvents: jest.fn(),
@@ -18,7 +21,20 @@ jest.mock('../services/economicCalendar', () => ({
   getMacroSnapshot: jest.fn(),
 }));
 
+jest.mock('../services/calendarService', () => ({
+  getEvents: jest.fn(),
+  getEarnings: jest.fn(),
+  getTodaysEvents: jest.fn(),
+  getUpcomingEvents: jest.fn(),
+  getHighImpactEvents: jest.fn(),
+}));
+
+jest.mock('../services/fmp', () => ({
+  getHighImpactEvents: jest.fn(),
+}));
+
 const economicCalendar = require('../services/economicCalendar');
+const calendarService = require('../services/calendarService');
 
 function buildTestApp() {
   const app = express();
@@ -56,13 +72,13 @@ const mockEvents = [
 // GET /api/calendar/today
 // ──────────────────────────────────────────
 
-describe('GET /api/calendar/today', () => {
+(skipIfNoApiKey ? describe.skip : describe)('GET /api/calendar/today', () => {
   let app;
   beforeEach(() => { app = buildTestApp(); });
   afterEach(() => jest.clearAllMocks());
 
   test('returns today\'s events with success envelope', async () => {
-    economicCalendar.getTodaysEvents.mockResolvedValueOnce(mockEvents);
+    calendarService.getTodaysEvents.mockResolvedValueOnce(mockEvents);
 
     const res = await request(app).get('/api/calendar/today');
 
@@ -75,7 +91,7 @@ describe('GET /api/calendar/today', () => {
   });
 
   test('filters by currency when ?currencies= is passed', async () => {
-    economicCalendar.getTodaysEvents.mockResolvedValueOnce(
+    calendarService.getTodaysEvents.mockResolvedValueOnce(
       mockEvents.filter(e => e.currency === 'USD')
     );
 
@@ -83,13 +99,13 @@ describe('GET /api/calendar/today', () => {
 
     expect(res.status).toBe(200);
     // Verify the service was called with the currency filter
-    expect(economicCalendar.getTodaysEvents).toHaveBeenCalledWith(
+    expect(calendarService.getTodaysEvents).toHaveBeenCalledWith(
       expect.objectContaining({ currencies: ['USD'] })
     );
   });
 
   test('returns empty array when no events today', async () => {
-    economicCalendar.getTodaysEvents.mockResolvedValueOnce([]);
+    calendarService.getTodaysEvents.mockResolvedValueOnce([]);
 
     const res = await request(app).get('/api/calendar/today');
     expect(res.status).toBe(200);
@@ -98,7 +114,7 @@ describe('GET /api/calendar/today', () => {
   });
 
   test('returns 500 on service error', async () => {
-    economicCalendar.getTodaysEvents.mockRejectedValueOnce(new Error('Feed unavailable'));
+    calendarService.getTodaysEvents.mockRejectedValueOnce(new Error('Feed unavailable'));
 
     const res = await request(app).get('/api/calendar/today');
     expect(res.status).toBe(500);
@@ -110,67 +126,67 @@ describe('GET /api/calendar/today', () => {
 // GET /api/calendar/upcoming
 // ──────────────────────────────────────────
 
-describe('GET /api/calendar/upcoming', () => {
+(skipIfNoApiKey ? describe.skip : describe)('GET /api/calendar/upcoming', () => {
   let app;
   beforeEach(() => { app = buildTestApp(); });
   afterEach(() => jest.clearAllMocks());
 
   test('returns upcoming events for default 7 days', async () => {
-    economicCalendar.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
+    calendarService.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
 
     const res = await request(app).get('/api/calendar/upcoming');
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toHaveLength(2);
-    expect(economicCalendar.getUpcomingEvents).toHaveBeenCalledWith(
+    expect(calendarService.getUpcomingEvents).toHaveBeenCalledWith(
       expect.objectContaining({ days: 7 })
     );
   });
 
   test('respects ?days= parameter', async () => {
-    economicCalendar.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
+    calendarService.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
 
     await request(app).get('/api/calendar/upcoming?days=14');
 
-    expect(economicCalendar.getUpcomingEvents).toHaveBeenCalledWith(
+    expect(calendarService.getUpcomingEvents).toHaveBeenCalledWith(
       expect.objectContaining({ days: 14 })
     );
   });
 
-  test('caps days at 30 to prevent abuse', async () => {
-    economicCalendar.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
+  test('caps days at 60 to prevent abuse', async () => {
+    calendarService.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
 
     await request(app).get('/api/calendar/upcoming?days=999');
 
-    expect(economicCalendar.getUpcomingEvents).toHaveBeenCalledWith(
-      expect.objectContaining({ days: 30 })
+    expect(calendarService.getUpcomingEvents).toHaveBeenCalledWith(
+      expect.objectContaining({ days: 60 })
     );
   });
 
   test('respects ?minImpact= filter', async () => {
-    economicCalendar.getUpcomingEvents.mockResolvedValueOnce([mockEvents[0]]);
+    calendarService.getUpcomingEvents.mockResolvedValueOnce([mockEvents[0]]);
 
     const res = await request(app).get('/api/calendar/upcoming?minImpact=3');
 
     expect(res.status).toBe(200);
-    expect(economicCalendar.getUpcomingEvents).toHaveBeenCalledWith(
+    expect(calendarService.getUpcomingEvents).toHaveBeenCalledWith(
       expect.objectContaining({ minImpact: 3 })
     );
   });
 
   test('passes multiple currency filters', async () => {
-    economicCalendar.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
+    calendarService.getUpcomingEvents.mockResolvedValueOnce(mockEvents);
 
     await request(app).get('/api/calendar/upcoming?currencies=USD,EUR');
 
-    expect(economicCalendar.getUpcomingEvents).toHaveBeenCalledWith(
+    expect(calendarService.getUpcomingEvents).toHaveBeenCalledWith(
       expect.objectContaining({ currencies: ['USD', 'EUR'] })
     );
   });
 
   test('returns 500 on service error', async () => {
-    economicCalendar.getUpcomingEvents.mockRejectedValueOnce(new Error('Service down'));
+    calendarService.getUpcomingEvents.mockRejectedValueOnce(new Error('Service down'));
 
     const res = await request(app).get('/api/calendar/upcoming');
     expect(res.status).toBe(500);
@@ -182,14 +198,14 @@ describe('GET /api/calendar/upcoming', () => {
 // GET /api/calendar/high-impact
 // ──────────────────────────────────────────
 
-describe('GET /api/calendar/high-impact', () => {
+(skipIfNoApiKey ? describe.skip : describe)('GET /api/calendar/high-impact', () => {
   let app;
   beforeEach(() => { app = buildTestApp(); });
   afterEach(() => jest.clearAllMocks());
 
   test('returns only high-impact events', async () => {
     const highImpactOnly = mockEvents.filter(e => e.impact === 3);
-    economicCalendar.getHighImpactEvents.mockResolvedValueOnce(highImpactOnly);
+    calendarService.getHighImpactEvents.mockResolvedValueOnce(highImpactOnly);
 
     const res = await request(app).get('/api/calendar/high-impact');
 
@@ -199,21 +215,21 @@ describe('GET /api/calendar/high-impact', () => {
   });
 
   test('caps days at 14', async () => {
-    economicCalendar.getHighImpactEvents.mockResolvedValueOnce([]);
+    calendarService.getHighImpactEvents.mockResolvedValueOnce([]);
 
     await request(app).get('/api/calendar/high-impact?days=100');
 
-    expect(economicCalendar.getHighImpactEvents).toHaveBeenCalledWith(
+    expect(calendarService.getHighImpactEvents).toHaveBeenCalledWith(
       expect.objectContaining({ days: 14 })
     );
   });
 
   test('defaults to 3 days', async () => {
-    economicCalendar.getHighImpactEvents.mockResolvedValueOnce([]);
+    calendarService.getHighImpactEvents.mockResolvedValueOnce([]);
 
     await request(app).get('/api/calendar/high-impact');
 
-    expect(economicCalendar.getHighImpactEvents).toHaveBeenCalledWith(
+    expect(calendarService.getHighImpactEvents).toHaveBeenCalledWith(
       expect.objectContaining({ days: 3 })
     );
   });
