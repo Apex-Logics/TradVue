@@ -69,6 +69,25 @@ app.use(compression());
 // ── Request logging ───────────────────────────────────────────────────────────
 app.use(morgan('combined'));
 
+// ── Stripe webhook — MUST be registered BEFORE the JSON body parser ───────────
+// Stripe needs the raw request body to verify the webhook signature.
+// We mount this as a concrete path (not via router) so it bypasses json middleware.
+try {
+  const stripeRouter = require('./routes/stripe');
+  app.post(
+    '/api/stripe/webhook',
+    express.raw({ type: 'application/json' }),
+    (req, res, next) => {
+      // Delegate to the /webhook sub-route of the stripe router
+      req.url = '/webhook';
+      stripeRouter(req, res, next);
+    }
+  );
+  console.log('[Stripe] Webhook endpoint registered at /api/stripe/webhook');
+} catch (e) {
+  console.warn('[Stripe] Webhook route failed to load:', e.message);
+}
+
 // ── Body parsing with size limit ──────────────────────────────────────────────
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
@@ -120,6 +139,7 @@ app.use('/api/feedback',                      require('./routes/feedback'));    
 app.use('/api/support',                       require('./routes/support'));          // AI support chatbot
 app.use('/api/admin',         cachePrivate,   require('./routes/admin'));            // Admin dashboard (allowlisted only)
 app.use('/api/announcements', cachePublic30s, require('./routes/announcements'));   // Public announcement banner
+app.use('/api/stripe',        cachePrivate,   require('./routes/stripe'));           // Stripe payment integration
 
 // ── Health check ──────────────────────────────────────────────────────────────
 app.get('/health', (req, res) => {

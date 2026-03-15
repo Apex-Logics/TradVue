@@ -8,8 +8,9 @@
  * Dismissible — remembers that feature was gated (per session).
  */
 
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useState } from 'react'
 import { MONTHLY_PRICE, ANNUAL_PRICE } from '../utils/tierAccess'
+import { API_BASE } from '../lib/api'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -26,6 +27,10 @@ export interface UpgradePromptProps {
   lockedCount?: number
   /** CTA variant — 'trial' shown when trial never started, 'upgrade' when trial ended */
   variant?: 'trial' | 'upgrade'
+  /** Authenticated user ID — required for checkout */
+  userId?: string
+  /** Authenticated user email — required for checkout */
+  email?: string
 }
 
 // ── Feature metadata ──────────────────────────────────────────────────────────
@@ -66,7 +71,50 @@ export default function UpgradePrompt({
   featureDesc,
   lockedCount,
   variant = 'upgrade',
+  userId,
+  email,
 }: UpgradePromptProps) {
+  const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'annual' | null>(null)
+  const [checkoutError, setCheckoutError] = useState<string | null>(null)
+
+  // ── Stripe checkout handler ─────────────────────────────────────────────
+  async function handleUpgrade(plan: 'monthly' | 'annual') {
+    if (!userId || !email) {
+      setCheckoutError('Please sign in to upgrade.')
+      return
+    }
+    if (checkoutPlan) return // already in flight
+
+    setCheckoutError(null)
+    setCheckoutPlan(plan)
+
+    try {
+      // First, fetch live price IDs
+      const pricesRes = await fetch(`${API_BASE}/api/stripe/prices`)
+      const prices = await pricesRes.json()
+      if (!pricesRes.ok || !prices.monthly || !prices.annual) throw new Error('Failed to load pricing')
+
+      const priceId = plan === 'monthly' ? prices.monthly.priceId : prices.annual.priceId
+
+      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ priceId, userId, email }),
+      })
+      const data = await res.json()
+      if (!res.ok) throw new Error(data.error || 'Checkout failed')
+      if (data.url) {
+        window.location.href = data.url
+      } else {
+        throw new Error('No checkout URL returned')
+      }
+    } catch (err: unknown) {
+      const msg = err instanceof Error ? err.message : 'Something went wrong'
+      setCheckoutError(msg)
+      setCheckoutPlan(null)
+    }
+  }
+
   // Close on Escape
   const handleKey = useCallback((e: KeyboardEvent) => {
     if (e.key === 'Escape') onClose()
@@ -86,6 +134,14 @@ export default function UpgradePrompt({
       document.body.style.overflow = ''
     }
     return () => { document.body.style.overflow = '' }
+  }, [open])
+
+  // Reset checkout state when modal opens/closes
+  useEffect(() => {
+    if (!open) {
+      setCheckoutPlan(null)
+      setCheckoutError(null)
+    }
   }, [open])
 
   if (!open) return null
@@ -289,12 +345,10 @@ export default function UpgradePrompt({
 
         {/* CTA buttons */}
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          {/* Primary: Annual (most popular) */}
           <button
-            onClick={() => {
-              // TODO: wire to Stripe when payment integration lands
-              alert('Payment integration coming soon! We\'ll notify you when Pro launches.')
-              onClose()
-            }}
+            disabled={!!checkoutPlan}
+            onClick={() => handleUpgrade('annual')}
             style={{
               background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
               border: 'none',
@@ -303,32 +357,62 @@ export default function UpgradePrompt({
               color: '#fff',
               fontSize: 15,
               fontWeight: 700,
-              cursor: 'pointer',
+              cursor: checkoutPlan ? 'wait' : 'pointer',
               letterSpacing: '-0.01em',
               transition: 'opacity 0.15s',
+              opacity: checkoutPlan === 'annual' ? 0.7 : 1,
             }}
-            onMouseEnter={e => (e.currentTarget.style.opacity = '0.9')}
-            onMouseLeave={e => (e.currentTarget.style.opacity = '1')}
+            onMouseEnter={e => { if (!checkoutPlan) e.currentTarget.style.opacity = '0.9' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = checkoutPlan === 'annual' ? '0.7' : '1' }}
           >
-            {ctaPrimary} →
+            {checkoutPlan === 'annual' ? 'Redirecting to checkout…' : `${ctaPrimary} — Annual ($16.80/mo) →`}
           </button>
+
+          {/* Secondary: Monthly */}
+          <button
+            disabled={!!checkoutPlan}
+            onClick={() => handleUpgrade('monthly')}
+            style={{
+              background: 'transparent',
+              border: '1px solid rgba(255,255,255,0.18)',
+              borderRadius: 12,
+              padding: '12px 24px',
+              color: 'var(--text-1)',
+              fontSize: 13,
+              cursor: checkoutPlan ? 'wait' : 'pointer',
+              transition: 'border-color 0.15s',
+              opacity: checkoutPlan === 'monthly' ? 0.7 : 1,
+            }}
+            onMouseEnter={e => { if (!checkoutPlan) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' }}
+            onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)' }}
+          >
+            {checkoutPlan === 'monthly' ? 'Redirecting…' : 'Monthly plan — $24/mo'}
+          </button>
+
           <button
             onClick={onClose}
             style={{
               background: 'transparent',
-              border: '1px solid rgba(255,255,255,0.12)',
+              border: '1px solid rgba(255,255,255,0.08)',
               borderRadius: 12,
-              padding: '12px 24px',
+              padding: '10px 24px',
               color: 'var(--text-2)',
-              fontSize: 13,
+              fontSize: 12,
               cursor: 'pointer',
               transition: 'border-color 0.15s',
             }}
-            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.25)')}
-            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.12)')}
+            onMouseEnter={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)')}
+            onMouseLeave={e => (e.currentTarget.style.borderColor = 'rgba(255,255,255,0.08)')}
           >
             Maybe later
           </button>
+
+          {/* Checkout error */}
+          {checkoutError && (
+            <div style={{ fontSize: 12, color: '#f87171', textAlign: 'center', marginTop: 4 }}>
+              {checkoutError}
+            </div>
+          )}
         </div>
 
         {/* Trust line */}
