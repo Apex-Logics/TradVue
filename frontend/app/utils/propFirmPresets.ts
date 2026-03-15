@@ -1,6 +1,9 @@
 /**
  * PropFirmPresets — Rule presets for major prop trading firms
- * Firms: FTMO, TopStep, Apex Trader Funding, My Funded Futures, The 5%ers
+ * Firms: FTMO, TopStep, Apex Trader Funding, My Funded Futures, The 5%ers,
+ *        Take Profit Trader, Earn2Trade, Bulenox, TradeDay, Leeloo Trading
+ *
+ * ⚠️ Rule presets are approximate and may change. Always verify with your prop firm.
  */
 
 import type { FirmId, PhaseId, PropFirmRules } from './propFirmData'
@@ -217,6 +220,187 @@ const fivePctersPreset: FirmPreset = {
   },
 }
 
+// ─── Take Profit Trader ───────────────────────────────────────────────────────
+
+const tptPreset: FirmPreset = {
+  id: 'tpt',
+  displayName: 'Take Profit Trader',
+  shortName: 'TPT',
+  color: '#10b981',
+  accountSizes: [50000, 100000, 150000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
+      50000:  { profit: 3000, drawdown: 2000, daily: 1000 },
+      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
+      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        minTradingDays: 5,
+        tradingDaysCompleted: 0,
+        newsTrading: true,
+      }
+    }
+    return {
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      newsTrading: true,
+    }
+  },
+}
+
+// ─── Earn2Trade ───────────────────────────────────────────────────────────────
+
+const earn2TradePreset: FirmPreset = {
+  id: 'earn2trade',
+  displayName: 'Earn2Trade',
+  shortName: 'E2T',
+  color: '#f59e0b',
+  accountSizes: [50000, 100000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
+      50000:  { profit: 3000, drawdown: 2000, daily: 1000 },
+      100000: { profit: 6000, drawdown: 3500, daily: 2000 },
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.035, daily: accountSize * 0.02 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        minTradingDays: 10,
+        tradingDaysCompleted: 0,
+        newsTrading: true,
+      }
+    }
+    return {
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      newsTrading: true,
+    }
+  },
+}
+
+// ─── Bulenox ──────────────────────────────────────────────────────────────────
+
+const bulenoxPreset: FirmPreset = {
+  id: 'bulenox',
+  displayName: 'Bulenox',
+  shortName: 'Bulenox',
+  color: '#ef4444',
+  accountSizes: [50000, 150000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    const ratios: Record<number, { profit: number; drawdown: number }> = {
+      50000:  { profit: 3000, drawdown: 2500 },
+      150000: { profit: 9000, drawdown: 5000 },
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.033 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'static', limit: r.drawdown, current: 0 }, // EOD drawdown ≈ static
+        dailyLossLimit: { limit: 0, todayPnl: 0 }, // No daily loss limit
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        minTradingDays: 5,
+        tradingDaysCompleted: 0,
+        newsTrading: true,
+      }
+    }
+    return {
+      maxDrawdown: { type: 'static', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: 0, todayPnl: 0 },
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      newsTrading: true,
+    }
+  },
+}
+
+// ─── TradeDay ─────────────────────────────────────────────────────────────────
+
+const tradeDayPreset: FirmPreset = {
+  id: 'tradeday',
+  displayName: 'TradeDay',
+  shortName: 'TradeDay',
+  color: '#8b5cf6',
+  accountSizes: [100000, 150000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
+      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
+      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        minTradingDays: 7,
+        tradingDaysCompleted: 0,
+        newsTrading: true,
+      }
+    }
+    return {
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      newsTrading: true,
+    }
+  },
+}
+
+// ─── Leeloo Trading ───────────────────────────────────────────────────────────
+
+const leelooPreset: FirmPreset = {
+  id: 'leeloo',
+  displayName: 'Leeloo Trading',
+  shortName: 'Leeloo',
+  color: '#06b6d4',
+  accountSizes: [100000, 150000],
+  phases: ['phase1', 'funded'],
+  getRules: (accountSize: number, phase: PhaseId): PropFirmRules => {
+    const ratios: Record<number, { profit: number; drawdown: number; daily: number }> = {
+      100000: { profit: 6000, drawdown: 3000, daily: 2000 },
+      150000: { profit: 9000, drawdown: 4500, daily: 3000 },
+    }
+    const r = ratios[accountSize] ?? { profit: accountSize * 0.06, drawdown: accountSize * 0.03, daily: accountSize * 0.02 }
+
+    if (phase === 'phase1') {
+      return {
+        maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+        dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+        profitTarget: { target: r.profit, currentPnl: 0 },
+        minTradingDays: 10,
+        tradingDaysCompleted: 0,
+        newsTrading: true,
+      }
+    }
+    return {
+      maxDrawdown: { type: 'trailing', limit: r.drawdown, current: 0 },
+      dailyLossLimit: { limit: r.daily, todayPnl: 0 },
+      profitTarget: { target: 0, currentPnl: 0 },
+      tradingDaysCompleted: 0,
+      newsTrading: true,
+    }
+  },
+}
+
 // ─── Custom ───────────────────────────────────────────────────────────────────
 
 const customPreset: FirmPreset = {
@@ -238,12 +422,17 @@ const customPreset: FirmPreset = {
 // ─── Registry ─────────────────────────────────────────────────────────────────
 
 export const FIRM_PRESETS: Record<FirmId, FirmPreset> = {
-  ftmo:    ftmoPreset,
-  topstep: topstepPreset,
-  apex:    apexPreset,
-  mff:     mffPreset,
-  '5ers':  fivePctersPreset,
-  custom:  customPreset,
+  ftmo:       ftmoPreset,
+  topstep:    topstepPreset,
+  apex:       apexPreset,
+  mff:        mffPreset,
+  '5ers':     fivePctersPreset,
+  tpt:        tptPreset,
+  earn2trade: earn2TradePreset,
+  bulenox:    bulenoxPreset,
+  tradeday:   tradeDayPreset,
+  leeloo:     leelooPreset,
+  custom:     customPreset,
 }
 
 export const FIRM_LIST: FirmPreset[] = [
@@ -252,6 +441,11 @@ export const FIRM_LIST: FirmPreset[] = [
   apexPreset,
   mffPreset,
   fivePctersPreset,
+  tptPreset,
+  earn2TradePreset,
+  bulenoxPreset,
+  tradeDayPreset,
+  leelooPreset,
   customPreset,
 ]
 

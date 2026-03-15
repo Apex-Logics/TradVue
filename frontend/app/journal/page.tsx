@@ -98,6 +98,8 @@ interface Trade {
   emotionTag?: string
   // Playbook tag
   playbookId?: string
+  // Prop Firm account link (optional, backward compatible)
+  propFirmAccountId?: string
 
   // ── Futures fields (assetClass === 'Futures') ─────────────────────────────
   // assetClass 'Futures' already exists; these are additional detail fields.
@@ -409,6 +411,58 @@ const inputSx: React.CSSProperties = {
   borderRadius: 8, padding: '10px 14px',
   color: 'var(--text-0)', fontSize: 13, fontFamily: 'var(--mono)',
   outline: 'none',
+}
+
+// ─── Prop Firm Dropdown ───────────────────────────────────────────────────────
+
+interface PropFirmAccountMin {
+  id: string
+  accountName: string
+  firm: string
+  status: string
+}
+
+function PropFirmDropdown({ value, onChange }: { value: string; onChange: (id: string) => void }) {
+  const [accounts, setAccounts] = useState<PropFirmAccountMin[]>([])
+
+  useEffect(() => {
+    try {
+      const raw = localStorage.getItem('cg_propfirm_accounts')
+      if (raw) {
+        const all = JSON.parse(raw) as PropFirmAccountMin[]
+        setAccounts(all.filter(a => a.status === 'active'))
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  if (accounts.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 12 }}>
+      <FieldLabel label="Prop Firm Account (optional)" tooltip="Link this trade to a prop firm account. P&L will auto-count toward that account's tracker." />
+      <select
+        value={value}
+        onChange={e => onChange(e.target.value)}
+        style={{
+          width: '100%',
+          background: 'var(--bg-1)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '10px 14px',
+          color: value ? 'var(--text-0)' : 'var(--text-3)',
+          fontSize: 13,
+          fontFamily: 'var(--font)',
+          outline: 'none',
+          cursor: 'pointer',
+        }}
+      >
+        <option value="">— No prop firm account —</option>
+        {accounts.map(a => (
+          <option key={a.id} value={a.id}>{a.accountName}</option>
+        ))}
+      </select>
+    </div>
+  )
 }
 
 // ─── Playbook Dropdown ────────────────────────────────────────────────────────
@@ -893,6 +947,7 @@ const EMPTY_FORM = {
   screenshot: '',
   emotionTag: '',
   playbookId: '',
+  propFirmAccountId: '',
   // Option fields (legacy)
   strike: '', expiry: '', premium: '', contracts: '',
   // Forex fields
@@ -997,6 +1052,8 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
   const [livePriceHint, setLivePriceHint] = useState<{ symbol: string; price: number } | null>(null)
   // Futures contract spec (auto-populated when contractType changes)
   const [futuresSpec, setFuturesSpec] = useState<FuturesContractSpec | null>(null)
+  // Show advanced futures contract override fields
+  const [showFuturesAdvanced, setShowFuturesAdvanced] = useState(false)
   // Options legs for multi-leg strategies
   const [optionLegs, setOptionLegs] = useState<OptionLeg[]>([])
   const set = (k: string) => (v: string | number) => setForm(f => ({ ...f, [k]: v }))
@@ -1030,7 +1087,8 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
     let pnl = calcPnl(partial)
     let ticks: number | null = null
     if (form.assetClass === 'Futures' && form.contractType && futuresSpec && entry && exit) {
-      const numC = parseFloat(form.futuresContracts) || 1
+      // Use positionSize as the contracts count (they are kept in sync)
+      const numC = parseFloat(form.positionSize) || parseFloat(form.futuresContracts) || 1
       const rawTicks = calculateTicksFromPrices(form.contractType, entry, exit, form.direction)
       ticks = rawTicks * numC
       pnl = calculatePnlFromTicks(form.contractType, rawTicks, numC) - (parseFloat(form.commissions) || 0)
@@ -1069,7 +1127,8 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
     let finalPnl = calcPnl(partial)
     let finalPnlTicks: number | undefined
     if (form.assetClass === 'Futures' && form.contractType && futuresSpec) {
-      const numC = parseFloat(form.futuresContracts) || 1
+      // positionSize is the canonical contracts count for futures (synced on change)
+      const numC = parseFloat(form.positionSize) || parseFloat(form.futuresContracts) || 1
       const ticks = calculateTicksFromPrices(form.contractType, entry, exit, form.direction)
       finalPnlTicks = ticks * numC
       finalPnl = calculatePnlFromTicks(form.contractType, ticks, numC) - (parseFloat(form.commissions) || 0)
@@ -1108,7 +1167,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
         contractType: form.contractType,
         tickSize: futuresSpec?.tickSize,
         tickValue: futuresSpec?.tickValue,
-        futuresContracts: parseFloat(form.futuresContracts) || 1,
+        futuresContracts: parseFloat(form.positionSize) || parseFloat(form.futuresContracts) || 1,
         pnlTicks: finalPnlTicks,
       } : {}),
       // ── Options extended fields ──
@@ -1131,10 +1190,30 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
       tags_strategies: formStrategies,
       emotionTag: form.emotionTag || '',
       playbookId: form.playbookId || undefined,
+      propFirmAccountId: form.propFirmAccountId || undefined,
     }
     const updated = [trade, ...trades]
     setTrades(updated)
     saveTrades(updated)
+    // If linked to a prop firm account, update its trades list
+    if (trade.propFirmAccountId) {
+      try {
+        const pfRaw = localStorage.getItem('cg_propfirm_accounts')
+        if (pfRaw) {
+          const pfAccounts = JSON.parse(pfRaw)
+          const pfIdx = pfAccounts.findIndex((a: { id: string }) => a.id === trade.propFirmAccountId)
+          if (pfIdx !== -1) {
+            const acct = pfAccounts[pfIdx]
+            if (!acct.trades.includes(trade.id)) {
+              acct.trades = [...acct.trades, trade.id]
+              acct.updatedAt = new Date().toISOString()
+              pfAccounts[pfIdx] = acct
+              localStorage.setItem('cg_propfirm_accounts', JSON.stringify(pfAccounts))
+            }
+          }
+        }
+      } catch { /* ignore */ }
+    }
     // Save smart defaults for this asset class
     try {
       localStorage.setItem(`cg_journal_defaults_${form.assetClass}`, JSON.stringify({
@@ -1149,6 +1228,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
     setFormStrategies([])
     setOptionLegs([])
     setFuturesSpec(null)
+    setShowFuturesAdvanced(false)
     setShowForm(false)
   }
 
@@ -1263,7 +1343,22 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                 set('symbol')(sym)
                 const detected = detectAssetClass(sym)
                 if (detected) set('assetClass')(detected)
-              }} placeholder="e.g. AAPL" style={inputSx} />
+                // Auto-populate futures spec when a known futures symbol is typed
+                if (detected === 'Futures') {
+                  const spec = getContractSpec(sym)
+                  if (spec) {
+                    setFuturesSpec(spec)
+                    set('contractType')(spec.symbol)
+                    setShowFuturesAdvanced(false)
+                  }
+                } else {
+                  // Clear futures spec if user switches away from a futures symbol
+                  if (futuresSpec) {
+                    setFuturesSpec(null)
+                    set('contractType')('')
+                  }
+                }
+              }} placeholder="e.g. AAPL or NQ" style={inputSx} />
             </div>
             <div>
               <FieldLabel label="Asset Class" tooltip="Type of instrument. Each has different characteristics — stocks trade shares, options trade contracts, forex trades lots." />
@@ -1337,8 +1432,15 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
               <input type="number" value={form.exitPrice} onChange={e => set('exitPrice')(e.target.value)} placeholder="e.g. 157.50" step="any" style={inputSx} />
             </div>
             <div>
-              <FieldLabel label="Position Size" tooltip="Number of shares (stocks), contracts (options/futures), lots (forex), or coins (crypto). Used to calculate total P&L." />
-              <input type="number" value={form.positionSize} onChange={e => set('positionSize')(e.target.value)} placeholder="e.g. 100" step="any" style={inputSx} />
+              <FieldLabel
+                label={form.assetClass === 'Futures' ? 'Contracts' : 'Position Size'}
+                tooltip={form.assetClass === 'Futures' ? 'Number of futures contracts traded.' : 'Number of shares (stocks), contracts (options/futures), lots (forex), or coins (crypto). Used to calculate total P&L.'}
+              />
+              <input type="number" value={form.positionSize} onChange={e => {
+                set('positionSize')(e.target.value)
+                // Keep futuresContracts in sync so P&L preview uses the right count
+                if (form.assetClass === 'Futures') set('futuresContracts')(e.target.value)
+              }} placeholder={form.assetClass === 'Futures' ? 'e.g. 1' : 'e.g. 100'} step={form.assetClass === 'Futures' ? '1' : 'any'} style={inputSx} />
             </div>
             <div>
               <FieldLabel label="Stop Loss" tooltip="The price where you would have exited to limit losses. Used to calculate R-Multiple — your risk on this trade." />
@@ -1357,12 +1459,31 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
           {/* ── Futures-specific fields ────────────────────────────────────── */}
           {form.assetClass === 'Futures' && (
             <div style={{ marginBottom: 12 }}>
-              <div style={{ fontSize: 11, color: BLUE, fontWeight: 600, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 10 }}>
-                <IconChart size={11} />Futures Contract Details
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12 }}>
-                <div>
-                  <FieldLabel label="Contract" tooltip="Select the futures contract. Tick size and tick value auto-populate." />
+              {/* Auto-detected contract confirmation banner */}
+              {futuresSpec ? (
+                <div style={{ padding: '10px 14px', background: BLUE + '18', border: `1px solid ${BLUE}44`, borderRadius: 8, marginBottom: 10, display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: 8 }}>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
+                    <IconChart size={13} style={{ color: BLUE }} />
+                    <span style={{ fontSize: 13, fontWeight: 700, color: BLUE }}>{futuresSpec.symbol}</span>
+                    <span style={{ fontSize: 12, color: 'var(--text-1)' }}>— {futuresSpec.name}</span>
+                    <span style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>
+                      tick: {futuresSpec.tickSize} · ${futuresSpec.tickValue}/tick
+                    </span>
+                  </div>
+                  <button
+                    type="button"
+                    onClick={() => setShowFuturesAdvanced(v => !v)}
+                    style={{ fontSize: 11, background: 'none', border: `1px solid ${BLUE}55`, borderRadius: 6, padding: '3px 10px', color: BLUE, cursor: 'pointer' }}
+                  >
+                    {showFuturesAdvanced ? 'Hide' : 'Override'} contract
+                  </button>
+                </div>
+              ) : (
+                /* No auto-detected spec — show manual selector */
+                <div style={{ marginBottom: 12 }}>
+                  <div style={{ fontSize: 11, color: BLUE, fontWeight: 600, textTransform: 'uppercase', display: 'flex', alignItems: 'center', gap: 5, marginBottom: 8 }}>
+                    <IconChart size={11} />Select Futures Contract
+                  </div>
                   <select
                     value={form.contractType}
                     onChange={e => {
@@ -1379,37 +1500,42 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                       <option key={s} value={s}>{s} — {getContractSpec(s)?.name}</option>
                     ))}
                   </select>
-                  {futuresSpec && (
-                    <div style={{ fontSize: 9, color: 'var(--text-3)', marginTop: 3 }}>
-                      Tick: {futuresSpec.tickSize} · Value: ${futuresSpec.tickValue}/tick
-                    </div>
-                  )}
                 </div>
-                <div>
-                  <FieldLabel label="Contracts" tooltip="Number of futures contracts traded." />
-                  <input
-                    type="number"
-                    value={form.futuresContracts}
-                    onChange={e => set('futuresContracts')(e.target.value)}
-                    placeholder="e.g. 1"
-                    min="1"
-                    step="1"
-                    style={inputSx}
-                  />
-                </div>
-                {futuresSpec && (
+              )}
+
+              {/* Advanced override: contract selector + tick fields */}
+              {showFuturesAdvanced && futuresSpec && (
+                <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 10, padding: '12px', background: 'var(--bg-1)', borderRadius: 8, border: '1px solid var(--border)' }}>
+                  <div style={{ gridColumn: '1 / -1', fontSize: 10, color: 'var(--text-3)', fontWeight: 600, textTransform: 'uppercase', letterSpacing: '0.06em' }}>Advanced — Manual Override</div>
                   <div>
-                    <FieldLabel label="Tick Size" tooltip="Minimum price movement. Auto-populated." />
+                    <FieldLabel label="Contract" tooltip="Change the detected contract type." />
+                    <select
+                      value={form.contractType}
+                      onChange={e => {
+                        const sym = e.target.value
+                        set('contractType')(sym)
+                        const spec = getContractSpec(sym)
+                        setFuturesSpec(spec)
+                      }}
+                      style={inputSx}
+                    >
+                      <option value="">— Select —</option>
+                      {FUTURES_SYMBOLS_LIST.map(s => (
+                        <option key={s} value={s}>{s} — {getContractSpec(s)?.name}</option>
+                      ))}
+                    </select>
+                  </div>
+                  <div>
+                    <FieldLabel label="Tick Size" tooltip="Minimum price movement. Auto-populated from contract spec." />
                     <input type="number" value={futuresSpec.tickSize} readOnly style={{ ...inputSx, color: 'var(--text-3)', cursor: 'default' }} />
                   </div>
-                )}
-                {futuresSpec && (
                   <div>
                     <FieldLabel label="Tick Value ($)" tooltip="Dollar value per tick per contract. Auto-populated." />
                     <input type="number" value={futuresSpec.tickValue} readOnly style={{ ...inputSx, color: 'var(--text-3)', cursor: 'default' }} />
                   </div>
-                )}
-              </div>
+                </div>
+              )}
+
               {/* Tick P&L live preview */}
               {futuresSpec && parseFloat(form.entryPrice) > 0 && parseFloat(form.exitPrice) > 0 && (
                 <div style={{ marginTop: 10, padding: '8px 12px', background: 'var(--bg-1)', borderRadius: 8, border: '1px solid var(--border)', display: 'flex', gap: 20, flexWrap: 'wrap' }}>
@@ -1426,7 +1552,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                     </div>
                   </div>
                   <div style={{ fontSize: 10, color: 'var(--text-3)', alignSelf: 'center' }}>
-                    {futuresSpec.symbol} · {form.futuresContracts || 1} contract(s) · ${futuresSpec.tickValue}/tick
+                    {futuresSpec.symbol} · {form.positionSize || 1} contract(s) · ${futuresSpec.tickValue}/tick
                   </div>
                 </div>
               )}
@@ -1564,6 +1690,9 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
 
           {/* Playbook */}
           <PlaybookDropdown value={form.playbookId} onChange={id => set('playbookId')(id)} />
+
+          {/* Prop Firm Account */}
+          <PropFirmDropdown value={form.propFirmAccountId} onChange={id => set('propFirmAccountId')(id)} />
 
           {/* Tags & Rating — Multi-select */}
           <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr auto', gap: 12, marginBottom: 12 }}>

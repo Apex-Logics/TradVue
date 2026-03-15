@@ -5,7 +5,7 @@
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
-export type FirmId = 'ftmo' | 'topstep' | '5ers' | 'apex' | 'mff' | 'custom'
+export type FirmId = 'ftmo' | 'topstep' | '5ers' | 'apex' | 'mff' | 'tpt' | 'earn2trade' | 'bulenox' | 'tradeday' | 'leeloo' | 'custom'
 export type PhaseId = 'phase1' | 'phase2' | 'funded' | 'payout'
 export type AccountStatus = 'active' | 'passed' | 'failed' | 'withdrawn'
 export type DrawdownType = 'static' | 'trailing'
