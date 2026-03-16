@@ -3,7 +3,7 @@
 import { useState, useEffect, useCallback } from 'react'
 import PersistentNav from '../components/PersistentNav'
 import { IconBrain, IconCheck, IconInfo, IconAlert, IconZap, IconTrendingUp, IconTrendingDown } from '../components/Icons'
-import { generateWeeklySummary } from '../utils/coachEngine'
+import { generateWeeklySummary, getThresholdInfo, type ThresholdInfo } from '../utils/coachEngine'
 import { loadCoachSummaries, type WeeklySummary, type CoachInsight } from '../utils/coachData'
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
@@ -63,10 +63,134 @@ const SEVERITY = {
   },
 }
 
+// ─── Disclaimer Box ───────────────────────────────────────────────────────────
+
+function DisclaimerBox() {
+  return (
+    <div style={{
+      background: 'rgba(74, 158, 255, 0.06)',
+      border: '1px solid rgba(74, 158, 255, 0.3)',
+      borderRadius: 12,
+      padding: '16px 20px',
+      marginBottom: 28,
+      display: 'flex',
+      gap: 12,
+      alignItems: 'flex-start',
+    }}>
+      <span style={{ fontSize: 22, flexShrink: 0 }}>🧠</span>
+      <p style={{ margin: 0, fontSize: 13, color: 'var(--text-1)', lineHeight: 1.7 }}>
+        <strong style={{ color: 'var(--text-0)' }}>AI Trade Coach</strong> analyzes patterns in YOUR trading data
+        using statistical methods only. It does not provide financial advice, trading recommendations, or predictions.
+        All insights are backward-looking observations based on trades you've logged.{' '}
+        <strong style={{ color: 'var(--text-0)' }}>Always make your own trading decisions.</strong>
+      </p>
+    </div>
+  )
+}
+
+// ─── Progress Bar ─────────────────────────────────────────────────────────────
+
+function ThresholdProgressBar({ info }: { info: ThresholdInfo }) {
+  const pct = Math.min(info.progressPct * 100, 100)
+  const isComplete = info.level === 'confident'
+
+  return (
+    <div style={{
+      background: 'var(--bg-2)',
+      border: '1px solid var(--border)',
+      borderRadius: 10,
+      padding: '14px 18px',
+      marginBottom: 20,
+    }}>
+      <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
+        <span style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)' }}>
+          {info.progressLabel}
+        </span>
+        {isComplete && (
+          <span style={{ fontSize: 11, color: '#4ade80', fontWeight: 700 }}>🏆 HIGH CONFIDENCE</span>
+        )}
+      </div>
+      <div style={{ background: 'var(--bg-3)', borderRadius: 999, height: 6, overflow: 'hidden' }}>
+        <div style={{
+          height: '100%',
+          width: `${pct}%`,
+          background: isComplete
+            ? 'linear-gradient(90deg, #4ade80, #22d3ee)'
+            : 'linear-gradient(90deg, #4a9eff, #8b5cf6)',
+          borderRadius: 999,
+          transition: 'width 0.4s ease',
+        }} />
+      </div>
+      {!isComplete && (
+        <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 6 }}>
+          {info.nextMilestone - info.tradeCount} more trade{info.nextMilestone - info.tradeCount !== 1 ? 's' : ''} to unlock{' '}
+          <strong style={{ color: 'var(--text-2)' }}>{info.nextLabel}</strong>
+        </div>
+      )}
+      <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-2)', fontStyle: 'italic' }}>
+        {info.message}
+      </div>
+    </div>
+  )
+}
+
+// ─── Locked Feature Preview ───────────────────────────────────────────────────
+
+const LOCKED_PREVIEWS = [
+  { icon: '🕵️', label: 'Revenge Trading Detection', threshold: 20 },
+  { icon: '🕐', label: 'Time-of-Day Analysis', threshold: 20 },
+  { icon: '🔥', label: 'Streak Patterns', threshold: 10 },
+  { icon: '📊', label: 'Overtrading Detection', threshold: 10 },
+  { icon: '🎯', label: 'Ticker Concentration Analysis', threshold: 10 },
+  { icon: '📋', label: 'Playbook Performance', threshold: 20 },
+  { icon: '💭', label: 'Emotion-Performance Correlation', threshold: 20 },
+  { icon: '⚖️', label: 'Risk/Reward Analysis', threshold: 20 },
+]
+
+function LockedPreviewCards({ tradeCount }: { tradeCount: number }) {
+  const locked = LOCKED_PREVIEWS.filter(p => p.threshold > tradeCount)
+  if (locked.length === 0) return null
+
+  return (
+    <div style={{ marginBottom: 28 }}>
+      <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
+        Upcoming Insights — Log More Trades to Unlock
+      </div>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(200px, 1fr))', gap: 10 }}>
+        {locked.map(p => (
+          <div
+            key={p.label}
+            style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 10,
+              padding: '14px 16px',
+              opacity: 0.5,
+              display: 'flex',
+              alignItems: 'center',
+              gap: 10,
+            }}
+          >
+            <span style={{ fontSize: 20, filter: 'grayscale(1)' }}>{p.icon}</span>
+            <div>
+              <div style={{ fontSize: 12, fontWeight: 600, color: 'var(--text-1)' }}>{p.label}</div>
+              <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 2 }}>
+                🔒 Unlocks at {p.threshold} trades
+              </div>
+            </div>
+          </div>
+        ))}
+      </div>
+    </div>
+  )
+}
+
 // ─── Sub-Components ───────────────────────────────────────────────────────────
 
-function InsightCard({ insight }: { insight: CoachInsight }) {
+function InsightCard({ insight, showConfidence }: { insight: CoachInsight; showConfidence: boolean }) {
   const s = SEVERITY[insight.severity]
+  const hasSmallSample = insight.dataPoints !== undefined && insight.dataPoints < 10
+
   return (
     <div style={{
       background: s.gradient,
@@ -112,7 +236,7 @@ function InsightCard({ insight }: { insight: CoachInsight }) {
         padding: '10px 14px',
       }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: s.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-          💡 Recommendation
+          📊 Statistical Observation
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-0)', lineHeight: 1.6 }}>
           {insight.recommendation}
@@ -120,11 +244,21 @@ function InsightCard({ insight }: { insight: CoachInsight }) {
       </div>
 
       {/* Footer */}
-      {insight.dataPoints !== undefined && (
-        <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
-          Based on {insight.dataPoints} trade{insight.dataPoints !== 1 ? 's' : ''}
-        </div>
-      )}
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
+        {insight.dataPoints !== undefined && (
+          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            Based on {insight.dataPoints} trade{insight.dataPoints !== 1 ? 's' : ''}
+            {showConfidence && (
+              <span style={{ marginLeft: 8, color: '#4ade80', fontWeight: 600 }}>✓ High confidence</span>
+            )}
+          </div>
+        )}
+        {hasSmallSample && (
+          <div style={{ fontSize: 11, color: '#fb923c' }}>
+            ⚠️ Small sample size — accuracy improves with more data
+          </div>
+        )}
+      </div>
     </div>
   )
 }
@@ -156,9 +290,14 @@ function StatCard({ label, value, sub, accent }: {
   )
 }
 
-function WeeklySummaryCard({ summary }: { summary: WeeklySummary }) {
+function WeeklySummaryCard({ summary, thresholdLevel }: {
+  summary: WeeklySummary
+  thresholdLevel: 'none' | 'basic' | 'patterns' | 'full' | 'confident'
+}) {
   const pnlColor = summary.totalPnl >= 0 ? '#4ade80' : '#f87171'
   const pfColor = summary.profitFactor >= 1.5 ? '#4ade80' : summary.profitFactor >= 1 ? '#fb923c' : '#f87171'
+  const showInsights = thresholdLevel !== 'none' && thresholdLevel !== 'basic'
+  const showConfidence = thresholdLevel === 'confident'
 
   return (
     <div style={{
@@ -209,21 +348,37 @@ function WeeklySummaryCard({ summary }: { summary: WeeklySummary }) {
         />
       </div>
 
-      {summary.insights.length > 0 && (
+      {showInsights && summary.insights.length > 0 && (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: 1 }}>
-            Insights ({summary.insights.length})
+            Pattern Insights ({summary.insights.length})
           </div>
           {summary.insights.map(ins => (
-            <InsightCard key={ins.id} insight={ins} />
+            <InsightCard key={ins.id} insight={ins} showConfidence={showConfidence} />
           ))}
+        </div>
+      )}
+
+      {!showInsights && summary.totalTrades >= 5 && (
+        <div style={{
+          background: 'var(--bg-1)',
+          border: '1px solid var(--border)',
+          borderRadius: 8,
+          padding: '12px 16px',
+          fontSize: 13,
+          color: 'var(--text-2)',
+        }}>
+          🔒 Pattern detection unlocks at 10+ total logged trades. Keep journaling!
         </div>
       )}
     </div>
   )
 }
 
-function PastSummaryAccordion({ summary }: { summary: WeeklySummary }) {
+function PastSummaryAccordion({ summary, thresholdLevel }: {
+  summary: WeeklySummary
+  thresholdLevel: 'none' | 'basic' | 'patterns' | 'full' | 'confident'
+}) {
   const [open, setOpen] = useState(false)
   const pnlColor = summary.totalPnl >= 0 ? '#4ade80' : '#f87171'
 
@@ -269,7 +424,7 @@ function PastSummaryAccordion({ summary }: { summary: WeeklySummary }) {
 
       {open && (
         <div style={{ padding: '0 18px 18px' }}>
-          <WeeklySummaryCard summary={summary} />
+          <WeeklySummaryCard summary={summary} thresholdLevel={thresholdLevel} />
         </div>
       )}
     </div>
@@ -282,7 +437,8 @@ export default function CoachPage() {
   const [currentSummary, setCurrentSummary] = useState<WeeklySummary | null>(null)
   const [pastSummaries, setPastSummaries] = useState<WeeklySummary[]>([])
   const [generating, setGenerating] = useState(false)
-  const [hasTradeData, setHasTradeData] = useState(true)
+  const [tradeCount, setTradeCount] = useState(0)
+  const [thresholdInfo, setThresholdInfo] = useState<ThresholdInfo>(() => getThresholdInfo(0))
 
   // Load existing summaries on mount
   useEffect(() => {
@@ -292,13 +448,16 @@ export default function CoachPage() {
       setPastSummaries(summaries.slice(1))
     }
 
-    // Check if user has trade data
+    // Load trade count for threshold calculations
     try {
       const raw = localStorage.getItem('cg_journal_trades')
       const trades = raw ? JSON.parse(raw) : []
-      setHasTradeData(trades.length > 0)
+      const count = Array.isArray(trades) ? trades.length : 0
+      setTradeCount(count)
+      setThresholdInfo(getThresholdInfo(count))
     } catch {
-      setHasTradeData(false)
+      setTradeCount(0)
+      setThresholdInfo(getThresholdInfo(0))
     }
   }, [])
 
@@ -312,11 +471,13 @@ export default function CoachPage() {
         const all = loadCoachSummaries()
         setPastSummaries(all.slice(1))
 
-        // Update trade data check
+        // Update trade count
         try {
           const raw = localStorage.getItem('cg_journal_trades')
           const trades = raw ? JSON.parse(raw) : []
-          setHasTradeData(trades.length > 0)
+          const count = Array.isArray(trades) ? trades.length : 0
+          setTradeCount(count)
+          setThresholdInfo(getThresholdInfo(count))
         } catch { /* ignore */ }
       } catch (e) {
         console.error('Coach generation error:', e)
@@ -325,6 +486,8 @@ export default function CoachPage() {
       }
     }, 50)
   }, [])
+
+  const hasEnoughData = tradeCount >= 5
 
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
@@ -351,7 +514,7 @@ export default function CoachPage() {
               AI Trade Coach
             </h1>
             <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)' }}>
-              Pattern detection & behavioral analysis — 100% private, runs in your browser
+              Pattern detection &amp; behavioral analysis — 100% private, runs in your browser
             </p>
           </div>
         </div>
@@ -368,47 +531,61 @@ export default function CoachPage() {
           fontSize: 11,
           fontWeight: 700,
           color: 'var(--accent)',
-          marginBottom: 28,
+          marginBottom: 20,
           letterSpacing: 0.5,
         }}>
-          ⚡ BETA — All insights unlocked
+          ⚡ BETA
         </div>
 
-        {/* ── Empty State ── */}
-        {!hasTradeData && (
-          <div style={{
-            background: 'var(--bg-2)',
-            border: '1px solid var(--border)',
-            borderRadius: 12,
-            padding: '48px 32px',
-            textAlign: 'center',
-            marginBottom: 24,
-          }}>
-            <div style={{ fontSize: 48, marginBottom: 16 }}>📓</div>
-            <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>No Trade Data Yet</h2>
-            <p style={{ margin: '0 0 24px', fontSize: 14, color: 'var(--text-1)', maxWidth: 400, marginLeft: 'auto', marginRight: 'auto' }}>
-              Log some trades in your Journal first, then come back for AI-powered insights.
-            </p>
-            <a
-              href="/journal"
-              style={{
-                display: 'inline-block',
-                background: 'var(--accent)',
-                color: '#fff',
-                padding: '10px 20px',
-                borderRadius: 8,
-                fontWeight: 700,
-                fontSize: 14,
-                textDecoration: 'none',
-              }}
-            >
-              Go to Journal →
-            </a>
-          </div>
+        {/* ── Prominent Disclaimer ── */}
+        <DisclaimerBox />
+
+        {/* ── Progress Bar (always visible) ── */}
+        <ThresholdProgressBar info={thresholdInfo} />
+
+        {/* ── Under Threshold State ── */}
+        {!hasEnoughData && (
+          <>
+            <div style={{
+              background: 'var(--bg-2)',
+              border: '1px solid var(--border)',
+              borderRadius: 12,
+              padding: '40px 32px',
+              textAlign: 'center',
+              marginBottom: 24,
+            }}>
+              <div style={{ fontSize: 48, marginBottom: 16 }}>📓</div>
+              <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>Keep Building Your Trade History</h2>
+              <p style={{ margin: '0 0 8px', fontSize: 14, color: 'var(--text-1)', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
+                {tradeCount === 0
+                  ? 'Log at least 5 trades to unlock your first insights. The more you trade and journal, the smarter your analysis gets.'
+                  : `You have ${tradeCount} trade${tradeCount !== 1 ? 's' : ''} logged. Log ${5 - tradeCount} more to unlock your first insights.`}
+              </p>
+              <a
+                href="/journal"
+                style={{
+                  display: 'inline-block',
+                  background: 'var(--accent)',
+                  color: '#fff',
+                  padding: '10px 20px',
+                  borderRadius: 8,
+                  fontWeight: 700,
+                  fontSize: 14,
+                  textDecoration: 'none',
+                  marginTop: 16,
+                }}
+              >
+                Go to Journal →
+              </a>
+            </div>
+
+            {/* Locked preview cards */}
+            <LockedPreviewCards tradeCount={tradeCount} />
+          </>
         )}
 
-        {/* ── Generate Button ── */}
-        {hasTradeData && (
+        {/* ── Generate Button (5+ trades) ── */}
+        {hasEnoughData && (
           <div style={{ marginBottom: 28 }}>
             <button
               onClick={handleGenerate}
@@ -432,7 +609,7 @@ export default function CoachPage() {
               }}
             >
               <IconBrain size={18} />
-              {generating ? 'Analyzing your trades…' : 'Generate This Week\'s Summary'}
+              {generating ? 'Analyzing your trades…' : 'Generate This Week\'s Analysis'}
             </button>
             <p style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 6 }}>
               Analyzes your journal data locally — nothing is sent anywhere
@@ -440,31 +617,36 @@ export default function CoachPage() {
           </div>
         )}
 
+        {/* ── Locked previews for partial unlocks ── */}
+        {hasEnoughData && thresholdInfo.level !== 'confident' && (
+          <LockedPreviewCards tradeCount={tradeCount} />
+        )}
+
         {/* ── Current Summary ── */}
-        {currentSummary && (
+        {currentSummary && hasEnoughData && (
           <div style={{ marginBottom: 32 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
               Latest Analysis
             </div>
-            <WeeklySummaryCard summary={currentSummary} />
+            <WeeklySummaryCard summary={currentSummary} thresholdLevel={thresholdInfo.level} />
           </div>
         )}
 
         {/* ── Past Summaries ── */}
-        {pastSummaries.length > 0 && (
+        {pastSummaries.length > 0 && hasEnoughData && (
           <div style={{ marginBottom: 32 }}>
             <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: 1, marginBottom: 12 }}>
-              Past Summaries
+              Past Analyses
             </div>
             <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
               {pastSummaries.map(s => (
-                <PastSummaryAccordion key={s.id} summary={s} />
+                <PastSummaryAccordion key={s.id} summary={s} thresholdLevel={thresholdInfo.level} />
               ))}
             </div>
           </div>
         )}
 
-        {/* ── Disclaimer ── */}
+        {/* ── Footer Disclaimer ── */}
         <div style={{
           marginTop: 40,
           padding: '16px 20px',
@@ -475,10 +657,10 @@ export default function CoachPage() {
           color: 'var(--text-3)',
           lineHeight: 1.7,
         }}>
-          <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>⚠️ Disclaimer: </span>
-          AI Trade Coach provides analytical insights based on your trading data for educational purposes only.
+          <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>⚠️ Statistical Analysis Only: </span>
+          AI Trade Coach provides backward-looking observations based on your trading data for educational purposes only.
           This is not financial advice. Past patterns do not guarantee future results.
-          Always make trading decisions based on your own research and risk tolerance.
+          All insights are statistical observations of logged data. Always make your own trading decisions based on your own research and risk tolerance.
         </div>
       </div>
     </div>

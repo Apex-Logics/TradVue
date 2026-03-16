@@ -31,6 +31,83 @@ export interface RitualLike {
   completedAt: string
 }
 
+// ─── Threshold System ─────────────────────────────────────────────────────────
+
+export type ThresholdLevel = 'none' | 'basic' | 'patterns' | 'full' | 'confident'
+
+export interface ThresholdInfo {
+  level: ThresholdLevel
+  tradeCount: number
+  message: string
+  nextMilestone: number
+  nextLabel: string
+  progressLabel: string
+  progressPct: number
+}
+
+export function getThresholdInfo(tradeCount: number): ThresholdInfo {
+  if (tradeCount < 5) {
+    return {
+      level: 'none',
+      tradeCount,
+      message: 'Log at least 5 trades to unlock your first insights. The more you trade and journal, the smarter your analysis gets.',
+      nextMilestone: 5,
+      nextLabel: 'Basic Stats',
+      progressLabel: `${tradeCount} / 5 trades for Basic Stats`,
+      progressPct: tradeCount / 5,
+    }
+  } else if (tradeCount < 10) {
+    return {
+      level: 'basic',
+      tradeCount,
+      message: 'Basic stats unlocked! Log 10+ trades to unlock pattern detection.',
+      nextMilestone: 10,
+      nextLabel: 'Pattern Detection',
+      progressLabel: `${tradeCount} / 10 for Pattern Detection`,
+      progressPct: tradeCount / 10,
+    }
+  } else if (tradeCount < 20) {
+    return {
+      level: 'patterns',
+      tradeCount,
+      message: 'Pattern detection active! Log 20+ trades for advanced behavioral insights.',
+      nextMilestone: 20,
+      nextLabel: 'Full Analysis',
+      progressLabel: `${tradeCount} / 20 for Full Analysis`,
+      progressPct: tradeCount / 20,
+    }
+  } else if (tradeCount < 50) {
+    return {
+      level: 'full',
+      tradeCount,
+      message: 'Full analysis active. Keep journaling — insights improve with more data.',
+      nextMilestone: 50,
+      nextLabel: 'High-Confidence',
+      progressLabel: `${tradeCount} / 50 for High-Confidence`,
+      progressPct: tradeCount / 50,
+    }
+  } else {
+    return {
+      level: 'confident',
+      tradeCount,
+      message: 'High-confidence analysis based on 50+ trades.',
+      nextMilestone: 50,
+      nextLabel: 'High-Confidence',
+      progressLabel: `${tradeCount} trades — High-Confidence Mode`,
+      progressPct: 1,
+    }
+  }
+}
+
+/** Insight types visible at each threshold level */
+export const THRESHOLD_INSIGHT_TYPES: Record<ThresholdLevel, string[]> = {
+  none: [],
+  basic: [],
+  patterns: ['streak', 'pattern', 'ticker_analysis'],
+  full: ['streak', 'pattern', 'ticker_analysis', 'time_analysis', 'risk', 'playbook', 'emotion'],
+  confident: ['streak', 'pattern', 'ticker_analysis', 'time_analysis', 'risk', 'playbook', 'emotion'],
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function uid(): string {
@@ -113,10 +190,10 @@ function detectRevengeTrading(trades: TradeLike[]): CoachInsight[] {
     id: uid(),
     type: 'pattern',
     severity: drop > 0.25 ? 'critical' : 'warning',
-    title: 'Revenge Trading Detected',
-    description: `You took ${revengeTrades.length} trades within 15 minutes of a loss with equal or larger position size. These trades perform significantly worse than your average.`,
-    metric: `Win rate drops ${pctDrop}% on revenge trades (${Math.round(revengeWr * 100)}% vs ${Math.round(overallWr * 100)}% overall)`,
-    recommendation: 'After a losing trade, step away for at least 15–30 minutes before re-entering the market. Set a hard rule: no new trade until a timer expires.',
+    title: 'Revenge Trading Pattern Detected',
+    description: `Your data shows ${revengeTrades.length} trades taken within 15 minutes of a loss with equal or larger position size. These entries perform significantly worse than your historical average.`,
+    metric: `Win rate drops ${pctDrop}% on these entries (${Math.round(revengeWr * 100)}% vs ${Math.round(overallWr * 100)}% overall)`,
+    recommendation: `📊 Data observation: Performance tends to decline when re-entering within 15 minutes of a loss. Based on your logged trades, a ${pctDrop}% win rate drop is observed on these entries. Historical data indicates a pause after losing trades correlates with improved subsequent performance.`,
     dataPoints: revengeTrades.length,
     createdAt: new Date().toISOString(),
   }]
@@ -155,14 +232,17 @@ function detectOvertrading(trades: TradeLike[]): CoachInsight[] {
 
   if (overtradeDays < 2) return []
 
+  const avgFirst = (early3Pnl / overtradeDays).toFixed(0)
+  const avgLater = (later4Pnl / overtradeDays).toFixed(0)
+
   return [{
     id: uid(),
     type: 'pattern',
     severity: 'warning',
     title: 'Overtrading Pattern',
-    description: `On ${overtradeDays} trading days with 5+ trades, your performance declined significantly on trades 4 and beyond compared to your first 3 trades of the day.`,
-    metric: `Avg P&L per trade: First 3 = $${(early3Pnl / overtradeDays).toFixed(0)}, Trades 4+ = $${(later4Pnl / overtradeDays).toFixed(0)}`,
-    recommendation: 'Consider setting a daily trade limit of 3–4. Once you hit your profit target or trade limit, close the platform. Your edge diminishes as the day goes on.',
+    description: `On ${overtradeDays} trading days with 5+ trades, your data shows declining performance on trades 4 and beyond compared to your first 3 trades of the day.`,
+    metric: `Avg P&L per trade: First 3 = $${avgFirst}, Trades 4+ = $${avgLater}`,
+    recommendation: `📊 Data observation: Based on your logged trades, performance on trades 4+ averages $${avgLater} vs $${avgFirst} on your first 3. Historical data indicates diminishing returns as daily trade count increases. Your statistical edge appears strongest in the first 3 trades of a session.`,
     dataPoints: sampleSize,
     createdAt: new Date().toISOString(),
   }]
@@ -199,14 +279,15 @@ function detectTimeOfDay(trades: TradeLike[]): CoachInsight[] {
 
     if (drop >= 0.15) {
       const avgPeriodPnl = avgPnl(pts)
+      const dropPct = Math.round(drop * 100)
       insights.push({
         id: uid(),
         type: 'time_analysis',
         severity: drop >= 0.25 ? 'critical' : 'warning',
         title: `Weak ${period} Performance`,
-        description: `Your win rate during ${period} is significantly below your average. Consider avoiding or reducing position sizes during this time window.`,
+        description: `Your win rate during ${period} is significantly below your historical average. Your data shows a ${dropPct}% lower win rate during this window.`,
         metric: `Win rate: ${Math.round(wr * 100)}% vs ${Math.round(overallWr * 100)}% average · Avg P&L: $${avgPeriodPnl.toFixed(0)}`,
-        recommendation: `Review the ${period} trades that lost money. Are there common patterns — news events, low liquidity, fatigue? Consider a rule to skip this window.`,
+        recommendation: `📊 Data observation: Based on your logged trades, the ${period} window shows a ${dropPct}% lower win rate vs. your overall average. Historical data indicates this window's statistical performance differs from your peak hours. Reviewing these entries for common patterns may reveal contributing factors.`,
         dataPoints: pts.length,
         createdAt: new Date().toISOString(),
       })
@@ -236,14 +317,15 @@ function detectTickerConcentration(trades: TradeLike[]): CoachInsight[] {
     const drop = overallWr - wr
 
     if (drop >= 0.2 && totalPnl < 0) {
+      const dropPct = Math.round(drop * 100)
       insights.push({
         id: uid(),
         type: 'ticker_analysis',
         severity: totalPnl < -200 ? 'critical' : 'warning',
-        title: `${sym} Is Hurting Your P&L`,
-        description: `Your win rate on ${sym} is significantly below average, and you've lost money on it overall. This ticker may not fit your current strategy.`,
+        title: `${sym} Statistical Underperformance`,
+        description: `Your data shows a win rate on ${sym} that is ${dropPct}% below your overall average, with a net loss on this symbol. Historical data indicates this ticker's performance differs from your typical profile.`,
         metric: `${sym}: ${Math.round(wr * 100)}% win rate (${pts.filter(t => t.pnl > 0).length}W/${pts.filter(t => t.pnl <= 0).length}L) · Total P&L: $${totalPnl.toFixed(0)}`,
-        recommendation: `Consider taking ${sym} off your watchlist until you understand why it's not working for you. Wait for a clear setup that matches your best patterns.`,
+        recommendation: `📊 Data observation: Based on your logged trades, ${sym} shows a ${dropPct}% lower win rate than your average. Historically, your results indicate this symbol has not aligned with your overall statistical edge. Your data may warrant reviewing your criteria for this specific ticker.`,
         dataPoints: pts.length,
         createdAt: new Date().toISOString(),
       })
@@ -292,14 +374,15 @@ function detectStreaks(trades: TradeLike[]): CoachInsight[] {
     const wr = winRate(postStreak3Wins)
     const overallWr = winRate(trades)
     if (overallWr - wr >= 0.15) {
+      const dropPct = Math.round((overallWr - wr) * 100)
       insights.push({
         id: uid(),
         type: 'streak',
         severity: 'warning',
-        title: 'Win Streak Overconfidence',
-        description: `After 3 consecutive wins, your very next trade has a lower-than-average win rate. Hot streaks may be leading to overconfidence and less selective entries.`,
+        title: 'Win Streak Overconfidence Pattern',
+        description: `After 3 consecutive wins, your data shows the very next trade has a lower-than-average win rate. Your historical data indicates a statistical dip following hot streaks.`,
         metric: `Post win-streak win rate: ${Math.round(wr * 100)}% vs ${Math.round(overallWr * 100)}% overall`,
-        recommendation: 'After 3 wins in a row, be extra selective. Review your criteria before taking the next trade — don\'t "ride the wave" into a bad setup.',
+        recommendation: `📊 Data observation: Based on your logged trades, performance after 3-win streaks shows a ${dropPct}% statistical dip. Historical data indicates overconfidence after hot streaks may correlate with lower-quality entry selection on the subsequent trade.`,
         dataPoints: postStreak3Wins.length,
         createdAt: new Date().toISOString(),
       })
@@ -311,14 +394,15 @@ function detectStreaks(trades: TradeLike[]): CoachInsight[] {
     const wr = winRate(postStreak3Loss)
     const overallWr = winRate(trades)
     if (overallWr - wr >= 0.15) {
+      const dropPct = Math.round((overallWr - wr) * 100)
       insights.push({
         id: uid(),
         type: 'streak',
         severity: 'critical',
-        title: 'Chasing Losses After Drawdown',
-        description: `After 3 consecutive losing trades, your recovery trades tend to perform worse than average. You may be taking lower-quality setups to win back losses.`,
+        title: 'Post-Drawdown Recovery Pattern',
+        description: `After 3 consecutive losing trades, your data shows recovery entries tend to perform worse than average. A pattern of lower-quality setups following drawdowns is present in your historical data.`,
         metric: `Post loss-streak win rate: ${Math.round(wr * 100)}% vs ${Math.round(overallWr * 100)}% overall`,
-        recommendation: 'After 3 consecutive losses, stop trading for the day. Come back tomorrow with a fresh mindset. Chasing losses compounds the damage.',
+        recommendation: `📊 Data observation: Performance tends to decline when continuing to trade after 3 consecutive losses. Based on your logged trades, a ${dropPct}% win rate drop is observed on these recovery entries. Historical data indicates pausing after consecutive losses correlates with better subsequent performance.`,
         dataPoints: postStreak3Loss.length,
         createdAt: new Date().toISOString(),
       })
@@ -331,10 +415,10 @@ function detectStreaks(trades: TradeLike[]): CoachInsight[] {
       id: uid(),
       type: 'streak',
       severity: 'positive',
-      title: `Impressive ${maxWinStreak}-Trade Win Streak`,
-      description: `You achieved a ${maxWinStreak}-trade winning streak this period. That's evidence of strong execution when you're in the zone.`,
+      title: `${maxWinStreak}-Trade Win Streak Recorded`,
+      description: `Your data shows a ${maxWinStreak}-trade winning streak this period. This represents strong execution consistency in your historical record.`,
       metric: `Best streak: ${maxWinStreak} consecutive wins`,
-      recommendation: 'Study the conditions around this streak — what was your mindset, what setups did you take? Try to replicate those conditions.',
+      recommendation: `📊 Data observation: Based on your logged trades, this ${maxWinStreak}-trade streak represents a period of strong statistical execution. Historical data indicates analyzing the conditions during this period — setups taken, market environment, session timing — may reveal patterns worth documenting.`,
       dataPoints: maxWinStreak,
       createdAt: new Date().toISOString(),
     })
@@ -363,10 +447,10 @@ function detectRiskManagement(trades: TradeLike[]): CoachInsight[] {
       id: uid(),
       type: 'risk',
       severity: ratio > 2 ? 'critical' : 'warning',
-      title: 'Losers Are Too Big',
-      description: `Your average losing trade is ${ratio.toFixed(1)}x larger than your average winner. This means you need an unusually high win rate just to break even.`,
+      title: 'Unfavorable Loss-to-Win Ratio',
+      description: `Your data shows your average losing trade is ${ratio.toFixed(1)}x larger than your average winner. This means an unusually high win rate is required statistically just to break even.`,
       metric: `Avg winner: $${avgWin.toFixed(0)} · Avg loser: -$${avgLoss.toFixed(0)} · Ratio: ${ratio.toFixed(2)}`,
-      recommendation: 'Focus on cutting losses faster. Set hard stop-losses before entering trades. Your target should be: avg loser ≤ avg winner.',
+      recommendation: `📊 Data observation: Based on your logged trades, your average losing trade is ${ratio.toFixed(1)}x larger than your average winner. Historical data indicates that tighter loss management — targeting average loser ≤ average winner — correlates with improved overall profitability in your statistical profile.`,
       dataPoints: trades.length,
       createdAt: new Date().toISOString(),
     })
@@ -376,9 +460,9 @@ function detectRiskManagement(trades: TradeLike[]): CoachInsight[] {
       type: 'risk',
       severity: 'positive',
       title: 'Strong Risk/Reward Ratio',
-      description: `Your winners are significantly larger than your losers, which is excellent risk management. Even a sub-50% win rate can be profitable with this profile.`,
+      description: `Your data shows winners are significantly larger than losers — a statistically favorable risk profile. Even a sub-50% win rate can be profitable with this pattern.`,
       metric: `Avg winner: $${avgWin.toFixed(0)} · Avg loser: -$${avgLoss.toFixed(0)} · Ratio: 1:${(avgWin / avgLoss).toFixed(1)}`,
-      recommendation: 'Maintain this discipline. Don\'t feel pressured to increase win rate — your edge is in letting winners run and cutting losers short.',
+      recommendation: `📊 Data observation: Based on your logged trades, your risk-reward profile is statistically favorable at 1:${(avgWin / avgLoss).toFixed(1)}. Historical data indicates this pattern — larger winners than losers — is associated with sustainable long-term performance even at sub-50% win rates.`,
       dataPoints: trades.length,
       createdAt: new Date().toISOString(),
     })
@@ -409,14 +493,15 @@ function detectPlaybookPerformance(trades: TradeLike[]): CoachInsight[] {
     const drop = overallWr - wr
 
     if (drop >= 0.2) {
+      const dropPct = Math.round(drop * 100)
       insights.push({
         id: uid(),
         type: 'playbook',
         severity: 'warning',
         title: `Underperforming Playbook: "${pbId}"`,
-        description: `This playbook has a notably lower win rate than your other setups. Either the setup is currently out of market regime, or execution needs improvement.`,
+        description: `Your data shows this playbook has a ${dropPct}% lower win rate than your other setups. Historical data indicates possible misalignment with current market conditions or execution variance.`,
         metric: `Win rate: ${Math.round(wr * 100)}% vs ${Math.round(overallWr * 100)}% avg · Total P&L: $${totalPnl.toFixed(0)}`,
-        recommendation: 'Pause this playbook and do a deep review. Are you entering at the right time? Is the market environment suitable? Consider paper-trading it before going live again.',
+        recommendation: `📊 Data observation: Based on your logged trades, this playbook shows a ${dropPct}% lower win rate than your other setups. Historical data indicates reviewing entry criteria and market conditions for these trades may reveal contributing factors to the performance gap.`,
         dataPoints: pts.length,
         createdAt: new Date().toISOString(),
       })
@@ -427,10 +512,10 @@ function detectPlaybookPerformance(trades: TradeLike[]): CoachInsight[] {
         id: uid(),
         type: 'playbook',
         severity: 'positive',
-        title: `Best Playbook: "${pbId}"`,
-        description: `This playbook is outperforming your other setups with a higher win rate and positive P&L. This is your edge.`,
+        title: `Highest-Performing Playbook: "${pbId}"`,
+        description: `Your data shows this playbook outperforming your other setups with a higher win rate and positive P&L. This represents your strongest statistical edge.`,
         metric: `Win rate: ${Math.round(wr * 100)}% vs ${Math.round(overallWr * 100)}% avg · Total P&L: $${totalPnl.toFixed(0)}`,
-        recommendation: 'Double down on this playbook. Focus your trading sessions on finding more of these setups and avoiding lower-quality alternatives.',
+        recommendation: `📊 Data observation: Based on your logged trades, this playbook demonstrates your strongest statistical edge at ${Math.round(wr * 100)}% win rate. Historical data indicates prioritizing setups matching this profile correlates with better overall outcomes in your trading record.`,
         dataPoints: pts.length,
         createdAt: new Date().toISOString(),
       })
@@ -479,10 +564,10 @@ function detectEmotionCorrelation(trades: TradeLike[], rituals: RitualLike[]): C
       id: uid(),
       type: 'emotion',
       severity: 'warning',
-      title: 'Emotional State Predicts Performance',
-      description: 'Days following low emotional scores in your ritual tend to produce worse trading results. Your mindset the night before affects your performance the next day.',
+      title: 'Emotional State Correlates With Performance',
+      description: 'Your data shows days following low emotional scores in your ritual tend to produce worse trading results. A statistical correlation between pre-trading emotional state and next-day performance is present in your historical data.',
       metric: `Avg P&L after low-emotion days: $${avgLow.toFixed(0)} vs after high-emotion days: $${avgHigh.toFixed(0)}`,
-      recommendation: 'On low-emotion days, consider trading smaller size or taking fewer trades. Use your ritual to flag when you\'re not in the right headspace.',
+      recommendation: `📊 Data observation: Based on your logged trades, days following low-emotion ritual scores show an average P&L of $${avgLow.toFixed(0)} vs $${avgHigh.toFixed(0)} after high-emotion days. Historical data indicates a statistical correlation between pre-trading emotional state and next-day performance in your trading record.`,
       dataPoints: lowEmotionNextDay.length + highEmotionNextDay.length,
       createdAt: new Date().toISOString(),
     }]
