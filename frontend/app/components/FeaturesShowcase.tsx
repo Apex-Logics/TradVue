@@ -73,7 +73,7 @@ const PLATFORM_FEATURES = [
         <polyline points="9 12 11 14 15 10"/>
       </svg>
     ),
-    title: '100% Free',
+    title: 'Free to Start',
     desc: 'No paywall for core features. No account required to start. Sign in only to sync your watchlist across devices.',
     href: '/',
   },

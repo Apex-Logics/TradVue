@@ -18,6 +18,7 @@ const NAV_ITEMS = [
   { label: 'Prop Firm', href: '/propfirm' },
   { label: 'Playbooks', href: '/playbooks' },
   { label: '✨ Ritual', href: '/ritual' },
+  { label: '🧠 AI Coach', href: '/coach' },
   { label: 'Tools',     href: '/tools' },
   { label: 'Help',      href: '/help' },
 ]
