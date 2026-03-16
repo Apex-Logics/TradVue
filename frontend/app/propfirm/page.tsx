@@ -1500,6 +1500,86 @@ function AccountDetail({ account, onBack, onUpdate }: {
   )
 }
 
+// ─── Drawdown Disclaimer Banner ───────────────────────────────────────────────
+
+function DrawdownDisclaimer() {
+  const [dismissed, setDismissed] = useState(false)
+  const [collapsed, setCollapsed] = useState(false)
+
+  useEffect(() => {
+    try {
+      if (localStorage.getItem('cg_propfirm_disclaimer_dismissed') === 'true') {
+        setDismissed(true)
+      }
+    } catch { /* ignore */ }
+  }, [])
+
+  const handleDismiss = () => {
+    try { localStorage.setItem('cg_propfirm_disclaimer_dismissed', 'true') } catch { /* ignore */ }
+    setDismissed(true)
+  }
+
+  if (dismissed) return null
+
+  return (
+    <div style={{
+      marginBottom: 20,
+      borderRadius: 8,
+      border: '1px solid var(--accent)',
+      background: 'var(--bg-2)',
+      overflow: 'hidden',
+    }}>
+      <div style={{
+        display: 'flex',
+        alignItems: collapsed ? 'center' : 'flex-start',
+        gap: 10,
+        padding: '10px 14px',
+      }}>
+        <span style={{ fontSize: 14, flexShrink: 0, marginTop: collapsed ? 0 : 1 }}>ℹ️</span>
+        {collapsed ? (
+          <span style={{ fontSize: 12, color: 'var(--text-2)', flex: 1, fontStyle: 'italic' }}>
+            Intraday drawdown disclaimer (click ▼ to expand)
+          </span>
+        ) : (
+          <p style={{
+            fontSize: 12,
+            color: 'var(--text-2)',
+            flex: 1,
+            margin: 0,
+            lineHeight: 1.55,
+          }}>
+            TradVue tracks drawdown from closed/logged trades only. Intraday drawdown on open positions is calculated by your prop firm&apos;s platform in real-time and may differ from values shown here. Always monitor your firm&apos;s official dashboard for live account status. TradVue&apos;s tracking is supplementary — not a replacement for your firm&apos;s official numbers.
+          </p>
+        )}
+        <div style={{ display: 'flex', gap: 4, flexShrink: 0, alignItems: 'center' }}>
+          <button
+            onClick={() => setCollapsed(v => !v)}
+            style={{
+              background: 'none', border: 'none',
+              color: 'var(--text-3)', cursor: 'pointer',
+              fontSize: 11, padding: '2px 6px', lineHeight: 1,
+            }}
+            title={collapsed ? 'Expand' : 'Collapse'}
+          >
+            {collapsed ? '▼' : '▲'}
+          </button>
+          <button
+            onClick={handleDismiss}
+            style={{
+              background: 'none', border: 'none',
+              color: 'var(--text-3)', cursor: 'pointer',
+              fontSize: 11, padding: '2px 6px', lineHeight: 1,
+            }}
+            title="Dismiss"
+          >
+            ✕
+          </button>
+        </div>
+      </div>
+    </div>
+  )
+}
+
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PropFirmPage() {
@@ -1600,6 +1680,9 @@ export default function PropFirmPage() {
                 + Add Account
               </button>
             </div>
+
+            {/* Intraday drawdown disclaimer */}
+            <DrawdownDisclaimer />
 
             {/* Accounts grid */}
             {accounts.length === 0 ? (
