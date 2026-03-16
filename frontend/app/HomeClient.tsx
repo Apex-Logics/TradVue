@@ -168,6 +168,9 @@ export default function HomeClient() {
   // Mobile nav
   const [mobileSidebarOpen, setMobileSidebarOpen] = useState(false)
   const [mobileNavOpen, setMobileNavOpen]         = useState(false)
+  // More dropdown
+  const [moreDropdownOpen, setMoreDropdownOpen]   = useState(false)
+  const moreDropdownRef = useRef<HTMLDivElement>(null)
 
   // ── Read ?view= query param on initial load ──────────────────────────────────
   useEffect(() => {
@@ -177,6 +180,18 @@ export default function HomeClient() {
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [])
+
+  // ── Close More dropdown on outside click ─────────────────────────────────────
+  useEffect(() => {
+    if (!moreDropdownOpen) return
+    const handleClick = (e: MouseEvent) => {
+      if (moreDropdownRef.current && !moreDropdownRef.current.contains(e.target as Node)) {
+        setMoreDropdownOpen(false)
+      }
+    }
+    document.addEventListener('mousedown', handleClick)
+    return () => document.removeEventListener('mousedown', handleClick)
+  }, [moreDropdownOpen])
 
   // ── Clock ────────────────────────────────────────────────────────────────────
   useEffect(() => {
@@ -702,6 +717,55 @@ export default function HomeClient() {
           <a href="/portfolio" className={`nav-item${activeNav === 'Portfolio' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Portfolio</a>
           <a href="/tools"     className={`nav-item${activeNav === 'Tools'     ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Tools</a>
           <a href="/journal"   className={`nav-item${activeNav === 'Journal'   ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Journal</a>
+          {/* ── More dropdown ──────────────────────────────────────────────── */}
+          <div ref={moreDropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
+            <button
+              className="nav-item"
+              onClick={() => setMoreDropdownOpen(o => !o)}
+              aria-haspopup="true"
+              aria-expanded={moreDropdownOpen}
+              style={{ display: 'flex', alignItems: 'center', gap: 4 }}
+            >
+              More
+              <svg width="10" height="6" viewBox="0 0 10 6" fill="none" style={{ transition: 'transform 0.2s', transform: moreDropdownOpen ? 'rotate(180deg)' : 'rotate(0deg)' }}>
+                <path d="M1 1l4 4 4-4" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"/>
+              </svg>
+            </button>
+            {moreDropdownOpen && (
+              <div style={{
+                position: 'absolute', top: 'calc(100% + 6px)', right: 0,
+                background: 'var(--bg-1)', border: '1px solid var(--border)',
+                borderRadius: 8, boxShadow: '0 8px 24px rgba(0,0,0,0.4)',
+                minWidth: 180, zIndex: 9990, overflow: 'hidden',
+              }}>
+                {[
+                  { label: 'Playbooks',         href: '/playbooks' },
+                  { label: 'Post-Trade Ritual',  href: '/ritual' },
+                  { label: 'AI Coach',           href: '/coach' },
+                  { label: 'Prop Firm Tracker',  href: '/propfirm' },
+                  { label: 'Trade Rules',        href: '/rules' },
+                  { label: 'Help',               href: '/help' },
+                ].map(item => (
+                  <a
+                    key={item.href}
+                    href={item.href}
+                    onClick={() => setMoreDropdownOpen(false)}
+                    style={{
+                      display: 'block', padding: '10px 16px',
+                      fontSize: 13, fontWeight: 500,
+                      color: 'var(--text-1)', textDecoration: 'none',
+                      borderBottom: '1px solid var(--border)',
+                      transition: 'background 0.15s, color 0.15s',
+                    }}
+                    onMouseEnter={e => { (e.currentTarget as HTMLElement).style.background = 'var(--bg-0)'; (e.currentTarget as HTMLElement).style.color = 'var(--purple)' }}
+                    onMouseLeave={e => { (e.currentTarget as HTMLElement).style.background = ''; (e.currentTarget as HTMLElement).style.color = 'var(--text-1)' }}
+                  >
+                    {item.label}
+                  </a>
+                ))}
+              </div>
+            )}
+          </div>
         </nav>
 
         <div className="header-right">
@@ -752,13 +816,18 @@ export default function HomeClient() {
           <button onClick={() => setMobileNavOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer', padding: '4px 8px' }} aria-label="Close navigation">✕</button>
         </div>
         {[
-          { label: 'Dashboard', href: '/' },
-          { label: 'News',      href: '/news' },
-          { label: 'Calendar',  href: '/calendar' },
-          { label: 'Portfolio', href: '/portfolio' },
-          { label: 'Journal',   href: '/journal' },
-          { label: 'Tools',     href: '/tools' },
-          { label: 'Help',      href: '/help' },
+          { label: 'Dashboard',          href: '/' },
+          { label: 'News',               href: '/news' },
+          { label: 'Calendar',           href: '/calendar' },
+          { label: 'Portfolio',          href: '/portfolio' },
+          { label: 'Journal',            href: '/journal' },
+          { label: 'Tools',              href: '/tools' },
+          { label: 'Playbooks',          href: '/playbooks' },
+          { label: 'Post-Trade Ritual',  href: '/ritual' },
+          { label: 'AI Coach',           href: '/coach' },
+          { label: 'Prop Firm Tracker',  href: '/propfirm' },
+          { label: 'Trade Rules',        href: '/rules' },
+          { label: 'Help',               href: '/help' },
         ].map(item => (
           <a key={item.label} href={item.href} onClick={() => setMobileNavOpen(false)}
             style={{ padding: '12px 20px', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}
