@@ -92,8 +92,9 @@ router.post('/chat', chatLimiter, async (req, res) => {
     // Limit history to last 10 messages to keep context manageable
     const recentHistory = history.slice(-10);
 
-    // Build messages array for OpenRouter
+    // Build messages array for OpenRouter — system prompt MUST be first message
     const messages = [
+      { role: 'system', content: SYSTEM_PROMPT },
       ...recentHistory.map(msg => ({
         role: msg.role === 'user' ? 'user' : 'assistant',
         content: String(msg.content || '').slice(0, 2000), // safety truncation
@@ -119,9 +120,8 @@ router.post('/chat', chatLimiter, async (req, res) => {
         'X-Title': 'TradVue Support',
       },
       body: JSON.stringify({
-        model: 'google/gemini-2.0-flash-001',
+        model: 'google/gemini-2.0-flash',
         messages,
-        system: SYSTEM_PROMPT,
         max_tokens: 500,
         temperature: 0.7,
       }),
