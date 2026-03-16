@@ -1,0 +1,4 @@
+[
+  {"date": "2026-03-16", "score": 8.5, "type": "pen_test", "findings": {"critical":0,"high":0,"medium":0,"low":0,"info":1}},
+  {"date": "2026-03-16", "score": 10, "type": "weekly_audit", "status": "PASS", "checks": 10}
+]

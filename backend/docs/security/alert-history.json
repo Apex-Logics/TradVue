@@ -1,0 +1,5 @@
+[
+  {"date": "2026-03-16T22:00:00Z", "type": "monitor", "result": "clean", "details": "No suspicious activity detected in last 30 min"},
+  {"date": "2026-03-16T06:00:00Z", "type": "weekly_audit", "result": "pass", "details": "All 10 checks passed. Score: 10/10. No critical issues."},
+  {"date": "2026-03-16T18:00:00Z", "type": "pen_test", "result": "pass", "details": "Score 8.5/10. 0 critical, 0 high, 0 medium, 3 low (now fixed), 1 info."}
+]

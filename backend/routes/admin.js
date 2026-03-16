@@ -661,7 +661,7 @@ const fs = require('fs');
 
 function getSecurityStatus() {
   try {
-    const statusPath = path.join(__dirname, '../../docs/security/security-status.json');
+    const statusPath = path.join(__dirname, '../docs/security/security-status.json');
     const raw = fs.readFileSync(statusPath, 'utf8');
     return JSON.parse(raw);
   } catch (e) {
@@ -911,7 +911,7 @@ router.get('/security/activity-feed', async (req, res) => {
 // ── GET /api/admin/security/reports ──────────────────────────────────────────
 router.get('/security/reports', async (req, res) => {
   try {
-    const secDir = path.join(__dirname, '../../docs/security');
+    const secDir = path.join(__dirname, '../docs/security');
     const files = fs.readdirSync(secDir).filter(f => f.endsWith('.md'));
     const reports = [];
 
@@ -1000,7 +1000,7 @@ router.get('/security/reports/:filename', async (req, res) => {
       return res.status(400).json({ error: 'Only .md files are accessible' });
     }
 
-    const secDir = path.join(__dirname, '../../docs/security');
+    const secDir = path.join(__dirname, '../docs/security');
     const filePath = path.join(secDir, filename);
 
     // Double check resolved path stays within secDir
@@ -1025,7 +1025,7 @@ router.get('/security/reports/:filename', async (req, res) => {
 // ── GET /api/admin/security/score-history ────────────────────────────────────
 router.get('/security/score-history', async (req, res) => {
   try {
-    const histPath = path.join(__dirname, '../../docs/security/score-history.json');
+    const histPath = path.join(__dirname, '../docs/security/score-history.json');
     if (!fs.existsSync(histPath)) return res.json({ history: [] });
     const data = JSON.parse(fs.readFileSync(histPath, 'utf8'));
     res.json({ history: data });
@@ -1038,7 +1038,7 @@ router.get('/security/score-history', async (req, res) => {
 // ── GET /api/admin/security/alert-history ────────────────────────────────────
 router.get('/security/alert-history', async (req, res) => {
   try {
-    const alertPath = path.join(__dirname, '../../docs/security/alert-history.json');
+    const alertPath = path.join(__dirname, '../docs/security/alert-history.json');
     if (!fs.existsSync(alertPath)) return res.json({ alerts: [] });
     const data = JSON.parse(fs.readFileSync(alertPath, 'utf8'));
     // Sort newest first, limit to 200
@@ -1056,7 +1056,7 @@ router.post('/security/alert-history', async (req, res) => {
     const { type, result, details } = req.body;
     if (!type || !result) return res.status(400).json({ error: 'type and result are required' });
 
-    const alertPath = path.join(__dirname, '../../docs/security/alert-history.json');
+    const alertPath = path.join(__dirname, '../docs/security/alert-history.json');
     let data = [];
     if (fs.existsSync(alertPath)) {
       try { data = JSON.parse(fs.readFileSync(alertPath, 'utf8')); } catch (e) { data = []; }
@@ -1079,7 +1079,7 @@ router.post('/security/alert-history', async (req, res) => {
 router.get('/security/export/:type', async (req, res) => {
   try {
     const { type } = req.params;
-    const secDir = path.join(__dirname, '../../docs/security');
+    const secDir = path.join(__dirname, '../docs/security');
 
     // Helper: sanitize a single CSV field (prevent formula injection)
     function csvField(val) {

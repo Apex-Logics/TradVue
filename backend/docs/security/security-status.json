@@ -1,0 +1,21 @@
+{
+  "lastPenTest": "2026-03-16",
+  "penTestScore": "8.5/10",
+  "penTestFindings": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 1},
+  "lastSecurityAudit": "2026-03-16",
+  "auditStatus": "PASS",
+  "sslExpiry": "2026-06-07",
+  "rlsTables": 32,
+  "rlsProtected": 32,
+  "cloudflareEnabled": true,
+  "wafEnabled": true,
+  "botFightMode": true,
+  "aiLabyrinth": true,
+  "rateLimiting": {"auth": "5/15min", "general": "1000/15min"},
+  "backups": {"enabled": true, "schedule": "Daily 3AM ET", "destination": "Google Drive"},
+  "monitoring": {"enabled": true, "interval": "30min", "channel": "#security"},
+  "weeklyAudit": {"enabled": true, "schedule": "Mondays 6AM ET"},
+  "monthlyPenTest": {"enabled": true, "schedule": "15th of month 2AM ET"},
+  "monthlyDeepReview": {"enabled": true, "schedule": "1st of month 10AM ET"},
+  "lastUpdated": "2026-03-16"
+}
