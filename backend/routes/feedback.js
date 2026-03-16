@@ -9,6 +9,7 @@
  */
 
 const express = require('express');
+const xss = require('xss');
 const router = express.Router();
 const rateLimit = require('express-rate-limit');
 const { createClient } = require('@supabase/supabase-js');
@@ -38,6 +39,11 @@ router.post('/', feedbackLimiter, async (req, res) => {
   try {
     const { type, message, email, page_url } = req.body;
 
+    // XSS sanitization — strip all HTML from user-supplied text fields
+    const sanitizedMessage = message ? xss(message, { whiteList: {}, stripIgnoreTag: true }) : message;
+    const sanitizedEmail = email ? xss(email, { whiteList: {}, stripIgnoreTag: true }) : email;
+    const sanitizedPageUrl = page_url ? xss(page_url, { whiteList: {}, stripIgnoreTag: true }) : page_url;
+
     // Validate type
     const validTypes = ['bug', 'feature', 'general'];
     if (!type || !validTypes.includes(type)) {
@@ -48,7 +54,7 @@ router.post('/', feedbackLimiter, async (req, res) => {
     if (!message || typeof message !== 'string') {
       return res.status(400).json({ error: 'message is required' });
     }
-    const trimmed = message.trim();
+    const trimmed = sanitizedMessage.trim();
     if (trimmed.length < 10) {
       return res.status(400).json({ error: 'message must be at least 10 characters' });
     }
@@ -57,8 +63,8 @@ router.post('/', feedbackLimiter, async (req, res) => {
     }
 
     // Optional email basic sanity check
-    if (email && typeof email === 'string' && email.length > 0) {
-      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
+    if (sanitizedEmail && typeof sanitizedEmail === 'string' && sanitizedEmail.length > 0) {
+      if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(sanitizedEmail)) {
         return res.status(400).json({ error: 'Invalid email format' });
       }
     }
@@ -69,8 +75,8 @@ router.post('/', feedbackLimiter, async (req, res) => {
     const { error } = await supabase.from('feedback').insert({
       type,
       message: trimmed,
-      email: email || null,
-      page_url: page_url || null,
+      email: sanitizedEmail || null,
+      page_url: sanitizedPageUrl || null,
       user_agent,
     });
 
@@ -79,7 +85,7 @@ router.post('/', feedbackLimiter, async (req, res) => {
       return res.status(500).json({ error: 'Failed to save feedback' });
     }
 
-    logActivity(null, email || null, 'feedback_submit', { type, page_url: page_url || null }, getIP(req), req.headers['user-agent']);
+    logActivity(null, sanitizedEmail || null, 'feedback_submit', { type, page_url: page_url || null }, getIP(req), req.headers['user-agent']);
     return res.status(201).json({ success: true, message: 'Feedback received' });
   } catch (err) {
     console.error('[feedback] Unexpected error:', err.message);

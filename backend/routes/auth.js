@@ -113,8 +113,18 @@ function sanitizeUser(user) {
 
 const EMAIL_REGEX = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
 
+// ── Pre-limiter email format guard ────────────────────────────────────────────
+// Runs BEFORE authLimiter so garbage emails don't consume rate-limit tokens.
+function validateEmailFormat(req, res, next) {
+  const email = req.body?.email;
+  if (!email || !EMAIL_REGEX.test(String(email).trim().toLowerCase())) {
+    return res.status(400).json({ error: 'Invalid email format' });
+  }
+  next();
+}
+
 // ── POST /api/auth/signup ─────────────────────────────────────────────────────
-router.post('/signup', authLimiter, async (req, res) => {
+router.post('/signup', validateEmailFormat, authLimiter, async (req, res) => {
   // Guard: Supabase not configured (env vars missing on this deployment)
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
     return res.status(503).json({
@@ -210,7 +220,7 @@ router.post('/resend-verification', authLimiter, async (req, res) => {
 });
 
 // ── POST /api/auth/login ──────────────────────────────────────────────────────
-router.post('/login', authLimiter, async (req, res) => {
+router.post('/login', validateEmailFormat, authLimiter, async (req, res) => {
   // Guard: Supabase not configured (env vars missing on this deployment)
   if (!process.env.SUPABASE_URL || !process.env.SUPABASE_ANON_KEY) {
     return res.status(503).json({
