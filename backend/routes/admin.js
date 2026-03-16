@@ -652,4 +652,260 @@ function formatUptime(seconds) {
   return `${m}m`;
 }
 
+
+// ── SECURITY DASHBOARD ENDPOINTS ─────────────────────────────────────────────
+// All inherit requireAuth + requireAdmin from router.use() at the top.
+
+const path = require('path');
+const fs = require('fs');
+
+function getSecurityStatus() {
+  try {
+    const statusPath = path.join(__dirname, '../../docs/security/security-status.json');
+    const raw = fs.readFileSync(statusPath, 'utf8');
+    return JSON.parse(raw);
+  } catch (e) {
+    console.warn('[Admin] security-status.json not found or invalid:', e.message);
+    return {
+      lastPenTest: null,
+      penTestScore: 'N/A',
+      lastSecurityAudit: null,
+      auditStatus: 'UNKNOWN',
+      sslExpiry: null,
+      rlsTables: 0,
+      rlsProtected: 0,
+    };
+  }
+}
+
+// ── GET /api/admin/security/overview ─────────────────────────────────────────
+router.get('/security/overview', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+    const since7d  = new Date(Date.now() - 7 * 24 * 60 * 60 * 1000).toISOString();
+
+    // Failed logins 24h
+    const { count: failedLogins24h } = await supabase
+      .from('activity_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('action', 'login_failed')
+      .gte('created_at', since24h);
+
+    // Failed logins 7d
+    const { count: failedLogins7d } = await supabase
+      .from('activity_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('action', 'login_failed')
+      .gte('created_at', since7d);
+
+    // Unique attacker IPs (24h, 3+ failed attempts)
+    const { data: failedIPData } = await supabase
+      .from('activity_log')
+      .select('ip_address')
+      .eq('action', 'login_failed')
+      .gte('created_at', since24h)
+      .not('ip_address', 'is', null);
+
+    const ipCounts = {};
+    (failedIPData || []).forEach(r => {
+      ipCounts[r.ip_address] = (ipCounts[r.ip_address] || 0) + 1;
+    });
+    const uniqueAttackerIPs24h = Object.values(ipCounts).filter(c => c >= 3).length;
+
+    // Successful logins 24h
+    const { count: successfulLogins24h } = await supabase
+      .from('activity_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('action', 'login')
+      .gte('created_at', since24h);
+
+    // Total API requests 24h
+    const { count: totalAPIRequests24h } = await supabase
+      .from('activity_log')
+      .select('*', { count: 'exact', head: true })
+      .gte('created_at', since24h);
+
+    // Active users 24h (distinct user_ids who logged in)
+    const { data: activeUserData } = await supabase
+      .from('activity_log')
+      .select('user_id')
+      .eq('action', 'login')
+      .gte('created_at', since24h)
+      .not('user_id', 'is', null);
+
+    const activeUsers24h = new Set((activeUserData || []).map(r => r.user_id)).size;
+
+    // Rate limit hits 24h (from activity_log action = 'rate_limit_hit' if logged)
+    const { count: rateLimitHits24h } = await supabase
+      .from('activity_log')
+      .select('*', { count: 'exact', head: true })
+      .eq('action', 'rate_limit_hit')
+      .gte('created_at', since24h);
+
+    // Security status from JSON file
+    const secStatus = getSecurityStatus();
+
+    // SSL expiry days
+    let sslDaysLeft = null;
+    if (secStatus.sslExpiry) {
+      sslDaysLeft = Math.ceil((new Date(secStatus.sslExpiry) - new Date()) / (1000 * 60 * 60 * 24));
+    }
+
+    res.json({
+      failedLogins24h:       failedLogins24h || 0,
+      failedLogins7d:        failedLogins7d || 0,
+      uniqueAttackerIPs24h:  uniqueAttackerIPs24h,
+      successfulLogins24h:   successfulLogins24h || 0,
+      totalAPIRequests24h:   totalAPIRequests24h || 0,
+      rlsTablesCount:        secStatus.rlsTables || 0,
+      rlsTablesProtected:    secStatus.rlsProtected || 0,
+      lastSecurityAudit:     secStatus.lastSecurityAudit,
+      lastPenTest:           secStatus.lastPenTest,
+      penTestScore:          secStatus.penTestScore,
+      penTestFindings:       secStatus.penTestFindings || null,
+      sslExpiry:             secStatus.sslExpiry,
+      sslDaysLeft:           sslDaysLeft,
+      activeUsers24h:        activeUsers24h,
+      rateLimitHits24h:      rateLimitHits24h || 0,
+      cloudflareEnabled:     secStatus.cloudflareEnabled || false,
+      wafEnabled:            secStatus.wafEnabled || false,
+      auditStatus:           secStatus.auditStatus || 'UNKNOWN',
+    });
+  } catch (err) {
+    console.error('[Admin] /security/overview error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/security/failed-logins ────────────────────────────────────
+router.get('/security/failed-logins', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const { data, error } = await supabase
+      .from('activity_log')
+      .select('ip_address, email, created_at, details')
+      .eq('action', 'login_failed')
+      .order('created_at', { ascending: false })
+      .limit(100);
+
+    if (error) throw error;
+
+    const result = (data || []).map(r => ({
+      ip_address: r.ip_address || null,
+      email:      r.email || null,
+      created_at: r.created_at,
+      user_agent: r.details?.user_agent || null,
+    }));
+
+    res.json({ failed_logins: result, total: result.length });
+  } catch (err) {
+    console.error('[Admin] /security/failed-logins error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/security/active-sessions ──────────────────────────────────
+router.get('/security/active-sessions', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('activity_log')
+      .select('user_id, email, ip_address, created_at, details')
+      .eq('action', 'login')
+      .gte('created_at', since24h)
+      .order('created_at', { ascending: false })
+      .limit(500);
+
+    if (error) throw error;
+
+    // DISTINCT ON user_id: keep the most recent login per user
+    const seen = new Set();
+    const sessions = [];
+    for (const row of (data || [])) {
+      const uid = row.user_id || row.email;
+      if (!seen.has(uid)) {
+        seen.add(uid);
+        sessions.push({
+          user_id:    row.user_id || null,
+          email:      row.email || null,
+          ip_address: row.ip_address || null,
+          last_seen:  row.created_at,
+          user_agent: row.details?.user_agent || null,
+        });
+      }
+    }
+
+    res.json({ active_sessions: sessions, total: sessions.length });
+  } catch (err) {
+    console.error('[Admin] /security/active-sessions error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/security/ip-threats ───────────────────────────────────────
+router.get('/security/ip-threats', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const since24h = new Date(Date.now() - 24 * 60 * 60 * 1000).toISOString();
+
+    const { data, error } = await supabase
+      .from('activity_log')
+      .select('ip_address, email, created_at')
+      .eq('action', 'login_failed')
+      .gte('created_at', since24h)
+      .not('ip_address', 'is', null)
+      .order('created_at', { ascending: false })
+      .limit(5000);
+
+    if (error) throw error;
+
+    // Group by IP
+    const ipMap = {};
+    (data || []).forEach(r => {
+      const ip = r.ip_address;
+      if (!ipMap[ip]) {
+        ipMap[ip] = { ip_address: ip, attempts: 0, targeted_emails: new Set(), last_attempt: r.created_at };
+      }
+      ipMap[ip].attempts++;
+      if (r.email) ipMap[ip].targeted_emails.add(r.email);
+      if (r.created_at > ipMap[ip].last_attempt) ipMap[ip].last_attempt = r.created_at;
+    });
+
+    const threats = Object.values(ipMap)
+      .filter(t => t.attempts >= 3)
+      .map(t => ({ ...t, targeted_emails: Array.from(t.targeted_emails) }))
+      .sort((a, b) => b.attempts - a.attempts);
+
+    res.json({ ip_threats: threats, total: threats.length });
+  } catch (err) {
+    console.error('[Admin] /security/ip-threats error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
+// ── GET /api/admin/security/activity-feed ────────────────────────────────────
+router.get('/security/activity-feed', async (req, res) => {
+  try {
+    const supabase = getAdminClient();
+    const SECURITY_ACTIONS = ['login', 'login_failed', 'signup', 'password_reset', 'account_deleted'];
+
+    const { data, error } = await supabase
+      .from('activity_log')
+      .select('id, action, email, ip_address, created_at, details')
+      .in('action', SECURITY_ACTIONS)
+      .order('created_at', { ascending: false })
+      .limit(50);
+
+    if (error) throw error;
+
+    res.json({ activity_feed: data || [], total: data?.length || 0 });
+  } catch (err) {
+    console.error('[Admin] /security/activity-feed error:', err);
+    res.status(500).json({ error: err.message });
+  }
+});
+
 module.exports = router;

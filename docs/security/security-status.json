@@ -1,0 +1,13 @@
+{
+  "lastPenTest": "2026-03-16",
+  "penTestScore": "8.5/10",
+  "penTestFindings": {"critical": 0, "high": 0, "medium": 0, "low": 0, "info": 1},
+  "lastSecurityAudit": "2026-03-16",
+  "auditStatus": "PASS",
+  "sslExpiry": "2026-06-07",
+  "rlsTables": 32,
+  "rlsProtected": 32,
+  "cloudflareEnabled": true,
+  "wafEnabled": true,
+  "lastUpdated": "2026-03-16"
+}

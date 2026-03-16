@@ -52,6 +52,29 @@ interface AbuseData {
   failed_logins: { email?: string; ip_address?: string; created_at: string }[]
   high_traffic_threshold: number
 }
+interface SecurityOverview {
+  failedLogins24h: number; failedLogins7d: number; uniqueAttackerIPs24h: number
+  successfulLogins24h: number; totalAPIRequests24h: number
+  rlsTablesCount: number; rlsTablesProtected: number
+  lastSecurityAudit: string | null; lastPenTest: string | null; penTestScore: string
+  sslExpiry: string | null; sslDaysLeft: number | null
+  activeUsers24h: number; rateLimitHits24h: number
+  cloudflareEnabled: boolean; wafEnabled: boolean; auditStatus: string
+}
+interface FailedLogin {
+  ip_address: string | null; email: string | null; created_at: string; user_agent: string | null
+}
+interface ActiveSession {
+  user_id: string | null; email: string | null; ip_address: string | null
+  last_seen: string; user_agent: string | null
+}
+interface IPThreat {
+  ip_address: string; attempts: number; targeted_emails: string[]; last_attempt: string
+}
+interface SecurityFeedEntry {
+  id: string; action: string; email: string | null; ip_address: string | null
+  created_at: string; details: Record<string, unknown> | null
+}
 interface Announcement {
   id: string; message: string; type: 'info' | 'warning' | 'success'
   active: boolean; expires_at?: string; created_at: string
@@ -151,6 +174,14 @@ export default function AdminPage() {
   const [analytics, setAnalytics] = useState<AnalyticsData | null>(null)
   const [sentEmails, setSentEmails] = useState<SentEmail[]>([])
   const [abuse, setAbuse] = useState<AbuseData | null>(null)
+  // Security dashboard state
+  const [secOverview, setSecOverview] = useState<SecurityOverview | null>(null)
+  const [secFailedLogins, setSecFailedLogins] = useState<FailedLogin[]>([])
+  const [secActiveSessions, setSecActiveSessions] = useState<ActiveSession[]>([])
+  const [secIPThreats, setSecIPThreats] = useState<IPThreat[]>([])
+  const [secActivityFeed, setSecActivityFeed] = useState<SecurityFeedEntry[]>([])
+  const [secLoading, setSecLoading] = useState(false)
+  const [failedLoginSort, setFailedLoginSort] = useState<'asc' | 'desc'>('desc')
   const [announcements, setAnnouncements] = useState<Announcement[]>([])
   const [loading, setLoading] = useState(false)
   const [error, setError] = useState<string | null>(null)
@@ -258,6 +289,26 @@ export default function AdminPage() {
     try { const d = await apiFetch('/api/admin/abuse'); setAbuse(d) } catch (e: unknown) { setError((e as Error).message) }
   }, [apiFetch])
 
+  const loadSecurity = useCallback(async () => {
+    if (!token) return
+    setSecLoading(true)
+    try {
+      const [overview, failedLogins, activeSessions, ipThreats, activityFeed] = await Promise.all([
+        apiFetch('/api/admin/security/overview'),
+        apiFetch('/api/admin/security/failed-logins'),
+        apiFetch('/api/admin/security/active-sessions'),
+        apiFetch('/api/admin/security/ip-threats'),
+        apiFetch('/api/admin/security/activity-feed'),
+      ])
+      setSecOverview(overview)
+      setSecFailedLogins(failedLogins.failed_logins || [])
+      setSecActiveSessions(activeSessions.active_sessions || [])
+      setSecIPThreats(ipThreats.ip_threats || [])
+      setSecActivityFeed(activityFeed.activity_feed || [])
+    } catch (e: unknown) { setError((e as Error).message) }
+    finally { setSecLoading(false) }
+  }, [apiFetch, token])
+
   const loadAnnouncements = useCallback(async () => {
     try { const d = await apiFetch('/api/admin/announcements'); setAnnouncements(d.announcements || []) } catch (e: unknown) { setError((e as Error).message) }
   }, [apiFetch])
@@ -266,13 +317,19 @@ export default function AdminPage() {
   useEffect(() => {
     if (!token || authLoading || !user || !ADMIN_EMAILS.includes(user.email)) return
     setLoading(true)
-    Promise.all([loadStats(), loadUsers(), loadFeedback(), loadHealth(), loadActivity(), loadAnalytics(), loadEmails(), loadAbuse(), loadAnnouncements()])
+    Promise.all([loadStats(), loadUsers(), loadFeedback(), loadHealth(), loadActivity(), loadAnalytics(), loadEmails(), loadAbuse(), loadAnnouncements(), loadSecurity()])
       .finally(() => setLoading(false))
   }, [token, authLoading, user]) // eslint-disable-line
 
   // Reload on filter changes
   useEffect(() => { if (token) loadUsers() }, [userSearch, userTier, loadUsers, token])
   useEffect(() => { if (token) loadFeedback() }, [feedbackTab, loadFeedback, token])
+
+  // Security tab auto-refresh every 30s
+  useEffect(() => {
+    if (!token) return
+    if (activeTab === 'security') loadSecurity()
+  }, [activeTab]) // eslint-disable-line
 
   // Activity auto-refresh every 30s
   useEffect(() => {
@@ -843,59 +900,216 @@ export default function AdminPage() {
         {/* ── SECURITY ──────────────────────────────────────────────────────── */}
         {activeTab === 'security' && (
           <div>
-            {/* High traffic alert */}
-            {abuse?.top_ips.some(ip => ip.count > (abuse.high_traffic_threshold || 100)) && (
-              <div style={{ background: 'rgba(255,69,96,0.1)', border: '1px solid rgba(255,69,96,0.3)', borderRadius: 10, padding: '14px 20px', marginBottom: 20, color: '#ff4560', fontSize: 14, fontWeight: 600 }}>
-                ⚠ High traffic detected from one or more IPs (&gt;100 requests in 24h)
+            {/* Refresh + loading */}
+            <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
+              <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
+                🔒 Security Dashboard
+              </h2>
+              <button onClick={() => loadSecurity()} disabled={secLoading}
+                style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', color: 'var(--text-1)', cursor: secLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, opacity: secLoading ? 0.6 : 1 }}>
+                <IconRefresh /> {secLoading ? 'Refreshing…' : 'Refresh'}
+              </button>
+            </div>
+
+            {/* ── 1. Overview Cards ─────────────────────────────────────────── */}
+            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 14, marginBottom: 24 }}>
+              {/* Failed Logins 24h */}
+              <div style={{ background: 'var(--bg-1)', border: `1px solid ${(secOverview?.failedLogins24h ?? 0) > 10 ? 'rgba(255,69,96,0.5)' : 'var(--border)'}`, borderRadius: 12, padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Failed Logins (24h)</div>
+                <div style={{ fontSize: 32, fontWeight: 700, color: (secOverview?.failedLogins24h ?? 0) > 10 ? '#ff4560' : 'var(--text-0)' }}>{secOverview?.failedLogins24h ?? '—'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>7d: {secOverview?.failedLogins7d ?? '—'}</div>
+              </div>
+              {/* Unique Attacker IPs */}
+              <div style={{ background: 'var(--bg-1)', border: `1px solid ${(secOverview?.uniqueAttackerIPs24h ?? 0) > 0 ? 'rgba(255,69,96,0.5)' : 'var(--border)'}`, borderRadius: 12, padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Attacker IPs (24h)</div>
+                <div style={{ fontSize: 32, fontWeight: 700, color: (secOverview?.uniqueAttackerIPs24h ?? 0) > 0 ? '#ff4560' : 'var(--text-0)' }}>{secOverview?.uniqueAttackerIPs24h ?? '—'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>3+ failed attempts</div>
+              </div>
+              {/* Successful Logins */}
+              <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Successful Logins (24h)</div>
+                <div style={{ fontSize: 32, fontWeight: 700, color: 'var(--green)' }}>{secOverview?.successfulLogins24h ?? '—'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>Active users: {secOverview?.activeUsers24h ?? '—'}</div>
+              </div>
+              {/* RLS Status */}
+              <div style={{ background: 'var(--bg-1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 12, padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>RLS Status</div>
+                <div style={{ fontSize: 20, fontWeight: 700, color: 'var(--green)' }}>
+                  {secOverview ? `${secOverview.rlsTablesProtected}/${secOverview.rlsTablesCount}` : '—'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--green)', marginTop: 4 }}>✓ Protected</div>
+              </div>
+              {/* SSL Expiry */}
+              <div style={{ background: 'var(--bg-1)', border: `1px solid ${secOverview?.sslDaysLeft != null && secOverview.sslDaysLeft < 30 ? 'rgba(249,115,22,0.5)' : 'var(--border)'}`, borderRadius: 12, padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>SSL Expiry</div>
+                <div style={{ fontSize: 16, fontWeight: 700, color: secOverview?.sslDaysLeft != null && secOverview.sslDaysLeft < 30 ? '#f97316' : 'var(--text-0)' }}>
+                  {secOverview?.sslExpiry ? fmtDate(secOverview.sslExpiry) : '—'}
+                </div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>
+                  {secOverview?.sslDaysLeft != null ? `${secOverview.sslDaysLeft}d left` : ''}
+                </div>
+              </div>
+              {/* Pen Test Score */}
+              <div style={{ background: 'var(--bg-1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 12, padding: '16px 20px' }}>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase', letterSpacing: 0.5 }}>Pen Test Score</div>
+                <div style={{ fontSize: 28, fontWeight: 700, color: 'var(--green)' }}>{secOverview?.penTestScore ?? '—'}</div>
+                <div style={{ fontSize: 11, color: 'var(--text-2)', marginTop: 4 }}>{secOverview?.lastPenTest ? fmtDate(secOverview.lastPenTest) : ''}</div>
+              </div>
+            </div>
+
+            {/* Security posture badges */}
+            {secOverview && (
+              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 24 }}>
+                <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, background: secOverview.cloudflareEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(255,69,96,0.1)', color: secOverview.cloudflareEnabled ? 'var(--green)' : '#ff4560', border: `1px solid ${secOverview.cloudflareEnabled ? 'rgba(34,197,94,0.3)' : 'rgba(255,69,96,0.3)'}` }}>
+                  {secOverview.cloudflareEnabled ? '✓ Cloudflare' : '✗ Cloudflare'}
+                </span>
+                <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, background: secOverview.wafEnabled ? 'rgba(34,197,94,0.12)' : 'rgba(255,69,96,0.1)', color: secOverview.wafEnabled ? 'var(--green)' : '#ff4560', border: `1px solid ${secOverview.wafEnabled ? 'rgba(34,197,94,0.3)' : 'rgba(255,69,96,0.3)'}` }}>
+                  {secOverview.wafEnabled ? '✓ WAF' : '✗ WAF'}
+                </span>
+                <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, background: secOverview.auditStatus === 'PASS' ? 'rgba(34,197,94,0.12)' : 'rgba(249,115,22,0.1)', color: secOverview.auditStatus === 'PASS' ? 'var(--green)' : '#f97316', border: `1px solid ${secOverview.auditStatus === 'PASS' ? 'rgba(34,197,94,0.3)' : 'rgba(249,115,22,0.3)'}` }}>
+                  Audit: {secOverview.auditStatus}
+                </span>
+                <span style={{ fontSize: 12, padding: '4px 12px', borderRadius: 20, background: 'rgba(74,158,255,0.1)', color: 'var(--blue)', border: '1px solid rgba(74,158,255,0.3)' }}>
+                  Rate limit hits (24h): {secOverview.rateLimitHits24h}
+                </span>
               </div>
             )}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
-              {/* Top IPs */}
-              <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 14 }}>Top IPs (last 24h)</div>
+
+            {/* ── 2. Threat Monitor ─────────────────────────────────────────── */}
+            <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>🚨 Threat Monitor</span>
+                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>IPs with 3+ failed attempts (24h)</span>
+                {secIPThreats.length > 0 && <span style={{ marginLeft: 'auto', background: 'rgba(255,69,96,0.12)', color: '#ff4560', border: '1px solid rgba(255,69,96,0.3)', borderRadius: 10, fontSize: 11, padding: '2px 8px', fontWeight: 700 }}>{secIPThreats.length} threat{secIPThreats.length !== 1 ? 's' : ''}</span>}
+              </div>
+              <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
-                      {['IP Address', 'Requests', 'Last Action'].map(h => (
-                        <th key={h} style={{ padding: '8px 16px', textAlign: 'left', color: 'var(--text-2)', fontWeight: 500 }}>{h}</th>
+                      {['IP Address', 'Attempts', 'Targeted Emails', 'Last Attempt'].map(h => (
+                        <th key={h} style={{ padding: '9px 16px', textAlign: 'left', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {(!abuse?.top_ips?.length) && <tr><td colSpan={3} style={{ padding: 24, textAlign: 'center', color: 'var(--text-2)' }}>No data yet</td></tr>}
-                    {(abuse?.top_ips || []).slice(0, 20).map((ip, i) => (
-                      <tr key={ip.ip} style={{ borderBottom: i < Math.min((abuse?.top_ips?.length || 0) - 1, 19) ? '1px solid var(--border-b)' : 'none' }}>
-                        <td style={{ padding: '8px 16px', fontFamily: 'monospace', fontSize: 12, color: ip.count > 100 ? '#ff4560' : 'var(--text-0)' }}>{ip.ip}</td>
-                        <td style={{ padding: '8px 16px', color: ip.count > 100 ? '#ff4560' : 'var(--text-0)', fontWeight: ip.count > 100 ? 700 : 400 }}>{ip.count}</td>
-                        <td style={{ padding: '8px 16px', color: 'var(--text-2)', fontSize: 12 }}>{ip.last_action}</td>
+                    {secIPThreats.length === 0 && <tr><td colSpan={4} style={{ padding: 28, textAlign: 'center', color: 'var(--text-2)' }}>✓ No active threats detected</td></tr>}
+                    {secIPThreats.map((t, i) => (
+                      <tr key={t.ip_address} style={{ borderBottom: i < secIPThreats.length - 1 ? '1px solid var(--border-b)' : 'none', background: t.attempts >= 5 ? 'rgba(255,69,96,0.05)' : 'transparent' }}>
+                        <td style={{ padding: '10px 16px', fontFamily: 'monospace', fontSize: 12, color: t.attempts >= 5 ? '#ff4560' : 'var(--text-0)', fontWeight: t.attempts >= 5 ? 700 : 400 }}>{t.ip_address}</td>
+                        <td style={{ padding: '10px 16px' }}>
+                          <span style={{ fontWeight: 700, color: t.attempts >= 5 ? '#ff4560' : t.attempts >= 3 ? '#f97316' : 'var(--text-0)', fontSize: 14 }}>{t.attempts}</span>
+                        </td>
+                        <td style={{ padding: '10px 16px', maxWidth: 260, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-1)', fontSize: 12 }}>
+                          {t.targeted_emails.length > 0 ? t.targeted_emails.join(', ') : '—'}
+                        </td>
+                        <td style={{ padding: '10px 16px', color: 'var(--text-2)', whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDateTime(t.last_attempt)}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
               </div>
+            </div>
 
-              {/* Failed logins */}
-              <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
-                <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', fontWeight: 600, fontSize: 14 }}>Failed Login Attempts</div>
+            {/* ── 3. Recent Failed Logins ───────────────────────────────────── */}
+            <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>🔑 Recent Failed Logins</span>
+                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Last 100 attempts</span>
+                <button onClick={() => setFailedLoginSort(s => s === 'desc' ? 'asc' : 'desc')}
+                  style={{ marginLeft: 'auto', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-2)', cursor: 'pointer', fontSize: 12 }}>
+                  {failedLoginSort === 'desc' ? '↓ Newest first' : '↑ Oldest first'}
+                </button>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
                 <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
                   <thead>
                     <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
-                      {['Timestamp', 'Email Attempted', 'IP'].map(h => (
-                        <th key={h} style={{ padding: '8px 16px', textAlign: 'left', color: 'var(--text-2)', fontWeight: 500 }}>{h}</th>
+                      {['Timestamp', 'IP Address', 'Email', 'User Agent'].map(h => (
+                        <th key={h} style={{ padding: '9px 16px', textAlign: 'left', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
                       ))}
                     </tr>
                   </thead>
                   <tbody>
-                    {(!abuse?.failed_logins?.length) && <tr><td colSpan={3} style={{ padding: 24, textAlign: 'center', color: 'var(--text-2)' }}>No failed logins</td></tr>}
-                    {(abuse?.failed_logins || []).slice(0, 20).map((f, i) => (
-                      <tr key={i} style={{ borderBottom: i < Math.min((abuse?.failed_logins?.length || 0) - 1, 19) ? '1px solid var(--border-b)' : 'none' }}>
-                        <td style={{ padding: '8px 16px', color: 'var(--text-2)', fontSize: 12, whiteSpace: 'nowrap' }}>{fmtDateTime(f.created_at)}</td>
-                        <td style={{ padding: '8px 16px', maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.email || '—'}</td>
-                        <td style={{ padding: '8px 16px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-2)' }}>{f.ip_address || '—'}</td>
+                    {secFailedLogins.length === 0 && <tr><td colSpan={4} style={{ padding: 28, textAlign: 'center', color: 'var(--text-2)' }}>No failed logins recorded</td></tr>}
+                    {[...secFailedLogins]
+                      .sort((a, b) => failedLoginSort === 'desc'
+                        ? new Date(b.created_at).getTime() - new Date(a.created_at).getTime()
+                        : new Date(a.created_at).getTime() - new Date(b.created_at).getTime()
+                      )
+                      .map((f, i) => {
+                        const age = Date.now() - new Date(f.created_at).getTime()
+                        const rowColor = age < 3600000 ? 'rgba(255,69,96,0.08)' : age < 21600000 ? 'rgba(249,115,22,0.06)' : 'transparent'
+                        const textColor = age < 3600000 ? '#ff4560' : age < 21600000 ? '#f97316' : 'var(--text-2)'
+                        return (
+                          <tr key={i} style={{ borderBottom: i < secFailedLogins.length - 1 ? '1px solid var(--border-b)' : 'none', background: rowColor }}>
+                            <td style={{ padding: '9px 16px', color: textColor, fontSize: 12, whiteSpace: 'nowrap' }}>{fmtDateTime(f.created_at)}</td>
+                            <td style={{ padding: '9px 16px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-1)' }}>{f.ip_address || '—'}</td>
+                            <td style={{ padding: '9px 16px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{f.email || '—'}</td>
+                            <td style={{ padding: '9px 16px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 12 }}>{f.user_agent || '—'}</td>
+                          </tr>
+                        )
+                      })}
+                  </tbody>
+                </table>
+              </div>
+            </div>
+
+            {/* ── 4. Active Sessions ────────────────────────────────────────── */}
+            <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>👥 Active Sessions (last 24h)</span>
+                <span style={{ background: 'rgba(34,197,94,0.12)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, fontSize: 11, padding: '2px 8px', fontWeight: 700 }}>{secActiveSessions.length} online</span>
+              </div>
+              <div style={{ overflowX: 'auto' }}>
+                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
+                  <thead>
+                    <tr style={{ background: 'var(--bg-2)', borderBottom: '1px solid var(--border)' }}>
+                      {['Email', 'User ID', 'IP', 'Last Seen', 'User Agent'].map(h => (
+                        <th key={h} style={{ padding: '9px 16px', textAlign: 'left', color: 'var(--text-2)', fontWeight: 500, whiteSpace: 'nowrap' }}>{h}</th>
+                      ))}
+                    </tr>
+                  </thead>
+                  <tbody>
+                    {secActiveSessions.length === 0 && <tr><td colSpan={5} style={{ padding: 28, textAlign: 'center', color: 'var(--text-2)' }}>No active sessions</td></tr>}
+                    {secActiveSessions.map((s, i) => (
+                      <tr key={i} style={{ borderBottom: i < secActiveSessions.length - 1 ? '1px solid var(--border-b)' : 'none' }}>
+                        <td style={{ padding: '9px 16px', maxWidth: 200, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{s.email || '—'}</td>
+                        <td style={{ padding: '9px 16px', fontFamily: 'monospace', fontSize: 11, color: 'var(--text-2)' }}>{s.user_id?.slice(0, 8) || '—'}</td>
+                        <td style={{ padding: '9px 16px', fontFamily: 'monospace', fontSize: 12, color: 'var(--text-1)' }}>{s.ip_address || '—'}</td>
+                        <td style={{ padding: '9px 16px', color: 'var(--text-2)', whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDateTime(s.last_seen)}</td>
+                        <td style={{ padding: '9px 16px', maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 12 }}>{s.user_agent || '—'}</td>
                       </tr>
                     ))}
                   </tbody>
                 </table>
+              </div>
+            </div>
+
+            {/* ── 5. Live Activity Feed ─────────────────────────────────────── */}
+            <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
+              <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>⚡ Live Security Feed</span>
+                <span style={{ fontSize: 12, color: 'var(--text-2)' }}>auto-refreshes every 30s</span>
+              </div>
+              <div style={{ padding: '4px 0' }}>
+                {secActivityFeed.length === 0 && <div style={{ padding: 28, textAlign: 'center', color: 'var(--text-2)', fontSize: 13 }}>No recent security events</div>}
+                {secActivityFeed.map((ev, i) => {
+                  const isError = ev.action === 'login_failed'
+                  const isSuccess = ev.action === 'login'
+                  const isBlue = ev.action === 'signup' || ev.action === 'password_reset'
+                  const color = isError ? '#ff4560' : isSuccess ? 'var(--green)' : isBlue ? 'var(--blue)' : 'var(--text-2)'
+                  const bg = isError ? 'rgba(255,69,96,0.06)' : isSuccess ? 'rgba(34,197,94,0.04)' : isBlue ? 'rgba(74,158,255,0.06)' : 'transparent'
+                  const icon = isError ? '🔴' : isSuccess ? '🟢' : isBlue ? '🔵' : '⚪'
+                  return (
+                    <div key={ev.id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 20px', borderBottom: i < secActivityFeed.length - 1 ? '1px solid var(--border-b)' : 'none', background: bg, fontSize: 13 }}>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
+                      <span style={{ color, fontWeight: 600, minWidth: 120, fontSize: 12 }}>{ev.action}</span>
+                      <span style={{ color: 'var(--text-1)', flex: 1, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{ev.email || '—'}</span>
+                      <span style={{ fontFamily: 'monospace', fontSize: 11, color: 'var(--text-2)', flexShrink: 0 }}>{ev.ip_address || ''}</span>
+                      <span style={{ fontSize: 12, color: 'var(--text-2)', whiteSpace: 'nowrap', flexShrink: 0 }}>{fmtDateTime(ev.created_at)}</span>
+                    </div>
+                  )
+                })}
               </div>
             </div>
           </div>
