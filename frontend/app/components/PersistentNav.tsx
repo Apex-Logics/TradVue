@@ -19,6 +19,7 @@ const NAV_ITEMS = [
   { label: 'Playbooks', href: '/playbooks' },
   { label: '✨ Ritual', href: '/ritual' },
   { label: '🧠 AI Coach', href: '/coach' },
+  { label: '🛡️ Rules',   href: '/rules' },
   { label: 'Tools',     href: '/tools' },
   { label: 'Help',      href: '/help' },
 ]
