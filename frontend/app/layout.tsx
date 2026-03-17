@@ -161,7 +161,7 @@ const jsonLd = {
           name: 'Free',
           price: '0',
           priceCurrency: 'USD',
-          description: 'Free forever tier with trading journal, calculators, and basic analytics.',
+          description: 'Free tier with trading journal, calculators, and basic analytics.',
         },
         {
           '@type': 'Offer',

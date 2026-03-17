@@ -889,7 +889,7 @@ export default function LandingPage() {
                   <div style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-0)', lineHeight: 1 }}>
                     Free
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '6px' }}>Forever</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-2)', marginTop: '6px' }}>No credit card required</div>
                 </div>
                 <ul style={{ listStyle: 'none', display: 'flex', flexDirection: 'column', gap: '12px', flex: 1, marginBottom: '28px' }}>
                   {pricingFree.map(item => (

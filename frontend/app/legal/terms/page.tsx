@@ -476,7 +476,7 @@ export default function TermsPage() {
         <UL items={[
           'Your User Data will be removed from active production systems within ninety (90) days of account deletion;',
           'Residual copies of your User Data may persist in encrypted backup systems for up to an additional ninety (90) days before being purged in the ordinary course of backup rotation;',
-          'Aggregated, anonymized data derived from your usage may be retained indefinitely.',
+          'Aggregated, anonymized data derived from your usage may be retained for analytical purposes while the service operates.',
         ]} />
         <p>
           <strong>13.3 No Guarantee of Permanent Storage.</strong> WE DO NOT GUARANTEE THAT YOUR DATA WILL BE STORED
