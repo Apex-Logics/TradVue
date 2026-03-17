@@ -41,7 +41,7 @@ const jsonLd = {
         '@type': 'Offer',
         price: '0',
         priceCurrency: 'USD',
-        description: 'All calculators are completely free.',
+        description: '30+ trading calculators — no account required.',
       },
       featureList: [
         'Position Size Calculator',

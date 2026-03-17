@@ -499,7 +499,7 @@ export default function LandingPage() {
           }} />
 
           <div style={{ maxWidth: '800px', margin: '0 auto', textAlign: 'center', position: 'relative' }}>
-            {/* Beta badge */}
+            {/* NEW badge */}
             <div style={{
               display: 'inline-flex', alignItems: 'center', gap: '8px',
               background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.2)',
@@ -860,7 +860,7 @@ export default function LandingPage() {
               </p>
             </div>
 
-            {/* Beta offer banner */}
+            {/* Offer banner */}
             <div style={{
               background: 'linear-gradient(135deg, rgba(74,158,255,0.1) 0%, rgba(167,139,250,0.1) 100%)',
               border: '1px solid rgba(74,158,255,0.25)',

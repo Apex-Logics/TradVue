@@ -598,11 +598,11 @@ function loadRitualsFromStorage(): RitualLike[] {
 
 /**
  * Generate a WeeklySummary for the week containing `forDate` (defaults to now).
- * Set `betaMode = true` to show all insights (no 3-cap).
+ * Set `showAllInsights = true` to show all insights (no 3-cap).
  */
 export function generateWeeklySummary(
   forDate: Date = new Date(),
-  betaMode = true,
+  showAllInsights = true,
 ): WeeklySummary {
   const allTrades = loadTradesFromStorage()
   const allRituals = loadRitualsFromStorage()
@@ -657,7 +657,7 @@ export function generateWeeklySummary(
   const severityOrder = { critical: 0, warning: 1, neutral: 2, positive: 3 }
   rawInsights.sort((a, b) => severityOrder[a.severity] - severityOrder[b.severity])
 
-  const insights = betaMode ? rawInsights : rawInsights.slice(0, 3)
+  const insights = showAllInsights ? rawInsights : rawInsights.slice(0, 3)
 
   const summary: WeeklySummary = {
     id: uid(),

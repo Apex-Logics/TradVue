@@ -843,7 +843,7 @@ export default function PlaybooksPage() {
               </button>
             </div>
 
-            {/* Beta notice */}
+            {/* Pro notice */}
             <div style={{
               background: 'var(--accent)11',
               border: '1px solid var(--accent)33',
