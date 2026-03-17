@@ -62,7 +62,7 @@ export const metadata: Metadata = {
 
   // ── Canonical ─────────────────────────────────────────────────────────
   alternates: {
-    canonical: 'https://tradvue.com/landing',
+    canonical: 'https://www.tradvue.com/landing',
   },
 }
 
