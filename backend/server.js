@@ -107,6 +107,7 @@ const cachePrivate    = (_, res, next) => { res.set('Cache-Control', 'private, n
 try {
   app.use('/api/auth',     cachePrivate, require('./routes/auth'));
   app.use('/api/user',     cachePrivate, require('./routes/userData'));
+  app.use('/api/user',     cachePrivate, require('./routes/userManagement'));
 } catch (e) {
   console.warn('[auth] Auth routes failed to load:', e.message);
   // Fallback: register a stub so users get a clear 503 instead of 404
