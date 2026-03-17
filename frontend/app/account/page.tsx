@@ -556,6 +556,20 @@ function AccountPageInner() {
           </p>
         </SectionCard>
 
+
+        {/* ── Disclaimer ── */}
+        <div style={{
+          marginTop: 32,
+          padding: '12px 16px',
+          background: 'rgba(255,255,255,0.03)',
+          borderRadius: 8,
+          border: '1px solid rgba(255,255,255,0.07)',
+        }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)', lineHeight: 1.6 }}>
+            Account settings and data shown here reflect your TradVue profile only. TradVue is not a financial institution. Nothing on this platform constitutes financial advice, trading recommendations, or guarantees of any kind. This is not financial advice.
+          </p>
+        </div>
+
       </div>
 
       {/* ── Delete confirmation modal ────────────────────────────────────────── */}

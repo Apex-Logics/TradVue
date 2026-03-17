@@ -1,7 +1,4 @@
-# Attorney Review Cover Letter / Memorandum
-
-**CONFIDENTIAL — ATTORNEY-CLIENT COMMUNICATION**
-**SUBJECT TO ATTORNEY-CLIENT PRIVILEGE**
+# ATTORNEY COVER LETTER — TradVue Legal Document Package
 
 ---
 
@@ -11,236 +8,152 @@
 Apex Logics LLC d/b/a TradVue
 1935 Commerce Lane, Suite 9
 Jupiter, FL 33458
-EIN: 93-3771291
-FL Doc# L23000460971 | DBA Reg# G26000036763
-legal@tradvue.com
 
-**To:** [Attorney Name]
-[Law Firm]
+**To:** Counsel of Record
+[Attorney Name]
+[Firm Name]
 [Address]
 
-**Re:** Legal Review of TradVue Platform — Terms of Service, Privacy Policy, Disclaimer, Cookie Policy, and Acceptable Use Policy
+**Re:** Updated Legal Document Package for Review — TradVue Platform (tradvue.com)
 
 ---
 
-## 1. Overview and Purpose of This Engagement
+Dear Counsel,
 
-We are requesting your review and strengthening of the attached draft legal documents for **TradVue**, a SaaS trading journal and analytics platform operated by **Apex Logics LLC**, a Florida LLC registered in Palm Beach County.
-
-All attached documents are **internal drafts** prepared for attorney review. We have attempted to be thorough and accurate, but we are not attorneys. The purpose of this engagement is for you to:
-
-1. Review each document for legal accuracy, enforceability, and completeness;
-2. Strengthen language in areas of identified legal risk (outlined below);
-3. Identify anything we have missed;
-4. Answer the specific questions listed in Section 4.
-
-We intend to deploy these documents on the TradVue platform (tradvue.com) as clickwrap agreements prior to accepting paying customers. **We have not yet gone live with paid subscriptions.** This review is part of our pre-launch legal preparation.
+Please find enclosed an updated legal document package for TradVue, a software-as-a-service (SaaS) trading journal and analytics platform operated by Apex Logics LLC (FL Doc# L23000460971, DBA Reg# G26000036763, EIN 93-3771291). This package reflects significant revisions made on March 16, 2026, and is submitted for your review and comment prior to publication on the platform.
 
 ---
 
-## 2. What TradVue Is
+## Documents Included in This Package
 
-TradVue is a **SaaS trading journal and analytics platform** for individual traders. It is a tool to help traders log, review, and analyze their own historical trading data.
+The following five (5) legal documents are enclosed:
 
-### Core Features (currently live or in final development):
-
-| Feature | Description |
-|---|---|
-| Trade Journaling | Users manually enter or import trade records, annotate with notes and tags |
-| Performance Analytics | Statistical analysis of user's own trade history (win rate, P&L, drawdown, etc.) |
-| Portfolio Tracking | Visualization of holdings using third-party market data |
-| AI Coach | AI-powered analysis of user's trade history using OpenAI API — generates textual insights about patterns |
-| Watchlists & Alerts | Users define watchlists; alerts notify when price thresholds are reached |
-| CSV Import | Users import trade history from brokers via CSV files |
-| Playbooks | User-created strategy templates |
-| Post-Trade Ritual | Guided trade review workflow |
-| Correlation Matrix | Visualizes correlations between instruments |
-| Market Data Display | Charts and data from Alpaca, Marketaux, Finnhub |
-
-### What TradVue Does NOT Do:
-- Execute, route, or place trades
-- Provide investment advice or recommendations
-- Manage portfolios or funds
-- Act as a registered investment adviser or broker-dealer
-
-### Infrastructure:
-- **Backend Hosting:** Render
-- **Frontend Hosting:** Vercel
-- **Database:** Supabase (PostgreSQL, hosted on AWS, US-based)
-- **CDN / Security:** Cloudflare
-- **Payments:** Stripe (PCI DSS compliant)
-- **Email:** Resend API
-- **Analytics:** Google Analytics GA4
-- **Market Data:** Alpaca Markets, Marketaux, Finnhub
-- **AI:** OpenAI API (GPT models)
-- **Broker Aggregation:** SnapTrade (planned future feature, not yet live)
-
-### Pricing:
-- Free trial: 3 weeks full access, then limited free tier (30-day rolling view window)
-- Monthly plan: $24/month, auto-renewing
-- Annual plan: $201.60/year ($16.80/month equivalent), auto-renewing
-- No mobile app yet (planned for the future)
-- U.S.-based users are the primary target market, but the platform is accessible globally
+1. **Terms of Service** (`TERMS_OF_SERVICE.md`) — Primary user agreement governing access and use of the TradVue platform.
+2. **Privacy Policy** (`PRIVACY_POLICY.md`) — Governs collection, use, storage, and disclosure of user personal information; includes GDPR and CCPA compliance sections.
+3. **Disclaimer** (`DISCLAIMER.md`) — Investment risk, no-advice, regulatory status, and limitation of liability disclosures.
+4. **Cookie Policy** (`COOKIE_POLICY.md`) — Discloses all cookies and tracking technologies in use; includes opt-out mechanisms.
+5. **Acceptable Use Policy** (`ACCEPTABLE_USE_POLICY.md`) — Governs permitted and prohibited uses of the platform, including market manipulation, AI Coach misuse, and technical abuse prohibitions.
 
 ---
 
-## 3. Identified Legal Risk Areas
+## Summary of Material Changes — March 16, 2026
 
-We have attempted to address the following risks in the draft documents. We need your assessment of whether our treatment is sufficient and where language should be strengthened.
+The following material changes were made to the legal documents in this revision cycle. These changes are highlighted for your particular attention:
 
-### 3.1 AI Coach and Investment Adviser Classification Risk
+### 1. Three-Tier Access Model Defined (Terms of Service §2.1)
 
-**THE MOST CRITICAL RISK WE HAVE IDENTIFIED.**
+The platform's access model has been formally defined into three tiers:
 
-Our AI Coach feature analyzes a user's trade history using OpenAI's GPT API and returns textual analysis such as: "Your win rate on AAPL calls drops significantly on Fridays — consider reviewing your Friday morning entry timing."
+- **No Account / Anonymous Access:** Dashboard market data, news feed, economic calendar, 30+ calculators, and watchlist. No personal data stored.
+- **Free Account (with 3-week full trial):** All features during trial; after trial expiration, limited to 30-day rolling view window, limited CSV import/export, 3 price alerts, and community support. Data preserved.
+- **Pro Subscription:** $24.00/month (monthly) or $16.80/month billed annually at $201.60/year.
 
-We are concerned that:
+*Attorney's attention is requested on the enforceability of the trial-to-free-tier downgrade mechanism and whether the free tier data restriction (locked but not deleted) requires additional disclosure.*
 
-- The AI Coach feature, depending on the specificity and nature of its outputs, could be interpreted as providing "investment advice" or "personalized investment advice" under the Investment Advisers Act of 1940 (15 U.S.C. § 80b-1 et seq.);
-- Generating insights from a user's own trade data (rather than making market recommendations) may still attract scrutiny if outputs are framed in ways that resemble investment guidance;
-- We may be at risk even if we disclaim "investment advice" status if the functional effect of our AI outputs is advisory in nature.
+### 2. Section 4.1 Updated — Anonymous Access Explicitly Defined
 
-We have added extensive disclaimers in the ToS (Section 8), the standalone Disclaimer, and the AUP. We need you to:
-- Assess whether the AI Coach feature, as described, creates investment adviser registration risk under the Investment Advisers Act of 1940;
-- Review whether any specific type of AI output we might generate crosses a legal line;
-- Confirm whether our disclaimers are legally sufficient under the current SEC interpretive guidance on technology-based advisory services (e.g., SEC Release No. IA-2050 and subsequent guidance);
-- Advise whether we should add any affirmative contractual restrictions on how users can use AI Coach outputs.
+Terms of Service §4.1 has been updated to explicitly enumerate which features are available without an account (dashboard, news feed, economic calendar, trading calculators, watchlist) and which require account creation (trading journal, portfolio tracker, playbooks, AI Coach, prop firm tracker, trade rules). This is intended to align the Terms with the actual product behavior and to clarify the scope of the "anonymous use" tier.
 
-### 3.2 SEC and FINRA Regulatory Implications
+### 3. Section 13.5 Added — Inactive Accounts (12-Month Policy)
 
-Related to the above, we need guidance on whether:
+A new section has been added to address inactive accounts: accounts with no login activity for twelve (12) consecutive months are subject to data deletion after thirty (30) days written notice to the email on file. This policy has also been cross-referenced in Privacy Policy §8.A.
 
-- Providing market data displays (even from third-party providers) alongside trade analytics creates any securities regulatory concern;
-- Offering watchlists and price alerts (user-defined, not TradVue-recommended) triggers any registration or disclosure requirements;
-- The combination of features (analytics + market data + AI insights) could be interpreted as an unregistered securities information service with advisory characteristics under federal or state securities law.
+*Attorney's attention is requested: please review whether the 12-month inactivity threshold and 30-day notice period are reasonable and enforceable, and whether additional GDPR-specific notice requirements apply to EU users.*
 
-### 3.3 Subscription Billing and Auto-Renewal Compliance
+### 4. Section 13.6 Added — Free Tier Data Best-Effort Disclaimer
 
-We have drafted auto-renewal terms and a refund policy. We need you to confirm compliance with:
+A new ALL CAPS warning block has been added to Terms of Service §13.6 and cross-referenced in Privacy Policy §8.B, disclaiming TradVue's liability for data loss, corruption, or unavailability under free-tier accounts. Data stored under free-tier accounts is characterized as "best-effort basis" storage.
 
-- Florida's automatic renewal law (if applicable to SaaS subscriptions);
-- California's automatic renewal law (ARL, Cal. Bus. & Prof. Code § 17600 et seq.) — California residents are likely a significant portion of our user base;
-- New York automatic renewal requirements;
-- FTC guidelines on negative option marketing (16 C.F.R. Part 425 and the updated Negative Option Rule);
-- Whether our cancellation and refund policy (no refund on monthly, 30-day window on annual) is legally defensible in consumer protection terms.
+*Attorney's attention is requested: please confirm that this disclaimer is adequately prominent and whether a clickwrap acknowledgment at the point of free account creation would strengthen enforceability.*
 
-### 3.4 Data Breach Liability and Cybersecurity
+### 5. Section 2.3 Updated — Uptime/Downtime Disclaimer
 
-We have addressed breach notification in the Privacy Policy. Key questions:
+Terms of Service §2.3 has been updated to explicitly state that TradVue "is not liable for any downtime, service interruptions, or data unavailability, whether scheduled or unscheduled." This supersedes the prior language which was ambiguous regarding liability for maintenance windows.
 
-- Given that we store sensitive financial/trading data, what is our potential liability exposure in a data breach scenario?
-- Are our security representations in the Privacy Policy (TLS, encryption at rest, RLS, Cloudflare WAF) adequate as contractual security commitments, or do they create warranty-like obligations that could expose us if we suffer a breach?
-- What are our data breach notification obligations under Florida law (Florida Information Protection Act, Fla. Stat. § 501.171), GDPR, and relevant state laws?
+### 6. Section 21 Added — Force Majeure Clause
 
-### 3.5 Third-Party Data and Broker Sync Liability
+A Force Majeure clause has been added as a new Section 21 to the Terms of Service. The clause covers natural disasters, pandemics, government actions, war, terrorism, cyberattacks, utility/infrastructure failures, and internet/telecommunications outages. TradVue commits to using "commercially reasonable efforts" to resume performance following cessation of a force majeure event.
 
-We disclaim responsibility for data accuracy from brokers and market data providers. Please review:
+*Attorney's attention is requested: please confirm the scope of force majeure events is appropriate and that the clause is sufficient to protect against liability arising from AWS/Supabase, Cloudflare, Vercel, or Render outages.*
 
-- Whether our broker sync and market data disclaimers are sufficient to shield us from claims where users trade based on inaccurate data displayed in TradVue;
-- Whether we need additional flow-down clauses with SnapTrade (once implemented) to adequately pass through liability for data accuracy errors.
+### 7. Retention Timelines Softened to "Commercially Reasonable Efforts"
 
-### 3.6 OpenAI Data Processing and GDPR
+Throughout the Terms of Service (§13.1, §13.2) and Privacy Policy (§8), absolute deletion commitments have been softened to "commercially reasonable efforts" language to account for the practical realities of backup rotation and distributed infrastructure. The 90-day deletion timeline for active production systems is retained as a target, not a guarantee.
 
-We disclose that trade data is sent to OpenAI's API for AI Coach features. Please review:
+*Attorney's attention is requested: please review whether the "commercially reasonable efforts" standard is consistent with GDPR Article 5(1)(e) storage limitation obligations and CCPA deletion right requirements.*
 
-- Whether our disclosure is GDPR-compliant as a consent mechanism for this data transfer;
-- Whether OpenAI is our "data processor" under GDPR, requiring a Data Processing Agreement (DPA) with OpenAI (OpenAI does offer a standard API DPA);
-- Whether our privacy policy adequately discloses the legal bases for this processing under GDPR Article 6 and Article 28.
+### 8. Privacy Policy §8.A and §8.B Added
+
+Two new subsections have been added to Privacy Policy Section 8 (Data Retention):
+
+- **§8.A Inactive Accounts:** Cross-references the Terms of Service §13.5 inactive account policy, specifying 12-month inactivity threshold and 30-day notice before deletion.
+- **§8.B Free Tier Data Disclaimer:** Cross-references the Terms of Service §13.6 disclaimer, confirming that free-tier data is stored on a best-effort basis in the Privacy Policy as well.
+
+### 9. Pricing Confirmed
+
+All pricing references have been confirmed and are consistent across all documents:
+
+- Monthly Plan: **$24.00/month**
+- Annual Plan: **$16.80/month** billed annually at **$201.60/year** (approximately 30% savings)
 
 ---
 
-## 4. Specific Questions for Attorney Review
+## Priority Items for Attorney Review
 
-Please provide your professional assessment of the following questions:
+The following items are flagged as highest priority for legal review:
 
-**4.1** Does the TradVue AI Coach feature, as described in Section 2 and in the draft Terms of Service (Section 8), risk classification as "investment advice" or the operation of an "investment advisory service" under the Investment Advisers Act of 1940? If yes, what would registration entail, and are there exemptions that might apply?
+1. **AI Coach and Investment Adviser Classification Risk** — The AI Coach feature analyzes historical trade patterns and provides textual feedback (e.g., pattern analysis, behavioral insights). Please review whether any AI Coach output type could be characterized as "investment advice" under the Investment Advisers Act of 1940 or applicable state law, and advise on whether additional safeguards, modal acknowledgments, or feature restrictions are warranted.
 
-**4.2** Is our binding arbitration clause (Terms of Service, Section 17) enforceable under Florida law, including against consumer users? Does the AAA Commercial Arbitration Rules designation create any issues for consumer-facing arbitration? Should we use AAA Consumer Arbitration Rules instead? Are there any recent Florida Supreme Court or Eleventh Circuit decisions we should be aware of?
+2. **Arbitration Clause Enforceability (Terms §17)** — The Terms specify AAA Consumer Arbitration Rules for individual users and AAA Commercial Arbitration Rules for business accounts. Please advise on enforceability under Florida law and any federal consumer protection statutes, and confirm that the class action waiver in §17.4 is enforceable.
 
-**4.3** Are our limitation of liability caps (amount paid in prior 12 months, or $100, whichever is greater) reasonable and enforceable under Florida law, particularly in a consumer-facing SaaS context? Are there any Florida-specific consumer protection statutes that might override our limitation of liability clauses?
+3. **GDPR Compliance — OpenAI Data Transfers** — The Privacy Policy (§5.10) discloses that user trade data is transmitted to OpenAI's API for AI Coach processing. Please advise on whether a Data Processing Agreement (DPA) with OpenAI is required under GDPR Article 28, and whether the current Standard Contractual Clauses (SCCs) framework adequately covers this transfer.
 
-**4.4** Do we need additional state-specific disclosures or filings for:
-- **California:** CCPA/CPRA compliance, California securities disclosures, ARL compliance
-- **New York:** NY financial services disclosures, SHIELD Act compliance
-- **Texas:** Texas Business & Commerce Code cybersecurity notification requirements
-Any other high-population states with specific SaaS or financial service disclosure requirements?
+4. **Free Tier Data Retention and Inactive Account Policy** — Please advise on the interaction between the 12-month inactive account deletion policy (§13.5), the 30-day notice requirement, and GDPR/CCPA deletion right obligations.
 
-**4.5** Is our CCPA compliance section in the Privacy Policy legally sufficient for a company of our size and nature? Do we meet the thresholds that trigger CCPA obligations (>$25M revenue, or >50,000 consumers/year)? Even if we are below CCPA thresholds currently, should we include the rights section as a matter of best practice given our growth trajectory?
+5. **Auto-Renewal Compliance** — Please review Terms §5.3 and advise on compliance with state-specific auto-renewal laws, including California's Automatic Renewal Law (Cal. Bus. & Prof. Code § 17600 et seq.) and any applicable Florida statutes.
 
-**4.6** Should Apex Logics LLC register with any state or federal financial regulatory body before going live with TradVue, given its AI Coach feature and market data displays? Specifically:
-- SEC registration as an investment adviser or exempt reporting adviser?
-- Any state investment adviser registration?
-- Any commodity trading adviser registration with the CFTC?
-- Any FINRA membership or notice filing?
-
-**4.7** Do we need a separate End User License Agreement (EULA) for a mobile application when TradVue launches on iOS and/or Android? What mobile-specific legal requirements should we be aware of (Apple App Store and Google Play Store terms, COPPA mobile-specific requirements)?
-
-**4.8** Is our disclosure regarding OpenAI API data processing in the Privacy Policy sufficient to satisfy GDPR Article 13 (transparency), Article 28 (data processor), and to establish a valid legal basis for transmitting EU user trade data to OpenAI's US-based API? Should we enter into a formal Data Processing Agreement (DPA) with OpenAI, and if so, are OpenAI's standard API DPA terms adequate? Do we need to update our GDPR disclosure regarding Standard Contractual Clauses for the OpenAI data transfer?
-
-**4.9** Should TradVue offer a separate **Data Processing Agreement (DPA)** for enterprise customers or business accounts? As we grow, we anticipate attracting professional traders, small funds, and trading firms. These entities may require a DPA for GDPR compliance. What should such a DPA include, and what would our obligations be as a data processor for those entities?
-
-**4.11** Please review the attached Operating Agreement for Apex Logics LLC. It was originally drafted as a template and has never been formally executed. We have updated it to reflect the correct member name (Erick M. Ramdeholl), added TradVue DBA provisions, AI/technology operations sections, data breach response authority, and insurance requirements. Please review for: (a) completeness and enforceability under Florida LLC law (Chapter 605); (b) adequacy of the IP assignment provisions to cover all TradVue-related intellectual property; (c) whether the AI operations and data processing provisions are sufficient; (d) whether the single-member structure adequately protects the Member's personal assets (corporate veil); (e) any additional provisions recommended for a technology/SaaS LLC operating in the fintech space. We would like to execute this agreement as part of this legal review engagement.
-
-**4.10** Before we go live with paid subscriptions and process customer payment data via Stripe, what **insurance coverage** do you recommend? Specifically:
-- Cyber liability insurance — minimum recommended limits given our infrastructure and data types?
-- Errors and omissions (E&O) / Professional liability insurance?
-- General commercial liability?
-- Directors & Officers (D&O) insurance for the LLC?
-- Any financial services-specific coverage given the AI Coach feature and analytics?
-Any specific insurers or programs you would recommend for a pre-revenue SaaS startup in the fintech space?
+6. **DMCA Agent Registration** — Please confirm whether TradVue's designated DMCA agent (legal@tradvue.com) should be formally registered with the U.S. Copyright Office under 17 U.S.C. § 512(c)(2) and advise on the registration process if so.
 
 ---
 
-## 5. Documents Attached for Review
+## Internal Review Completed
 
-The following draft documents are attached to this memorandum for your review:
+Prior to transmittal to counsel, this document package was reviewed internally by:
 
-| Document | Filename | Status |
-|---|---|---|
-| Terms of Service | `TERMS_OF_SERVICE.md` | Draft — needs attorney review |
-| Privacy Policy | `PRIVACY_POLICY.md` | Draft — needs attorney review |
-| Disclaimer | `DISCLAIMER.md` | Draft — needs attorney review |
-| Cookie Policy | `COOKIE_POLICY.md` | Draft — needs attorney review |
-| Acceptable Use Policy | `ACCEPTABLE_USE_POLICY.md` | Draft — needs attorney review |
-| Operating Agreement | `OPERATING_AGREEMENT.md` | Draft — never executed, needs review and execution |
+- **Axle** (CEO Agent, Apex Logics LLC) — Reviewed for business accuracy, pricing consistency, and policy alignment.
+- **Nova** (QA and Review Agent, Apex Logics LLC) — Conducted cross-reference audit of all five documents for internal consistency, legal terminology, and cross-document coherence. Nova's full audit report is enclosed as a separate document (`AUDIT_REPORT.md`).
 
 ---
 
-## 6. Our Priority Review Areas
+## Requested Actions
 
-If attorney time is limited, we request that the following be prioritized in the order listed:
+We respectfully request that counsel:
 
-1. **AI Coach / Investment Adviser classification risk** (Question 4.1) — this is our #1 legal risk
-2. **Limitation of liability and arbitration enforceability** (Questions 4.2 and 4.3)
-3. **Auto-renewal compliance** (Section 3.3)
-4. **Insurance recommendations** (Question 4.10) — we need this before going live
-5. **GDPR / OpenAI data processing** (Question 4.8)
-6. All other questions and document review
+1. Review all five (5) enclosed legal documents for enforceability under Florida law and applicable federal law.
+2. Identify any provisions that may be unenforceable, ambiguous, or in need of strengthening.
+3. Advise specifically on the priority items enumerated above.
+4. Confirm whether any additional disclosures, registrations (e.g., DMCA agent), or user consent mechanisms are required.
+5. Provide a redlined version of any suggested revisions.
 
----
-
-## 7. Timeline and Next Steps
-
-We are targeting a paid subscription launch in **Q2 2026**. We would like to have finalized, attorney-approved legal documents in place at least **30 days before launch**.
-
-Preferred timeline for initial review and response: **within 2–3 weeks of receipt of this package.**
-
-Please confirm receipt of this package and advise on your engagement terms, including hourly rate, estimated hours for initial review, and any retainer requirements.
+Please do not hesitate to contact me directly at the information below with any questions.
 
 ---
 
-## 8. Contact
+Respectfully submitted,
 
 **Erick M. Ramdeholl**
-President, Apex Logics LLC
-d/b/a TradVue
+President, Apex Logics LLC d/b/a TradVue
 1935 Commerce Lane, Suite 9
 Jupiter, FL 33458
-legal@tradvue.com
-https://tradvue.com
+Email: legal@tradvue.com
+Website: https://tradvue.com
+
+Apex Logics LLC, FL Doc# L23000460971, DBA Reg# G26000036763, EIN 93-3771291.
 
 ---
 
-*This memorandum and the attached draft documents are confidential and prepared in anticipation of legal advice. All attached documents are marked as DRAFT and are not yet published or effective. Nothing in these draft documents constitutes legal advice.*
+*This letter and the enclosed documents are submitted for legal review and are subject to attorney-client privilege. Do not distribute without authorization.*
 
-*TradVue is a product of Apex Logics LLC. Apex Logics LLC, FL Doc# L23000460971, DBA Reg# G26000036763, EIN 93-3771291.*
+---
+
+© 2026 TradVue — Operated by Apex Logics LLC

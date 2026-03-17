@@ -1258,6 +1258,15 @@ export default function HelpClient() {
           </div>
         </div>
 
+        {/* ── Disclaimer ── */}
+        <div style={{ padding: '16px 24px', background: 'rgba(255,255,255,0.02)', borderTop: '1px solid var(--border)' }}>
+          <div style={{ maxWidth: '1100px', margin: '0 auto' }}>
+            <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)', lineHeight: 1.6 }}>
+              TradVue is a trading journal and analytics tool — not a financial advisor. Market data and analytics are provided for informational purposes only and may be delayed or incomplete. This is not financial advice. Trading involves substantial risk of loss.
+            </p>
+          </div>
+        </div>
+
         {/* ── Page Footer ── */}
         <div style={{ borderTop: '1px solid var(--border)', padding: '20px 24px', background: 'var(--bg-0)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', flexWrap: 'wrap', gap: '12px' }}>

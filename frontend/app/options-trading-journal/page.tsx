@@ -283,6 +283,20 @@ export default function OptionsTradingJournalPage() {
         </div>
       </section>
 
+      {/* ── Disclaimer ── */}
+      <section style={{
+        padding: '16px 24px',
+        background: 'rgba(255,255,255,0.02)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'rgba(180,180,200,0.55)', lineHeight: 1.6 }}>
+            Performance analytics are based on user-entered data and may not reflect actual trading results. Past performance does not indicate future results. This is not financial advice.
+          </p>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="seo-cta-section">
         <div className="seo-cta-inner">

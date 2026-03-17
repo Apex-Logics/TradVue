@@ -278,6 +278,20 @@ export default function TradingCalculatorsPage() {
         </div>
       </section>
 
+      {/* ── Disclaimer ── */}
+      <section style={{
+        padding: '16px 24px',
+        background: 'rgba(255,255,255,0.02)',
+        borderTop: '1px solid rgba(255,255,255,0.06)',
+        borderBottom: '1px solid rgba(255,255,255,0.06)',
+      }}>
+        <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
+          <p style={{ margin: 0, fontSize: 11, color: 'rgba(180,180,200,0.55)', lineHeight: 1.6 }}>
+            Calculations are based on published specifications and user-entered data. Results are estimates only and do not account for commissions, fees, slippage, or market conditions. Always verify with your broker. This is not financial advice.
+          </p>
+        </div>
+      </section>
+
       {/* ── CTA ── */}
       <section className="seo-cta-section">
         <div className="seo-cta-inner">

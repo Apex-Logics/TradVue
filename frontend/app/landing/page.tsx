@@ -982,6 +982,19 @@ export default function LandingPage() {
           </div>
         </section>
 
+        {/* ── Disclaimer ── */}
+        <section style={{
+          padding: '12px 24px',
+          background: 'rgba(255,255,255,0.02)',
+          borderTop: '1px solid rgba(255,255,255,0.05)',
+        }}>
+          <div style={{ maxWidth: 800, margin: '0 auto', textAlign: 'center' }}>
+            <p style={{ margin: 0, fontSize: 11, color: 'rgba(180,180,200,0.5)', lineHeight: 1.6 }}>
+              TradVue is a trading journal and analytics tool — not a financial advisor. Nothing on this platform constitutes financial advice, trading recommendations, or guarantees of any kind. Trading involves substantial risk of loss.
+            </p>
+          </div>
+        </section>
+
         {/* ─────────────────────────────────────────────────────────────────
             EMAIL SIGNUP FORM
         ───────────────────────────────────────────────────────────────── */}

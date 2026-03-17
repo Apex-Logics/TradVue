@@ -204,6 +204,35 @@ const jsonLd = {
   ],
 }
 
+// ─── Global Disclaimer Bar ────────────────────────────────────────────────────
+
+function GlobalDisclaimer() {
+  return (
+    <div style={{
+      width: '100%',
+      background: '#0d0d16',
+      borderTop: '1px solid rgba(255,255,255,0.07)',
+      padding: '8px 16px',
+      textAlign: 'center',
+    }}>
+      <p style={{
+        margin: 0,
+        fontSize: 11,
+        color: 'rgba(180,180,200,0.6)',
+        lineHeight: 1.5,
+        maxWidth: 900,
+        marginLeft: 'auto',
+        marginRight: 'auto',
+      }}>
+        TradVue is a trading journal and analytics tool — not a financial advisor. Nothing on this platform constitutes financial advice, trading recommendations, or guarantees of any kind. Trading involves substantial risk of loss. See our{' '}
+        <a href="/legal/disclaimer" style={{ color: 'var(--accent, #6366f1)', textDecoration: 'none' }}>Disclaimer</a>
+        {' '}and{' '}
+        <a href="/legal/terms" style={{ color: 'var(--accent, #6366f1)', textDecoration: 'none' }}>Terms of Service</a>.
+      </p>
+    </div>
+  )
+}
+
 // ─── Root Layout ──────────────────────────────────────────────────────────────
 
 export default function RootLayout({ children }: { children: React.ReactNode }) {
@@ -258,6 +287,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
                 {children}
                 <OnboardingOverlay />
                 <CookieConsent />
+                <GlobalDisclaimer />
                 <AppFooter />
                 <FeedbackWidget />
                 <SupportChat />
