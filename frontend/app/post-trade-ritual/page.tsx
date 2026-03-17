@@ -1,10 +1,11 @@
 import { Metadata } from 'next'
 import Link from 'next/link'
+import '../components/seo-landing.css'
 
 export const metadata: Metadata = {
   title: 'Post-Trade Ritual — Build a Daily Trading Journal Habit in 60 Seconds',
   description:
-    'Build a consistent trading journal habit with TradVue post-trade ritual. Emotion tags, streak tracking, and 60-second journaling. Free to start, try now.',
+    'Build a consistent trading journal habit with TradVue\'s post-trade ritual. Emotion tags, streak tracking, and 60-second journaling. Free to start, try now.',
   alternates: {
     canonical: 'https://www.tradvue.com/post-trade-ritual',
   },
@@ -28,7 +29,7 @@ export const metadata: Metadata = {
 
 export default function PostTradeRitualPage() {
   return (
-    <div style={{ fontFamily: 'var(--font)', background: 'var(--bg-0)', color: 'var(--text-0)', minHeight: '100vh' }}>
+    <div className="seo-page">
       <script
         type="application/ld+json"
         dangerouslySetInnerHTML={{
@@ -67,7 +68,7 @@ export default function PostTradeRitualPage() {
                     name: 'What emotion tags does TradVue use in the post-trade ritual?',
                     acceptedAnswer: {
                       '@type': 'Answer',
-                      text: 'TradVue includes emotion tags like: Confident, Fearful, Greedy, Bored, FOMO, Overextended, Regretful, and Lucky. Over time you will see correlations between emotions and your P&L.',
+                      text: 'TradVue includes emotion tags like: Confident, Fearful, Greedy, Bored, FOMO, Overextended, Regretful, and Lucky. Over time you\'ll see correlations between emotions and your P&L.',
                     },
                   },
                 ],
@@ -84,485 +85,289 @@ export default function PostTradeRitualPage() {
         }}
       />
 
-      <nav
-        style={{
-          position: 'sticky',
-          top: 0,
-          zIndex: 100,
-          borderBottom: '1px solid var(--border)',
-          background: 'rgba(10, 10, 12, 0.85)',
-          backdropFilter: 'blur(12px)',
-          WebkitBackdropFilter: 'blur(12px)',
-        }}
-      >
-        <div
-          style={{
-            maxWidth: '1100px',
-            margin: '0 auto',
-            padding: '0 24px',
-            height: '60px',
-            display: 'flex',
-            alignItems: 'center',
-            justifyContent: 'space-between',
-          }}
-        >
+      {/* ── Nav ── */}
+      <nav className="seo-nav">
+        <div className="seo-nav-inner">
           <Link href="/" style={{ display: 'flex', alignItems: 'center', gap: '8px', textDecoration: 'none' }}>
             {/* eslint-disable-next-line @next/next/no-img-element */}
-            <img
-              src="/logo-header.svg"
-              alt="TradVue"
-              style={{ height: '36px', width: 'auto', objectFit: 'contain' }}
-            />
+            <img src="/logo-header.svg" alt="TradVue" style={{ height: '36px', width: 'auto', objectFit: 'contain' }} />
           </Link>
-          <Link
-            href="/#signup"
-            style={{
-              fontSize: '13px',
-              fontWeight: 600,
-              padding: '9px 20px',
-              background: 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              display: 'inline-block',
-            }}
-          >
-            Get Started Free
-          </Link>
+          <Link href="/#signup" className="seo-nav-cta">Get Started Free</Link>
         </div>
       </nav>
 
-      <section style={{ padding: 'clamp(60px, 8vw, 100px) 24px 40px', maxWidth: '800px', margin: '0 auto' }}>
-        <h1
-          style={{
-            fontSize: 'clamp(2rem, 5vw, 3.2rem)',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-            lineHeight: 1.2,
-            marginBottom: '20px',
-            color: 'var(--text-0)',
-          }}
-        >
-          Build a Daily Trading Journal Habit in 60 Seconds
-        </h1>
-        <p
-          style={{
-            fontSize: 'clamp(1rem, 2.5vw, 1.1rem)',
-            color: 'var(--text-1)',
-            lineHeight: 1.6,
-            marginBottom: '32px',
-            fontWeight: 400,
-          }}
-        >
-          Most traders skip journaling because it's tedious. TradVue's post-trade ritual removes friction and makes
-          journaling automatic. Track emotions, build streaks, improve faster.
-        </p>
-        <Link
-          href="/#signup"
-          style={{
-            display: 'inline-flex',
-            alignItems: 'center',
-            gap: '8px',
-            padding: '14px 32px',
-            background: 'var(--accent)',
-            color: '#fff',
-            border: 'none',
-            borderRadius: '8px',
-            cursor: 'pointer',
-            textDecoration: 'none',
-            fontSize: '15px',
-            fontWeight: 700,
-          }}
-        >
-          Start Your Ritual
-        </Link>
+      {/* ── Hero ── */}
+      <section className="seo-hero">
+        <div className="seo-hero-glow-1" />
+        <div className="seo-hero-glow-2" />
+        <div className="seo-hero-inner">
+          <div className="seo-hero-badge">
+            <span className="seo-hero-badge-dot" />
+            60-second ritual — build your edge daily
+          </div>
+          <h1 className="seo-hero-h1">
+            Build a Daily Trading Journal Habit<br />
+            <span className="gradient-text">In 60 Seconds</span>
+          </h1>
+          <p className="seo-hero-sub">
+            Most traders skip journaling because it's tedious. TradVue's post-trade ritual removes friction and makes
+            journaling automatic. Track emotions, build streaks, improve faster.
+          </p>
+          <Link href="/#signup" className="seo-hero-cta">
+            Start Your Ritual
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
+          </Link>
+          <div className="seo-hero-trust">
+            {['60 seconds per trade', 'Emotion tracking', 'Streak-based motivation'].map(t => (
+              <span key={t} className="seo-hero-trust-item">
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                {t}
+              </span>
+            ))}
+          </div>
+        </div>
       </section>
 
-      <section
-        style={{
-          padding: 'clamp(60px, 8vw, 100px) 24px',
-          background: 'var(--bg-1)',
-          borderTop: '1px solid var(--border)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: '2rem',
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              marginBottom: '40px',
-              textAlign: 'center',
-              color: 'var(--text-0)',
-            }}
-          >
-            Why Traders Fail to Journal
-          </h2>
+      {/* ── Stats ── */}
+      <div className="seo-section-alt" style={{ padding: '0' }}>
+        <div className="seo-stats-bar" style={{ borderRadius: '0', border: 'none', borderBottom: '1px solid var(--border)' }}>
+          {[
+            { value: '60s', label: 'Per Trade' },
+            { value: '8', label: 'Emotion Tags' },
+            { value: '365', label: 'Day Streaks Possible' },
+            { value: '∞', label: 'Data Over Time' },
+          ].map(s => (
+            <div key={s.label} className="seo-stat">
+              <div className="seo-stat-value">{s.value}</div>
+              <div className="seo-stat-label">{s.label}</div>
+            </div>
+          ))}
+        </div>
+      </div>
 
-          <p style={{ fontSize: '15px', color: 'var(--text-1)', lineHeight: 1.7, marginBottom: '32px' }}>
-            Here's what usually happens:
-          </p>
-
-          <div style={{ display: 'grid', gap: '20px' }}>
+      {/* ── Why traders fail ── */}
+      <section className="seo-section">
+        <div className="seo-section-inner-narrow">
+          <div className="seo-section-header">
+            <h2>Why Traders Fail to Journal</h2>
+            <div className="seo-divider" />
+            <p style={{ marginTop: '20px' }}>Here's what usually happens:</p>
+          </div>
+          <div className="seo-steps">
             {[
-              {
-                step: '01',
-                title: 'The Good Intention',
-                desc: '"I\'ll journal every trade. It\'ll help me improve." Sounds great.',
-              },
-              {
-                step: '02',
-                title: 'The First Week',
-                desc: 'You journal a few trades. It takes 10 minutes each. You\'re motivated.',
-              },
-              {
-                step: '03',
-                title: 'The Drift',
-                desc: 'By week 3, you\'re tired. Market moving. No time to journal. You skip a few.',
-              },
-              {
-                step: '04',
-                title: 'The Quit',
-                desc: 'Now you feel guilty, so you stop entirely. Back to trading without data.',
-              },
-            ].map((item) => (
-              <div
-                key={item.step}
-                style={{
-                  display: 'flex',
-                  gap: '20px',
-                  background: 'var(--bg-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  padding: '20px',
-                }}
-              >
-                <div
-                  style={{
-                    fontSize: '20px',
-                    fontWeight: 800,
-                    color: 'var(--red)',
-                    flexShrink: 0,
-                  }}
-                >
+              { step: '01', title: 'The Good Intention', desc: '"I\'ll journal every trade. It\'ll help me improve." Sounds great.', color: 'var(--blue)' },
+              { step: '02', title: 'The First Week', desc: 'You journal a few trades. It takes 10 minutes each. You\'re motivated.', color: 'var(--purple)' },
+              { step: '03', title: 'The Drift', desc: 'By week 3, you\'re tired. Market\'s moving. No time to journal. You skip a few.', color: 'var(--yellow)' },
+              { step: '04', title: 'The Quit', desc: 'Now you feel guilty, so you stop entirely. Back to trading without data.', color: 'var(--red)' },
+            ].map(item => (
+              <div key={item.step} className="seo-step">
+                <div className="seo-step-num" style={{ color: item.color, borderColor: item.color + '40', background: item.color + '15' }}>
                   {item.step}
                 </div>
                 <div>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-0)' }}>
-                    {item.title}
-                  </h3>
-                  <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
-                    {item.desc}
-                  </p>
+                  <h3>{item.title}</h3>
+                  <p>{item.desc}</p>
                 </div>
               </div>
             ))}
           </div>
-
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '32px', fontStyle: 'italic' }}>
+          <p style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '28px', fontStyle: 'italic', textAlign: 'center', padding: '16px', background: 'var(--bg-1)', borderRadius: '10px', border: '1px solid var(--border)' }}>
             TradVue fixes this by making the ritual 60 seconds and building habit momentum through streak tracking.
           </p>
         </div>
       </section>
 
-      <section style={{ padding: 'clamp(60px, 8vw, 100px) 24px', maxWidth: '800px', margin: '0 auto' }}>
-        <h2
-          style={{
-            fontSize: '2rem',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-            marginBottom: '40px',
-            textAlign: 'center',
-            color: 'var(--text-0)',
-          }}
-        >
-          The Post-Trade Ritual
-        </h2>
-
-        <p style={{ fontSize: '15px', color: 'var(--text-1)', lineHeight: 1.7, marginBottom: '32px', textAlign: 'center' }}>
-          60 seconds. Every trade. This simple ritual creates the habit.
-        </p>
-
-        <div style={{ display: 'grid', gap: '20px' }}>
-          {[
-            {
-              step: '1',
-              title: 'Entry Details (15 sec)',
-              desc: 'Symbol, entry price, entry time. Auto-filled if you use broker sync.',
-            },
-            {
-              step: '2',
-              title: 'Exit Details (15 sec)',
-              desc: 'Exit price, exit time. TradVue calculates your P&L instantly.',
-            },
-            {
-              step: '3',
-              title: 'Emotion Tag (10 sec)',
-              desc: 'How did you feel? Confident, fearful, overextended, missed? Tag it.',
-            },
-            {
-              step: '4',
-              title: 'Quick Note (20 sec)',
-              desc: 'One sentence. What was the setup? Why did you take it? What happened?',
-            },
-          ].map((item) => (
-            <div
-              key={item.step}
-              style={{
-                background: 'var(--bg-1)',
-                border: '1px solid var(--border)',
-                borderRadius: '12px',
-                padding: '20px',
-              }}
-            >
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'flex-start' }}>
-                <div
-                  style={{
-                    fontSize: '32px',
-                    fontWeight: 800,
-                    color: 'var(--accent)',
-                    flexShrink: 0,
-                    width: '40px',
-                    textAlign: 'center',
-                  }}
-                >
+      {/* ── The ritual ── */}
+      <section className="seo-section-alt">
+        <div className="seo-section-inner-narrow">
+          <div className="seo-section-header">
+            <h2>The Post-Trade Ritual</h2>
+            <div className="seo-divider" />
+            <p style={{ marginTop: '20px' }}>60 seconds. Every trade. This simple ritual creates the habit.</p>
+          </div>
+          <div style={{ display: 'grid', gap: '16px' }}>
+            {[
+              { step: '1', time: '15 sec', title: 'Entry Details', desc: 'Symbol, entry price, entry time. Auto-filled if you use broker sync.', color: 'blue' },
+              { step: '2', time: '15 sec', title: 'Exit Details', desc: 'Exit price, exit time. TradVue calculates your P&L instantly.', color: 'purple' },
+              { step: '3', time: '10 sec', title: 'Emotion Tag', desc: 'How did you feel? Confident, fearful, overextended, missed? Tag it.', color: 'yellow' },
+              { step: '4', time: '20 sec', title: 'Quick Note', desc: 'One sentence. What was the setup? Why did you take it? What happened?', color: 'green' },
+            ].map(item => (
+              <div key={item.step} style={{
+                display: 'flex', gap: '20px', alignItems: 'flex-start',
+                background: 'var(--bg-2)', border: '1px solid var(--border)',
+                borderRadius: '14px', padding: '24px',
+              }}>
+                <div className={`seo-card-icon seo-card-icon-${item.color}`} style={{ marginBottom: 0, fontSize: '20px', fontWeight: 800 }}>
                   {item.step}
                 </div>
                 <div style={{ flex: 1 }}>
-                  <h3 style={{ fontSize: '16px', fontWeight: 700, marginBottom: '6px', color: 'var(--text-0)' }}>
-                    {item.title}
-                  </h3>
-                  <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0, lineHeight: 1.5 }}>
-                    {item.desc}
-                  </p>
-                </div>
-              </div>
-            </div>
-          ))}
-        </div>
-
-        <p style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '32px', textAlign: 'center', fontWeight: 600 }}>
-          Done. Move on. TradVue tracks the rest.
-        </p>
-      </section>
-
-      <section
-        style={{
-          padding: 'clamp(60px, 8vw, 100px) 24px',
-          background: 'var(--bg-1)',
-          borderTop: '1px solid var(--border)',
-          borderBottom: '1px solid var(--border)',
-        }}
-      >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: '2rem',
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              marginBottom: '40px',
-              textAlign: 'center',
-              color: 'var(--text-0)',
-            }}
-          >
-            Streak Tracking Builds Habits
-          </h2>
-
-          <p style={{ fontSize: '15px', color: 'var(--text-1)', lineHeight: 1.7, marginBottom: '32px' }}>
-            Humans are motivated by progress. TradVue shows you your journaling streak—how many consecutive trading days
-            you've journaled every trade.
-          </p>
-
-          <div style={{ display: 'grid', gap: '16px' }}>
-            {[
-              { milestone: '7 days', reward: 'You\'ve built the habit. Keep it going.' },
-              { milestone: '30 days', reward: 'You have a month of data. Patterns are emerging.' },
-              { milestone: '90 days', reward: 'You have a quarter of data. Real insights now.' },
-              { milestone: '1 year', reward: 'A full year of trading data. This is your edge.' },
-            ].map((item) => (
-              <div
-                key={item.milestone}
-                style={{
-                  background: 'var(--bg-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '12px',
-                  padding: '16px',
-                  display: 'flex',
-                  justifyContent: 'space-between',
-                  alignItems: 'center',
-                }}
-              >
-                <div>
-                  <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>
-                    {item.milestone}
+                  <div style={{ display: 'flex', alignItems: 'center', gap: '12px', marginBottom: '8px' }}>
+                    <h3 style={{ fontSize: '16px', fontWeight: 700, color: 'var(--text-0)', margin: 0 }}>{item.title}</h3>
+                    <span style={{
+                      fontSize: '11px', fontWeight: 700, padding: '2px 8px',
+                      background: `var(--${item.color}-dim, rgba(74,158,255,0.1))`,
+                      color: `var(--${item.color}, #4a9eff)`,
+                      borderRadius: '100px', letterSpacing: '0.04em',
+                    }}>{item.time}</span>
                   </div>
-                  <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>{item.reward}</div>
+                  <p style={{ fontSize: '14px', color: 'var(--text-2)', margin: 0, lineHeight: 1.6 }}>{item.desc}</p>
                 </div>
-                <div style={{ fontSize: '28px', color: 'var(--green)' }}>✓</div>
               </div>
             ))}
           </div>
-
-          <p style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '32px', textAlign: 'center', fontStyle: 'italic' }}>
-            The streak is visual proof that you're building something. That motivation keeps you going.
+          <p style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '24px', textAlign: 'center', fontWeight: 600 }}>
+            Done. Move on. TradVue tracks the rest.
           </p>
         </div>
       </section>
 
-      <section style={{ padding: 'clamp(60px, 8vw, 100px) 24px', maxWidth: '800px', margin: '0 auto' }}>
-        <h2
-          style={{
-            fontSize: '2rem',
-            fontWeight: 800,
-            letterSpacing: '-0.03em',
-            marginBottom: '32px',
-            textAlign: 'center',
-            color: 'var(--text-0)',
-          }}
-        >
-          Emotion Tracking for Self-Awareness
-        </h2>
-
-        <p style={{ fontSize: '15px', color: 'var(--text-1)', lineHeight: 1.7, marginBottom: '24px' }}>
-          The ritual includes emotion tags. Why? Because emotions drive bad trading decisions. By tagging how you felt,
-          you start to notice patterns.
-        </p>
-
-        <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '12px', padding: '24px' }}>
-          <p style={{ fontSize: '14px', color: 'var(--text-1)', marginBottom: '16px' }}>
-            Common emotion tags:
+      {/* ── Streak tracking ── */}
+      <section className="seo-section">
+        <div className="seo-section-inner-narrow">
+          <div className="seo-section-header">
+            <h2>Streak Tracking Builds Habits</h2>
+            <div className="seo-divider" />
+          </div>
+          <p style={{ fontSize: '15px', color: 'var(--text-1)', lineHeight: 1.75, marginBottom: '32px', textAlign: 'center' }}>
+            Humans are motivated by progress. TradVue shows you your journaling streak — consecutive trading days
+            you've journaled every trade.
           </p>
-          <ul
-            style={{
-              listStyle: 'none',
-              display: 'grid',
-              gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))',
-              gap: '12px',
-              margin: 0,
-              padding: 0,
-            }}
-          >
-            {['Confident', 'Fearful', 'Greedy', 'Bored', 'FOMO', 'Overextended', 'Regretful', 'Lucky'].map((emotion) => (
-              <div
-                key={emotion}
-                style={{
-                  background: 'var(--bg-2)',
-                  border: '1px solid var(--border)',
-                  borderRadius: '6px',
-                  padding: '10px 12px',
-                  fontSize: '13px',
-                  color: 'var(--text-1)',
-                  textAlign: 'center',
-                }}
-              >
-                {emotion}
+          <div style={{ display: 'grid', gap: '12px' }}>
+            {[
+              { milestone: '🌱 7 days', reward: 'You\'ve built the habit. Keep it going.', color: 'var(--green)' },
+              { milestone: '📅 30 days', reward: 'You have a month of data. Patterns are emerging.', color: 'var(--blue)' },
+              { milestone: '📊 90 days', reward: 'You have a quarter of data. Real insights now.', color: 'var(--purple)' },
+              { milestone: '🏆 1 year', reward: 'A full year of trading data. This is your edge.', color: 'var(--yellow)' },
+            ].map(item => (
+              <div key={item.milestone} style={{
+                background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: '12px',
+                padding: '18px 24px', display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+              }}>
+                <div>
+                  <div style={{ fontSize: '15px', fontWeight: 700, color: 'var(--text-0)', marginBottom: '4px' }}>{item.milestone}</div>
+                  <div style={{ fontSize: '13px', color: 'var(--text-2)' }}>{item.reward}</div>
+                </div>
+                <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke={item.color} strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
             ))}
-          </ul>
+          </div>
         </div>
-
-        <p style={{ fontSize: '14px', color: 'var(--text-2)', marginTop: '24px' }}>
-          Over time, you'll see: "When I trade fearful, I lose money. When I trade confident but measured, I win."
-          That's self-awareness. That's growth.
-        </p>
       </section>
 
-      <section
-        style={{
-          padding: 'clamp(60px, 8vw, 100px) 24px',
-          background: 'var(--bg-1)',
-          borderTop: '1px solid var(--border)',
-          textAlign: 'center',
-        }}
-      >
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2
-            style={{
-              fontSize: '2.2rem',
-              fontWeight: 800,
-              letterSpacing: '-0.03em',
-              marginBottom: '16px',
-              color: 'var(--text-0)',
-            }}
-          >
-            60 Seconds Changes Everything
-          </h2>
-          <p style={{ fontSize: '16px', color: 'var(--text-2)', marginBottom: '32px', lineHeight: 1.6 }}>
+      {/* ── Emotions ── */}
+      <section className="seo-section-alt">
+        <div className="seo-section-inner-narrow">
+          <div className="seo-section-header">
+            <h2>Emotion Tracking for Self-Awareness</h2>
+            <div className="seo-divider" />
+          </div>
+          <p style={{ fontSize: '15px', color: 'var(--text-1)', lineHeight: 1.75, marginBottom: '28px', textAlign: 'center' }}>
+            The ritual includes emotion tags. Why? Because emotions drive bad trading decisions. By tagging how you felt,
+            you start to notice patterns that cost you money.
+          </p>
+          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(140px, 1fr))', gap: '12px', marginBottom: '24px' }}>
+            {[
+              { label: 'Confident', color: 'blue' },
+              { label: 'Fearful', color: 'red' },
+              { label: 'Greedy', color: 'yellow' },
+              { label: 'Bored', color: 'purple' },
+              { label: 'FOMO', color: 'red' },
+              { label: 'Overextended', color: 'yellow' },
+              { label: 'Regretful', color: 'purple' },
+              { label: 'Lucky', color: 'green' },
+            ].map(emotion => (
+              <div key={emotion.label} className={`seo-card-icon seo-card-icon-${emotion.color}`} style={{
+                width: '100%', height: 'auto', borderRadius: '10px', padding: '14px 16px',
+                fontSize: '13px', fontWeight: 600, textAlign: 'center', marginBottom: 0,
+              }}>
+                {emotion.label}
+              </div>
+            ))}
+          </div>
+          <p style={{ fontSize: '14px', color: 'var(--text-2)', textAlign: 'center', lineHeight: 1.7, fontStyle: 'italic' }}>
+            Over time, you'll see: "When I trade fearful, I lose money. When I trade confident but measured, I win."
+            That's self-awareness. That's growth.
+          </p>
+        </div>
+      </section>
+
+      {/* ── FAQ ── */}
+      <section className="seo-section">
+        <div className="seo-section-inner-narrow">
+          <div className="seo-section-header">
+            <h2>Frequently Asked Questions</h2>
+            <div className="seo-divider" />
+          </div>
+          <div className="seo-faq-list">
+            {[
+              { q: 'What is the post-trade ritual for traders?', a: 'The post-trade ritual is a 60-second routine to journal every trade immediately after closing it: entry/exit details, emotion tag, and a quick note. Designed to build a consistent journaling habit through streak tracking.' },
+              { q: 'Why does journaling after every trade help traders improve?', a: 'Journaling captures the data and emotions behind every trade. Over time, patterns emerge — you see which setups work, which emotions lead to bad decisions, and exactly where your edge is. Traders who journal consistently improve measurably faster.' },
+              { q: 'How does streak tracking help build a journaling habit?', a: 'TradVue tracks your consecutive days of journaling. Seeing your streak grow creates motivation to keep going. Missing a day feels significant — which prevents the common pattern of slowly stopping.' },
+              { q: 'What emotion tags does TradVue use in the post-trade ritual?', a: 'TradVue includes emotion tags like: Confident, Fearful, Greedy, Bored, FOMO, Overextended, Regretful, and Lucky. Over time you\'ll see correlations between emotions and your P&L.' },
+            ].map(item => (
+              <div key={item.q} className="seo-faq-item">
+                <div className="seo-faq-q">
+                  <span>{item.q}</span>
+                  <span className="seo-faq-q-icon">+</span>
+                </div>
+                <div className="seo-faq-a">{item.a}</div>
+              </div>
+            ))}
+          </div>
+        </div>
+      </section>
+
+      {/* ── CTA ── */}
+      <section className="seo-cta-section">
+        <div className="seo-cta-inner">
+          <h2 className="seo-cta-h2">60 Seconds Changes Everything</h2>
+          <p className="seo-cta-sub">
             A small ritual, done daily, creates momentum. Track your streak. Watch your habits change. Improve faster.
           </p>
-          <Link
-            href="/#signup"
-            style={{
-              display: 'inline-flex',
-              alignItems: 'center',
-              gap: '8px',
-              padding: '16px 40px',
-              background: 'var(--accent)',
-              color: '#fff',
-              border: 'none',
-              borderRadius: '8px',
-              cursor: 'pointer',
-              textDecoration: 'none',
-              fontSize: '16px',
-              fontWeight: 700,
-            }}
-          >
+          <Link href="/#signup" className="seo-cta-btn">
             Start Your Ritual
+            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="5" y1="12" x2="19" y2="12"/><polyline points="12 5 19 12 12 19"/></svg>
           </Link>
         </div>
       </section>
 
-      <section style={{ padding: '60px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-1)' }}>
-        <div style={{ maxWidth: '800px', margin: '0 auto' }}>
-          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>
-            You Might Also Like
-          </h2>
-          <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: '16px', marginBottom: '32px' }}>
+      {/* ── Related ── */}
+      <section className="seo-related-section">
+        <div className="seo-section-inner-narrow">
+          <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>You Might Also Like</h2>
+          <div className="seo-related-grid">
             {[
               { href: '/ritual', title: 'Start Your Ritual', desc: 'Open the post-trade ritual app now', emoji: '🔥' },
               { href: '/journal', title: 'Trading Journal', desc: 'Full-featured journal with AI analytics', emoji: '📓' },
               { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why journaling changes your trading', emoji: '🏆' },
               { href: '/coach', title: 'AI Trading Coach', desc: 'Get AI insights on your trade patterns', emoji: '🧠' },
-            ].map((item) => (
-              <Link key={item.href} href={item.href} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: '12px', padding: '16px', textDecoration: 'none', display: 'block' }}>
-                <div style={{ fontSize: '24px', marginBottom: '8px' }}>{item.emoji}</div>
-                <div style={{ fontSize: '14px', fontWeight: 700, color: 'var(--accent)', marginBottom: '4px' }}>{item.title}</div>
-                <div style={{ fontSize: '12px', color: 'var(--text-2)', lineHeight: 1.4 }}>{item.desc}</div>
+            ].map(item => (
+              <Link key={item.href} href={item.href} className="seo-related-card">
+                <span className="seo-related-card-emoji">{item.emoji}</span>
+                <div className="seo-related-card-title">{item.title}</div>
+                <div className="seo-related-card-desc">{item.desc}</div>
               </Link>
             ))}
           </div>
-          <h3 style={{ fontSize: '14px', fontWeight: 700, marginBottom: '12px', color: 'var(--text-1)' }}>Related Guides</h3>
-          <ul style={{ listStyle: 'none', display: 'grid', gap: '8px', margin: 0, padding: 0 }}>
-            {[
-              { href: '/best-trading-journal', text: 'Best Trading Journal for Day Traders 2026' },
-              { href: '/trading-calculators', text: '30+ Free Trading Calculators' },
-              { href: '/prop-firm-tracker', text: 'Prop Firm Tracker — Monitor Rules in Real-Time' },
-              { href: '/options-trading-journal', text: 'Options Trading Journal — Track Greeks & Strategies' },
-            ].map((link) => (
-              <li key={link.href}>
-                <Link href={link.href} style={{ color: 'var(--accent)', textDecoration: 'none', fontSize: '14px' }}>
-                  → {link.text}
-                </Link>
-              </li>
-            ))}
-          </ul>
+          <div className="seo-guide-links">
+            <h3>Related Guides</h3>
+            <ul>
+              {[
+                { href: '/best-trading-journal', text: 'Best Trading Journal for Day Traders 2026' },
+                { href: '/trading-calculators', text: '30+ Free Trading Calculators' },
+                { href: '/prop-firm-tracker', text: 'Prop Firm Tracker — Monitor Rules in Real-Time' },
+                { href: '/options-trading-journal', text: 'Options Trading Journal — Track Greeks & Strategies' },
+              ].map(link => (
+                <li key={link.href}><Link href={link.href}>→ {link.text}</Link></li>
+              ))}
+            </ul>
+          </div>
         </div>
       </section>
 
-      <footer style={{ padding: '40px 24px', borderTop: '1px solid var(--border)', background: 'var(--bg-1)', textAlign: 'center', fontSize: '12px', color: 'var(--text-3)' }}>
-        <p style={{ margin: '8px 0' }}>© 2026 TradVue. Not financial advice. Trading involves risk.</p>
-        <p style={{ margin: '8px 0' }}>
-          <Link href="/legal/disclaimer" style={{ color: 'var(--text-2)', textDecoration: 'none' }}>
-            Disclaimer
-          </Link>
-          {' • '}
-          <Link href="/legal/privacy" style={{ color: 'var(--text-2)', textDecoration: 'none' }}>
-            Privacy
-          </Link>
-        </p>
+      <footer className="seo-footer">
+        <p>© 2026 TradVue. Not financial advice. Trading involves risk.</p>
+        <p><Link href="/legal/disclaimer">Disclaimer</Link>{' • '}<Link href="/legal/privacy">Privacy</Link></p>
       </footer>
     </div>
   )
