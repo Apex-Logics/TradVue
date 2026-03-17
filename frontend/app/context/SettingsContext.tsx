@@ -15,6 +15,8 @@ export interface Settings {
   defaultMarket: DefaultMarket
   /** IANA timezone override (null = use device auto-detection) */
   timezone: string | null
+  /** AI Trade Coach — when false, no trade data is sent to OpenAI (Privacy Policy §6.3 and §9) */
+  aiCoachEnabled: boolean
 }
 
 interface SettingsContextValue {
@@ -25,6 +27,8 @@ interface SettingsContextValue {
   setNotificationsEnabled: (v: boolean) => void
   /** Set a manual timezone override. Pass null to use device timezone. */
   setTimezone: (tz: string | null) => void
+  /** Toggle AI Coach data processing. When false, no data goes to OpenAI. */
+  setAiCoachEnabled: (enabled: boolean) => void
   settingsOpen: boolean
   openSettings: () => void
   closeSettings: () => void
@@ -36,6 +40,7 @@ const DEFAULT_SETTINGS: Settings = {
   notificationPermission: 'unknown',
   defaultMarket: 'US',
   timezone: null,
+  aiCoachEnabled: true,
 }
 
 const SettingsContext = createContext<SettingsContextValue | null>(null)
@@ -110,6 +115,10 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
     update({ timezone: tz })
   }, [])
 
+  const setAiCoachEnabled = useCallback((enabled: boolean) => {
+    update({ aiCoachEnabled: enabled })
+  }, [])
+
   const requestNotifications = useCallback(async (): Promise<boolean> => {
     if (!('Notification' in window)) return false
     try {
@@ -129,6 +138,7 @@ export function SettingsProvider({ children }: { children: React.ReactNode }) {
       requestNotifications,
       setNotificationsEnabled,
       setTimezone,
+      setAiCoachEnabled,
       settingsOpen,
       openSettings: () => setSettingsOpen(true),
       closeSettings: () => setSettingsOpen(false),

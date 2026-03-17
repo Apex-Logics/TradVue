@@ -12,7 +12,7 @@ interface SettingsPanelProps {
 }
 
 export default function SettingsPanel({ onClose }: SettingsPanelProps) {
-  const { settings, setTheme, setDefaultMarket, requestNotifications, setNotificationsEnabled, setTimezone } = useSettings()
+  const { settings, setTheme, setDefaultMarket, requestNotifications, setNotificationsEnabled, setTimezone, setAiCoachEnabled } = useSettings()
   const detectedTz = typeof window !== 'undefined' ? Intl.DateTimeFormat().resolvedOptions().timeZone : 'UTC'
   const activeTz = settings.timezone || detectedTz
   const { user, logout } = useAuth()
@@ -235,6 +235,37 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
               <span><IconBell size={12} style={{ verticalAlign: 'middle', marginRight: 4 }} />You'll receive alerts for price movements and major market events.</span>
             </div>
           )}
+        </div>
+
+        {/* AI & Privacy */}
+        <div className="settings-section">
+          <div className="settings-section-label">AI &amp; Privacy</div>
+
+          <div className="settings-row">
+            <div className="settings-row-info">
+              <span className="settings-row-label">AI Trade Coach</span>
+              <span className="settings-row-desc">
+                {settings.aiCoachEnabled
+                  ? 'Trade patterns are analyzed for insights'
+                  : 'No data sent to AI — coach is disabled'}
+              </span>
+            </div>
+            <button
+              className={`settings-toggle${settings.aiCoachEnabled ? ' settings-toggle-on' : ''}`}
+              onClick={() => setAiCoachEnabled(!settings.aiCoachEnabled)}
+              aria-pressed={settings.aiCoachEnabled}
+              aria-label="Toggle AI Trade Coach"
+            >
+              <span className="settings-toggle-thumb" />
+            </button>
+          </div>
+
+          <div className="settings-notif-note" style={{ marginTop: 6 }}>
+            <span>
+              When enabled, trade patterns are analyzed locally and via OpenAI.{' '}
+              <a href="/legal/privacy" className="settings-footer-link">Privacy Policy</a>
+            </span>
+          </div>
         </div>
 
         {/* Timezone */}
