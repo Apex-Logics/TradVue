@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useMemo } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { getUserTier } from '../utils/tierAccess'
+import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
 import {
   type Playbook,
@@ -763,6 +766,7 @@ function PlaybookModal({
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function PlaybooksPage() {
+  const { user } = useAuth()
   const [playbooks, setPlaybooks] = useState<Playbook[]>([])
   const [selected, setSelected] = useState<Playbook | null>(null)
   const [editing, setEditing] = useState<Partial<Playbook> | null>(null)
@@ -796,6 +800,24 @@ export default function PlaybooksPage() {
     deletePlaybook(id)
     setPlaybooks(loadPlaybooks())
     setSelected(null)
+  }
+
+  // Auth gating — demo/unauthenticated users see a sign-in prompt
+  const tier = getUserTier(user)
+  if (tier === 'demo') {
+    return (
+      <AuthGate
+        featureName="Trade Playbooks"
+        featureDesc="Define your strategies, tag your trades, and track what works. Create a free account to get started."
+      >
+        <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+          <PersistentNav />
+          <div style={{ maxWidth: 1100, margin: '0 auto', padding: '28px 20px' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800 }}>Playbook Templates</h1>
+          </div>
+        </div>
+      </AuthGate>
+    )
   }
 
   return (

@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useCallback, useRef } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { getUserTier } from '../utils/tierAccess'
+import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
 import { IconShield } from '../components/Icons'
 import {
@@ -419,6 +422,7 @@ function ViolationRow({ v, onAck }: { v: RuleViolation; onAck: (id: string) => v
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function RulesPage() {
+  const { user } = useAuth()
   const [rules, setRules] = useState<TradingRule[]>([])
   const [violations, setViolations] = useState<RuleViolation[]>([])
   const [showAddModal, setShowAddModal] = useState(false)
@@ -512,6 +516,24 @@ export default function RulesPage() {
   const recentViolations = [...violations]
     .sort((a, b) => b.createdAt.localeCompare(a.createdAt))
     .slice(0, 20)
+
+  // Auth gating
+  const tier = getUserTier(user)
+  if (tier === 'demo') {
+    return (
+      <AuthGate
+        featureName="Rule Cop"
+        featureDesc="Define your trading rules and get automatic violation alerts. Free account required."
+      >
+        <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+          <PersistentNav />
+          <div style={{ maxWidth: 820, margin: '0 auto', padding: '80px 16px' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800 }}>Rule Cop</h1>
+          </div>
+        </div>
+      </AuthGate>
+    )
+  }
 
   if (!loaded) return null
 

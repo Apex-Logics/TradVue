@@ -1,6 +1,10 @@
 'use client'
 
 import { useState, useEffect, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { useSettings } from '../context/SettingsContext'
+import { getUserTier } from '../utils/tierAccess'
+import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
 import { IconBrain, IconCheck, IconInfo, IconAlert, IconZap, IconTrendingUp, IconTrendingDown } from '../components/Icons'
 import { generateWeeklySummary, getThresholdInfo, type ThresholdInfo } from '../utils/coachEngine'
@@ -435,6 +439,8 @@ function PastSummaryAccordion({ summary, thresholdLevel }: {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function CoachPage() {
+  const { user } = useAuth()
+  const { settings, openSettings } = useSettings()
   const [currentSummary, setCurrentSummary] = useState<WeeklySummary | null>(null)
   const [pastSummaries, setPastSummaries] = useState<WeeklySummary[]>([])
   const [generating, setGenerating] = useState(false)
@@ -490,11 +496,69 @@ export default function CoachPage() {
 
   const hasEnoughData = tradeCount >= 5
 
+  // Auth gating
+  const tier = getUserTier(user)
+  if (tier === 'demo') {
+    return (
+      <AuthGate
+        featureName="AI Trade Coach"
+        featureDesc="Get weekly AI-powered insights on your trading patterns. Identify strengths and areas for improvement. Free account required."
+      >
+        <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+          <PersistentNav />
+          <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 16px' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800 }}>AI Trade Coach</h1>
+          </div>
+        </div>
+      </AuthGate>
+    )
+  }
+
   return (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
       <PersistentNav />
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 16px 80px' }}>
+        {/* AI Coach disabled banner */}
+        {!settings.aiCoachEnabled && (
+          <div style={{
+            background: 'rgba(251,146,60,0.08)',
+            border: '1px solid rgba(251,146,60,0.25)',
+            borderRadius: 12,
+            padding: '16px 20px',
+            marginBottom: 24,
+            display: 'flex',
+            alignItems: 'flex-start',
+            gap: 12,
+          }}>
+            <span style={{ fontSize: 20 }}>🔕</span>
+            <div>
+              <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>
+                AI Coach is currently disabled
+              </div>
+              <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                You can enable it in Settings to get trade insights. When enabled, your trade patterns are analyzed to provide insights. Your data is processed securely — see our{' '}
+                <a href="/legal/privacy" style={{ color: 'var(--accent, #6366f1)' }}>Privacy Policy</a> for details.
+              </div>
+              <button
+                onClick={openSettings}
+                style={{
+                  marginTop: 10,
+                  padding: '7px 14px',
+                  background: 'rgba(251,146,60,0.15)',
+                  border: '1px solid rgba(251,146,60,0.35)',
+                  borderRadius: 8,
+                  color: '#fb923c',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                Open Settings →
+              </button>
+            </div>
+          </div>
+        )}
 
         {/* ── Header ── */}
         <div style={{ display: 'flex', alignItems: 'center', gap: 14, marginBottom: 8 }}>

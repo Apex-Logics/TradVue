@@ -1,6 +1,9 @@
 'use client'
 
 import { useState, useEffect, useRef, useCallback } from 'react'
+import { useAuth } from '../context/AuthContext'
+import { getUserTier } from '../utils/tierAccess'
+import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
 import PushNotificationPanel from '../components/PushNotificationPanel'
 import {
@@ -1136,6 +1139,7 @@ const btnGhost: React.CSSProperties = {
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function RitualPage() {
+  const { user } = useAuth()
   const [entries, setEntries] = useState<RitualEntry[]>([])
   const [streak, setStreak] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastCompletedDate: '', milestones: [] })
   const [todayEntry, setTodayEntry] = useState<RitualEntry | undefined>(undefined)
@@ -1178,6 +1182,24 @@ export default function RitualPage() {
         <PersistentNav />
         <div style={{ color: 'var(--text-3, #666)', fontSize: 14 }}>Loading…</div>
       </div>
+    )
+  }
+
+  // Auth gating
+  const tier = getUserTier(user)
+  if (tier === 'demo') {
+    return (
+      <AuthGate
+        featureName="Post-Trade Ritual"
+        featureDesc="Build your daily trading habits. Review trades, track emotional state, and build consistency. Free account required."
+      >
+        <div style={{ minHeight: '100vh', background: 'var(--bg, #0a0a0a)' }}>
+          <PersistentNav />
+          <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px' }}>
+            <h1 style={{ fontSize: 24, fontWeight: 800 }}>Post-Trade Ritual</h1>
+          </div>
+        </div>
+      </AuthGate>
     )
   }
 
