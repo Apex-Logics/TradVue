@@ -520,7 +520,7 @@ export default function CoachPage() {
           </div>
         </div>
 
-        {/* ── Beta badge ── */}
+        {/* ── New badge ── */}
         <div style={{
           display: 'inline-flex',
           alignItems: 'center',
@@ -535,7 +535,7 @@ export default function CoachPage() {
           marginBottom: 20,
           letterSpacing: 0.5,
         }}>
-          ⚡ BETA
+          ⚡ NEW
         </div>
 
         {/* ── Prominent Disclaimer ── */}

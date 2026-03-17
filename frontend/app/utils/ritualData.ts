@@ -5,12 +5,12 @@ export interface RitualEntry {
   date: string                    // YYYY-MM-DD
   trades: string[]                // linked trade IDs from journal
   totalPnl: number                // auto-calculated or manually entered
-  note: string                    // free text (unlimited during beta)
+  note: string                    // free text (unlimited with trial)
   emotion?: {
     score: number                 // 1-5 scale (1=terrible, 5=great)
     tags: string[]                // e.g., ["disciplined", "frustrated"]
   }
-  screenshots?: string[]          // base64 data URLs (paid feature, beta: available)
+  screenshots?: string[]          // base64 data URLs (paid feature, included in trial)
   playbookId?: string             // which playbook was used today
   followedRules?: boolean         // "Did I follow my trading rules?"
   rulesNote?: string              // what rules were broken/followed

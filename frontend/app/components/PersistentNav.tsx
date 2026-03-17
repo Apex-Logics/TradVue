@@ -171,7 +171,7 @@ function NavInner() {
             alt="TradVue"
             className="apn-logo-img"
           />
-          <span className="logo-badge">BETA</span>
+          <span className="logo-badge">NEW</span>
         </Link>
 
         {/* Desktop + non-landscape tab bar */}

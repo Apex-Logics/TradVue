@@ -939,7 +939,7 @@ export default function LandingPage() {
                   </div>
                   <div style={{ display: 'flex', alignItems: 'baseline', gap: '8px' }}>
                     <div style={{ fontSize: '40px', fontWeight: 800, letterSpacing: '-0.03em', color: 'var(--text-0)', lineHeight: 1 }}>
-                      $29
+                      $24
                     </div>
                     <div style={{ fontSize: '14px', color: 'var(--text-2)' }}>/month</div>
                   </div>

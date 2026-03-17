@@ -698,7 +698,7 @@ export default function HomeClient() {
           </button>
           {/* eslint-disable-next-line @next/next/no-img-element */}
           <img src="/logo-header.svg" alt="TradVue" className="header-logo-img" />
-          <span className="logo-badge">BETA</span>
+          <span className="logo-badge">NEW</span>
           <span className="header-motto">AI DRIVEN ALPHA</span>
         </div>
 
