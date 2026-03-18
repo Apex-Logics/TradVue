@@ -190,8 +190,8 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
     } else {
       // Batch: EDGAR is primary (30 most recent), Finnhub is fallback
       const edgarBatchPromise = Promise.race([
-        edgarForm4.getBatchInsiderTrades({ count: 40, maxXmlFetch: 30 }),
-        new Promise((_, reject) => setTimeout(() => reject(new Error('EDGAR batch timeout')), 10000)),
+        edgarForm4.getBatchInsiderTrades({ count: 30, maxXmlFetch: 20 }),
+        new Promise((_, reject) => setTimeout(() => reject(new Error('EDGAR batch timeout')), 35000)),
       ]);
 
       const [edgarResult, finnhubResult] = await Promise.allSettled([
