@@ -322,8 +322,8 @@ function AccountPageInner() {
               </div>
 
               <DetailRow label="Status" value={
-                sub.status === 'active' ? '✅ Active' :
-                sub.status === 'trialing' ? '🕐 Trial' :
+                sub.status === 'active' ? 'Active' :
+                sub.status === 'trialing' ? 'Trial' :
                 sub.status === 'past_due' ? 'Payment past due' :
                 sub.status
               } />
@@ -487,7 +487,7 @@ function AccountPageInner() {
                 cursor: 'pointer',
               }}
             >
-              🗑 Delete My Account
+Delete My Account
             </button>
           </div>
         </SectionCard>

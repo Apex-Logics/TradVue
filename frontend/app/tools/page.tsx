@@ -696,7 +696,7 @@ function FibonacciCalc() {
                 <div key={label} style={{ marginBottom: 8 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 3 }}>
                     <span style={{ fontSize: 11, color: FIB_COLORS[label] || 'var(--text-2)', fontWeight: label === '61.8%' ? 700 : 400, display: 'flex', alignItems: 'center', gap: 4 }}>
-                      {label === '61.8%' ? '⭐ ' : ''}{label}
+                      {label === '61.8%' ? '★ ' : ''}{label}
                       {label === '61.8%' && <Tooltip text="The Golden Ratio — the most important Fibonacci level. Derived from nature's mathematical constant φ (phi). Traders watch this level very closely." position="right" />}
                       {label === '38.2%' && <Tooltip text="Often the first strong support/resistance. A common retracement level in healthy trends." position="right" />}
                       {label === '50%' && <Tooltip text="Not technically a Fibonacci number, but widely watched as a psychological mid-point. Strong markets often bounce here." position="right" />}

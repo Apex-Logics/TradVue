@@ -180,8 +180,8 @@ function CalendarHeatmap({ entries }: { entries: RitualEntry[] }) {
                 'none'
 
               const title =
-                day.status === 'completed' ? `${day.date} ✅ Completed (P&L: ${day.entry ? formatPnl(day.entry.totalPnl) : '—'})` :
-                day.status === 'missed' ? `${day.date} ❌ Missed` :
+                day.status === 'completed' ? `${day.date} Completed (P&L: ${day.entry ? formatPnl(day.entry.totalPnl) : '—'})` :
+                day.status === 'missed' ? `${day.date} Missed` :
                 day.status === 'weekend' ? `${day.date} (Weekend)` :
                 day.date
 
@@ -457,7 +457,10 @@ function CompletedView({
       >
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
           <div style={{ fontSize: 13, color: 'var(--text-3, #666)' }}>Today's Ritual</div>
-          <div style={{ fontSize: 13, color: '#22c55e' }}>✅ Complete</div>
+          <div style={{ fontSize: 13, color: '#22c55e', display: 'flex', alignItems: 'center', gap: 4 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+                <polyline points="20 6 9 17 4 12"/>
+              </svg>Complete</div>
         </div>
 
         <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
@@ -1049,7 +1052,9 @@ function WizardFlow({
               marginBottom: 24,
             }}
           >
-            📎 Upload screenshot
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+              <path d="M21.44 11.05l-9.19 9.19a6 6 0 0 1-8.49-8.49l9.19-9.19a4 4 0 0 1 5.66 5.66l-9.2 9.19a2 2 0 0 1-2.83-2.83l8.49-8.48"/>
+            </svg>Upload screenshot
           </button>
 
           <div style={{ display: 'flex', gap: 10 }}>
@@ -1067,7 +1072,12 @@ function WizardFlow({
       {step === 4 && (
         <StepCard visible={visible}>
           <div style={{ textAlign: 'center', padding: '12px 0' }}>
-            <div style={{ fontSize: 64, marginBottom: 16 }}>✅</div>
+            <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+              <svg width="64" height="64" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="9 12 11 14 15 10"/>
+              </svg>
+            </div>
             <h2 style={{ fontSize: 28, fontWeight: 700, color: '#4a9eff', marginBottom: 8 }}>
               Done!
             </h2>

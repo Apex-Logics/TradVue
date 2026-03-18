@@ -873,7 +873,7 @@ function InlineEditNumber({
         onClick={() => setEditing(true)}
         style={{ fontSize: 10, color: 'var(--text-3)', background: 'none', border: 'none', cursor: 'pointer', padding: '1px 4px' }}
       >
-        ✎
+Edit
       </button>
     </div>
   )
@@ -1274,7 +1274,7 @@ function AccountDetail({ account, onBack, onUpdate }: {
               cursor: 'pointer',
             }}
           >
-            {editingRules ? 'Cancel' : '✎ Edit Rules'}
+            {editingRules ? 'Cancel' : 'Edit Rules'}
           </button>
         </div>
 

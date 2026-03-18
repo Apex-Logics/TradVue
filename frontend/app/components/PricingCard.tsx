@@ -119,7 +119,7 @@ export default function PricingCard({ userId, email, token, onCheckoutStart }: P
       <div style={cardStyle(true)}>
         {/* Badges */}
         <div style={{ display: 'flex', gap: 8, marginBottom: 4, flexWrap: 'wrap' }}>
-          <span style={badgeStyle('#6366f1', '#312e81')}>⭐ Most Popular</span>
+          <span style={badgeStyle('#6366f1', '#312e81')}>★ Most Popular</span>
           <span style={badgeStyle('#059669', '#064e3b')}>Save 30%</span>
         </div>
 

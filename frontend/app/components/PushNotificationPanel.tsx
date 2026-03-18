@@ -316,7 +316,7 @@ export default function PushNotificationPanel() {
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3, #666)' }}>
             {isOn
-              ? `Notifications: ON ✅  · ${formatDisplayTime(state.notificationTime)} ET`
+              ? `Notifications: ON · ${formatDisplayTime(state.notificationTime)} ET`
               : isDenied
               ? 'Notifications blocked in browser'
               : 'Get reminded at market close to log your trades'}

@@ -2018,7 +2018,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                       )}
                     </td>
                     <td style={{ padding: '10px 12px' }}>
-                      {locked ? '' : ('★'.repeat(t.rating) + '☆'.repeat(5 - t.rating))}
+                      {locked ? '' : ('★'.repeat(t.rating) + '○'.repeat(5 - t.rating))}
                     </td>
                     <td style={{ padding: '10px 12px' }}>
                       {!locked && (

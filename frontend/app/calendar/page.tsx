@@ -139,11 +139,11 @@ function MarketStatusBanner({ status }: { status: MarketStatus | null }) {
   if (!status) return null
 
   const SESSION_CONFIG: Record<string, { icon: string; color: string; bg: string; border: string }> = {
-    'Regular':     { icon: '🟢', color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)' },
-    'Pre-Market':  { icon: '🟡', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)' },
-    'After-Hours': { icon: '🟡', color: '#6366f1', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.25)' },
-    'Holiday':     { icon: '🏛️', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.25)' },
-    'Closed':      { icon: '🔴', color: '#ef4444', bg: 'rgba(239,68,68,0.07)',  border: 'rgba(239,68,68,0.2)'  },
+    'Regular':     { icon: '●', color: '#10b981', bg: 'rgba(16,185,129,0.08)',  border: 'rgba(16,185,129,0.25)' },
+    'Pre-Market':  { icon: '●', color: '#f59e0b', bg: 'rgba(245,158,11,0.08)', border: 'rgba(245,158,11,0.25)' },
+    'After-Hours': { icon: '●', color: '#6366f1', bg: 'rgba(99,102,241,0.08)', border: 'rgba(99,102,241,0.25)' },
+    'Holiday':     { icon: '●', color: '#8b5cf6', bg: 'rgba(139,92,246,0.08)', border: 'rgba(139,92,246,0.25)' },
+    'Closed':      { icon: '●', color: '#ef4444', bg: 'rgba(239,68,68,0.07)',  border: 'rgba(239,68,68,0.2)'  },
   }
   const cfg = SESSION_CONFIG[status.session] ?? SESSION_CONFIG['Closed']
 
@@ -178,7 +178,7 @@ function MarketStatusBanner({ status }: { status: MarketStatus | null }) {
       )}
       {status.holidays.length > 0 && (
         <span style={{ marginLeft: 'auto', color: 'var(--text-3)', fontSize: 10 }}>
-          Next holiday: {status.holidays[0]?.title?.replace('🏛️ Market Closed — ', '') || ''} ({status.holidays[0]?.date})
+          Next holiday: {status.holidays[0]?.title?.replace('🏛️ Market Closed — ', '').replace('Market Closed — ', '') || ''} ({status.holidays[0]?.date})
         </span>
       )}
     </div>
@@ -1219,7 +1219,7 @@ export default function CalendarPage() {
                                     alignItems: 'center',
                                     gap: 10,
                                   }}>
-                                    <span style={{ fontSize: 16 }}>🏛️</span>
+                                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M8 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg>
                                     <div>
                                       <div style={{ fontSize: 13, fontWeight: 700, color: '#8b5cf6' }}>
                                         {event.title.replace('🏛️ ', '')}
@@ -1393,7 +1393,7 @@ export default function CalendarPage() {
                           alignItems: 'center',
                           gap: 8,
                         }}>
-                          <span style={{ fontSize: 13 }}>🏛️</span>
+                          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="4" y="2" width="16" height="20" rx="1"/><path d="M9 22v-4h6v4"/><path d="M8 6h.01M16 6h.01M12 6h.01M12 10h.01M8 10h.01M16 10h.01M8 14h.01M12 14h.01M16 14h.01"/></svg>
                           <div style={{ flex: 1, minWidth: 0 }}>
                             <div style={{ fontSize: 11, fontWeight: 700, color: '#8b5cf6', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
                               {event.title.replace('🏛️ ', '')}

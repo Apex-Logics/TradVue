@@ -540,7 +540,7 @@ export default function AdminPage() {
       {/* Error banner */}
       {error && (
         <div style={{ background: 'rgba(255,69,96,0.12)', border: '1px solid rgba(255,69,96,0.3)', color: '#ff4560', padding: '10px 24px', fontSize: 13, display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span>⚠ {error}</span>
+          <span>Error: {error}</span>
           <button onClick={() => setError(null)} style={{ background: 'none', border: 'none', color: '#ff4560', cursor: 'pointer', fontSize: 16 }}>×</button>
         </div>
       )}
@@ -579,7 +579,7 @@ export default function AdminPage() {
 
             {/* Announcements section */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, padding: 24, marginBottom: 24 }}>
-              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>📣 Announcement Banner</h3>
+              <h3 style={{ fontSize: 15, fontWeight: 600, marginBottom: 16 }}>Announcement Banner</h3>
               {activeAnnouncement && (
                 <div style={{ marginBottom: 16, padding: '12px 16px', borderRadius: 8, background: 'rgba(74,158,255,0.08)', border: '1px solid rgba(74,158,255,0.2)', fontSize: 13 }}>
                   <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', gap: 12 }}>
@@ -727,14 +727,14 @@ export default function AdminPage() {
                         style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 14, padding: '2px 6px', borderRadius: 4, opacity: 0.6, transition: 'opacity 0.15s' }}
                         onMouseEnter={e => (e.currentTarget.style.opacity = '1', e.currentTarget.style.color = 'var(--red)')}
                         onMouseLeave={e => (e.currentTarget.style.opacity = '0.6', e.currentTarget.style.color = 'var(--text-2)')}>
-                        🗑
+                        ×
                       </button>
                     </div>
                   </div>
                   <p style={{ margin: '12px 0 8px', color: 'var(--text-0)', lineHeight: 1.5 }}>{f.message}</p>
                   <div style={{ display: 'flex', gap: 16, fontSize: 12, color: 'var(--text-2)', flexWrap: 'wrap' }}>
-                    {f.email && <span>✉ {f.email}</span>}
-                    {f.page_url && <span>🔗 {f.page_url}</span>}
+                    {f.email && <span>{f.email}</span>}
+                    {f.page_url && <span>{f.page_url}</span>}
                   </div>
                 </div>
               ))}
@@ -853,11 +853,16 @@ export default function AdminPage() {
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(180px, 1fr))', gap: 16, marginBottom: 28 }}>
               <StatCard label="MRR" value="$0" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="1" x2="12" y2="23"/><path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/></svg>} color="var(--green)" />
               <StatCard label="Active Subscribers" value="0" icon={<IconUsers />} color="var(--blue)" />
-              <StatCard label="Churn Rate" value="0%" icon={<span style={{ fontSize: 18 }}>📉</span>} color="#f97316" />
+              <StatCard label="Churn Rate" value="0%" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 18 13.5 8.5 8.5 13.5 1 6"/><polyline points="17 18 23 18 23 12"/></svg>} color="#f97316" />
               <StatCard label="Free→Pro Conversion" value="0%" icon={<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>} color="var(--accent)" />
             </div>
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, padding: 32, textAlign: 'center' }}>
-              <div style={{ fontSize: 40, marginBottom: 12 }}>💳</div>
+              <div style={{ marginBottom: 12, display: 'flex', justifyContent: 'center' }}>
+                <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="1" y="4" width="22" height="16" rx="2" ry="2"/>
+                  <line x1="1" y1="10" x2="23" y2="10"/>
+                </svg>
+              </div>
               <h3 style={{ fontSize: 16, fontWeight: 600, marginBottom: 8 }}>Revenue tracking will activate when Stripe is connected</h3>
               <p style={{ color: 'var(--text-2)', fontSize: 14, marginBottom: 24, maxWidth: 400, margin: '0 auto 24px' }}>
                 Connect Stripe to start tracking subscriptions, MRR, churn, and conversion metrics automatically.
@@ -900,7 +905,7 @@ export default function AdminPage() {
                   {emailConfirm ? (
                     <div style={{ display: 'flex', gap: 10, alignItems: 'center', flexWrap: 'wrap' }}>
                       <span style={{ fontSize: 14, color: '#f97316', fontWeight: 600 }}>
-                        ⚠ Send to {emailAudience === 'all' ? 'all' : emailAudience} users?
+                        Send to {emailAudience === 'all' ? 'all' : emailAudience} users?
                       </span>
                       <button onClick={sendEmail} disabled={emailSending}
                         style={{ background: '#f97316', border: 'none', borderRadius: 8, padding: '8px 20px', color: '#fff', cursor: emailSending ? 'not-allowed' : 'pointer', fontSize: 14, fontWeight: 600 }}>
@@ -1074,7 +1079,7 @@ export default function AdminPage() {
             {/* ── 3. Recent Failed Logins ───────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>🔑 Recent Failed Logins</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>Recent Failed Logins</span>
                 <span style={{ fontSize: 12, color: 'var(--text-2)' }}>Last 100 attempts</span>
                 <button onClick={() => setFailedLoginSort(s => s === 'desc' ? 'asc' : 'desc')}
                   style={{ marginLeft: 'auto', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-2)', cursor: 'pointer', fontSize: 12 }}>
@@ -1118,7 +1123,7 @@ export default function AdminPage() {
             {/* ── 4. Active Sessions ────────────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>👥 Active Sessions (last 24h)</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>Active Sessions (last 24h)</span>
                 <span style={{ background: 'rgba(34,197,94,0.12)', color: 'var(--green)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 10, fontSize: 11, padding: '2px 8px', fontWeight: 700 }}>{secActiveSessions.length} online</span>
               </div>
               <div style={{ overflowX: 'auto' }}>
@@ -1163,7 +1168,7 @@ export default function AdminPage() {
                   const isBlue = ev.action === 'signup' || ev.action === 'password_reset'
                   const color = isError ? '#ff4560' : isSuccess ? 'var(--green)' : isBlue ? 'var(--blue)' : 'var(--text-2)'
                   const bg = isError ? 'rgba(255,69,96,0.06)' : isSuccess ? 'rgba(34,197,94,0.04)' : isBlue ? 'rgba(74,158,255,0.06)' : 'transparent'
-                  const icon = isError ? '🔴' : isSuccess ? '🟢' : isBlue ? '🔵' : '⚪'
+                  const icon = isError ? '●' : isSuccess ? '●' : isBlue ? '●' : '○'
                   return (
                     <div key={ev.id || i} style={{ display: 'flex', alignItems: 'center', gap: 12, padding: '9px 20px', borderBottom: i < secActivityFeed.length - 1 ? '1px solid var(--border-b)' : 'none', background: bg, fontSize: 13 }}>
                       <span style={{ fontSize: 14, flexShrink: 0 }}>{icon}</span>
@@ -1202,14 +1207,14 @@ export default function AdminPage() {
                 </button>
                 <button onClick={() => exportFile('failed-logins-csv')}
                   style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '8px 14px', color: 'var(--green)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  ⬇ Export Failed Logins (CSV)
+Export Failed Logins (CSV)
                 </button>
                 <button onClick={() => exportFile('activity-csv')}
                   style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '8px 14px', color: 'var(--green)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  ⬇ Export Activity Log (CSV)
+Export Activity Log (CSV)
                 </button>
                 <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 14px', fontSize: 13, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                  🔄 Security monitor runs every 30 min
+Security monitor runs every 30 min
                 </div>
               </div>
             </div>
@@ -1217,7 +1222,7 @@ export default function AdminPage() {
             {/* ── 7. System Status ──────────────────────────────────────────── */}
             {secOverview && (
               <div style={{ background: 'var(--bg-1)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>🛡 Security Infrastructure Status</div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>Security Infrastructure Status</div>
                 <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(260px, 1fr))', gap: 10 }}>
                   {[
                     { label: 'Cloudflare', ok: secOverview.cloudflareEnabled, note: 'Active (proxied)' },
@@ -1234,7 +1239,13 @@ export default function AdminPage() {
                     { label: 'SSL Certificate', ok: (secOverview.sslDaysLeft ?? 99) > 30, note: secOverview.sslExpiry ? `Valid until ${fmtDate(secOverview.sslExpiry)} (${secOverview.sslDaysLeft}d left)` : 'Unknown' },
                   ].map(item => (
                     <div key={item.label} style={{ display: 'flex', alignItems: 'flex-start', gap: 10, padding: '8px 12px', background: 'var(--bg-2)', borderRadius: 8, border: `1px solid ${item.ok ? 'rgba(34,197,94,0.15)' : 'rgba(255,69,96,0.2)'}` }}>
-                      <span style={{ fontSize: 14, flexShrink: 0 }}>{item.ok ? '✅' : '❌'}</span>
+                      <span style={{ fontSize: 14, flexShrink: 0 }}>
+                      {item.ok ? (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#22c55e" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                      ) : (
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+                      )}
+                    </span>
                       <div>
                         <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-0)' }}>{item.label}</div>
                         <div style={{ fontSize: 12, color: 'var(--text-2)', marginTop: 2 }}>{item.note}</div>
@@ -1248,7 +1259,7 @@ export default function AdminPage() {
             {/* ── 8. Security Reports ───────────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>📄 Security Reports</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>Security Reports</span>
                 {secReports.length > 0 && (() => {
                   const latest = secReports[0]
                   return (
@@ -1299,7 +1310,7 @@ export default function AdminPage() {
                             </button>
                             <button onClick={() => exportFile(`pen-test-latest`)}
                               style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 5, padding: '4px 8px', fontSize: 11, cursor: 'pointer', color: 'var(--text-2)' }}>
-                              ⬇
+↓
                             </button>
                           </div>
                         </td>
@@ -1313,7 +1324,7 @@ export default function AdminPage() {
             {/* ── 9. Security Score History Chart ───────────────────────────── */}
             {secScoreHistory.length > 0 && (
               <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', marginBottom: 20 }}>
-                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 16 }}>📈 Security Score History</div>
+                <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 16 }}>Security Score History</div>
                 <div style={{ display: 'flex', alignItems: 'flex-end', gap: 8, height: 100, overflowX: 'auto', paddingBottom: 4 }}>
                   {secScoreHistory.map((entry, i) => {
                     const scoreVal = typeof entry.score === 'number' ? entry.score : (entry.status === 'PASS' ? 10 : 5)
@@ -1389,7 +1400,7 @@ export default function AdminPage() {
                             </td>
                             <td style={{ padding: '9px 16px' }}>
                               <span style={{ color, fontWeight: 600, fontSize: 12 }}>
-                                {isClean ? '✓' : isWarn ? '⚠' : '✗'} {a.result}
+                                {a.result}
                               </span>
                             </td>
                             <td style={{ padding: '9px 16px', color: 'var(--text-1)', fontSize: 12, maxWidth: 400, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>{a.details}</td>
@@ -1474,12 +1485,12 @@ export default function AdminPage() {
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 0, maxWidth: 860, width: '100%', maxHeight: '88vh', display: 'flex', flexDirection: 'column', overflow: 'hidden' }}
             onClick={e => e.stopPropagation()}>
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '16px 20px', borderBottom: '1px solid var(--border)' }}>
-              <div style={{ fontWeight: 700, fontSize: 15 }}>📄 {selectedReport?.filename ?? 'Loading…'}</div>
+              <div style={{ fontWeight: 700, fontSize: 15 }}>{selectedReport?.filename ?? 'Loading…'}</div>
               <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
                 {selectedReport && (
                   <button onClick={() => exportFile('pen-test-latest')}
                     style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '5px 10px', cursor: 'pointer', fontSize: 12, color: 'var(--text-1)', display: 'flex', alignItems: 'center', gap: 5 }}>
-                    ⬇ Download
+Download
                   </button>
                 )}
                 <button onClick={() => setSelectedReport(null)}

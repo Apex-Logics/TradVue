@@ -386,12 +386,12 @@ export default function BestTradingJournalPage() {
           </h2>
           <div className="seo-related-grid">
             {[
-              { href: '/prop-firm-tracker', title: 'Prop Firm Tracker', desc: 'Track drawdown & daily limits in real-time', emoji: '🎯' },
-              { href: '/trading-calculators', title: '30+ Calculators', desc: 'Position size, risk/reward, Greeks & more', emoji: '🔢' },
-              { href: '/futures-trading-journal', title: 'Futures Journal', desc: 'Track NQ, ES, CL with tick-based P&L', emoji: '📈' },
-              { href: '/options-trading-journal', title: 'Options Journal', desc: 'Track Greeks & multi-leg strategies', emoji: '⚡' },
-              { href: '/post-trade-ritual', title: 'Post-Trade Ritual', desc: 'Build your daily journaling habit', emoji: '🔥' },
-              { href: '/coach', title: 'AI Coach', desc: 'Get AI analysis of your trading patterns', emoji: '🧠' },
+              { href: '/prop-firm-tracker', title: 'Prop Firm Tracker', desc: 'Track drawdown & daily limits in real-time', emoji: '!' },
+              { href: '/trading-calculators', title: '30+ Calculators', desc: 'Position size, risk/reward, Greeks & more', emoji: '#' },
+              { href: '/futures-trading-journal', title: 'Futures Journal', desc: 'Track NQ, ES, CL with tick-based P&L', emoji: '^' },
+              { href: '/options-trading-journal', title: 'Options Journal', desc: 'Track Greeks & multi-leg strategies', emoji: '*' },
+              { href: '/post-trade-ritual', title: 'Post-Trade Ritual', desc: 'Build your daily journaling habit', emoji: '!' },
+              { href: '/coach', title: 'AI Coach', desc: 'Get AI analysis of your trading patterns', emoji: '?' },
             ].map(item => (
               <Link key={item.href} href={item.href} className="seo-related-card">
                 <div className="seo-related-card-title">{item.title}</div>

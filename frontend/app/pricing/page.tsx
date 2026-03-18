@@ -200,7 +200,11 @@ export default function PricingPage() {
     <div style={pageStyle}>
       {/* ── Header ─────────────────────────────────────────────────────────── */}
       <div style={{ textAlign: 'center', marginBottom: 48, maxWidth: 700 }}>
-        <div style={proBadgeStyle}>⚡ TradVue Pricing</div>
+        <div style={proBadgeStyle}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+          <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+        </svg>TradVue Pricing
+      </div>
         <h1 style={h1Style}>
           Simple, transparent pricing.
         </h1>
@@ -367,7 +371,10 @@ export default function PricingPage() {
                   : 'Upgrade to Pro →'}
             </button>
             <p style={{ fontSize: 11, color: '#6b7280', textAlign: 'center', marginTop: 10 }}>
-              🔒 Secure via Stripe · Cancel anytime
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>Secure via Stripe · Cancel anytime
             </p>
           </div>
         </div>
@@ -395,7 +402,9 @@ export default function PricingPage() {
                   <span style={{ color: '#d1d5db' }}>Free</span>
                 </th>
                 <th style={{ ...thStyle, ...thCenterStyle, background: 'rgba(99,102,241,0.15)' }}>
-                  <span style={{ color: '#a78bfa', fontWeight: 800 }}>Pro ⚡</span>
+                  <span style={{ color: '#a78bfa', fontWeight: 800 }}>Pro <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle' }}>
+                  <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+                </svg></span>
                 </th>
               </tr>
             </thead>
@@ -416,7 +425,7 @@ export default function PricingPage() {
 
         {/* Data policy note */}
         <div style={dataPolicyStyle}>
-          <span style={{ fontSize: 16, marginRight: 8 }}>🔐</span>
+          <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 8 }}><rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>
           <span>
             Your data is retained for as long as your account is active. We use commercially reasonable efforts to
             protect your data but cannot guarantee indefinite storage. Free tier data older than 30 days is locked

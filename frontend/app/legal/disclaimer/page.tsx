@@ -327,7 +327,7 @@ export default function DisclaimerPage() {
       <AcknowledgmentBox>
         By using TradVue, you certify that you have read this entire Disclaimer, understand the risks of
         trading and investing, acknowledge that TradVue provides no financial advice, and accept all
-        limitations and disclaimers outlined above. <strong>Use at Your Own Risk ⚠️</strong>
+        limitations and disclaimers outlined above. <strong>Use at Your Own Risk</strong>
       </AcknowledgmentBox>
 
     </LegalPage>

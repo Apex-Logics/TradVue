@@ -39,9 +39,9 @@ const STORAGE_KEY = 'ops_tasks'
 const DEPLOY_TIME_KEY = 'ops_last_deploy'
 
 const PRIORITY_EMOJI: Record<Priority, string> = {
-  high: '🔴',
-  medium: '🟡',
-  low: '🟢',
+  high: '●',
+  medium: '●',
+  low: '●',
 }
 
 const COLUMN_LABELS: Record<Column, string> = {
@@ -59,10 +59,10 @@ const COLUMN_ACCENT: Record<Column, string> = {
 }
 
 const AGENTS: AgentInfo[] = [
-  { name: 'Axle', emoji: '⚙️', model: 'claude-sonnet-4-6', status: 'idle', lastActive: 'Today' },
+  { name: 'Axle', emoji: '*', model: 'claude-sonnet-4-6', status: 'idle', lastActive: 'Today' },
   { name: 'Bolt', emoji: '', model: 'claude-sonnet-4-6', status: 'working', lastActive: 'Now' },
-  { name: 'Zip',  emoji: '🏃', model: 'claude-sonnet-4-6', status: 'idle',    lastActive: 'Today' },
-  { name: 'Nova', emoji: '✨', model: 'claude-sonnet-4-6', status: 'idle',    lastActive: 'Yesterday' },
+  { name: 'Zip',  emoji: '→', model: 'claude-sonnet-4-6', status: 'idle',    lastActive: 'Today' },
+  { name: 'Nova', emoji: '★', model: 'claude-sonnet-4-6', status: 'idle',    lastActive: 'Yesterday' },
 ]
 
 const INITIAL_TASKS: OpsTask[] = [
@@ -80,20 +80,20 @@ const INITIAL_TASKS: OpsTask[] = [
   // In Progress
   { id: 'ip1', title: 'Reddit account warm-up',                         agent: 'Erick', priority: 'medium', column: 'inprogress', createdAt: '2026-03-14', notes: '' },
   // Done
-  { id: 'd1',  title: 'Free Tier + Paywall system',                     agent: 'Bolt',  priority: 'high',   column: 'done',       createdAt: '2026-03-10', notes: '✅ Shipped' },
-  { id: 'd2',  title: 'AI Support Chatbot',                             agent: 'Bolt',  priority: 'medium', column: 'done',       createdAt: '2026-03-11', notes: '✅ Shipped' },
-  { id: 'd3',  title: 'Multi-broker CSV import (8 brokers)',            agent: 'Bolt',  priority: 'medium', column: 'done',       createdAt: '2026-03-12', notes: '✅ Shipped' },
-  { id: 'd4',  title: 'Calendar UX v2 + static fallback',              agent: 'Bolt',  priority: 'medium', column: 'done',       createdAt: '2026-03-13', notes: '✅ Shipped' },
-  { id: 'd5',  title: 'DBA filing',                                     agent: 'Erick', priority: 'high',   column: 'done',       createdAt: '2026-03-08', notes: '✅ Done' },
-  { id: 'd6',  title: 'Copyright deposit prep',                         agent: 'Axle',  priority: 'medium', column: 'done',       createdAt: '2026-03-09', notes: '✅ Done' },
+  { id: 'd1',  title: 'Free Tier + Paywall system',                     agent: 'Bolt',  priority: 'high',   column: 'done',       createdAt: '2026-03-10', notes: 'Shipped' },
+  { id: 'd2',  title: 'AI Support Chatbot',                             agent: 'Bolt',  priority: 'medium', column: 'done',       createdAt: '2026-03-11', notes: 'Shipped' },
+  { id: 'd3',  title: 'Multi-broker CSV import (8 brokers)',            agent: 'Bolt',  priority: 'medium', column: 'done',       createdAt: '2026-03-12', notes: 'Shipped' },
+  { id: 'd4',  title: 'Calendar UX v2 + static fallback',              agent: 'Bolt',  priority: 'medium', column: 'done',       createdAt: '2026-03-13', notes: 'Shipped' },
+  { id: 'd5',  title: 'DBA filing',                                     agent: 'Erick', priority: 'high',   column: 'done',       createdAt: '2026-03-08', notes: 'Done' },
+  { id: 'd6',  title: 'Copyright deposit prep',                         agent: 'Axle',  priority: 'medium', column: 'done',       createdAt: '2026-03-09', notes: 'Done' },
 ]
 
 const QUICK_LINKS = [
   { label: 'Render',    url: 'https://dashboard.render.com' },
-  { label: '🐙 GitHub',    url: 'https://github.com/Apex-Logics/TradVue' },
+  { label: 'GitHub',    url: 'https://github.com/Apex-Logics/TradVue' },
   { label: '▲ Vercel',     url: 'https://vercel.com/dashboard' },
-  { label: '🗄 Supabase',  url: 'https://supabase.com/dashboard' },
-  { label: '🌐 Prod Site', url: 'https://www.tradvue.com' },
+  { label: 'Supabase',  url: 'https://supabase.com/dashboard' },
+  { label: 'Prod Site', url: 'https://www.tradvue.com' },
 ]
 
 // ── Helpers ───────────────────────────────────────────────────────────────────
@@ -323,7 +323,7 @@ function AddTaskForm({ onAdd, onClose }: AddTaskFormProps) {
         borderRadius: 12, padding: 28, width: '100%', maxWidth: 480,
       }}>
         <h3 style={{ fontSize: 16, fontWeight: 700, marginBottom: 20, color: 'var(--text-0)' }}>
-          ➕ Add Task
+          + Add Task
         </h3>
         <form onSubmit={handleSubmit} style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <div>
@@ -341,19 +341,19 @@ function AddTaskForm({ onAdd, onClose }: AddTaskFormProps) {
             <div>
               <label style={labelStyle}>Agent</label>
               <select value={agent} onChange={e => setAgent(e.target.value as AgentName)} style={inputStyle}>
-                <option value="Axle">Axle ⚙️</option>
+                <option value="Axle">Axle</option>
                 <option value="Bolt">Bolt</option>
-                <option value="Zip">Zip 🏃</option>
-                <option value="Nova">Nova ✨</option>
+                <option value="Zip">Zip</option>
+                <option value="Nova">Nova</option>
                 <option value="Erick">Erick</option>
               </select>
             </div>
             <div>
               <label style={labelStyle}>Priority</label>
               <select value={priority} onChange={e => setPriority(e.target.value as Priority)} style={inputStyle}>
-                <option value="high">🔴 High</option>
-                <option value="medium">🟡 Medium</option>
-                <option value="low">🟢 Low</option>
+                <option value="high">High</option>
+                <option value="medium">Medium</option>
+                <option value="low">Low</option>
               </select>
             </div>
           </div>
@@ -494,7 +494,7 @@ function QuickStatsPanel({ tasks }: { tasks: OpsTask[] }) {
             { label: 'In Progress', value: counts.inprogress,  color: 'var(--blue)' },
             { label: 'Done',        value: counts.done,        color: 'var(--green)' },
             { label: 'Blocked',     value: counts.blocked,     color: 'var(--red)' },
-            { label: '🔴 High Pri', value: counts.high,        color: 'var(--red)' },
+            { label: 'High Pri', value: counts.high,        color: 'var(--red)' },
           ].map(s => (
             <div key={s.label} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 13 }}>
               <span style={{ color: 'var(--text-2)' }}>{s.label}</span>
@@ -509,7 +509,7 @@ function QuickStatsPanel({ tasks }: { tasks: OpsTask[] }) {
             <span style={{ fontSize: 11, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.5px', fontWeight: 600 }}>Last Deploy</span>
             <button onClick={() => { setEditingDeploy(true); setDeployInput(deployTime) }}
               style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 11, padding: 2 }}>
-              ✏️
+Edit
             </button>
           </div>
           {editingDeploy ? (
@@ -534,7 +534,7 @@ function QuickStatsPanel({ tasks }: { tasks: OpsTask[] }) {
       {/* Links */}
       <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 10, padding: '18px 20px' }}>
         <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          🔗 Quick Links
+          Quick Links
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {QUICK_LINKS.map(link => (
@@ -648,7 +648,9 @@ export default function OpsPage() {
       <header style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-1)', padding: '0 24px', position: 'sticky', top: 0, zIndex: 50 }}>
         <div style={{ maxWidth: 1400, margin: '0 auto', display: 'flex', alignItems: 'center', justifyContent: 'space-between', height: 58 }}>
           <div style={{ display: 'flex', alignItems: 'center', gap: 10 }}>
-            <span style={{ fontSize: 20 }}>⚙️</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 0 0 .33 1.82l.06.06a2 2 0 0 1-2.83 2.83l-.06-.06a1.65 1.65 0 0 0-1.82-.33 1.65 1.65 0 0 0-1 1.51V21a2 2 0 0 1-4 0v-.09A1.65 1.65 0 0 0 9 19.4a1.65 1.65 0 0 0-1.82.33l-.06.06a2 2 0 0 1-2.83-2.83l.06-.06A1.65 1.65 0 0 0 4.68 15a1.65 1.65 0 0 0-1.51-1H3a2 2 0 0 1 0-4h.09A1.65 1.65 0 0 0 4.6 9a1.65 1.65 0 0 0-.33-1.82l-.06-.06a2 2 0 0 1 2.83-2.83l.06.06A1.65 1.65 0 0 0 9 4.68a1.65 1.65 0 0 0 1-1.51V3a2 2 0 0 1 4 0v.09a1.65 1.65 0 0 0 1 1.51 1.65 1.65 0 0 0 1.82-.33l.06-.06a2 2 0 0 1 2.83 2.83l-.06.06A1.65 1.65 0 0 0 19.4 9a1.65 1.65 0 0 0 1.51 1H21a2 2 0 0 1 0 4h-.09a1.65 1.65 0 0 0-1.51 1z"/>
+            </svg>
             <span style={{ fontWeight: 700, fontSize: 17, letterSpacing: '-0.3px' }}>
               ApexLogics <span style={{ color: 'var(--accent)' }}>Ops</span>
             </span>
@@ -673,7 +675,7 @@ export default function OpsPage() {
         {/* ── Section A: Kanban Board ──────────────────────────────────────── */}
         <section>
           <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>
-            🗂 Task Board
+            Task Board
           </h2>
           <div
             style={{ display: 'flex', gap: 14, overflowX: 'auto', paddingBottom: 8 }}

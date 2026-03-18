@@ -316,10 +316,10 @@ export default function PropFirmTrackerPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>You Might Also Like</h2>
           <div className="seo-related-grid">
             {[
-              { href: '/propfirm', title: 'Prop Firm App', desc: 'The actual prop firm account manager tool', emoji: '🎯' },
-              { href: '/journal', title: 'Trading Journal', desc: 'Log every trade and analyze your patterns', emoji: '📓' },
-              { href: '/tools', title: 'Trading Calculators', desc: '30+ free calculators including position sizing', emoji: '🔢' },
-              { href: '/best-trading-journal', title: 'Best Trading Journal Guide', desc: 'Why TradVue is the best journal for day traders', emoji: '🏆' },
+              { href: '/propfirm', title: 'Prop Firm App', desc: 'The actual prop firm account manager tool', emoji: '!' },
+              { href: '/journal', title: 'Trading Journal', desc: 'Log every trade and analyze your patterns', emoji: '#' },
+              { href: '/tools', title: 'Trading Calculators', desc: '30+ free calculators including position sizing', emoji: '#' },
+              { href: '/best-trading-journal', title: 'Best Trading Journal Guide', desc: 'Why TradVue is the best journal for day traders', emoji: '1' },
             ].map(item => (
               <Link key={item.href} href={item.href} className="seo-related-card">
                 <div className="seo-related-card-title">{item.title}</div>

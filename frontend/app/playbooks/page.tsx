@@ -579,7 +579,7 @@ function PlaybookModal({
       }}>
         <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 24 }}>
           <h2 style={{ margin: 0, fontSize: 18, fontWeight: 800, color: 'var(--text-0)' }}>
-            {isNew ? '+ Create Playbook' : '✎ Edit Playbook'}
+            {isNew ? '+ Create Playbook' : 'Edit Playbook'}
           </h2>
           <button onClick={onClose} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-2)', fontSize: 18, lineHeight: 1, padding: 4 }}>✕</button>
         </div>

@@ -539,7 +539,11 @@ export default function CoachPage() {
             alignItems: 'flex-start',
             gap: 12,
           }}>
-            <span style={{ fontSize: 20 }}>🔕</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                <line x1="1" y1="1" x2="23" y2="23"/>
+              </svg>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>
                 AI Coach is currently disabled

@@ -28,7 +28,9 @@ function PortfolioSyncBadge() {
   if (canSync || tier === 'paid') {
     return (
       <span style={{ fontSize: 10, color: 'var(--green)', background: 'var(--green-dim)', padding: '2px 8px', borderRadius: 10 }}>
-        ☁ Cloud Sync
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+        </svg>Cloud Sync
       </span>
     )
   }
@@ -48,7 +50,9 @@ function PortfolioSyncBadge() {
           cursor: 'pointer',
         }}
       >
-        ☁ Upgrade to sync
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+          <path d="M18 10h-1.26A8 8 0 1 0 9 20h9a5 5 0 0 0 0-10z"/>
+        </svg>Upgrade to sync
       </button>
       {showUpgrade && (
         <UpgradePromptDynamic
@@ -858,10 +862,14 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
             >
               <input ref={fileRef} type="file" accept=".csv,text/csv" onChange={handleFile} style={{ display: 'none' }} data-testid="import-file-input" />
               {file ? (
-                <div style={{ color: 'var(--green)', fontWeight: 600 }}>📄 {file.name} ({(file.size / 1024).toFixed(1)} KB)</div>
+                <div style={{ color: 'var(--green)', fontWeight: 600 }}>{file.name} ({(file.size / 1024).toFixed(1)} KB)</div>
               ) : (
                 <>
-                  <div style={{ fontSize: 28, marginBottom: 8 }}>📂</div>
+                  <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+                    <svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                      <path d="M22 19a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2V5a2 2 0 0 1 2-2h5l2 3h9a2 2 0 0 1 2 2z"/>
+                    </svg>
+                  </div>
                   <div style={{ fontSize: 13, fontWeight: 600, color: 'var(--text-1)', marginBottom: 4 }}>Click to select a CSV file</div>
                   <div style={{ fontSize: 11, color: 'var(--text-3)' }}>CSV files up to 5MB</div>
                 </>
@@ -898,14 +906,14 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
               </div>
               {hasConflicts && (
                 <div style={{ fontSize: 11, color: 'var(--yellow)', marginTop: 4 }}>
-                  ⚠ {conflicts.length} ticker{conflicts.length > 1 ? 's' : ''} already exist in your portfolio ({conflicts.map(c => c.ticker).join(', ')})
+                  <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{conflicts.length} ticker{conflicts.length > 1 ? 's' : ''} already exist in your portfolio ({conflicts.map(c => c.ticker).join(', ')})
                 </div>
               )}
             </div>
 
             {parseErrors.length > 0 && (
               <div style={{ background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8, padding: '10px 14px', marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--yellow)', marginBottom: 4 }}>⚠ {parseErrors.length} rows had issues</div>
+                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--yellow)', marginBottom: 4 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{parseErrors.length} rows had issues</div>
                 {parseErrors.slice(0, 3).map((e, i) => <div key={i} style={{ fontSize: 10, color: 'var(--text-2)', fontFamily: 'var(--mono)' }}>{e}</div>)}
                 {parseErrors.length > 3 && <div style={{ fontSize: 10, color: 'var(--text-2)' }}>…and {parseErrors.length - 3} more</div>}
               </div>
@@ -932,7 +940,7 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
                         <td style={{ padding: '7px 10px', color: 'var(--text-2)', fontSize: 10 }}>{h.sector || '—'}</td>
                         <td style={{ padding: '7px 10px' }}>
                           {isConflict
-                            ? <span style={{ fontSize: 9, color: 'var(--yellow)', background: 'rgba(245,158,11,0.15)', padding: '2px 6px', borderRadius: 10 }}>⚠ Conflict</span>
+                            ? <span style={{ fontSize: 9, color: 'var(--yellow)', background: 'rgba(245,158,11,0.15)', padding: '2px 6px', borderRadius: 10 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Conflict</span>
                             : <span style={{ fontSize: 9, color: 'var(--green)', background: 'rgba(0,192,106,0.12)', padding: '2px 6px', borderRadius: 10 }}>✓ New</span>}
                         </td>
                       </tr>
@@ -959,7 +967,7 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
         {step === 'merge' && (
           <>
             <div style={{ marginBottom: 16, padding: '14px', background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)', borderRadius: 8 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--yellow)', marginBottom: 8 }}>⚠ Conflict Resolution Required</div>
+              <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--yellow)', marginBottom: 8 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Conflict Resolution Required</div>
               <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 12 }}>
                 The following tickers already exist in your portfolio:<br />
                 <strong style={{ color: 'var(--text-1)' }}>{conflicts.map(c => c.ticker).join(', ')}</strong>
@@ -2288,7 +2296,7 @@ function HoldingsTab({
                     <td style={cell}>{alloc.toFixed(1)}%</td>
                     <td style={{ ...cell, color: hasOverride ? 'var(--yellow)' : 'var(--text-0)' }}>
                       {privacyMode ? '•••' : `$${fmt(h.annualDividend, 4)}`}
-                      {hasOverride && !privacyMode && <span style={{ fontSize: 8, marginLeft: 3, color: 'var(--yellow)' }}>✎</span>}
+                      {hasOverride && !privacyMode && <span style={{ fontSize: 8, marginLeft: 3, color: 'var(--yellow)' }}>*</span>}
                     </td>
                     <td style={{ ...cell, fontSize: 9.5, color: 'var(--text-3)' }}>
                       {info?.dividendFrequency ? info.dividendFrequency.slice(0, 3).toUpperCase() : '—'}
@@ -2725,7 +2733,7 @@ function DividendsTab({
                               ) : (
                                 <span style={{ color: isOverride ? 'var(--yellow)' : isAuto ? 'var(--green)' : 'var(--text-3)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
                                   {val > 0 ? `$${fmt(val)}` : '—'}
-                                  {isOverride && <span style={{ fontSize: 8, opacity: 0.7 }}>✎</span>}
+                                  {isOverride && <span style={{ fontSize: 8, opacity: 0.7 }}>*</span>}
                                 </span>
                               )}
                             </td>
@@ -3698,7 +3706,7 @@ function IncomeCalendar({ holdings, stockInfos }: {
       </div>
 
       <div style={{ fontSize: 9.5, color: 'var(--text-3)', marginTop: 12, borderTop: '1px solid var(--border-b)', paddingTop: 8 }}>
-        ⚠ Projected dividends are estimates based on current rates. Payment dates are approximate. Dividends can be cut, increased, or skipped at any time. Not financial advice.
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Projected dividends are estimates based on current rates. Payment dates are approximate. Dividends can be cut, increased, or skipped at any time. Not financial advice.
       </div>
     </div>
   )
@@ -4177,7 +4185,7 @@ function PortfolioRiskScore({ holdingsEnriched, stockInfos, totalMarketValue }: 
     { label: 'Volatility Proxy', pts: volatilityPts,     max: 25,
       sub: `Weighted beta: ${portfolioBeta.toFixed(2)}` },
     { label: 'Asset Class Mix',  pts: assetClassPts,     max: 20,
-      sub: `${hasBonds ? '✓ Bonds ' : '✗ No bonds  '}${hasGold ? '✓ Gold ' : ''}${hasCrypto ? '⚠ Crypto' : ''}` },
+      sub: `${hasBonds ? '✓ Bonds ' : '✗ No bonds  '}${hasGold ? '✓ Gold ' : ''}${hasCrypto ? 'Crypto' : ''}` },
   ]
   const factorColors = factors.map(f =>
     f.pts / f.max > 0.66 ? 'var(--red)' : f.pts / f.max > 0.33 ? 'var(--yellow)' : 'var(--green)'
@@ -4283,7 +4291,10 @@ function PortfolioRiskScore({ holdingsEnriched, stockInfos, totalMarketValue }: 
           {/* How to improve */}
           <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px' }}>
             <div style={{ fontSize: 10, fontWeight: 700, color: 'var(--text-2)', letterSpacing: '0.05em', marginBottom: 8 }}>
-              💡 HOW TO IMPROVE
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                <line x1="9" y1="18" x2="15" y2="18"/><line x1="10" y1="22" x2="14" y2="22"/>
+                <path d="M15.09 14c.18-.98.65-1.74 1.41-2.5A4.65 4.65 0 0 0 18 8 6 6 0 0 0 6 8c0 1 .23 2.23 1.5 3.5A4.61 4.61 0 0 1 8.91 14"/>
+              </svg>HOW TO IMPROVE
             </div>
             {suggestions.map((s, i) => (
               <div key={i} style={{
@@ -4298,7 +4309,7 @@ function PortfolioRiskScore({ holdingsEnriched, stockInfos, totalMarketValue }: 
       </div>
 
       <div style={{ fontSize: 9.5, color: 'var(--text-3)', marginTop: 14, borderTop: '1px solid var(--border-b)', paddingTop: 8 }}>
-        ⚠ Risk score is a simplified estimate using hardcoded sector/beta data — for educational purposes only. Not financial advice. Higher score = historically higher risk factors, not guaranteed losses.
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Risk score is a simplified estimate using hardcoded sector/beta data — for educational purposes only. Not financial advice. Higher score = historically higher risk factors, not guaranteed losses.
       </div>
     </div>
   )
@@ -4438,7 +4449,7 @@ function AllocationTargetsSection({ holdingsEnriched, totalMarketValue, portfoli
             <input type="number" value={newPct} onChange={e => setNewPct(e.target.value)} placeholder="%" min="0" max="100" style={{ fontSize: 11, padding: '4px 8px', background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 4, color: 'var(--text-0)', width: 60 }} />
             <button onClick={addTarget} style={{ fontSize: 11, color: '#fff', cursor: 'pointer', padding: '4px 10px', border: 'none', borderRadius: 4, background: 'var(--accent)' }}>Add</button>
           </div>
-          {totalTargetPct > 0 && <div style={{ fontSize: 10, color: totalTargetPct > 100 ? 'var(--red)' : 'var(--text-3)' }}>Total: {totalTargetPct.toFixed(1)}% {totalTargetPct > 100 ? '⚠ exceeds 100%' : ''}</div>}
+          {totalTargetPct > 0 && <div style={{ fontSize: 10, color: totalTargetPct > 100 ? 'var(--red)' : 'var(--text-3)' }}>Total: {totalTargetPct.toFixed(1)}% {totalTargetPct > 100 ? 'exceeds 100%' : ''}</div>}
           <div style={{ display: 'flex', flexDirection: 'column', gap: 4, marginTop: 8 }}>
             {draftTargets.map(t => (
               <div key={t.sector} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 11, background: 'var(--bg-3)', padding: '4px 8px', borderRadius: 4 }}>
@@ -4616,7 +4627,7 @@ function RiskMetricsSection({ holdingsEnriched, stockInfos, totalMarketValue }: 
         ))}
       </div>
       <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 10, fontStyle: 'italic' }}>
-        ⚠ Risk metrics are estimates based on limited historical data. Sharpe uses 5% risk-free rate. Not financial advice.
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Risk metrics are estimates based on limited historical data. Sharpe uses 5% risk-free rate. Not financial advice.
       </div>
     </div>
   )
@@ -5043,7 +5054,7 @@ function DRIPTab({
   if (holdingsEnriched.length === 0) {
     return (
       <div style={{ textAlign: 'center', padding: '60px 20px', color: 'var(--text-3)' }}>
-        <div style={{ fontSize: 28, marginBottom: 10 }}>♻</div>
+        <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}><svg width="28" height="28" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1.5 8.5 3 7 6.5 10.5"/><path d="M3 7c2-3 5-4 8-4a9 9 0 0 1 9 9"/><polyline points="22.5 15.5 21 17 17.5 13.5"/><path d="M21 17c-2 3-5 4-8 4a9 9 0 0 1-9-9"/></svg></div>
         <div style={{ fontSize: 14, color: 'var(--text-2)' }}>Add holdings in the Holdings tab to see DRIP projections.</div>
       </div>
     )
@@ -5059,7 +5070,7 @@ function DRIPTab({
           style={{ width: '100%', textAlign: 'left', padding: '12px 16px', background: 'transparent', border: 'none', cursor: 'pointer', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}
         >
           <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-            <span style={{ fontSize: 16, color: 'var(--accent)' }}>♻</span>
+            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><polyline points="1.5 8.5 3 7 6.5 10.5"/><path d="M3 7c2-3 5-4 8-4a9 9 0 0 1 9 9"/><polyline points="22.5 15.5 21 17 17.5 13.5"/><path d="M21 17c-2 3-5 4-8 4a9 9 0 0 1-9-9"/></svg>
             <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>What is DRIP?</span>
             <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '1px 7px', borderRadius: 10 }}>Dividend Reinvestment Plan</span>
           </div>
@@ -5072,10 +5083,10 @@ function DRIPTab({
             </p>
             <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(190px, 1fr))', gap: 10 }}>
               {[
-                { icon: '📈', title: 'Compound growth', desc: 'More shares → more dividends → more shares. The gap widens every single year.' },
-                { icon: '🔄', title: 'Fully automatic', desc: 'Set it once in your brokerage. Dividends buy fractional shares without any action needed.' },
-                { icon: '💸', title: 'No cash drag', desc: 'Every dividend dollar goes straight back to work — no idle cash sitting uninvested.' },
-                { icon: '⏳', title: 'Time is the engine', desc: 'The longer you hold, the more compounding dominates. Starting early matters enormously.' },
+                { icon: '↗', title: 'Compound growth', desc: 'More shares → more dividends → more shares. The gap widens every single year.' },
+                { icon: '↻', title: 'Fully automatic', desc: 'Set it once in your brokerage. Dividends buy fractional shares without any action needed.' },
+                { icon: '$', title: 'No cash drag', desc: 'Every dividend dollar goes straight back to work — no idle cash sitting uninvested.' },
+                { icon: '◷', title: 'Time is the engine', desc: 'The longer you hold, the more compounding dominates. Starting early matters enormously.' },
               ].map(c => (
                 <div key={c.title} style={{ background: 'var(--bg-3)', borderRadius: 6, padding: '10px 12px' }}>
                   <div style={{ fontSize: 13, marginBottom: 4 }}>{c.icon} <strong style={{ fontSize: 12, color: 'var(--text-0)' }}>{c.title}</strong></div>
@@ -5269,7 +5280,7 @@ function DRIPTab({
                       fontWeight: dripOn ? 700 : 400, transition: 'all 0.15s',
                     }}
                   >
-                    {dripOn ? '♻ DRIP ON' : '○ DRIP OFF'}
+                    {dripOn ? 'DRIP ON' : '○ DRIP OFF'}
                   </button>
                 )}
               </div>
@@ -5326,7 +5337,7 @@ function DRIPTab({
                       {/* With DRIP */}
                       <tr style={{ background: dripOn ? 'rgba(0,192,106,0.04)' : 'var(--bg-1)' }}>
                         <td style={{ padding: '9px 10px', fontSize: 11, color: 'var(--green)', fontWeight: 600 }}>
-                          ♻ With DRIP{dripOn && <span style={{ fontSize: 9, marginLeft: 5, color: 'var(--green)', opacity: 0.8 }}>active</span>}
+                          ↻ With DRIP{dripOn && <span style={{ fontSize: 9, marginLeft: 5, color: 'var(--green)', opacity: 0.8 }}>active</span>}
                         </td>
                         {PROJ_YEARS.map(yr => {
                           const pDrip  = projectHolding(h, yr, true,  yld)
@@ -5355,7 +5366,7 @@ function DRIPTab({
 
       {/* Disclaimer */}
       <div style={{ fontSize: 10, color: 'var(--text-3)', padding: '12px 0', borderTop: '1px solid var(--border)', fontStyle: 'italic' }}>
-        ⚠ DRIP projections are estimates for illustrative purposes only. Actual results depend on price fluctuations, dividend changes, taxes, and transaction costs. Assumes constant dividend yield over time. Not financial or investment advice. Consult a qualified financial professional.
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>DRIP projections are estimates for illustrative purposes only. Actual results depend on price fluctuations, dividend changes, taxes, and transaction costs. Assumes constant dividend yield over time. Not financial or investment advice. Consult a qualified financial professional.
       </div>
     </div>
   )

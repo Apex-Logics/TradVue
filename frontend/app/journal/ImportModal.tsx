@@ -442,7 +442,7 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
                         <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>{t.positionSize}</td>
                         <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.commissions.toFixed(2)}</td>
                         <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                          {t._unmatched ? '⚠ Open' : fmtDollar(t.pnl)}
+                          {t._unmatched ? '? Open' : fmtDollar(t.pnl)}
                         </td>
                       </tr>
                     ))}

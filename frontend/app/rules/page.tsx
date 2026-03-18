@@ -596,7 +596,7 @@ export default function RulesPage() {
               {summary.total === 0
                 ? 'Enable rules below to start tracking your discipline.'
                 : summary.followed === summary.total
-                  ? '✅ All rules on track today.'
+                  ? 'All rules on track today.'
                   : `${summary.total - summary.followed} rule${summary.total - summary.followed !== 1 ? 's' : ''} triggered today.`}
             </div>
             {violations.filter(v => !v.acknowledged && v.severity === 'violation').length > 0 && (
@@ -676,7 +676,7 @@ export default function RulesPage() {
             background: 'var(--surface)',
           }}
         >
-          ⚖️ <strong>Disclaimer:</strong> Trading rules are self-set guidelines for personal discipline. TradVue does not enforce, monitor, or guarantee compliance with any trading rules. This tool is for self-accountability only.
+          <strong>Disclaimer:</strong> Trading rules are self-set guidelines for personal discipline. TradVue does not enforce, monitor, or guarantee compliance with any trading rules. This tool is for self-accountability only.
         </div>
       </main>
 

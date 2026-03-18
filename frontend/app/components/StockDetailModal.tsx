@@ -140,7 +140,7 @@ export default function StockDetailModal({
 
   const isUp = quote ? quote.changePct >= 0 : true
 
-  const expandIcon  = chartSize === 'fullscreen' ? '⤡' : '⛶'
+  const expandIcon  = chartSize === 'fullscreen' ? '↙' : '↗'
   const expandTitle = chartSize === 'default'
     ? 'Expand chart (F)'
     : chartSize === 'expanded'
@@ -261,7 +261,7 @@ export default function StockDetailModal({
             onClick={onAddWatchlist}
             aria-label={inWatchlist ? `${symbol} is in your watchlist` : `Add ${symbol} to watchlist`}
           >
-            {inWatchlist ? '★ In Watchlist' : '☆ Add to Watchlist'}
+            {inWatchlist ? '★ In Watchlist' : '+ Add to Watchlist'}
           </button>
         </div>
       </div>
