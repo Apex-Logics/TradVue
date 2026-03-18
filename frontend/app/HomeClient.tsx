@@ -721,6 +721,7 @@ export default function HomeClient() {
           <a href="/portfolio" className={`nav-item${activeNav === 'Portfolio' ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Portfolio</a>
           <a href="/tools"     className={`nav-item${activeNav === 'Tools'     ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Tools</a>
           <a href="/journal"   className={`nav-item${activeNav === 'Journal'   ? ' active' : ''}`} style={{ textDecoration: 'none' }}>Journal</a>
+          <a href="/pricing"   className="nav-item" style={{ textDecoration: 'none', color: 'var(--purple)', fontWeight: 600 }}>⚡ Upgrade</a>
           {/* ── More dropdown ──────────────────────────────────────────────── */}
           <div ref={moreDropdownRef} style={{ position: 'relative', display: 'inline-block' }}>
             <button
