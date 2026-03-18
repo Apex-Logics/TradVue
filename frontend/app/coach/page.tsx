@@ -6,6 +6,8 @@ import { useSettings } from '../context/SettingsContext'
 import { getUserTier } from '../utils/tierAccess'
 import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
+import dynamic from 'next/dynamic'
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 import { IconBrain, IconCheck, IconInfo, IconAlert, IconZap, IconTrendingUp, IconTrendingDown } from '../components/Icons'
 import { generateWeeklySummary, getThresholdInfo, type ThresholdInfo } from '../utils/coachEngine'
 import { loadCoachSummaries, type WeeklySummary, type CoachInsight } from '../utils/coachData'
@@ -454,9 +456,140 @@ export default function CoachPage() {
   const [generating, setGenerating] = useState(false)
   const [tradeCount, setTradeCount] = useState(0)
   const [thresholdInfo, setThresholdInfo] = useState<ThresholdInfo>(() => getThresholdInfo(0))
+  const [authModalOpen, setAuthModalOpen] = useState(false)
+
+  const tier = getUserTier(user)
+  const isDemo = tier === 'demo'
+
+  // Sample data for demo mode — matches demo journal trades (9 trades, Mar 10-14 2026)
+  // win rate 88.9%, net P&L +$3,610, avg R 1.47
+  const DEMO_SUMMARIES: WeeklySummary[] = [
+    {
+      id: 'demo-week-1',
+      weekStart: '2026-03-10',
+      weekEnd: '2026-03-14',
+      totalTrades: 9,
+      winRate: 0.889,
+      totalPnl: 3610,
+      avgWinner: 457,
+      avgLoser: 46,
+      profitFactor: 9.54,
+      bestDay: { date: '2026-03-14', pnl: 1614 },
+      worstDay: { date: '2026-03-10', pnl: -46 },
+      insights: [
+        {
+          id: 'demo-i1',
+          type: 'pattern',
+          severity: 'positive',
+          title: 'Momentum Setups Outperforming',
+          description: 'Your NQ, NVDA, and META momentum trades have a 100% win rate this week. Entry timing is precise and you are cutting losses immediately when the thesis fails.',
+          metric: '5/5 momentum trades won — 100% win rate',
+          recommendation: 'Continue prioritizing momentum setups in the first 90 minutes. The data shows your edge is clearest on high-volume breakouts above key levels.',
+          dataPoints: 5,
+          createdAt: '2026-03-14T16:00:00Z',
+        },
+        {
+          id: 'demo-i2',
+          type: 'pattern',
+          severity: 'warning',
+          title: 'Early Exit Pattern on Winners',
+          description: 'Two trades this week were closed well before the take-profit target. TSLA was exited at $416.80 with roughly $53 remaining to target. This pattern reduces your average R-multiple.',
+          metric: 'Avg realized R: 1.47 vs avg potential R: 1.91',
+          recommendation: 'Review your exit rules. Consider using a trailing stop on A+ setups instead of a fixed time-based exit. Let winners run to the planned target before adjusting.',
+          dataPoints: 9,
+          createdAt: '2026-03-14T16:00:00Z',
+        },
+        {
+          id: 'demo-i3',
+          type: 'time_analysis',
+          severity: 'positive',
+          title: 'Morning Session Dominates',
+          description: 'All winning trades this week occurred between 9:42 AM and 11:30 AM Eastern. Your one losing trade was taken at 1:15 PM. Your edge is concentrated in the first two hours of the session.',
+          metric: '8/8 morning trades won — 0/1 afternoon trades won',
+          recommendation: 'Consider a hard cutoff at noon. The data strongly suggests your pattern recognition and discipline decrease in afternoon sessions.',
+          dataPoints: 9,
+          createdAt: '2026-03-14T16:00:00Z',
+        },
+        {
+          id: 'demo-i4',
+          type: 'risk',
+          severity: 'neutral',
+          title: 'Futures vs Stocks Edge',
+          description: 'Futures trades (NQ, ES, CL) generated $2,134 across 3 trades at an average R of 1.79. Stock trades generated $595 across 5 winning trades at an average R of 1.39. Your futures discipline is measurably stronger.',
+          metric: 'Futures avg R: 1.79 | Stocks avg R: 1.39',
+          recommendation: 'The numbers support shifting a larger percentage of capital to futures setups. Continue logging to validate this trend over 20+ trades.',
+          dataPoints: 9,
+          createdAt: '2026-03-14T16:00:00Z',
+        },
+      ],
+      generatedAt: '2026-03-14T16:30:00Z',
+    },
+    {
+      id: 'demo-week-2',
+      weekStart: '2026-03-03',
+      weekEnd: '2026-03-07',
+      totalTrades: 6,
+      winRate: 0.667,
+      totalPnl: 842,
+      avgWinner: 281,
+      avgLoser: 122,
+      profitFactor: 3.45,
+      bestDay: { date: '2026-03-05', pnl: 428 },
+      worstDay: { date: '2026-03-07', pnl: -244 },
+      insights: [
+        {
+          id: 'demo-j1',
+          type: 'pattern',
+          severity: 'warning',
+          title: 'Late-Week Performance Drop',
+          description: 'Both losses this week occurred on Friday afternoon. The pattern matches prior weeks where post-2 PM Friday trades underperform. Consider reducing size or stopping early on Fridays.',
+          metric: 'Friday P&L: -$244 | Monday–Thursday P&L: +$1,086',
+          recommendation: 'Log whether you are taking Friday trades out of boredom or FOMO. A simple rule — no new positions after 1 PM on Fridays — may improve the weekly result significantly.',
+          dataPoints: 6,
+          createdAt: '2026-03-07T16:00:00Z',
+        },
+      ],
+      generatedAt: '2026-03-07T16:30:00Z',
+    },
+    {
+      id: 'demo-week-3',
+      weekStart: '2026-02-24',
+      weekEnd: '2026-02-28',
+      totalTrades: 7,
+      winRate: 0.714,
+      totalPnl: 1204,
+      avgWinner: 344,
+      avgLoser: 108,
+      profitFactor: 4.77,
+      bestDay: { date: '2026-02-25', pnl: 716 },
+      worstDay: { date: '2026-02-27', pnl: -216 },
+      insights: [
+        {
+          id: 'demo-k1',
+          type: 'ticker_analysis',
+          severity: 'neutral',
+          title: 'Futures Dominating P&L',
+          description: "NQ and ES futures accounted for 72% of this week's profits despite representing only 28% of trade count. Stock trades are dragging the average.",
+          metric: 'Futures contribution: 72% of P&L | 28% of trades',
+          recommendation: 'Consider allocating more capital to futures setups when your morning edge is active. Continue logging to track whether this ratio holds.',
+          dataPoints: 7,
+          createdAt: '2026-02-28T16:00:00Z',
+        },
+      ],
+      generatedAt: '2026-02-28T16:30:00Z',
+    },
+  ]
 
   // Load existing summaries on mount
   useEffect(() => {
+    if (isDemo) {
+      setCurrentSummary(DEMO_SUMMARIES[0])
+      setPastSummaries(DEMO_SUMMARIES.slice(1))
+      setTradeCount(9)
+      setThresholdInfo(getThresholdInfo(9))
+      return
+    }
+
     const summaries = loadCoachSummaries()
     if (summaries.length > 0) {
       setCurrentSummary(summaries[0])
@@ -474,9 +607,13 @@ export default function CoachPage() {
       setTradeCount(0)
       setThresholdInfo(getThresholdInfo(0))
     }
-  }, [])
+  }, [isDemo]) // eslint-disable-line react-hooks/exhaustive-deps
 
   const handleGenerate = useCallback(() => {
+    if (isDemo) {
+      setAuthModalOpen(true)
+      return
+    }
     setGenerating(true)
     // Use setTimeout to allow spinner to render
     setTimeout(() => {
@@ -500,157 +637,12 @@ export default function CoachPage() {
         setGenerating(false)
       }
     }, 50)
-  }, [])
+  }, [isDemo])
 
   const hasEnoughData = tradeCount >= 5
-
-  // Auth gating
-  const tier = getUserTier(user)
-  if (tier === 'demo') {
-    // Metrics computed from DEMO_TRADES (9 trades, Mar 10-14, 2026):
-    // Win rate: 8/9 = 88.9%; Avg hold: (45+32+78+22+110+95+55+38+60)/9 = 59min
-    // Momentum setups (NQ, NVDA, AAPL breakout, META, CL): 100% win rate
-    // Avg R = (1.19+1.88+2.09+1.86+1.84+1.83+1.64+1.95-1.05)/9 = 1.47R
-    const DEMO_COACH_METRICS = [
-      { label: 'Overall Win Rate', value: '88.9%', color: '#10b981' },
-      { label: 'Momentum Win Rate', value: '100%', color: '#10b981' },
-      { label: 'Avg Hold Time', value: '59 min', color: '#6366f1' },
-      { label: 'Best Day', value: 'Friday', color: '#10b981' },
-      { label: 'Avg R-Multiple', value: '1.47R', color: '#6366f1' },
-      { label: 'Trades Analyzed', value: '9', color: 'var(--text-2)' },
-    ]
-    return (
-      <AuthGate featureName="AI Trade Coach" featureDesc="Get weekly AI-powered insights on your trading patterns. Identify strengths and areas for improvement.">
-        <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
-          <PersistentNav />
-          <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 16px 80px' }}>
-            {/* Header */}
-            <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 24, flexWrap: 'wrap', gap: 12 }}>
-              <div>
-                <h1 style={{ fontSize: 24, fontWeight: 800, margin: '0 0 4px' }}>AI Trade Coach</h1>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2)' }}>Weekly AI analysis of your trading patterns</p>
-              </div>
-              <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                <span style={{ fontSize: 11, background: 'rgba(16,185,129,0.1)', color: '#10b981', border: '1px solid rgba(16,185,129,0.3)', borderRadius: 20, padding: '4px 10px', fontWeight: 600 }}>
-                  <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><polyline points="20 6 9 17 4 12"/></svg>
-                  Analysis Ready
-                </span>
-              </div>
-            </div>
-
-            {/* Main AI analysis card */}
-            <div style={{ background: 'var(--bg-2)', border: '1px solid rgba(99,102,241,0.25)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 16 }}>
-                <div style={{ width: 40, height: 40, borderRadius: 10, background: 'rgba(99,102,241,0.12)', border: '1px solid rgba(99,102,241,0.3)', display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0 }}>
-                  <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#6366f1" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M12 2a2 2 0 0 1 2 2c0 .74-.4 1.39-1 1.73V7h1a7 7 0 0 1 7 7h1a1 1 0 0 1 1 1v3a1 1 0 0 1-1 1h-1v1a2 2 0 0 1-2 2H4a2 2 0 0 1-2-2v-1H1a1 1 0 0 1-1-1v-3a1 1 0 0 1 1-1h1a7 7 0 0 1 7-7h1V5.73c-.6-.34-1-.99-1-1.73a2 2 0 0 1 2-2z"/></svg>
-                </div>
-                <div>
-                  <div style={{ fontSize: 14, fontWeight: 700 }}>Weekly Performance Analysis</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Based on last 30 trades · Generated Mar 14, 2026</div>
-                </div>
-              </div>
-
-              {/* Summary paragraph */}
-              <div style={{ background: 'rgba(99,102,241,0.06)', border: '1px solid rgba(99,102,241,0.15)', borderRadius: 8, padding: '14px 16px', marginBottom: 14 }}>
-                <p style={{ margin: 0, fontSize: 13, color: 'var(--text-1)', lineHeight: 1.75 }}>
-                  Based on your last <strong>9 trades</strong> (Mar 10–14, 2026), your win rate is <strong style={{ color: '#10b981' }}>88.9%</strong> (8W/1L) with a net P&L of <strong style={{ color: '#10b981' }}>+$3,610</strong>. Your momentum setups on NQ and AAPL are outperforming — NQ long on Mar 14 returned <strong>1.88R</strong>. One clear pattern: you exit winners early. The TSLA long closed at $416.80 for $81 when your target was $422 (another ~$53 left). Your ES short was perfectly executed. Avoid reversals on volatile opens — the data shows your best edge is breakout/momentum in the first 90 minutes.
-                </p>
-              </div>
-
-              {/* Strengths */}
-              <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.15)', borderRadius: 8, padding: '14px 16px', marginBottom: 14 }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#10b981', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8 }}>Top Strengths</div>
-                {[
-                  'Excellent discipline on stop losses — only 2 blown stops in 30 trades (93% adherence)',
-                  'Strong Tuesday performance: 78% win rate — best day of the week for you',
-                  'Futures edge is clear: 68% win rate on NQ/ES vs 51% on stocks',
-                  'Position sizing consistency: standard deviation of 8% — well controlled',
-                ].map((s, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--text-1)', marginBottom: 6 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><polyline points="20 6 9 17 4 12"/></svg>
-                    {s}
-                  </div>
-                ))}
-              </div>
-
-              {/* Areas to improve */}
-              <div style={{ background: 'rgba(239,68,68,0.06)', border: '1px solid rgba(239,68,68,0.15)', borderRadius: 8, padding: '14px 16px' }}>
-                <div style={{ fontSize: 11, fontWeight: 700, color: '#ef4444', textTransform: 'uppercase' as const, letterSpacing: '0.06em', marginBottom: 8 }}>Areas to Improve</div>
-                {[
-                  'Avoid reversal setups — 45% win rate is below breakeven after commissions',
-                  'Friday trades: 38% win rate — consider reducing size or skipping entirely',
-                  'Increase position size on A+ momentum setups (currently undersizing by ~30%)',
-                  'Holding period variance is high: address inconsistent exit rules for winners',
-                ].map((s, i) => (
-                  <div key={i} style={{ display: 'flex', gap: 8, fontSize: 13, color: 'var(--text-1)', marginBottom: 6 }}>
-                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#ef4444" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 2 }}><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
-                    {s}
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Performance metrics grid */}
-            <div style={{ marginBottom: 16 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 12px' }}>Performance Metrics</h2>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10 }}>
-                {DEMO_COACH_METRICS.map(m => (
-                  <div key={m.label} style={{ background: 'var(--bg-2)', border: '1px solid rgba(255,255,255,0.07)', borderRadius: 10, padding: '12px 14px', textAlign: 'center' as const }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: '0.05em', marginBottom: 6 }}>{m.label}</div>
-                    <div style={{ fontSize: 20, fontWeight: 800, color: m.color, fontFamily: 'monospace' }}>{m.value}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            {/* Pattern Insights */}
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, marginBottom: 16 }}>
-              <h2 style={{ fontSize: 15, fontWeight: 700, margin: '0 0 14px' }}>Trade Pattern Insights</h2>
-              {[
-                { title: 'Momentum Mastery', detail: 'You execute momentum setups with above-average precision. Entry timing is within 0.15% of optimal in 68% of cases.', color: '#10b981' },
-                { title: 'Morning Session Edge', detail: '9:30–11:00 AM generates 71% of your profits. Afternoon trades (post 1 PM) have a 43% win rate. Consider cutting off trading at noon.', color: '#f59e0b' },
-                { title: 'Futures vs Stocks', detail: 'Your futures discipline significantly outperforms stocks. NQ win rate: 68%. Stock win rate: 54%. Allocate more capital to futures.', color: '#6366f1' },
-              ].map((p, i) => (
-                <div key={i} style={{ display: 'flex', gap: 12, padding: '10px 0', borderBottom: i < 2 ? '1px solid var(--border)' : 'none' }}>
-                  <div style={{ width: 3, borderRadius: 3, background: p.color, alignSelf: 'stretch', flexShrink: 0 }} />
-                  <div>
-                    <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 3 }}>{p.title}</div>
-                    <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>{p.detail}</div>
-                  </div>
-                </div>
-              ))}
-            </div>
-
-            {/* Past Summaries */}
-            <div style={{ marginBottom: 16 }}>
-              <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' as const, letterSpacing: 1, marginBottom: 12 }}>Past Analyses</div>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {[
-                  { period: 'Week of Mar 3–7, 2026', summary: '6 trades, 4W/2L (66.7%). Net P&L: +$842. Best: NVDA long +$183. Lesson: avoid trading after 2 PM on Fridays — both losses came in that window.', pnl: '+$842' },
-                  { period: 'Week of Feb 24–28, 2026', summary: '7 trades, 5W/2L (71.4%). Net P&L: +$1,204. NQ and ES futures dominating the P&L. Stock trades underperforming. Consider shifting allocation.', pnl: '+$1,204' },
-                ].map((s, i) => (
-                  <div key={i} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 18px' }}>
-                    <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 8 }}>
-                      <div style={{ fontSize: 13, fontWeight: 700 }}>{s.period}</div>
-                      <div style={{ fontSize: 14, fontWeight: 800, color: '#10b981', fontFamily: 'monospace' }}>{s.pnl}</div>
-                    </div>
-                    <div style={{ fontSize: 12, color: 'var(--text-2)', lineHeight: 1.6 }}>{s.summary}</div>
-                  </div>
-                ))}
-              </div>
-            </div>
-
-            <div style={{ fontSize: 11, color: 'var(--text-3)', textAlign: 'center' as const, fontStyle: 'italic', marginTop: 8 }}>
-              Sample AI analysis — create an account and log trades to get personalized weekly insights
-            </div>
-          </div>
-        </div>
-      </AuthGate>
-    )
-  }
-
-  return (
+  const pageContent = (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+      {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
       <PersistentNav />
 
       <div style={{ maxWidth: 860, margin: '0 auto', padding: '32px 16px 80px' }}>
@@ -881,4 +873,13 @@ export default function CoachPage() {
       </div>
     </div>
   )
+
+  if (isDemo) {
+    return (
+      <AuthGate featureName="AI Trade Coach" featureDesc="Get weekly AI-powered insights on your trading patterns. Identify strengths and areas for improvement.">
+        {pageContent}
+      </AuthGate>
+    )
+  }
+  return pageContent
 }
