@@ -1,4 +1,5 @@
 [
+  {"date": "2026-03-18T03:31:00Z", "type": "monitor", "result": "clean", "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 0 total API actions — all quiet"},
   {"date": "2026-03-18T03:02:00Z", "type": "monitor", "result": "clean", "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 4 total API actions (logins) — all normal"},
   {"date": "2026-03-18T02:31:00Z", "type": "monitor", "result": "clean", "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 2 total API actions (logins) — all normal"},
   {"date": "2026-03-18T02:01:00Z", "type": "monitor", "result": "clean", "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 0 total API actions — all quiet"},

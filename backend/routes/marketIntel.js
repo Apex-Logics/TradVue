@@ -175,7 +175,13 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
         combined.push(item);
       }
     }
-    combined.sort((a, b) => new Date(b.date) - new Date(a.date));
+    // Sort: items with real data (ticker + shares) first, then by date descending
+    combined.sort((a, b) => {
+      const aHasData = a.ticker && a.shares ? 1 : 0;
+      const bHasData = b.ticker && b.shares ? 1 : 0;
+      if (bHasData !== aHasData) return bHasData - aHasData;
+      return new Date(b.date) - new Date(a.date);
+    });
 
     // Save to last-good cache if we got results
     if (combined.length > 0) {
