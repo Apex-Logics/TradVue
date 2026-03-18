@@ -60,7 +60,7 @@ const COLUMN_ACCENT: Record<Column, string> = {
 
 const AGENTS: AgentInfo[] = [
   { name: 'Axle', emoji: '⚙️', model: 'claude-sonnet-4-6', status: 'idle', lastActive: 'Today' },
-  { name: 'Bolt', emoji: '⚡', model: 'claude-sonnet-4-6', status: 'working', lastActive: 'Now' },
+  { name: 'Bolt', emoji: '', model: 'claude-sonnet-4-6', status: 'working', lastActive: 'Now' },
   { name: 'Zip',  emoji: '🏃', model: 'claude-sonnet-4-6', status: 'idle',    lastActive: 'Today' },
   { name: 'Nova', emoji: '✨', model: 'claude-sonnet-4-6', status: 'idle',    lastActive: 'Yesterday' },
 ]
@@ -89,7 +89,7 @@ const INITIAL_TASKS: OpsTask[] = [
 ]
 
 const QUICK_LINKS = [
-  { label: '🚀 Render',    url: 'https://dashboard.render.com' },
+  { label: 'Render',    url: 'https://dashboard.render.com' },
   { label: '🐙 GitHub',    url: 'https://github.com/Apex-Logics/TradVue' },
   { label: '▲ Vercel',     url: 'https://vercel.com/dashboard' },
   { label: '🗄 Supabase',  url: 'https://supabase.com/dashboard' },
@@ -342,10 +342,10 @@ function AddTaskForm({ onAdd, onClose }: AddTaskFormProps) {
               <label style={labelStyle}>Agent</label>
               <select value={agent} onChange={e => setAgent(e.target.value as AgentName)} style={inputStyle}>
                 <option value="Axle">Axle ⚙️</option>
-                <option value="Bolt">Bolt ⚡</option>
+                <option value="Bolt">Bolt</option>
                 <option value="Zip">Zip 🏃</option>
                 <option value="Nova">Nova ✨</option>
-                <option value="Erick">Erick 👤</option>
+                <option value="Erick">Erick</option>
               </select>
             </div>
             <div>
@@ -486,7 +486,7 @@ function QuickStatsPanel({ tasks }: { tasks: OpsTask[] }) {
       {/* Stats */}
       <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 10, padding: '18px 20px' }}>
         <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)', marginBottom: 14, textTransform: 'uppercase', letterSpacing: '0.5px' }}>
-          📊 Task Stats
+          Task Stats
         </h3>
         <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
           {[
@@ -702,7 +702,7 @@ export default function OpsPage() {
         {/* ── Section B: Agent Status ──────────────────────────────────────── */}
         <section>
           <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>
-            🤖 Agent Status
+            Agent Status
           </h2>
           <AgentStatusPanel />
         </section>
@@ -710,7 +710,7 @@ export default function OpsPage() {
         {/* ── Section C: Stats & Links ─────────────────────────────────────── */}
         <section>
           <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.6px', marginBottom: 16 }}>
-            📋 Stats & Links
+            Stats & Links
           </h2>
           <QuickStatsPanel tasks={tasks} />
         </section>

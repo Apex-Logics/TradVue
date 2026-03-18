@@ -309,7 +309,10 @@ export default function PushNotificationPanel() {
       <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: 12 }}>
         <div>
           <div style={{ fontSize: 14, fontWeight: 600, color: 'var(--text-1, #e0e0e0)', marginBottom: 2 }}>
-            🔔 Daily Reminders
+            <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+              <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+              <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+            </svg>Daily Reminders
           </div>
           <div style={{ fontSize: 12, color: 'var(--text-3, #666)' }}>
             {isOn
@@ -327,7 +330,10 @@ export default function PushNotificationPanel() {
               style={btnSmall}
               title="Change notification time"
             >
-              ⏰ {formatDisplayTime(state.notificationTime)}
+              <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                <circle cx="12" cy="12" r="10"/>
+                <polyline points="12 6 12 12 16 14"/>
+              </svg>{formatDisplayTime(state.notificationTime)}
             </button>
           )}
 
@@ -347,7 +353,12 @@ export default function PushNotificationPanel() {
               disabled={state.loading}
               style={btnEnable}
             >
-              {state.loading ? 'Enabling…' : '🔔 Enable Daily Reminders'}
+              {state.loading ? 'Enabling…' : (
+                <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+                  <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                  <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+                </svg>Enable Daily Reminders</>
+              )}
             </button>
           )}
         </div>
@@ -412,7 +423,7 @@ export default function PushNotificationPanel() {
       {/* Denied help */}
       {isDenied && (
         <div style={{ marginTop: 10, fontSize: 12, color: 'var(--text-3, #666)' }}>
-          To re-enable: click the 🔒 icon in your browser address bar → Notifications → Allow
+          To re-enable: click the lock icon in your browser address bar → Notifications → Allow
         </div>
       )}
     </div>

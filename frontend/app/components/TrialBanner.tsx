@@ -82,7 +82,9 @@ export default function TrialBanner() {
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, flex: 1, justifyContent: 'center' }}>
           {trialActive ? (
             <>
-              <span style={{ fontSize: 15 }}>🎉</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M12 3l1.5 4.5L18 9l-4.5 1.5L12 15l-1.5-4.5L6 9l4.5-1.5L12 3z"/>
+              </svg>
               <span style={{ color: 'var(--text-0)', fontWeight: 500 }}>
                 Free trial:{' '}
                 <strong style={{ color: accentColor }}>
@@ -110,7 +112,10 @@ export default function TrialBanner() {
             </>
           ) : (
             <>
-              <span style={{ fontSize: 15 }}>🔒</span>
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+              </svg>
               <span style={{ color: 'var(--text-0)', fontWeight: 500 }}>
                 Trial ended —{' '}
                 <button

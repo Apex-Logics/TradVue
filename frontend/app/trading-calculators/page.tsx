@@ -210,7 +210,7 @@ export default function TradingCalculatorsPage() {
           </div>
           <div className="seo-grid-2">
             {[
-              { emoji: '📊', title: 'Calculate Before You Trade', desc: 'Most traders skip this step. Calculating position size, risk, and reward before every trade is a discipline that separates systematic traders from impulsive ones.', color: 'blue' },
+              { emoji: 'CB', title: 'Calculate Before You Trade', desc: 'Most traders skip this step. Calculating position size, risk, and reward before every trade is a discipline that separates systematic traders from impulsive ones.', color: 'blue' },
               { emoji: 'MM', title: 'No More Mental Math', desc: 'Stop trying to calculate Greeks in your head or searching YouTube for formulas. Get exact answers instantly.', color: 'purple' },
               { emoji: 'AN', title: 'Analyze Your Edge', desc: 'Sharpe ratio, expected value, probability of ruin — these metrics help you evaluate whether your strategy has a statistical edge.', color: 'green' },
               { emoji: 'AM', title: 'All Markets', desc: 'Stocks, options, futures, forex, crypto. Calculators for every asset class.', color: 'yellow' },
@@ -312,10 +312,10 @@ export default function TradingCalculatorsPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>You Might Also Like</h2>
           <div className="seo-related-grid">
             {[
-              { href: '/tools', title: 'Use Calculators Now', desc: 'Launch the actual calculator app', emoji: '🚀' },
-              { href: '/journal', title: 'Trading Journal', desc: 'Log trades and track your performance', emoji: '📓' },
-              { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why traders choose TradVue', emoji: '🏆' },
-              { href: '/options-trading-journal', title: 'Options Journal', desc: 'Track Greeks and multi-leg strategies', emoji: '⚡' },
+              { href: '/tools', title: 'Use Calculators Now', desc: 'Launch the actual calculator app', emoji: '' },
+              { href: '/journal', title: 'Trading Journal', desc: 'Log trades and track your performance', emoji: '' },
+              { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why traders choose TradVue', emoji: '' },
+              { href: '/options-trading-journal', title: 'Options Journal', desc: 'Track Greeks and multi-leg strategies', emoji: '' },
             ].map(item => (
               <Link key={item.href} href={item.href} className="seo-related-card">
                 <div className="seo-related-card-title">{item.title}</div>

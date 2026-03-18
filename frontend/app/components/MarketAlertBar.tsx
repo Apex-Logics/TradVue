@@ -116,7 +116,12 @@ export function CalendarEventPill({ event }: { event: UpcomingEvent }) {
         animation: isImminent ? 'pulse 1.2s ease-in-out infinite' : 'none',
       }}
     >
-      <span style={{ fontSize: 12 }} aria-hidden="true">📅</span>
+      <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+              <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+              <line x1="16" y1="2" x2="16" y2="6"/>
+              <line x1="8" y1="2" x2="8" y2="6"/>
+              <line x1="3" y1="10" x2="21" y2="10"/>
+            </svg>
       <a href="/calendar" style={{ color: isImminent ? '#f59e0b' : '#60a5fa', fontWeight: 600, textDecoration: 'none', fontSize: 11 }}>
         {event.title.slice(0, 28)}
       </a>
@@ -233,7 +238,12 @@ export function UpcomingEventsWidget() {
         color: 'var(--text-3)', marginBottom: 6,
         display: 'flex', alignItems: 'center', gap: 4,
       }}>
-        <span style={{ color: '#60a5fa' }} aria-hidden="true">📅</span> UPCOMING EVENTS
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="#60a5fa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <rect x="3" y="4" width="18" height="18" rx="2" ry="2"/>
+          <line x1="16" y1="2" x2="16" y2="6"/>
+          <line x1="8" y1="2" x2="8" y2="6"/>
+          <line x1="3" y1="10" x2="21" y2="10"/>
+        </svg> UPCOMING EVENTS
       </div>
       <div style={{ display: 'flex', flexDirection: 'column', gap: 4 }}>
         {events.map(e => {

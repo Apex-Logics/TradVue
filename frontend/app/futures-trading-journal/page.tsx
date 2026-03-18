@@ -322,10 +322,10 @@ export default function FuturesTradingJournalPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>You Might Also Like</h2>
           <div className="seo-related-grid">
             {[
-              { href: '/journal', title: 'Start Journaling', desc: 'Open the trading journal app', emoji: '📓' },
-              { href: '/propfirm', title: 'Prop Firm Tracker', desc: 'Track your prop firm rules & compliance', emoji: '🎯' },
+              { href: '/journal', title: 'Start Journaling', desc: 'Open the trading journal app', emoji: '' },
+              { href: '/propfirm', title: 'Prop Firm Tracker', desc: 'Track your prop firm rules & compliance', emoji: '' },
               { href: '/tools', title: 'Futures Calculator', desc: 'Calculate tick value for any contract', emoji: '🔢' },
-              { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why TradVue works for futures traders', emoji: '🏆' },
+              { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why TradVue works for futures traders', emoji: '' },
             ].map(item => (
               <Link key={item.href} href={item.href} className="seo-related-card">
                 <div className="seo-related-card-title">{item.title}</div>

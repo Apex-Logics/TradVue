@@ -386,12 +386,12 @@ function VolatilityEvents({
   }, [calendarEvents])
 
   const warnings: string[] = []
-  if (vixVal !== null && vixVal > 25) warnings.push(`⚠️ Elevated volatility conditions (VIX: ${fmt(vixVal)})`)
+  if (vixVal !== null && vixVal > 25) warnings.push(`Elevated volatility conditions (VIX: ${fmt(vixVal)})`)
   upcomingHighImpact.forEach(e => {
     const t = eventTimeET(e)
     if (!t) return
     const timeStr = t.toLocaleTimeString('en-US', { hour: 'numeric', minute: '2-digit', hour12: true, timeZone: 'America/New_York' })
-    warnings.push(`⚠️ ${e.title} at ${timeStr} ET — expect elevated volatility`)
+    warnings.push(`${e.title} at ${timeStr} ET — expect elevated volatility`)
   })
 
   return (
@@ -425,7 +425,12 @@ function VolatilityEvents({
                 fontSize: 12, padding: '8px 12px', borderRadius: 6,
                 background: 'rgba(239,68,68,0.1)', border: '1px solid rgba(239,68,68,0.3)',
                 color: '#fca5a5', lineHeight: 1.4,
+                display: 'flex', alignItems: 'flex-start', gap: 6,
               }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, marginTop: 1 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>
                 {w}
               </div>
             ))}
@@ -792,7 +797,10 @@ export default function AnalysisPanel({ wlQuotes, tickerQuotes, calendarEvents, 
       {/* ── Disclaimer ────────────────────────────────────────────────────── */}
       <div style={{ padding: '10px 4px', marginTop: 8, borderTop: '1px solid var(--border)' }}>
         <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
-          ⚠️ Market data is provided for informational purposes only and may be delayed. TradVue does not guarantee the accuracy, completeness, or timeliness of any data. Do not rely solely on this information for trading decisions.
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>Market data is provided for informational purposes only and may be delayed. TradVue does not guarantee the accuracy, completeness, or timeliness of any data. Do not rely solely on this information for trading decisions.
         </p>
       </div>
     </div>

@@ -398,7 +398,7 @@ function CompletedView({
           gap: 20,
         }}
       >
-        <div style={{ fontSize: 48 }}>🔥</div>
+        <div style={{ fontSize: 48, display: "flex", justifyContent: "center" }}><svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M12 22c-4.97 0-9-2.69-9-6 0-4 4.5-9.5 9-14 4.5 4.5 9 10 9 14 0 3.31-4.03 6-9 6z"/></svg></div>
         <div style={{ flex: 1 }}>
           <div style={{ fontSize: 36, fontWeight: 700, color: '#4a9eff', lineHeight: 1 }}>
             {streak.currentStreak}
@@ -420,7 +420,7 @@ function CompletedView({
                 color: '#4a9eff',
               }}
             >
-              🏆 {milestoneLabel(latestMilestone)} milestone achieved!
+              {milestoneLabel(latestMilestone)} milestone achieved!
             </div>
           )}
         </div>
@@ -1285,7 +1285,7 @@ export default function RitualPage() {
                   gap: 4,
                 }}
               >
-                🏆 {milestoneLabel(m)}
+                {milestoneLabel(m)}
               </div>
             ))}
           </div>
@@ -1322,7 +1322,10 @@ export default function RitualPage() {
         {/* ── Disclaimer ──────────────────────────────────────────────────── */}
         <div style={{ padding: '12px 0', marginTop: 24, borderTop: '1px solid var(--border)' }}>
           <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
-            ⚠️ Performance analytics are based on user-entered data and may not reflect actual trading results. Past performance does not guarantee future results. This is not financial advice.
+            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>Performance analytics are based on user-entered data and may not reflect actual trading results. Past performance does not guarantee future results. This is not financial advice.
           </p>
         </div>
       </div>

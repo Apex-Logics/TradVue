@@ -767,7 +767,7 @@ function AddAccountModal({ onClose, onAdd }: {
                   <RuleRow label="Daily Loss Limit" value={rules.dailyLossLimit.limit === 0 ? 'None' : `$${rules.dailyLossLimit.limit.toLocaleString()}`} />
                   <RuleRow label="Profit Target" value={rules.profitTarget.target === 0 ? 'N/A' : `$${rules.profitTarget.target.toLocaleString()}`} />
                   {rules.minTradingDays && <RuleRow label="Min Trading Days" value={String(rules.minTradingDays)} />}
-                  {rules.newsTrading === false && <RuleRow label="News Trading" value="Restricted ⚠️" />}
+                  {rules.newsTrading === false && <RuleRow label="News Trading" value="Restricted" />}
                 </div>
               )
             })()
@@ -1088,7 +1088,9 @@ function AccountDetail({ account, onBack, onUpdate }: {
           alignItems: 'center',
           gap: 8,
         }}>
-          <span>📊</span>
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/>
+          </svg>
           <span>Stats auto-calculated from {linkedTrades.length} linked journal trade{linkedTrades.length !== 1 ? 's' : ''}.
             {' '}Today: <strong style={{ color: linkedStats.todayPnl >= 0 ? 'var(--green)' : 'var(--red)' }}>${linkedStats.todayPnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
             {' '}Total: <strong style={{ color: linkedStats.totalPnl >= 0 ? 'var(--green)' : 'var(--red)' }}>${linkedStats.totalPnl.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</strong>
@@ -1212,7 +1214,10 @@ function AccountDetail({ account, onBack, onUpdate }: {
                 alignItems: 'center',
                 gap: 6,
               }}>
-                ⚠️ {dailyPct >= 90
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                  <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                  <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                </svg>{dailyPct >= 90
                   ? 'DANGER: Over 90% of daily loss limit reached. Consider stopping.'
                   : 'WARNING: Over 75% of daily loss limit reached.'}
               </div>
@@ -1392,7 +1397,12 @@ function AccountDetail({ account, onBack, onUpdate }: {
             {account.rules.newsTrading === false && (
               <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', fontSize: 12 }}>
                 <span style={{ color: 'var(--text-2)' }}>News Trading</span>
-                <span style={{ color: 'var(--yellow)', fontWeight: 600 }}>⚠️ Restricted</span>
+                <span style={{ color: 'var(--yellow)', fontWeight: 600, display: 'flex', alignItems: 'center', gap: 4 }}>
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                    <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                  </svg>Restricted
+                </span>
               </div>
             )}
           </div>
@@ -1712,7 +1722,13 @@ export default function PropFirmPage() {
                 textAlign: 'center', padding: '80px 20px',
                 border: '1px dashed var(--border)', borderRadius: 12,
               }}>
-                <div style={{ fontSize: 40, marginBottom: 16 }}>🎯</div>
+                <div style={{ marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                  <svg width="40" height="40" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                    <circle cx="12" cy="12" r="10"/>
+                    <circle cx="12" cy="12" r="6"/>
+                    <circle cx="12" cy="12" r="2"/>
+                  </svg>
+                </div>
                 <div style={{ fontSize: 16, fontWeight: 600, color: 'var(--text-0)', marginBottom: 8 }}>
                   No prop firm accounts yet
                 </div>

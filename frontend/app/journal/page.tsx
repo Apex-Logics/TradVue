@@ -1959,7 +1959,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                     onMouseLeave={e => {
                       if (!locked) e.currentTarget.style.background = expandedId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)'
                     }}
-                    title={locked ? '🔒 Upgrade to Pro to view this trade' : undefined}
+                    title={locked ? 'Upgrade to Pro to view this trade' : undefined}
                   >
                     <td style={{ padding: '10px 12px' }}>{t.date}</td>
                     <td style={{ padding: '10px 12px', fontWeight: 700, fontFamily: 'var(--mono)', color: BLUE }}>{locked ? '••••' : t.symbol}</td>
@@ -1996,7 +1996,10 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                                 fontSize: 10, fontWeight: 700,
                                 textTransform: 'uppercase', letterSpacing: '0.04em',
                               }}>
-                                📋 {pb.name}
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+                            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                          </svg>{pb.name}
                               </span>
                             )
                           })()}
@@ -2004,7 +2007,10 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                       )}
                       {locked && (
                         <span style={{ fontSize: 12, color: 'var(--text-3)' }}>
-                          🔒 <span style={{ textDecoration: 'underline', cursor: 'pointer' }}
+                          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                          </svg><span style={{ textDecoration: 'underline', cursor: 'pointer' }}
                             onClick={e => { e.stopPropagation(); onUpgrade?.('Full Trade History', 'Upgrade to Pro to view all your trades — your data is saved and waiting.') }}>
                             Upgrade
                           </span>
@@ -2783,7 +2789,10 @@ function PlaybookBreakdown({ trades }: { trades: Trade[] }) {
     <Card style={{ marginBottom: 16 }}>
       <div style={{ display: 'flex', alignItems: 'center', gap: 6, marginBottom: 14 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', display: 'flex', alignItems: 'center', gap: 5 }}>
-          📋 Performance by Playbook
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 6 }}>
+            <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+            <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+          </svg>Performance by Playbook
         </span>
         <Tooltip text="How each of your playbook strategies is performing. Win rate, trade count, and total P&L per strategy." position="right" />
       </div>
@@ -3736,7 +3745,10 @@ function JournalPageInner() {
       </div>
       {/* Disclaimer */}
       <div style={{ textAlign: 'center', padding: '0 24px 40px', fontSize: 11, color: 'var(--text-3)' }}>
-        ⚠️ Performance analytics are based on user-entered data and may not reflect actual trading results. Past performance does not guarantee future results. This is not financial advice.
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>Performance analytics are based on user-entered data and may not reflect actual trading results. Past performance does not guarantee future results. This is not financial advice.
       </div>
 
       {/* Modals */}

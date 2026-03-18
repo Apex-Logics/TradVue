@@ -315,8 +315,8 @@ export default function OptionsTradingJournalPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>You Might Also Like</h2>
           <div className="seo-related-grid">
             {[
-              { href: '/journal', title: 'Start Journaling', desc: 'Open the trading journal app', emoji: '📓' },
-              { href: '/tools', title: 'Options Calculator', desc: 'Calculate Greeks with Black-Scholes', emoji: '⚡' },
+              { href: '/journal', title: 'Start Journaling', desc: 'Open the trading journal app', emoji: '' },
+              { href: '/tools', title: 'Options Calculator', desc: 'Calculate Greeks with Black-Scholes', emoji: '' },
               { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why TradVue works for options traders', emoji: '🏆' },
               { href: '/trading-calculators', title: 'All Calculators', desc: '30+ free trading tools and calculators', emoji: '🔢' },
             ].map(item => (

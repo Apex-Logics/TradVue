@@ -81,7 +81,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
       // Signup successful but needs email verification
       trackSignup('free')
       setSuccessMessage(
-        'Account created! Check your email for a verification link. ⚠️ CHECK YOUR SPAM/JUNK FOLDER — new domain emails often land there. Mark it "Not Spam" to receive future emails in your inbox.'
+        'Account created! Check your email for a verification link. CHECK YOUR SPAM/JUNK FOLDER — new domain emails often land there. Mark it "Not Spam" to receive future emails in your inbox.'
       )
       return
     }
@@ -182,13 +182,21 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
                   textAlign: 'center',
                 }}
               >
-                {resendSuccess ? '✓ Verification email resent!' : resending ? 'Resending...' : '📧 Resend Verification Email'}
+                {resendSuccess ? '✓ Verification email resent!' : resending ? 'Resending...' : (
+                  <><svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                    <path d="M4 4h16c1.1 0 2 .9 2 2v12c0 1.1-.9 2-2 2H4c-1.1 0-2-.9-2-2V6c0-1.1.9-2 2-2z"/>
+                    <polyline points="22,6 12,13 2,6"/>
+                  </svg>Resend Verification Email</>
+                )}
               </button>
             </div>
           )}
           {error && (
             <div className="auth-error" role="alert">
-              <span>⚠</span> {error}
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4, flexShrink: 0 }}>
+                <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>{error}
             </div>
           )}
 

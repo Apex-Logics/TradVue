@@ -73,9 +73,9 @@ function CircularGauge({ value, total }: { value: number; total: number }) {
 
 function StatusBadge({ status }: { status: 'following' | 'warning' | 'violated' }) {
   const map = {
-    following: { icon: '✅', label: 'Following', color: '#4ade80' },
-    warning:   { icon: '⚠️', label: 'Warning',   color: '#fb923c' },
-    violated:  { icon: '🚨', label: 'Violated',  color: '#f87171' },
+    following: { icon: 'check', label: 'Following', color: '#4ade80' },
+    warning:   { icon: 'warn', label: 'Warning',   color: '#fb923c' },
+    violated:  { icon: '!!', label: 'Violated',  color: '#f87171' },
   }
   const cfg = map[status]
   return (
@@ -85,7 +85,16 @@ function StatusBadge({ status }: { status: 'following' | 'warning' | 'violated' 
       background: `${cfg.color}18`, borderRadius: 20,
       padding: '2px 8px', border: `1px solid ${cfg.color}40`,
     }}>
-      {cfg.icon} {cfg.label}
+      {cfg.icon === 'check' ? (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+          <polyline points="20 6 9 17 4 12"/>
+        </svg>
+      ) : cfg.icon === 'warn' ? (
+        <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      ) : cfg.icon} {cfg.label}
     </span>
   )
 }
@@ -397,7 +406,7 @@ function ViolationRow({ v, onAck }: { v: RuleViolation; onAck: (id: string) => v
     }}>
       <div style={{ flex: 1 }}>
         <div style={{ display: 'flex', alignItems: 'center', gap: 8, marginBottom: 4 }}>
-          <span style={{ fontSize: 13 }}>{isViolation ? '🚨' : '⚠️'}</span>
+          <span style={{ fontSize: 13 }}>{isViolation ? '!!' : '!'}</span>
           <span style={{ fontWeight: 600, fontSize: 13, color }}>{v.ruleName}</span>
           <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{formatDate(v.createdAt)}</span>
         </div>
@@ -592,7 +601,7 @@ export default function RulesPage() {
             </div>
             {violations.filter(v => !v.acknowledged && v.severity === 'violation').length > 0 && (
               <div style={{ marginTop: 8, fontSize: 12, color: '#f87171' }}>
-                🚨 {violations.filter(v => !v.acknowledged && v.severity === 'violation').length} unacknowledged violation{violations.filter(v => !v.acknowledged && v.severity === 'violation').length !== 1 ? 's' : ''}
+                {violations.filter(v => !v.acknowledged && v.severity === 'violation').length} unacknowledged violation{violations.filter(v => !v.acknowledged && v.severity === 'violation').length !== 1 ? 's' : ''}
               </div>
             )}
           </div>
@@ -648,7 +657,7 @@ export default function RulesPage() {
               color: 'var(--text-3)', fontSize: 13,
               border: '1px dashed var(--border)', borderRadius: 10,
             }}>
-              No violations recorded. Keep following your rules! 🎯
+              No violations recorded. Keep following your rules!
             </div>
           ) : (
             recentViolations.map(v => (

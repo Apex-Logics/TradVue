@@ -439,7 +439,9 @@ function PlaybookDetail({
           padding: '20px 24px',
         }}>
           <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--yellow)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 10 }}>
-            ⚡ Risk Parameters
+            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+              <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+            </svg>Risk Parameters
           </div>
           {playbook.riskParams.riskRewardTarget && (
             <div style={{ marginBottom: 8, fontSize: 13, color: 'var(--text-1)' }}>
@@ -960,7 +962,10 @@ export default function PlaybooksPage() {
       {/* ── Disclaimer ─────────────────────────────────────────────────────── */}
       <div style={{ padding: '12px 24px', borderTop: '1px solid var(--border)', marginTop: 16 }}>
         <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.5 }}>
-          ⚠️ Strategy templates are for educational purposes only and do not constitute trading advice. Past performance of any strategy does not guarantee future results. Always do your own research before trading.
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+            <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+            <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+          </svg>Strategy templates are for educational purposes only and do not constitute trading advice. Past performance of any strategy does not guarantee future results. Always do your own research before trading.
         </p>
       </div>
     </div>

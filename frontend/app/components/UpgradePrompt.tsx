@@ -38,12 +38,12 @@ export interface UpgradePromptProps {
 // ── Feature metadata ──────────────────────────────────────────────────────────
 
 const FEATURE_BENEFITS = [
-  { icon: '🔓', text: 'Unlimited trade history — every entry visible while your account is active' },
-  { icon: '☁️', text: 'Cloud auto-sync across all your devices' },
-  { icon: '📥', text: 'Full CSV import/export with no date restrictions' },
-  { icon: '🧠', text: 'Advanced reports & AI pattern detection' },
-  { icon: '📊', text: 'Unlimited portfolio positions & analytics' },
-  { icon: '⚡', text: 'Priority support & early feature access' },
+  { text: 'Unlimited trade history — every entry visible while your account is active' },
+  { text: 'Cloud auto-sync across all your devices' },
+  { text: 'Full CSV import/export with no date restrictions' },
+  { text: 'Advanced reports & AI pattern detection' },
+  { text: 'Unlimited portfolio positions & analytics' },
+  { text: 'Priority support & early feature access' },
 ]
 
 // ── Icons (inline to avoid import issues) ─────────────────────────────────────
@@ -217,7 +217,9 @@ export default function UpgradePrompt({
           padding: '4px 12px',
           marginBottom: 20,
         }}>
-          <span style={{ fontSize: 13 }}>⚡</span>
+          <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#a78bfa" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>
           <span style={{ fontSize: 12, fontWeight: 700, color: '#a78bfa', letterSpacing: '0.04em' }}>PRO FEATURE</span>
         </div>
 
@@ -259,7 +261,10 @@ export default function UpgradePrompt({
             alignItems: 'center',
             gap: 10,
           }}>
-            <span style={{ fontSize: 20 }}>🔒</span>
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+              <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+              <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+            </svg>
             <div>
               <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)' }}>
                 Your {lockedCount.toLocaleString()} {lockedCount === 1 ? 'entry is' : 'entries are'} waiting
@@ -427,7 +432,10 @@ export default function UpgradePrompt({
           fontSize: 11,
           color: 'var(--text-3)',
         }}>
-          🔒 Secure payment · Cancel anytime · No contracts
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', marginRight: 4, verticalAlign: 'middle' }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>Secure payment · Cancel anytime · No contracts
         </p>
       </div>
     </div>

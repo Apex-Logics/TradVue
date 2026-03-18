@@ -961,7 +961,10 @@ export default function AdminPage() {
             {/* Refresh + loading */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 20 }}>
               <h2 style={{ fontSize: 16, fontWeight: 700, display: 'flex', alignItems: 'center', gap: 8 }}>
-                🔒 Security Dashboard
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+                  <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+                  <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+                </svg>Security Dashboard
               </h2>
               <button onClick={() => loadSecurity()} disabled={secLoading}
                 style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', color: 'var(--text-1)', cursor: secLoading ? 'not-allowed' : 'pointer', display: 'flex', alignItems: 'center', gap: 6, fontSize: 13, opacity: secLoading ? 0.6 : 1 }}>
@@ -1036,7 +1039,7 @@ export default function AdminPage() {
             {/* ── 2. Threat Monitor ─────────────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>🚨 Threat Monitor</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>Threat Monitor</span>
                 <span style={{ fontSize: 12, color: 'var(--text-2)' }}>IPs with 3+ failed attempts (24h)</span>
                 {secIPThreats.length > 0 && <span style={{ marginLeft: 'auto', background: 'rgba(255,69,96,0.12)', color: '#ff4560', border: '1px solid rgba(255,69,96,0.3)', borderRadius: 10, fontSize: 11, padding: '2px 8px', fontWeight: 700 }}>{secIPThreats.length} threat{secIPThreats.length !== 1 ? 's' : ''}</span>}
               </div>
@@ -1146,7 +1149,10 @@ export default function AdminPage() {
             {/* ── 5. Live Activity Feed ─────────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden' }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10 }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>⚡ Live Security Feed</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>Live Security Feed</span>
                 <span style={{ fontSize: 12, color: 'var(--text-2)' }}>auto-refreshes every 30s</span>
               </div>
               <div style={{ padding: '4px 0' }}>
@@ -1173,17 +1179,26 @@ export default function AdminPage() {
 
             {/* ── 6. Quick Actions Panel ────────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, padding: '16px 20px', marginTop: 20, marginBottom: 20 }}>
-              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>⚡ Quick Actions</div>
+              <div style={{ fontWeight: 600, fontSize: 14, marginBottom: 14 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+              </svg>Quick Actions</div>
               <div style={{ display: 'flex', flexWrap: 'wrap', gap: 10 }}>
                 <button onClick={() => { const r = secReports.find(x => x.type === 'pen_test'); if (r) openReport(r.filename) }}
                   disabled={!secReports.some(x => x.type === 'pen_test')}
                   style={{ background: 'rgba(74,158,255,0.1)', border: '1px solid rgba(74,158,255,0.3)', borderRadius: 8, padding: '8px 14px', color: 'var(--blue)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📋 View Latest Pen Test
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                  </svg>View Latest Pen Test
                 </button>
                 <button onClick={() => { const r = secReports.find(x => x.type === 'weekly_audit' || x.type === 'deep_review'); if (r) openReport(r.filename) }}
                   disabled={!secReports.some(x => x.type === 'weekly_audit' || x.type === 'deep_review')}
                   style={{ background: 'rgba(74,158,255,0.1)', border: '1px solid rgba(74,158,255,0.3)', borderRadius: 8, padding: '8px 14px', color: 'var(--blue)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
-                  📋 View Latest Audit
+                  <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                    <path d="M16 4h2a2 2 0 0 1 2 2v14a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V6a2 2 0 0 1 2-2h2"/>
+                    <rect x="8" y="2" width="8" height="4" rx="1" ry="1"/>
+                  </svg>View Latest Audit
                 </button>
                 <button onClick={() => exportFile('failed-logins-csv')}
                   style={{ background: 'rgba(34,197,94,0.1)', border: '1px solid rgba(34,197,94,0.3)', borderRadius: 8, padding: '8px 14px', color: 'var(--green)', cursor: 'pointer', fontSize: 13, display: 'flex', alignItems: 'center', gap: 6 }}>
@@ -1326,7 +1341,11 @@ export default function AdminPage() {
             {/* ── 10. Alert History Log ─────────────────────────────────────── */}
             <div style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 12, overflow: 'hidden', marginBottom: 20 }}>
               <div style={{ padding: '14px 20px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 10, flexWrap: 'wrap' }}>
-                <span style={{ fontWeight: 600, fontSize: 14 }}>🔔 Alert History</span>
+                <span style={{ fontWeight: 600, fontSize: 14 }}>
+              <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+                <path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/>
+                <path d="M13.73 21a2 2 0 0 1-3.46 0"/>
+              </svg>Alert History</span>
                 <input value={secAlertFilter} onChange={e => setSecAlertFilter(e.target.value)} placeholder="Search…"
                   style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-1)', fontSize: 12, width: 160, outline: 'none' }} />
                 <select value={secAlertResultFilter} onChange={e => setSecAlertResultFilter(e.target.value as typeof secAlertResultFilter)}

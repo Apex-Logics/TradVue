@@ -241,7 +241,9 @@ function InsightCard({ insight, showConfidence }: { insight: CoachInsight; showC
         padding: '10px 14px',
       }}>
         <div style={{ fontSize: 10, fontWeight: 700, color: s.accent, textTransform: 'uppercase', letterSpacing: 1, marginBottom: 4 }}>
-          📊 Statistical Observation
+          <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+            <rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/>
+          </svg>Statistical Observation
         </div>
         <p style={{ margin: 0, fontSize: 13, color: 'var(--text-0)', lineHeight: 1.6 }}>
           {insight.recommendation}
@@ -260,7 +262,10 @@ function InsightCard({ insight, showConfidence }: { insight: CoachInsight; showC
         )}
         {hasSmallSample && (
           <div style={{ fontSize: 11, color: '#fb923c' }}>
-            ⚠️ Small sample size — accuracy improves with more data
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>Small sample size — accuracy improves with more data
           </div>
         )}
       </div>
@@ -373,7 +378,10 @@ function WeeklySummaryCard({ summary, thresholdLevel }: {
           fontSize: 13,
           color: 'var(--text-2)',
         }}>
-          🔒 Pattern detection unlocks at 10+ total logged trades. Keep journaling!
+          <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+            <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/>
+            <path d="M7 11V7a5 5 0 0 1 10 0v4"/>
+          </svg>Pattern detection unlocks at 10+ total logged trades. Keep journaling!
         </div>
       )}
     </div>
@@ -599,7 +607,9 @@ export default function CoachPage() {
           marginBottom: 20,
           letterSpacing: 0.5,
         }}>
-          ⚡ NEW
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+            <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+          </svg>NEW
         </div>
 
         {/* ── Prominent Disclaimer ── */}
@@ -619,7 +629,12 @@ export default function CoachPage() {
               textAlign: 'center',
               marginBottom: 24,
             }}>
-              <div style={{ fontSize: 48, marginBottom: 16 }}>📓</div>
+              <div style={{ fontSize: 48, marginBottom: 16, display: 'flex', justifyContent: 'center' }}>
+                <svg width="48" height="48" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"/>
+                  <path d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"/>
+                </svg>
+              </div>
               <h2 style={{ margin: '0 0 8px', fontSize: 20, fontWeight: 700 }}>Keep Building Your Trade History</h2>
               <p style={{ margin: '0 0 8px', fontSize: 14, color: 'var(--text-1)', maxWidth: 420, marginLeft: 'auto', marginRight: 'auto' }}>
                 {tradeCount === 0
@@ -722,7 +737,12 @@ export default function CoachPage() {
           color: 'var(--text-3)',
           lineHeight: 1.7,
         }}>
-          <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>⚠️ Statistical Analysis Only: </span>
+          <span style={{ fontWeight: 700, color: 'var(--text-2)' }}>
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>Statistical Analysis Only:{' '}
+          </span>
           AI Trade Coach provides backward-looking observations based on your trading data for educational purposes only.
           This is not financial advice. Past patterns do not guarantee future results.
           All insights are statistical observations of logged data. Always make your own trading decisions based on your own research and risk tolerance.

@@ -5140,13 +5140,19 @@ function DRIPTab({
             {/* Hero message */}
             <div style={{ background: 'rgba(0,192,106,0.08)', border: '1px solid rgba(0,192,106,0.2)', borderRadius: 8, padding: '14px 18px', marginBottom: 16 }}>
               <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 6 }}>
-                💰 Your portfolio currently generates{' '}
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+                  <line x1="12" y1="1" x2="12" y2="23"/>
+                  <path d="M17 5H9.5a3.5 3.5 0 0 0 0 7h5a3.5 3.5 0 0 1 0 7H6"/>
+                </svg>Your portfolio currently generates{' '}
                 <strong style={{ color: 'var(--green)', fontSize: 15, fontFamily: 'var(--mono)' }}>{fmtDollar(currentAnnualIncome / 12)}/month</strong>
                 {' '}in passive dividend income.
               </div>
               {income10With > 0 && (
                 <div style={{ fontSize: 12, color: 'var(--text-2)' }}>
-                  🚀 With DRIP reinvestment, this grows to{' '}
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 5 }}>
+                    <polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/>
+                    <polyline points="17 6 23 6 23 12"/>
+                  </svg>With DRIP reinvestment, this grows to{' '}
                   <strong style={{ color: 'var(--accent)', fontSize: 15, fontFamily: 'var(--mono)' }}>{fmtDollar(income10With / 12)}/month</strong>
                   {' '}in 10 years
                   {dripAdv10 > 0 && (
@@ -5195,7 +5201,11 @@ function DRIPTab({
           </>
         ) : (
           <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: 24, textAlign: 'center' }}>
-            <div style={{ fontSize: 32, marginBottom: 10 }}>📊</div>
+            <div style={{ marginBottom: 10, display: 'flex', justifyContent: 'center' }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                <rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/>
+              </svg>
+            </div>
             <div style={{ fontSize: 13, color: 'var(--text-2)', marginBottom: 6 }}>No dividend data available for your holdings yet.</div>
             <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Enter yields manually below for unknown tickers, or add dividend-paying stocks in the Holdings tab.</div>
           </div>

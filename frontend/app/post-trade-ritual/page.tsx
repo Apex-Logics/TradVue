@@ -337,10 +337,10 @@ export default function PostTradeRitualPage() {
           <h2 style={{ fontSize: '1.5rem', fontWeight: 800, letterSpacing: '-0.02em', marginBottom: '24px', color: 'var(--text-0)' }}>You Might Also Like</h2>
           <div className="seo-related-grid">
             {[
-              { href: '/ritual', title: 'Start Your Ritual', desc: 'Open the post-trade ritual app now', emoji: '🔥' },
-              { href: '/journal', title: 'Trading Journal', desc: 'Full-featured journal with AI analytics', emoji: '📓' },
-              { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why journaling changes your trading', emoji: '🏆' },
-              { href: '/coach', title: 'AI Trading Coach', desc: 'Get AI insights on your trade patterns', emoji: '🧠' },
+              { href: '/ritual', title: 'Start Your Ritual', desc: 'Open the post-trade ritual app now', emoji: '' },
+              { href: '/journal', title: 'Trading Journal', desc: 'Full-featured journal with AI analytics', emoji: '' },
+              { href: '/best-trading-journal', title: 'Best Trading Journal', desc: 'Why journaling changes your trading', emoji: '' },
+              { href: '/coach', title: 'AI Trading Coach', desc: 'Get AI insights on your trade patterns', emoji: '' },
             ].map(item => (
               <Link key={item.href} href={item.href} className="seo-related-card">
                 <div className="seo-related-card-title">{item.title}</div>

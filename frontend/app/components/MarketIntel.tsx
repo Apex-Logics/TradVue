@@ -152,7 +152,12 @@ function LoadingRows({ rows = 5 }: { rows?: number }) {
 function ErrorMsg({ msg, onRetry }: { msg: string; onRetry?: () => void }) {
   return (
     <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-      <div style={{ fontSize: 20, marginBottom: 8 }}>⚠️</div>
+      <div style={{ fontSize: 20, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+        <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+          <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+          <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </div>
       <div style={{ marginBottom: 12 }}>{msg}</div>
       {onRetry && (
         <button className="btn btn-secondary btn-sm" onClick={onRetry}>↻ Retry</button>
@@ -396,7 +401,11 @@ function EconomicDataTab() {
   if (!loading && data && !data.available) {
     return (
       <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-        <div style={{ fontSize: 20, marginBottom: 8 }}>📊</div>
+        <div style={{ fontSize: 20, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/>
+          </svg>
+        </div>
         <div>{data.message || 'Economic data not configured yet.'}</div>
         <div style={{ marginTop: 8, fontSize: 11 }}>Set FRED_API_KEY in your environment to enable.</div>
       </div>
@@ -531,10 +540,10 @@ function IPOCalendarTab() {
 // ─── Main Component ─────────────────────────────────────────────────────────────
 
 const TABS = [
-  { id: 'insider', label: '🔍 Insider Trades' },
-  { id: 'earnings', label: '📅 Earnings' },
-  { id: 'economic', label: '📊 Economic Data' },
-  { id: 'ipo', label: '🚀 IPO Calendar' },
+  { id: 'insider', label: 'Insider Trades' },
+  { id: 'earnings', label: 'Earnings' },
+  { id: 'economic', label: 'Economic Data' },
+  { id: 'ipo', label: 'IPO Calendar' },
 ]
 
 export default function MarketIntel({ symbol }: { symbol?: string }) {

@@ -18,7 +18,7 @@ interface FAQCategory {
 const FAQ_DATA: FAQCategory[] = [
   {
     id: 'journal',
-    label: '📓 Journal & Trade Log',
+    label: 'Journal & Trade Log',
     items: [
       {
         question: 'How do I log a trade?',
@@ -44,7 +44,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'propfirm',
-    label: '🎯 Prop Firm Tracker',
+    label: 'Prop Firm Tracker',
     items: [
       {
         question: 'How do I add a prop firm account?',
@@ -66,7 +66,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'playbooks',
-    label: '📋 Playbooks & Strategies',
+    label: 'Playbooks & Strategies',
     items: [
       {
         question: 'How do I create a custom playbook?',
@@ -80,7 +80,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'ritual',
-    label: '✨ Post-Trade Ritual',
+    label: 'Post-Trade Ritual',
     items: [
       {
         question: 'How does the streak work?',
@@ -94,7 +94,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'aicoach',
-    label: '🧠 AI Coach',
+    label: 'AI Coach',
     items: [
       {
         question: "Why don't I see any insights?",
@@ -108,7 +108,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'portfolio',
-    label: '💼 Portfolio',
+    label: 'Portfolio',
     items: [
       {
         question: 'How do I add a holding?',
@@ -122,7 +122,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'calculators',
-    label: '🧮 Calculators & Tools',
+    label: 'Calculators & Tools',
     items: [
       {
         question: 'Where are the calculators?',
@@ -132,7 +132,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'calendar',
-    label: '📅 Calendar & News',
+    label: 'Calendar & News',
     items: [
       {
         question: 'How do I filter events?',
@@ -146,7 +146,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'account',
-    label: '👤 Account & Billing',
+    label: 'Account & Billing',
     items: [
       {
         question: 'How do I sign up?',
@@ -168,7 +168,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'troubleshooting',
-    label: '🔧 Troubleshooting',
+    label: 'Troubleshooting',
     items: [
       {
         question: 'Data not loading',
@@ -186,7 +186,7 @@ const FAQ_DATA: FAQCategory[] = [
   },
   {
     id: 'contact',
-    label: '📧 Contact Support',
+    label: 'Contact Support',
     items: [],
   },
 ]
@@ -287,7 +287,7 @@ function ContactPanel({ onBack }: { onBack: () => void }) {
         }}
       >
         <p style={{ margin: '0 0 10px 0' }}>
-          📧 Email us at{' '}
+          Email us at{' '}
           <a href="mailto:support@tradvue.com" style={{ color: '#4a9eff', textDecoration: 'none' }}>
             support@tradvue.com
           </a>{' '}

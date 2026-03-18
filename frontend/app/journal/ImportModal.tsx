@@ -37,7 +37,7 @@ interface ImportModalProps {
 type BrokerOverride = 'auto' | 'Robinhood' | 'Fidelity' | 'Schwab' | 'Webull' | 'Tastytrade' | 'E*TRADE' | 'IBKR' | 'TradeStation'
 
 const BROKER_OPTIONS: { value: BrokerOverride; label: string }[] = [
-  { value: 'auto',         label: '✨ Auto-Detect' },
+  { value: 'auto',         label: 'Auto-Detect' },
   { value: 'Robinhood',    label: 'Robinhood' },
   { value: 'Fidelity',     label: 'Fidelity' },
   { value: 'Schwab',       label: 'Charles Schwab' },
@@ -315,7 +315,11 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
               padding: '12px 16px', background: 'rgba(99,102,241,0.08)',
               borderRadius: 10, border: '1px solid rgba(99,102,241,0.2)',
             }}>
-              <div style={{ fontSize: 22 }}>📊</div>
+              <div style={{ display: 'flex', justifyContent: 'center' }}>
+                <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/>
+                </svg>
+              </div>
               <div>
                 <div style={{ fontSize: 14, fontWeight: 700, color: 'var(--text-0)' }}>
                   Found {rawTrades.length} trade{rawTrades.length !== 1 ? 's' : ''} from{' '}

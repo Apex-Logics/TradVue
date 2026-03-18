@@ -30,7 +30,7 @@ interface NewsArticle {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['All', 'Equities', 'Forex', 'Crypto', 'Commodities', 'Macro', '📊 Market Intel']
+const CATEGORIES = ['All', 'Equities', 'Forex', 'Crypto', 'Commodities', 'Macro', 'Market Intel']
 const CAT_MAP: Record<string, string> = {
   All: 'all',
   Equities: 'stocks',
@@ -283,17 +283,17 @@ export default function NewsPage() {
       </div>
 
       {/* Market Intel Tab — shows instead of articles */}
-      {category === '📊 Market Intel' && (
+      {category === 'Market Intel' && (
         <div style={{ padding: '24px' }}>
           <MarketIntel />
         </div>
       )}
 
       {/* Grid */}
-      <div className="news-page-content" style={{ display: category === '📊 Market Intel' ? 'none' : undefined }}>
+      <div className="news-page-content" style={{ display: category === 'Market Intel' ? 'none' : undefined }}>
         {error && !loading && (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
-            <div style={{ fontSize: 24, marginBottom: 12 }}>⚠️</div>
+            <div style={{ marginBottom: 12 }}><svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg></div>
             <div style={{ fontSize: 14, marginBottom: 16 }}>News feed temporarily unavailable</div>
             <button
               className="btn btn-secondary"
@@ -320,7 +320,7 @@ export default function NewsPage() {
       </div>
 
       {/* Load More */}
-      {category !== '📊 Market Intel' && !loading && hasMore && filtered.length > 0 && (
+      {category !== 'Market Intel' && !loading && hasMore && filtered.length > 0 && (
         <div style={{ textAlign: 'center', padding: '24px 0' }}>
           <button className="btn btn-secondary" onClick={loadMore}>
             Load More
@@ -328,7 +328,7 @@ export default function NewsPage() {
         </div>
       )}
 
-      {category !== '📊 Market Intel' && loading && articles.length > 0 && (
+      {category !== 'Market Intel' && loading && articles.length > 0 && (
         <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-3)', fontSize: 12 }}>
           Loading more…
         </div>
@@ -345,7 +345,7 @@ export default function NewsPage() {
         textAlign: 'center',
         background: 'var(--bg-1)',
       }}>
-        ⚠️ News and calendar data is aggregated from third-party sources. TradVue does not verify the accuracy of third-party content and is not responsible for investment decisions based on this information.{' '}
+        News and calendar data is aggregated from third-party sources. TradVue does not verify the accuracy of third-party content and is not responsible for investment decisions based on this information.{' '}
         <Link href="/legal/disclaimer" style={{ color: 'var(--accent)' }}>Disclaimer</Link>
       </footer>
     </div>

@@ -1028,7 +1028,12 @@ export default function HomeClient() {
         <span>
           <a href="/help#data-sources" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 11 }}>Data Sources</a>
           <span style={{ margin: '0 6px', color: 'var(--text-3)' }}>·</span>
-          <span style={{ color: 'var(--text-3)', fontSize: 11 }}>⚠️ Market data is provided for informational purposes only and may be delayed. TradVue does not guarantee the accuracy, completeness, or timeliness of any data. Do not rely solely on this information for trading decisions.</span>
+          <span style={{ color: 'var(--text-3)', fontSize: 11 }}>
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
+              <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+              <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+            </svg>Market data is provided for informational purposes only and may be delayed. TradVue does not guarantee the accuracy, completeness, or timeliness of any data. Do not rely solely on this information for trading decisions.
+          </span>
         </span>
         <span>
           {isOffline
