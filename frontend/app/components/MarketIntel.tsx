@@ -29,6 +29,16 @@ interface InsiderTrade {
   transactionType?: string
   shares?: number
   name?: string
+  // Enriched EDGAR Form 4 fields
+  companyName?: string | null
+  officerTitle?: string | null
+  pricePerShare?: number | null
+  transactionValue?: number | null
+  holdingsAfter?: number | null
+  filingUrl?: string | null
+  isDirector?: boolean
+  isOfficer?: boolean
+  isTenPercentOwner?: boolean
 }
 
 interface EarningsItem {
@@ -276,27 +286,51 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
             <th>Insider</th>
             <th>Type</th>
             <th>Shares</th>
+            <th>Value</th>
             <th>Date</th>
-            <th>Details</th>
           </tr>
         </thead>
         <tbody>
           {loading ? <LoadingRows rows={8} /> : filtered.length === 0 ? (
             <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>{search ? `No results for "${search}"` : 'No insider trades found'}</td></tr>
           ) : filtered.slice(0, 50).map((item, i) => {
-            const isBuy = (item.transactionType || '').toLowerCase().includes('buy') ||
-                          (item.title || '').toLowerCase().includes('purchase')
-            const isSell = (item.transactionType || '').toLowerCase().includes('sell') ||
-                           (item.title || '').toLowerCase().includes('sale')
+            const txType = (item.transactionType || '').toLowerCase()
+            const isBuy = txType.includes('buy') || txType.includes('purchase') || txType === 'p'
+            const isSell = txType.includes('sell') || txType.includes('sale') || txType === 's'
             const typeColor = isBuy ? 'var(--green, #22c55e)' : isSell ? 'var(--red, #ef4444)' : 'var(--text-2)'
+            const filingLink = item.filingUrl || item.url || null
 
             return (
               <tr key={i}>
                 <td>
-                  <span className="intel-ticker-tag">{item.ticker || '—'}</span>
+                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                    <span className="intel-ticker-tag">{item.ticker || '—'}</span>
+                    {filingLink && (
+                      <a
+                        href={filingLink}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        title="View SEC filing"
+                        style={{ color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+                      >
+                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                          <polyline points="15 3 21 3 21 9"/>
+                          <line x1="10" y1="14" x2="21" y2="3"/>
+                        </svg>
+                      </a>
+                    )}
+                  </div>
                 </td>
-                <td style={{ maxWidth: 160, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                  {item.name || item.title?.split(':')[0] || '—'}
+                <td style={{ maxWidth: 180 }}>
+                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                    {item.name || '—'}
+                  </div>
+                  {item.officerTitle && (
+                    <div style={{ fontSize: 10, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                      {item.officerTitle}
+                    </div>
+                  )}
                 </td>
                 <td>
                   <span style={{ color: typeColor, fontWeight: 600, fontSize: 11 }}>
@@ -304,20 +338,17 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
                   </span>
                 </td>
                 <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>
-                  {item.shares ? item.shares.toLocaleString() : '—'}
+                  {item.shares != null ? item.shares.toLocaleString() : '—'}
+                </td>
+                <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
+                  {item.transactionValue != null
+                    ? fmtLargeMoney(item.transactionValue)
+                    : item.pricePerShare != null
+                      ? `$${item.pricePerShare.toFixed(2)}/sh`
+                      : '—'}
                 </td>
                 <td style={{ whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 11 }}>
                   {fmtDate(item.date)}
-                </td>
-                <td>
-                  {item.url ? (
-                    <a href={item.url} target="_blank" rel="noopener noreferrer"
-                      style={{ color: 'var(--purple)', fontSize: 11 }}>
-                      View →
-                    </a>
-                  ) : (
-                    <span style={{ color: 'var(--text-3)', fontSize: 11 }}>—</span>
-                  )}
                 </td>
               </tr>
             )
