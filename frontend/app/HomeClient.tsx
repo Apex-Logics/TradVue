@@ -802,7 +802,7 @@ export default function HomeClient() {
             </OnboardingTooltip>
           )}
 
-          <button className="pro-btn">PRO</button>
+          <a href="/pricing" className="pro-btn" style={{ textDecoration: 'none' }}>PRO</a>
         </div>
       </header>
 
