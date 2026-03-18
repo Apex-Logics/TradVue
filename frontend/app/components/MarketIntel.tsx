@@ -18,27 +18,41 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 // ─── Types ─────────────────────────────────────────────────────────────────────
 
 interface InsiderTrade {
-  title: string
-  summary: string
-  url: string
-  source: string
-  category: string
   ticker: string | null
-  filingType: string
-  date: string
-  transactionType?: string
-  shares?: number
-  name?: string
-  // Enriched EDGAR Form 4 fields
   companyName?: string | null
+  name?: string | null
   officerTitle?: string | null
+  transactionType?: string | null
+  shares?: number | null
   pricePerShare?: number | null
   transactionValue?: number | null
   holdingsAfter?: number | null
+  date: string
   filingUrl?: string | null
+  accessionNumber?: string | null
+  cik?: string | null
+  source?: string | null
+  sourceApi?: string | null
+  // Legacy fields (live fallback)
+  title?: string
+  summary?: string
+  url?: string
+  category?: string
+  filingType?: string
   isDirector?: boolean
   isOfficer?: boolean
   isTenPercentOwner?: boolean
+}
+
+interface InsiderApiResponse {
+  success: boolean
+  data: InsiderTrade[]
+  total: number
+  page: number
+  limit: number
+  hasMore: boolean
+  sources: { edgar: number; finnhub: number }
+  cached?: boolean
 }
 
 interface EarningsItem {
@@ -183,62 +197,119 @@ type InsiderFilter = 'All' | 'Buy' | 'Sell' | 'Award' | 'Gift' | 'Other'
 function InsiderTradesTab({ symbol }: { symbol?: string }) {
   const [data, setData] = useState<InsiderTrade[]>([])
   const [loading, setLoading] = useState(true)
+  const [loadingMore, setLoadingMore] = useState(false)
   const [error, setError] = useState(false)
   const [search, setSearch] = useState('')
   const [activeFilter, setActiveFilter] = useState<InsiderFilter>('All')
+  const [dateRange, setDateRange] = useState<'7' | '30' | '90'>('30')
+  const [page, setPage] = useState(1)
+  const [total, setTotal] = useState(0)
+  const [hasMore, setHasMore] = useState(false)
+  const [sources, setSources] = useState<{ edgar: number; finnhub: number }>({ edgar: 0, finnhub: 0 })
+
+  const LIMIT = 50
+
+  function buildUrl(pageNum: number) {
+    const params = new URLSearchParams()
+    if (symbol) params.set('symbol', symbol)
+    params.set('page', String(pageNum))
+    params.set('limit', String(LIMIT))
+
+    // Date range: from = today minus N days
+    const fromDate = new Date(Date.now() - parseInt(dateRange) * 24 * 3600 * 1000)
+    params.set('from', fromDate.toISOString().split('T')[0])
+
+    if (activeFilter !== 'All' && activeFilter !== 'Other') {
+      params.set('type', activeFilter.toLowerCase())
+    }
+
+    return `${API_BASE}/api/insider-trades?${params.toString()}`
+  }
 
   const load = useCallback(async () => {
-    setLoading(true); setError(false)
-    const url = symbol
-      ? `${API_BASE}/api/insider-trades?symbol=${encodeURIComponent(symbol)}`
-      : `${API_BASE}/api/insider-trades`
-    const res = await apiFetchSafe<{ success: boolean; data: InsiderTrade[] }>(url)
-    if (res?.success) setData(res.data || [])
-    else setError(true)
+    setLoading(true)
+    setError(false)
+    setPage(1)
+    setData([])
+    const res = await apiFetchSafe<InsiderApiResponse>(buildUrl(1))
+    if (res?.success) {
+      setData(res.data || [])
+      setTotal(res.total || 0)
+      setHasMore(res.hasMore || false)
+      setSources(res.sources || { edgar: 0, finnhub: 0 })
+    } else {
+      setError(true)
+    }
     setLoading(false)
-  }, [symbol])
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [symbol, dateRange, activeFilter])
 
   useEffect(() => { load() }, [load])
+
+  async function loadMore() {
+    if (loadingMore || !hasMore) return
+    setLoadingMore(true)
+    const nextPage = page + 1
+    const res = await apiFetchSafe<InsiderApiResponse>(buildUrl(nextPage))
+    if (res?.success) {
+      setData(prev => [...prev, ...(res.data || [])])
+      setPage(nextPage)
+      setHasMore(res.hasMore || false)
+      setTotal(res.total || 0)
+    }
+    setLoadingMore(false)
+  }
 
   if (error) return <ErrorMsg msg="Failed to load insider trades" onRetry={load} />
 
   const FILTERS: InsiderFilter[] = ['All', 'Buy', 'Sell', 'Award', 'Gift', 'Other']
 
-  function matchesFilter(item: InsiderTrade, filter: InsiderFilter): boolean {
+  // Client-side text search on already-loaded data
+  const filtered = data.filter(item => {
+    if (!search.trim()) return true
+    const q = search.toLowerCase()
+    return (item.ticker || '').toLowerCase().includes(q) ||
+           (item.name || '').toLowerCase().includes(q) ||
+           (item.transactionType || '').toLowerCase().includes(q) ||
+           (item.source || '').toLowerCase().includes(q) ||
+           (item.companyName || '').toLowerCase().includes(q)
+  }).filter(item => {
+    if (activeFilter === 'All') return true
     const t = (item.transactionType || '').toLowerCase()
-    const title = (item.title || '').toLowerCase()
-    switch (filter) {
-      case 'All':   return true
-      case 'Buy':   return t.includes('buy') || t.includes('purchase') || title.includes('purchase')
-      case 'Sell':  return t.includes('sell') || t.includes('sale') || title.includes('sale')
-      case 'Award': return t.includes('award')
-      case 'Gift':  return t === 'g' || t.includes('gift')
-      case 'Other': {
-        const isBuy   = t.includes('buy') || t.includes('purchase')
-        const isSell  = t.includes('sell') || t.includes('sale')
-        const isAward = t.includes('award')
-        const isGift  = t === 'g' || t.includes('gift')
-        return !isBuy && !isSell && !isAward && !isGift
-      }
+    if (activeFilter === 'Buy')   return t.includes('buy') || t.includes('purchase')
+    if (activeFilter === 'Sell')  return t.includes('sell') || t.includes('sale')
+    if (activeFilter === 'Award') return t.includes('award')
+    if (activeFilter === 'Gift')  return t.includes('gift')
+    if (activeFilter === 'Other') {
+      return !t.includes('buy') && !t.includes('purchase') && !t.includes('sell') &&
+             !t.includes('sale') && !t.includes('award') && !t.includes('gift')
     }
-  }
-
-  const filtered = data
-    .filter(item => matchesFilter(item, activeFilter))
-    .filter(item => {
-      if (!search.trim()) return true
-      const q = search.toLowerCase()
-      return (item.ticker || '').toLowerCase().includes(q) ||
-             (item.name || '').toLowerCase().includes(q) ||
-             (item.title || '').toLowerCase().includes(q) ||
-             (item.transactionType || '').toLowerCase().includes(q) ||
-             (item.source || '').toLowerCase().includes(q)
-    })
+    return true
+  })
 
   return (
     <div>
-      {/* Quick filter pills */}
-      <div style={{ padding: '10px 16px 0', display: 'flex', gap: 6, flexWrap: 'wrap' }}>
+      {/* Controls row */}
+      <div style={{ padding: '10px 16px 0', display: 'flex', gap: 8, flexWrap: 'wrap', alignItems: 'center' }}>
+        {/* Date range selector */}
+        <select
+          value={dateRange}
+          onChange={e => setDateRange(e.target.value as '7' | '30' | '90')}
+          style={{
+            fontSize: 11,
+            padding: '3px 8px',
+            borderRadius: 6,
+            border: '1px solid var(--border)',
+            background: 'var(--bg-1)',
+            color: 'var(--text-1)',
+            cursor: 'pointer',
+          }}
+        >
+          <option value="7">Last 7 days</option>
+          <option value="30">Last 30 days</option>
+          <option value="90">Last 90 days</option>
+        </select>
+        {/* Type filter pills */}
         {FILTERS.map(f => (
           <button
             key={f}
@@ -258,9 +329,17 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
             {f}
           </button>
         ))}
+        {/* Source counts */}
+        {!loading && (sources.edgar > 0 || sources.finnhub > 0) && (
+          <span style={{ fontSize: 10, color: 'var(--text-3)', marginLeft: 4 }}>
+            {sources.edgar > 0 && `${sources.edgar.toLocaleString()} SEC`}
+            {sources.edgar > 0 && sources.finnhub > 0 && ' · '}
+            {sources.finnhub > 0 && `${sources.finnhub.toLocaleString()} Finnhub`}
+          </span>
+        )}
       </div>
       {/* Search bar */}
-      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+      <div style={{ padding: '8px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
         <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
           <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
         </svg>
@@ -268,94 +347,154 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
           type="text"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          placeholder="Filter by ticker, insider, type…"
-          style={{
-            background: 'none', border: 'none', outline: 'none',
-            fontSize: 12, color: 'var(--text-0)', width: '100%',
-          }}
+          placeholder="Search ticker, insider, company..."
+          style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: 'var(--text-0)', width: '100%' }}
         />
         {search && (
           <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: 0 }}>✕</button>
         )}
+        {!loading && total > 0 && (
+          <span style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+            {total.toLocaleString()} total
+          </span>
+        )}
       </div>
+      {/* Table */}
       <div style={{ overflowX: 'auto' }}>
-      <table className="intel-table">
-        <thead>
-          <tr>
-            <th>Ticker</th>
-            <th>Insider</th>
-            <th>Type</th>
-            <th>Shares</th>
-            <th>Value</th>
-            <th>Date</th>
-          </tr>
-        </thead>
-        <tbody>
-          {loading ? <LoadingRows rows={8} /> : filtered.length === 0 ? (
-            <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>{search ? `No results for "${search}"` : 'No insider trades found'}</td></tr>
-          ) : filtered.slice(0, 50).map((item, i) => {
-            const txType = (item.transactionType || '').toLowerCase()
-            const isBuy = txType.includes('buy') || txType.includes('purchase') || txType === 'p'
-            const isSell = txType.includes('sell') || txType.includes('sale') || txType === 's'
-            const typeColor = isBuy ? 'var(--green, #22c55e)' : isSell ? 'var(--red, #ef4444)' : 'var(--text-2)'
-            const filingLink = item.filingUrl || item.url || null
-
-            return (
-              <tr key={i}>
-                <td>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
-                    <span className="intel-ticker-tag">{item.ticker || '—'}</span>
-                    {filingLink && (
-                      <a
-                        href={filingLink}
-                        target="_blank"
-                        rel="noopener noreferrer"
-                        title="View SEC filing"
-                        style={{ color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
-                      >
-                        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                          <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
-                          <polyline points="15 3 21 3 21 9"/>
-                          <line x1="10" y1="14" x2="21" y2="3"/>
-                        </svg>
-                      </a>
-                    )}
-                  </div>
-                </td>
-                <td style={{ maxWidth: 180 }}>
-                  <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
-                    {item.name || '—'}
-                  </div>
-                  {item.officerTitle && (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
-                      {item.officerTitle}
-                    </div>
-                  )}
-                </td>
-                <td>
-                  <span style={{ color: typeColor, fontWeight: 600, fontSize: 11 }}>
-                    {item.transactionType || item.filingType || '—'}
-                  </span>
-                </td>
-                <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>
-                  {item.shares != null ? item.shares.toLocaleString() : '—'}
-                </td>
-                <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
-                  {item.transactionValue != null
-                    ? fmtLargeMoney(item.transactionValue)
-                    : item.pricePerShare != null
-                      ? `$${item.pricePerShare.toFixed(2)}/sh`
-                      : '—'}
-                </td>
-                <td style={{ whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 11 }}>
-                  {fmtDate(item.date)}
+        <table className="intel-table">
+          <thead>
+            <tr>
+              <th>Ticker</th>
+              <th>Insider</th>
+              <th>Type</th>
+              <th>Shares</th>
+              <th>Value</th>
+              <th>Date</th>
+              <th>Source</th>
+            </tr>
+          </thead>
+          <tbody>
+            {loading ? <LoadingRows rows={8} /> : filtered.length === 0 ? (
+              <tr>
+                <td colSpan={7} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>
+                  {search ? `No results for "${search}"` : 'No insider trades found for this period'}
                 </td>
               </tr>
-            )
-          })}
-        </tbody>
-      </table>
+            ) : filtered.map((item, i) => {
+              const txType = (item.transactionType || '').toLowerCase()
+              const isBuy = txType.includes('buy') || txType.includes('purchase')
+              const isSell = txType.includes('sell') || txType.includes('sale')
+              const typeColor = isBuy ? 'var(--green, #22c55e)' : isSell ? 'var(--red, #ef4444)' : 'var(--text-2)'
+              const filingLink = item.filingUrl || null
+              const isEdgar = (item.source || '').includes('EDGAR') || (item.sourceApi || '') === 'EFTS'
+
+              return (
+                <tr key={i}>
+                  <td>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 4 }}>
+                      <span className="intel-ticker-tag">{item.ticker || '—'}</span>
+                      {filingLink && (
+                        <a
+                          href={filingLink}
+                          target="_blank"
+                          rel="noopener noreferrer"
+                          title={item.accessionNumber ? `Accession: ${item.accessionNumber}` : 'View SEC filing'}
+                          style={{ color: 'var(--text-3)', display: 'inline-flex', alignItems: 'center', flexShrink: 0 }}
+                        >
+                          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                            <path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/>
+                            <polyline points="15 3 21 3 21 9"/>
+                            <line x1="10" y1="14" x2="21" y2="3"/>
+                          </svg>
+                        </a>
+                      )}
+                    </div>
+                  </td>
+                  <td style={{ maxWidth: 180 }}>
+                    <div style={{ overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap' }}>
+                      {item.name || '—'}
+                    </div>
+                    {item.officerTitle && (
+                      <div style={{ fontSize: 10, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                        {item.officerTitle}
+                      </div>
+                    )}
+                  </td>
+                  <td>
+                    <span style={{ color: typeColor, fontWeight: 600, fontSize: 11 }}>
+                      {item.transactionType || '—'}
+                    </span>
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>
+                    {item.shares != null ? item.shares.toLocaleString() : '—'}
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
+                    {item.transactionValue != null
+                      ? fmtLargeMoney(item.transactionValue)
+                      : item.pricePerShare != null
+                        ? `$${item.pricePerShare.toFixed(2)}/sh`
+                        : '—'}
+                  </td>
+                  <td style={{ whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 11 }}>
+                    {fmtDate(item.date)}
+                  </td>
+                  <td>
+                    <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
+                      <span style={{
+                        fontSize: 9,
+                        fontWeight: 700,
+                        padding: '1px 5px',
+                        borderRadius: 3,
+                        background: isEdgar ? 'rgba(139,92,246,0.15)' : 'rgba(251,191,36,0.12)',
+                        color: isEdgar ? 'var(--purple)' : '#b45309',
+                        whiteSpace: 'nowrap',
+                        letterSpacing: '0.03em',
+                      }}>
+                        {isEdgar ? 'SEC' : 'FH'}
+                      </span>
+                      {item.accessionNumber && (
+                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }} title={`Accession: ${item.accessionNumber}`}>
+                          {item.accessionNumber.slice(-8)}
+                        </span>
+                      )}
+                    </div>
+                  </td>
+                </tr>
+              )
+            })}
+          </tbody>
+        </table>
       </div>
+      {/* Load More / pagination footer */}
+      {!loading && (
+        <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+            Showing {filtered.length} of {total.toLocaleString()} records
+          </span>
+          {hasMore && (
+            <button
+              onClick={loadMore}
+              disabled={loadingMore}
+              style={{
+                padding: '5px 16px',
+                fontSize: 11,
+                fontWeight: 600,
+                borderRadius: 6,
+                border: '1px solid var(--border)',
+                background: loadingMore ? 'var(--bg-2)' : 'var(--bg-1)',
+                color: loadingMore ? 'var(--text-3)' : 'var(--text-1)',
+                cursor: loadingMore ? 'default' : 'pointer',
+                transition: 'background 0.15s',
+              }}
+            >
+              {loadingMore ? 'Loading...' : 'Load More'}
+            </button>
+          )}
+          {!hasMore && data.length > 0 && (
+            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>All records loaded</span>
+          )}
+        </div>
+      )}
     </div>
   )
 }
