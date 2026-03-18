@@ -52,6 +52,15 @@ function NavIconAccount() {
 }
 
 
+
+function NavIconIntegrations() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M18 20V10"/><path d="M12 20V4"/><path d="M6 20v-6"/>
+    </svg>
+  )
+}
+
 const NAV_ITEMS: Array<{ label: string; href: string; icon?: React.ReactNode; authOnly?: boolean }> = [
   { label: 'Dashboard', href: '/' },
   { label: 'News',      href: '/news' },
@@ -68,6 +77,7 @@ const NAV_ITEMS: Array<{ label: string; href: string; icon?: React.ReactNode; au
   { label: 'Rules',     href: '/rules',   icon: <NavIconRules /> },
   { label: 'Help',      href: '/help' },
   { label: 'Upgrade', href: '/pricing', icon: <NavIconUpgrade /> },
+  { label: 'Integrations', href: '/integrations', icon: <NavIconIntegrations />, authOnly: true },
   { label: 'Account',   href: '/account', icon: <NavIconAccount />, authOnly: true },
 ]
 
