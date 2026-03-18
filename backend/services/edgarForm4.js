@@ -5,8 +5,8 @@
  * Provides enriched insider trade data: title, price per share, transaction value, holdings.
  *
  * Data flow:
- *   1. Discover filings via existing RSS feed (secEdgar.js pattern)
- *   2. For each filing, fetch the filing index page to find the XML filename
+ *   1. Discover filings via EDGAR EFTS search API (returns XML filename in _id)
+ *   2. Construct direct XML URL from _id and ciks
  *   3. Parse the Form 4 XML to extract all available fields
  *   4. Return enriched records
  *
@@ -21,6 +21,7 @@ const cache = require('./cache');
 
 const SEC_USER_AGENT = 'TradVue/1.0 (support@tradvue.com)';
 const SEC_BASE = 'https://www.sec.gov';
+const EFTS_BASE = 'https://efts.sec.gov';
 
 // Token-bucket: max 10 req/sec
 let _lastRequestTime = 0;
@@ -242,65 +243,56 @@ function parseForm4Xml(xml, filingUrl) {
   return records;
 }
 
-// ─── EDGAR Filing Index Fetcher ───────────────────────────────────────────────
+// ─── EFTS Search API ──────────────────────────────────────────────────────────
 
 /**
- * Given a filing index URL (e.g. https://www.sec.gov/Archives/edgar/data/CIK/ACCESSION-idx.htm),
- * fetch the filing index JSON/HTML to find the Form 4 XML filename.
+ * Search EDGAR EFTS for Form 4 filings.
+ * Returns an array of { xmlUrl, fileDate } objects.
  *
- * EDGAR filing index JSON endpoint:
- * https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=...&type=4&...
- *
- * For accession-based index:
- * https://www.sec.gov/Archives/edgar/data/{CIK}/{accession-no-dashes}/
- * The index JSON: https://data.sec.gov/submissions/CIK{padded10}.json
- *
- * Simpler: fetch {accessionUrl}-index.json
+ * @param {string} query      - Search query (empty string for all filings)
+ * @param {string} startdt    - Start date YYYY-MM-DD
+ * @param {string} enddt      - End date YYYY-MM-DD
+ * @param {number} limit      - Max results to return
  */
-async function _fetchFilingXmlUrl(filingIndexUrl) {
-  // Convert the filing URL to a JSON index URL
-  // Input: https://www.sec.gov/Archives/edgar/data/CIK/ACCESSION-nnn.txt
-  // or:    https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&CIK=...
-  // We want the accession folder listing
+async function _eftsSearchForm4(query, startdt, enddt, limit = 30) {
+  const q = query ? `"${encodeURIComponent(query)}"` : '';
+  const url = `${EFTS_BASE}/LATEST/search-index?q=${q}&forms=4&dateRange=custom&startdt=${startdt}&enddt=${enddt}`;
 
+  let hits = [];
   try {
-    // Pattern: .../Archives/edgar/data/{cik}/{accession}/
-    const archivesMatch = filingIndexUrl.match(/\/Archives\/edgar\/data\/(\d+)\/([0-9-]+)/);
-    if (!archivesMatch) return null;
-
-    const cik = archivesMatch[1];
-    const accessionRaw = archivesMatch[2];
-    const accessionNoDashes = accessionRaw.replace(/-/g, '');
-    const accessionDashed = accessionNoDashes.replace(/(\d{10})(\d{18})/, '$1-$2')
-      .replace(/^(\d+)-(\d{10})(\d{8})$/, '$1-$2-$3'); // try to normalize
-
-    // The JSON index for this filing
-    const indexJsonUrl = `${SEC_BASE}/Archives/edgar/data/${cik}/${accessionNoDashes}/${accessionNoDashes}-index.json`;
-
-    const resp = await _secFetch(indexJsonUrl, { timeout: 10000 });
-    const indexData = resp.data;
-
-    if (indexData && indexData.directory && indexData.directory.item) {
-      const items = Array.isArray(indexData.directory.item)
-        ? indexData.directory.item
-        : [indexData.directory.item];
-
-      // Find the XML file (Form 4 XML is usually named like "wf-form4-*.xml" or just "*.xml")
-      const xmlFile = items.find(f =>
-        f.name && f.name.endsWith('.xml') &&
-        !f.name.toLowerCase().includes('primary_doc') &&
-        (f.type === '4' || f.name.toLowerCase().includes('form4') || f.name.toLowerCase().includes('wf-form4') || !f.name.toLowerCase().includes('filing'))
-      ) || items.find(f => f.name && f.name.endsWith('.xml'));
-
-      if (xmlFile) {
-        return `${SEC_BASE}/Archives/edgar/data/${cik}/${accessionNoDashes}/${xmlFile.name}`;
-      }
-    }
-    return null;
+    const resp = await _secFetch(url, { timeout: 15000 });
+    hits = resp.data?.hits?.hits || [];
   } catch (err) {
-    // Silently fail — filing XML URL resolution is best-effort
-    return null;
+    console.error('[EDGAR Form4] EFTS search error:', err.message);
+    return [];
   }
+
+  const results = [];
+  for (const hit of hits.slice(0, limit)) {
+    const id = hit._id || '';       // e.g. "0001628280-26-019134:wk-form4_1773845585.xml"
+    const source = hit._source || {};
+    const colonIdx = id.indexOf(':');
+    if (colonIdx === -1) continue;
+
+    const accessionDashed = id.slice(0, colonIdx);   // "0001628280-26-019134"
+    const filename = id.slice(colonIdx + 1);          // "wk-form4_1773845585.xml"
+
+    if (!filename.endsWith('.xml')) continue;
+
+    const accessionNoDashes = accessionDashed.replace(/-/g, ''); // "000162828026019134"
+
+    // Use the second CIK (issuer) when available; fall back to first
+    const ciks = source.ciks || [];
+    const rawCik = ciks.length >= 2 ? ciks[ciks.length - 1] : (ciks[0] || null);
+    if (!rawCik) continue;
+
+    const cik = parseInt(rawCik, 10).toString(); // strip leading zeros
+
+    const xmlUrl = `${SEC_BASE}/Archives/edgar/data/${cik}/${accessionNoDashes}/${filename}`;
+    results.push({ xmlUrl, fileDate: source.file_date || null });
+  }
+
+  return results;
 }
 
 /**
@@ -316,175 +308,53 @@ async function _fetchAndParseXml(xmlUrl) {
   }
 }
 
-/**
- * Convert an 18-digit accession number to the dashed SEC format.
- * Example: "000035419026000093" -> "0000354190-26-000093"
- */
-function _toDashedAccession(acc) {
-  const clean = acc.replace(/-/g, '');
-  if (clean.length !== 18) return acc; // already dashed or unknown format
-  return `${clean.slice(0, 10)}-${clean.slice(10, 12)}-${clean.slice(12)}`;
-}
-
-// ─── RSS Feed Discovery ───────────────────────────────────────────────────────
-
-/**
- * Fetch the EDGAR RSS feed of recent Form 4 filings.
- * Returns raw RSS items with filing URLs.
- */
-async function _fetchRssFeed(count = 40) {
-  const url = `${SEC_BASE}/cgi-bin/browse-edgar?action=getcurrent&type=4&dateb=&owner=include&count=${count}&search_text=&output=atom`;
-
-  const resp = await _secFetch(url, { timeout: 20000 });
-  const xml = resp.data;
-
-  // Parse entries from Atom feed
-  const entries = _extractXmlBlocks(xml, 'entry');
-  return entries.map(entry => {
-    const title = _extractXmlValue(entry, 'title') || '';
-    const link = (() => {
-      const m = entry.match(/<link[^>]+href="([^"]+)"/i);
-      return m ? m[1] : null;
-    })();
-    const updated = _extractXmlValue(entry, 'updated') || '';
-    const summary = _extractXmlValue(entry, 'summary') || '';
-
-    // Extract CIK and accession from link
-    // URL: /Archives/edgar/data/{CIK}/{AccNoDashes}/{AccDashed}-index.htm
-    let cik = null, accession = null, accessionDashed = null;
-    if (link) {
-      const archMatch = link.match(/\/Archives\/edgar\/data\/(\d+)\/(\d{18})\//);
-      if (archMatch) {
-        cik = archMatch[1];
-        accession = archMatch[2]; // 18-digit no-dashes version
-        // Extract the dashed version from the filename
-        const dashedMatch = link.match(/\/(\d{10}-\d{2}-\d{6})-index\./);
-        accessionDashed = dashedMatch ? dashedMatch[1] : _toDashedAccession(accession);
-      }
-    }
-
-    return { title, link, updated, summary, cik, accession, accessionDashed };
-  });
-}
-
 // ─── Public API ───────────────────────────────────────────────────────────────
 
 /**
- * Given a filing index URL (the HTML index page from SEC EDGAR),
- * fetch it and extract the XML filename for the Form 4 document.
- * Returns null if not found.
- */
-async function _findXmlFromIndex(indexUrl) {
-  try {
-    const resp = await _secFetch(indexUrl, { timeout: 8000 });
-    const html = typeof resp.data === 'string' ? resp.data : '';
-
-    // Look for .xml links that are NOT the XSL-transformed version
-    // Pattern: href="/Archives/edgar/data/.../something.xml" (not in xslF345X05 dir)
-    const xmlMatches = [...html.matchAll(/href="(\/Archives\/edgar\/data\/[^"]+\.xml)"/gi)];
-    for (const m of xmlMatches) {
-      const href = m[1];
-      if (!href.includes('/xslF345X05/')) {
-        return SEC_BASE + href;
-      }
-    }
-    return null;
-  } catch {
-    return null;
-  }
-}
-
-/**
  * Get enriched insider trades for a batch of recent Form 4 filings.
- * Discovers filings via RSS, enriches each with XML parse.
+ * Discovers filings via EFTS search API (returns XML filename directly in _id).
  * Cache: 30 minutes.
  *
  * @param {Object} opts
- * @param {number} opts.count  - Number of RSS entries to process (default 40)
+ * @param {number} opts.count       - Number of EFTS results to process (default 30)
  * @param {number} opts.maxXmlFetch - Max XML files to actually fetch (default 25)
  */
-async function getBatchInsiderTrades({ count = 40, maxXmlFetch = 25 } = {}) {
-  const cacheKey = `edgar:form4:batch:v2:${count}:${maxXmlFetch}`;
+async function getBatchInsiderTrades({ count = 30, maxXmlFetch = 25 } = {}) {
+  const cacheKey = `edgar:form4:batch:v3:${count}:${maxXmlFetch}`;
 
   return cache.cacheAPICall(cacheKey, async () => {
     const startTime = Date.now();
 
-    let rssItems;
-    try {
-      rssItems = await _fetchRssFeed(count);
-    } catch (err) {
-      console.error('[EDGAR Form4] RSS fetch error:', err.message);
+    const today = new Date().toISOString().split('T')[0];
+    const sevenDaysAgo = new Date(Date.now() - 7 * 24 * 3600 * 1000).toISOString().split('T')[0];
+
+    const filings = await _eftsSearchForm4('', sevenDaysAgo, today, count);
+
+    if (filings.length === 0) {
+      console.warn('[EDGAR Form4] EFTS returned no filings');
       return [];
     }
 
-    // Deduplicate by accession number — the RSS returns both reporter and issuer entries
-    const seen = new Set();
-    const uniqueItems = [];
-    for (const item of rssItems) {
-      // Use accession or link as dedup key
-      const key = item.accessionDashed || item.link || item.title;
-      if (!seen.has(key)) {
-        seen.add(key);
-        uniqueItems.push(item);
-      }
-    }
-
     const results = [];
-    const toFetch = uniqueItems.slice(0, maxXmlFetch);
+    const toFetch = filings.slice(0, maxXmlFetch);
 
-    for (const item of toFetch) {
-      // Abort if taking too long (>9s budget for XML fetching)
-      if (Date.now() - startTime > 9000) {
+    for (const filing of toFetch) {
+      // Abort if taking too long (>25s budget for XML fetching)
+      if (Date.now() - startTime > 25000) {
         console.warn('[EDGAR Form4] Batch timeout — returning partial results');
         break;
       }
 
       try {
-        let xmlUrl = null;
-
-        // Strategy: fetch the filing index HTML to find the XML file
-        if (item.link) {
-          xmlUrl = await _findXmlFromIndex(item.link);
-        }
-
-        if (xmlUrl) {
-          const parsed = await _fetchAndParseXml(xmlUrl);
-          if (parsed && parsed.length > 0) {
-            const filingLink = item.link || xmlUrl;
-            for (const record of parsed) {
-              record.filingUrl = record.filingUrl || filingLink;
-              if (!record.date && item.updated) {
-                record.date = item.updated.split('T')[0];
-              }
-              results.push(record);
-            }
-            continue;
+        const parsed = await _fetchAndParseXml(filing.xmlUrl);
+        if (parsed && parsed.length > 0) {
+          for (const record of parsed) {
+            if (!record.date && filing.fileDate) record.date = filing.fileDate;
+            results.push(record);
           }
         }
-
-        // Fallback: minimal record from RSS data
-        results.push({
-          ticker: null,
-          companyName: null,
-          name: null,
-          officerTitle: null,
-          isDirector: false,
-          isOfficer: false,
-          isTenPercentOwner: false,
-          transactionType: null,
-          shares: null,
-          pricePerShare: null,
-          transactionValue: null,
-          holdingsAfter: null,
-          date: item.updated ? item.updated.split('T')[0] : null,
-          source: 'SEC EDGAR',
-          filingUrl: item.link || null,
-          category: 'insider',
-          filingType: '4',
-          _rssTitle: item.title,
-        });
       } catch (err) {
-        console.warn('[EDGAR Form4] Error processing filing:', err.message);
+        console.warn('[EDGAR Form4] Error processing filing:', filing.xmlUrl, err.message);
       }
     }
 
@@ -497,94 +367,34 @@ async function getBatchInsiderTrades({ count = 40, maxXmlFetch = 25 } = {}) {
  * Cache: 15 minutes.
  */
 async function getInsiderTradesBySymbol(symbol) {
-  const cacheKey = `edgar:form4:symbol:${symbol.toUpperCase()}`;
+  const cacheKey = `edgar:form4:symbol:v2:${symbol.toUpperCase()}`;
 
   return cache.cacheAPICall(cacheKey, async () => {
     const upperSymbol = symbol.toUpperCase();
 
-    // Use EDGAR full-text search to find recent Form 4 filings for this company
     const today = new Date().toISOString().split('T')[0];
     const sixMonthsAgo = new Date(Date.now() - 180 * 24 * 3600 * 1000).toISOString().split('T')[0];
 
-    let filings = [];
+    const filings = await _eftsSearchForm4(upperSymbol, sixMonthsAgo, today, 20);
 
-    try {
-      await _secDelay();
-      // Search by ticker symbol using EDGAR EFTS
-      const searchUrl = `https://efts.sec.gov/LATEST/search-index?q=%22${encodeURIComponent(upperSymbol)}%22&forms=4&dateRange=custom&startdt=${sixMonthsAgo}&enddt=${today}&hits.hits._source=period_of_report,file_date,entity_name,file_num&hits.hits.total.value=true`;
-      const resp = await axios.get(searchUrl, {
-        headers: SEC_HEADERS,
-        timeout: 12000,
-      });
-      _lastRequestTime = Date.now();
-
-      const hits = resp.data?.hits?.hits || [];
-      filings = hits.slice(0, 20).map(h => ({
-        entityId: h._source?.entity_id,
-        cik: h._id ? h._id.split(':')[0] : null,
-        accession: h._id ? h._id.split(':')[1] : null,
-        fileDate: h._source?.file_date,
-      }));
-    } catch (err) {
-      // Fall back to CIK-based RSS search
-      try {
-        const atomUrl = `${SEC_BASE}/cgi-bin/browse-edgar?company=&CIK=${encodeURIComponent(upperSymbol)}&type=4&dateb=&owner=include&count=20&search_text=&action=getcompany&output=atom`;
-        const resp = await _secFetch(atomUrl, { timeout: 15000 });
-        const xml = resp.data;
-
-        const entries = _extractXmlBlocks(xml, 'entry');
-        for (const entry of entries.slice(0, 15)) {
-          const link = (() => {
-            const m = entry.match(/<link[^>]+href="([^"]+)"/i);
-            return m ? m[1] : null;
-          })();
-          if (!link) continue;
-
-          const cikMatch = link.match(/CIK=(\d+)/i) || link.match(/\/data\/(\d+)\//);
-          const accMatch = link.match(/accession-number=([0-9-]+)/i);
-
-          filings.push({
-            cik: cikMatch ? cikMatch[1] : null,
-            accession: accMatch ? accMatch[1] : null,
-            link,
-          });
-        }
-      } catch (err2) {
-        console.error('[EDGAR Form4] Symbol search error:', err2.message);
-        return [];
-      }
+    if (filings.length === 0) {
+      console.warn(`[EDGAR Form4] No EFTS filings found for symbol: ${upperSymbol}`);
+      return [];
     }
 
     const results = [];
 
     for (const filing of filings.slice(0, 15)) {
-      // Need either a link or cik+accession to proceed
-      if (!filing.link && (!filing.cik || !filing.accession)) continue;
-
       try {
-        let xmlUrl = null;
-
-        if (filing.link) {
-          // Use the filing index HTML to find the XML
-          xmlUrl = await _findXmlFromIndex(filing.link);
-        } else if (filing.cik && filing.accession) {
-          const accNoDashes = filing.accession.replace(/-/g, '');
-          const accDashed = _toDashedAccession(accNoDashes);
-          const indexUrl = `${SEC_BASE}/Archives/edgar/data/${filing.cik}/${accNoDashes}/${accDashed}-index.htm`;
-          xmlUrl = await _findXmlFromIndex(indexUrl);
-        }
-
-        if (xmlUrl) {
-          const parsed = await _fetchAndParseXml(xmlUrl);
-          if (parsed) {
-            for (const record of parsed) {
-              if (!record.date && filing.fileDate) record.date = filing.fileDate;
-              results.push(record);
-            }
+        const parsed = await _fetchAndParseXml(filing.xmlUrl);
+        if (parsed && parsed.length > 0) {
+          for (const record of parsed) {
+            if (!record.date && filing.fileDate) record.date = filing.fileDate;
+            results.push(record);
           }
         }
       } catch (err) {
-        console.warn('[EDGAR Form4] Symbol filing error:', err.message);
+        console.warn('[EDGAR Form4] Symbol filing error:', filing.xmlUrl, err.message);
       }
     }
 
