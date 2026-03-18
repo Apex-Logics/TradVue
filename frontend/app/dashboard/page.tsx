@@ -1,10 +1,9 @@
 'use client'
 
-// INTERNAL OPS DASHBOARD — Block in production, only accessible in dev
-import { redirect } from 'next/navigation'
+// INTERNAL OPS DASHBOARD — Blocked in production by middleware.ts (server-side 308 redirect).
+// This client-side check is a secondary safety net only.
 if (typeof window !== 'undefined' && window.location.hostname !== 'localhost' && window.location.hostname !== '127.0.0.1') {
-  // Redirect to home if accessed in production
-  window.location.href = '/'
+  window.location.replace('/')
 }
 
 import { useState, useCallback, memo } from 'react'
