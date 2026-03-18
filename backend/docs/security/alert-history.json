@@ -1,5 +1,83 @@
 [
   {
+    "date": "2026-03-18T14:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 unusual activity in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T14:01:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 unusual activity in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T13:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 unusual activity in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T13:01:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 suspicious logins from previously failed IPs, 0 unusual activity volume in last 30 min — all quiet"
+  },
+  {
+    "date": "2026-03-18T12:01:48.090251+00:00",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all clean"
+  },
+  {
+    "date": "2026-03-18T11:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs with success logins, 0 API actions in last 30 min — all quiet"
+  },
+  {
+    "date": "2026-03-18T11:01:48.895Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+  },
+  {
+    "date": "2026-03-18T10:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+  },
+  {
+    "date": "2026-03-18T09:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+  },
+  {
+    "date": "2026-03-18T09:01:56.228Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+  },
+  {
+    "date": "2026-03-18T08:01:52.347Z",
+    "type": "alert",
+    "result": "alert",
+    "details": "DATABASE CONNECTION FAILED — Unable to connect to Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Security checks could not be executed. Connection refused — check network/firewall or Supabase service status."
+  },
+  {
+    "date": "2026-03-18T07:31:00Z",
+    "type": "alert",
+    "result": "alert",
+    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Queries not executed. Manual verification required."
+  },
+  {
+    "date": "2026-03-18T07:01:56.409Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+  },
+  {
     "date": "2026-03-18T04:02:00Z",
     "type": "monitor",
     "result": "clean",
@@ -54,15 +132,27 @@
     "details": "Score 8.5/10. 0 critical, 0 high, 0 medium, 3 low (now fixed), 1 info."
   },
   {
-    "date": "2026-03-18T04:32:00.313491Z",
+    "date": "2026-03-18T15:31:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins from previously failed IPs, 0 unusual activity volume in last 30 min — all systems nominal"
   },
   {
-    "date": "2026-03-18T05:01:43.590Z",
+    "date": "2026-03-18T16:02:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 1 login action in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T16:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins from previously failed IPs, 1 login action in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T17:02:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
   }
 ]

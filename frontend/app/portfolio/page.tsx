@@ -1089,596 +1089,30 @@ function PortfolioExportButton() {
   )
 }
 
-// ─── Demo Portfolio Content ───────────────────────────────────────────────────
-
-function DemoPortfolioContent({ holdings, totalValue, totalPnl, totalPnlPct, sectorMap, sectorColorMap, tabs }: {
-  holdings: Array<{ symbol: string; company: string; shares: number; avgCost: number; current: number; sector: string; divYield: number }>
-  totalValue: number
-  totalPnl: number
-  totalPnlPct: number
-  sectorMap: Record<string, number>
-  sectorColorMap: Record<string, string>
-  tabs: string[]
-}) {
-  const [activeTab, setActiveTab] = useState('Holdings')
-
-  const kpis = [
-    { label: 'Portfolio Value', value: `$${totalValue.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--text-0)' },
-    { label: 'Total Gain', value: `+$${totalPnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`, color: 'var(--green)' },
-    { label: 'Total Return', value: `+${totalPnlPct.toFixed(1)}%`, color: 'var(--green)' },
-    { label: 'Holdings', value: String(holdings.length), color: 'var(--text-0)' },
-    { label: 'Daily Change', value: '+$386.15', color: 'var(--green)' },
-    { label: 'Annual Dividends', value: `$${holdings.reduce((s, h) => s + h.current * h.shares * h.divYield / 100, 0).toFixed(2)}`, color: 'var(--blue)' },
-  ]
-
-  // Sector donut
-  const sectorEntries = Object.entries(sectorMap)
-  const sectorTotal = sectorEntries.reduce((s, [, v]) => s + v, 0)
-  let angle = 0
-  const r = 44, cx = 60, cy = 60
-  const sectorSlices = sectorEntries.map(([sector, val]) => {
-    const pct = val / sectorTotal
-    const sweep = pct * 2 * Math.PI
-    const x1 = cx + r * Math.sin(angle)
-    const y1 = cy - r * Math.cos(angle)
-    const x2 = cx + r * Math.sin(angle + sweep)
-    const y2 = cy - r * Math.cos(angle + sweep)
-    const large = sweep > Math.PI ? 1 : 0
-    const path = `M ${cx} ${cy} L ${x1} ${y1} A ${r} ${r} 0 ${large} 1 ${x2} ${y2} Z`
-    angle += sweep
-    return { sector, val, pct, path }
-  })
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
-      <PersistentNav />
-      <header className="page-header">
-        <div className="page-header-title">
-          <span style={{ color: 'var(--accent)' }}>
-            <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><rect x="2" y="7" width="20" height="14" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>
-          </span>
-          Portfolio Tracker
-        </div>
-        <div className="page-header-desc">Track your holdings, monitor P&L, and analyze sector allocation</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8 }}>
-          <button className="btn btn-secondary btn-sm">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Import CSV
-          </button>
-        </div>
-      </header>
-
-      {/* Tab bar */}
-      <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-2)', padding: '0 24px', display: 'flex', gap: 0, overflowX: 'auto' }}>
-        {tabs.map(tab => (
-          <button
-            key={tab}
-            onClick={() => setActiveTab(tab)}
-            style={{
-              background: 'none', border: 'none',
-              borderBottom: `2px solid ${activeTab === tab ? 'var(--blue)' : 'transparent'}`,
-              padding: '14px 20px',
-              color: activeTab === tab ? 'var(--blue)' : 'var(--text-2)',
-              fontSize: 13, fontWeight: activeTab === tab ? 700 : 400,
-              cursor: 'pointer', whiteSpace: 'nowrap',
-            }}
-          >
-            {tab}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
-        {/* KPI Cards — always visible */}
-        <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-          {kpis.map(k => (
-            <div key={k.label} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-              <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{k.label}</div>
-              <div style={{ fontSize: 20, fontWeight: 800, color: k.color, fontFamily: 'var(--mono)' }}>{k.value}</div>
-            </div>
-          ))}
-        </div>
-
-        {activeTab === 'Holdings' && (
-          <div style={{ display: 'grid', gridTemplateColumns: '1fr auto', gap: 20, alignItems: 'start' }}>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Symbol', 'Company', 'Shares', 'Avg Cost', 'Current', 'Value', 'P&L', 'Return', 'Sector'].map(h => (
-                      <th key={h} style={{ padding: '9px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {holdings.map(h => {
-                    const value = h.current * h.shares
-                    const cost = h.avgCost * h.shares
-                    const pnl = value - cost
-                    const ret = ((pnl / cost) * 100)
-                    return (
-                      <tr key={h.symbol} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{h.symbol}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 12 }}>{h.company}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{h.shares}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>${h.avgCost.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>${h.current.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 600 }}>${value.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 700, color: pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>+${pnl.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 12px', color: ret >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--mono)' }}>+{ret.toFixed(1)}%</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 11 }}>{h.sector}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            {/* Sector donut */}
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: 20, minWidth: 200 }}>
-              <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 14 }}>Sector Allocation</div>
-              <svg viewBox="0 0 120 120" style={{ width: 110, height: 110, display: 'block', margin: '0 auto 14px' }}>
-                {sectorSlices.map(({ sector, path }) => (
-                  <path key={sector} d={path} fill={sectorColorMap[sector] || '#888'} opacity={0.85} />
-                ))}
-                <circle cx="60" cy="60" r="26" fill="var(--bg-2)" />
-              </svg>
-              {sectorEntries.map(([sector, val]) => (
-                <div key={sector} style={{ display: 'flex', alignItems: 'center', gap: 7, marginBottom: 5 }}>
-                  <div style={{ width: 9, height: 9, borderRadius: '50%', background: sectorColorMap[sector] || '#888', flexShrink: 0 }} />
-                  <div style={{ fontSize: 11, color: 'var(--text-2)', flex: 1 }}>{sector}</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>{((val / sectorTotal) * 100).toFixed(0)}%</div>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'Dashboard' && (
-          <div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Portfolio Allocation</div>
-                {sectorEntries.map(([sector, val]) => (
-                  <div key={sector} style={{ marginBottom: 10 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                      <span style={{ color: 'var(--text-1)' }}>{sector}</span>
-                      <span style={{ color: 'var(--text-2)', fontFamily: 'var(--mono)' }}>${val.toLocaleString('en-US', { maximumFractionDigits: 0 })} ({((val / sectorTotal) * 100).toFixed(0)}%)</span>
-                    </div>
-                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 8 }}>
-                      <div style={{ height: '100%', width: `${(val / sectorTotal) * 100}%`, background: sectorColorMap[sector] || '#888', borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Top Performers</div>
-                {[...holdings].sort((a, b) => ((b.current - b.avgCost) / b.avgCost) - ((a.current - a.avgCost) / a.avgCost)).map(h => {
-                  const ret = ((h.current - h.avgCost) / h.avgCost) * 100
-                  return (
-                    <div key={h.symbol} style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', padding: '8px 0', borderBottom: '1px solid var(--border)' }}>
-                      <span style={{ fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{h.symbol}</span>
-                      <span style={{ color: 'var(--green)', fontFamily: 'var(--mono)', fontWeight: 700 }}>+{ret.toFixed(1)}%</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'Dividends' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Dividend Income</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Quarterly dividend payments from your holdings — amounts based on actual published dividends.</p>
-            </div>
-            {/* Upcoming dividend */}
-            <div style={{ background: 'rgba(16,185,129,0.06)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 10, padding: '14px 18px', marginBottom: 20, display: 'flex', alignItems: 'center', gap: 14 }}>
-              <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="12" cy="12" r="10"/><polyline points="12 6 12 12 16 14"/></svg>
-              <div>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>Next dividend: KO ex-date April 2, 2026 — $0.53/share × 150 shares = <span style={{ color: '#10b981', fontFamily: 'var(--mono)' }}>$79.50</span></div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)' }}>JPM ex-date April 6, 2026 · AAPL ex-date May 12, 2026 · MSFT ex-date May 21, 2026 · V ex-date May 12, 2026</div>
-              </div>
-            </div>
-            {/* KPI row */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 20 }}>
-              {[
-                { label: 'Annual Income', value: '$1,024.95', color: '#10b981' },
-                { label: 'Q1 2026 Total', value: '$318.45', color: 'var(--text-0)' },
-                { label: 'Yield on Cost', value: '1.34%', color: 'var(--blue)' },
-                { label: 'YTD Received', value: '$318.45', color: '#10b981' },
-              ].map(k => (
-                <div key={k.label} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{k.label}</div>
-                  <div style={{ fontSize: 20, fontWeight: 800, color: k.color, fontFamily: 'var(--mono)' }}>{k.value}</div>
-                </div>
-              ))}
-            </div>
-            {/* Dividend history table */}
-            {/* All amounts: quarterly dividend per share × shares held
-                AAPL $0.26 × 50 = $13.00 | MSFT $0.91 × 30 = $27.30
-                JPM  $1.50 × 40 = $60.00 | KO   $0.53 × 150 = $79.50
-                V    $0.67 × 25 = $16.75  | NVDA $0.01 × 100 = $1.00
-                Sources: koyfin.com, stockevents.app (March 2026) */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Ex-Date', 'Pay Date', 'Symbol', 'Shares', '$/Share', 'Amount', 'Status'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { exDate: '2026-03-13', payDate: '2026-04-01', symbol: 'KO',   shares: 150, perShare: 0.53, amount: 79.50,  status: 'Pending' },
-                    { exDate: '2026-02-19', payDate: '2026-03-12', symbol: 'MSFT', shares: 30,  perShare: 0.91, amount: 27.30,  status: 'Received' },
-                    { exDate: '2026-02-09', payDate: '2026-02-12', symbol: 'AAPL', shares: 50,  perShare: 0.26, amount: 13.00,  status: 'Received' },
-                    { exDate: '2026-02-10', payDate: '2026-03-02', symbol: 'V',    shares: 25,  perShare: 0.67, amount: 16.75,  status: 'Received' },
-                    { exDate: '2026-01-06', payDate: '2026-01-31', symbol: 'JPM',  shares: 40,  perShare: 1.50, amount: 60.00,  status: 'Received' },
-                    { exDate: '2025-12-04', payDate: '2025-12-26', symbol: 'NVDA', shares: 100, perShare: 0.01, amount: 1.00,   status: 'Received' },
-                    { exDate: '2025-12-12', payDate: '2026-01-08', symbol: 'KO',   shares: 150, perShare: 0.485, amount: 72.75, status: 'Received' },
-                    { exDate: '2025-11-20', payDate: '2025-12-11', symbol: 'MSFT', shares: 30,  perShare: 0.83, amount: 24.90,  status: 'Received' },
-                  ].map((d, i) => (
-                    <tr key={i} style={{ borderBottom: '1px solid var(--border)', background: d.status === 'Pending' ? 'rgba(16,185,129,0.03)' : 'transparent' }}>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontFamily: 'var(--mono)', fontSize: 12 }}>{d.exDate}</td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontFamily: 'var(--mono)', fontSize: 12 }}>{d.payDate}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{d.symbol}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{d.shares}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>${d.perShare.toFixed(3)}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 700, color: '#10b981' }}>+${d.amount.toFixed(2)}</td>
-                      <td style={{ padding: '10px 12px' }}>
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 600,
-                          background: d.status === 'Pending' ? 'rgba(245,158,11,0.12)' : 'rgba(16,185,129,0.12)',
-                          color: d.status === 'Pending' ? '#f59e0b' : '#10b981',
-                          border: `1px solid ${d.status === 'Pending' ? 'rgba(245,158,11,0.3)' : 'rgba(16,185,129,0.3)'}`
-                        }}>{d.status}</span>
-                      </td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
-              Dividend amounts: per-share × shares held. Sources: koyfin.com, stockevents.app (March 2026). KO Q1 2026 raised to $0.53/share (was $0.485).
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'DRIP' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Dividend Reinvestment (DRIP)</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Simulate reinvesting dividends to see compound growth over time.</p>
-            </div>
-            {/* DRIP summary cards
-                KO annual dividend: $0.53 × 4 = $2.12/share
-                Annual income on 150 shares = $318.00
-                KO current price $77.58 → $318.00 / $77.58 = 4.10 new shares/yr
-                Yield on cost: $2.12 / $60.20 (avg cost) = 3.52% */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 20 }}>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>KO — DRIP Simulation</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10, marginBottom: 16 }}>
-                  {[
-                    { label: 'Shares Held', value: '150' },
-                    { label: 'Avg Cost', value: '$60.20' },
-                    { label: 'Current Price', value: '$77.58' },
-                    { label: 'Annual Div/Share', value: '$2.12' },
-                    { label: 'Annual Income', value: '$318.00' },
-                    { label: 'Yield on Cost', value: '3.52%' },
-                  ].map(m => (
-                    <div key={m.label} style={{ background: 'var(--bg-1)', borderRadius: 8, padding: '10px 12px' }}>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}>{m.label}</div>
-                      <div style={{ fontSize: 15, fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text-0)' }}>{m.value}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>
-                  Annual income ($318.00) ÷ current price ($77.58) = <strong style={{ color: 'var(--text-1)' }}>4.10 new shares/year</strong> reinvested
-                </div>
-              </div>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>5-Year KO DRIP Projection</div>
-                <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 12 }}>
-                  Assumes 3.52% yield on cost, 5% annual dividend growth (historical avg), price appreciation excluded
-                </div>
-                {/* Year | Shares | Annual Div | Cumulative Divs */}
-                <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 12 }}>
-                  <thead>
-                    <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                      {['Year', 'Shares', 'Annual Div', 'Cumulative'].map(h => (
-                        <th key={h} style={{ padding: '6px 8px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase' }}>{h}</th>
-                      ))}
-                    </tr>
-                  </thead>
-                  <tbody>
-                    {[
-                      { year: 2026, shares: 150.0,  annual: 318.00,  cumulative: 318.00  },
-                      { year: 2027, shares: 154.10, annual: 350.15,  cumulative: 668.15  },
-                      { year: 2028, shares: 158.61, annual: 385.49,  cumulative: 1053.64 },
-                      { year: 2029, shares: 163.57, annual: 424.27,  cumulative: 1477.91 },
-                      { year: 2030, shares: 169.03, annual: 466.75,  cumulative: 1944.66 },
-                    ].map(r => (
-                      <tr key={r.year} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '8px 8px', color: 'var(--text-2)' }}>{r.year}</td>
-                        <td style={{ padding: '8px 8px', fontFamily: 'var(--mono)' }}>{r.shares.toFixed(2)}</td>
-                        <td style={{ padding: '8px 8px', fontFamily: 'var(--mono)', color: '#10b981' }}>+${r.annual.toFixed(2)}</td>
-                        <td style={{ padding: '8px 8px', fontFamily: 'var(--mono)', color: '#10b981', fontWeight: 700 }}>+${r.cumulative.toFixed(2)}</td>
-                      </tr>
-                    ))}
-                  </tbody>
-                </table>
-              </div>
-            </div>
-            {/* DRIP toggles for all holdings */}
-            <div style={{ marginBottom: 16 }}>
-              <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px' }}>DRIP Enrollment</h3>
-              <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
-                {holdings.map(h => {
-                  const dripOn = h.symbol === 'KO' || h.symbol === 'JPM'
-                  return (
-                    <div key={h.symbol} style={{ display: 'flex', alignItems: 'center', gap: 14, background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '12px 16px' }}>
-                      <div style={{ width: 36, height: 20, borderRadius: 10, background: dripOn ? 'var(--accent)' : 'var(--border)', position: 'relative', flexShrink: 0 }}>
-                        <span style={{ position: 'absolute', top: 2, left: dripOn ? 18 : 2, width: 16, height: 16, borderRadius: '50%', background: '#fff', boxShadow: '0 1px 3px rgba(0,0,0,0.3)' }} />
-                      </div>
-                      <div style={{ flex: 1 }}>
-                        <span style={{ fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)', marginRight: 8 }}>{h.symbol}</span>
-                        <span style={{ fontSize: 12, color: 'var(--text-2)' }}>{h.company}</span>
-                      </div>
-                      <span style={{ fontSize: 12, color: dripOn ? '#10b981' : 'var(--text-3)' }}>{dripOn ? 'Reinvesting' : 'Cash'}</span>
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'Sold' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Closed Positions</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>History of sold positions with realized P&L.</p>
-            </div>
-            {/* P&L math: (salePrice - avgCost) × shares
-                AMD:  ($193.39 - $105.40) × 30  = $87.99 × 30  = +$2,639.70 ✓
-                BABA: ($72.15 - $215.80) × 20   = -$143.65 × 20 = -$2,873.00 ✓
-                INTC: ($21.85 - $38.90) × 100  = -$17.05 × 100 = -$1,705.00 ✓
-                AMZN: ($215.20 - $178.50) × 15  = $36.70 × 15  = +$550.50 ✓ */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-              {[
-                { label: 'Total Realized P&L', value: '-$1,387.80', color: '#ef4444' },
-                { label: 'Realized Gains', value: '+$3,190.20', color: '#10b981' },
-                { label: 'Realized Losses', value: '-$4,578.00', color: '#ef4444' },
-                { label: 'Positions Closed', value: '4', color: 'var(--text-0)' },
-              ].map(k => (
-                <div key={k.label} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{k.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: k.color, fontFamily: 'var(--mono)' }}>{k.value}</div>
-                </div>
-              ))}
-            </div>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Symbol', 'Company', 'Shares', 'Avg Cost', 'Sale Price', 'Realized P&L', 'Return', 'Date Sold', 'Sector'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { symbol: 'AMD',  company: 'Advanced Micro Devices', shares: 30,  avgCost: 105.40, salePrice: 193.39, dateSold: '2025-11-14', sector: 'Information Technology' },
-                    { symbol: 'AMZN', company: 'Amazon.com Inc.',         shares: 15,  avgCost: 178.50, salePrice: 215.20, dateSold: '2026-02-03', sector: 'Consumer Discretionary' },
-                    { symbol: 'INTC', company: 'Intel Corp.',              shares: 100, avgCost: 38.90,  salePrice: 21.85,  dateSold: '2025-08-22', sector: 'Information Technology' },
-                    { symbol: 'BABA', company: 'Alibaba Group',            shares: 20,  avgCost: 215.80, salePrice: 72.15,  dateSold: '2024-12-18', sector: 'Consumer Discretionary' },
-                  ].map(p => {
-                    const pnl = (p.salePrice - p.avgCost) * p.shares
-                    const ret = ((p.salePrice - p.avgCost) / p.avgCost) * 100
-                    return (
-                      <tr key={p.symbol} style={{ borderBottom: '1px solid var(--border)', background: pnl >= 0 ? 'rgba(16,185,129,0.03)' : 'rgba(239,68,68,0.03)' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{p.symbol}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 12 }}>{p.company}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{p.shares}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>${p.avgCost.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>${p.salePrice.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 700, color: pnl >= 0 ? '#10b981' : '#ef4444' }}>{pnl >= 0 ? '+' : ''}${pnl.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: ret >= 0 ? '#10b981' : '#ef4444' }}>{ret >= 0 ? '+' : ''}{ret.toFixed(1)}%</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 12 }}>{p.dateSold}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 11 }}>{p.sector}</td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'Watchlist' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Watchlist</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Stocks you're tracking — prices as of March 17, 2026.</p>
-            </div>
-            {/* Prices sourced from macrotrends.net / stockanalysis.com March 17, 2026:
-                AMZN: $215.20 | GOOGL: $309.41 | AMD: $193.39 | CRM: $195.31 | PLTR: $152.72 */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Symbol', 'Company', 'Current Price', 'Target Price', 'Upside', 'Sector', 'Alert'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { symbol: 'AMZN', company: 'Amazon.com Inc.',          price: 215.20, target: 245.00, sector: 'Consumer Discretionary' },
-                    { symbol: 'GOOGL', company: 'Alphabet Inc.',            price: 309.41, target: 350.00, sector: 'Communication Services' },
-                    { symbol: 'AMD',   company: 'Advanced Micro Devices',   price: 193.39, target: 220.00, sector: 'Information Technology' },
-                    { symbol: 'CRM',   company: 'Salesforce Inc.',           price: 195.31, target: 230.00, sector: 'Information Technology' },
-                    { symbol: 'PLTR',  company: 'Palantir Technologies',    price: 152.72, target: 175.00, sector: 'Information Technology' },
-                  ].map(w => {
-                    const upside = ((w.target - w.price) / w.price) * 100
-                    return (
-                      <tr key={w.symbol} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{w.symbol}</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 12 }}>{w.company}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 600 }}>${w.price.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>${w.target.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: '#10b981' }}>+{upside.toFixed(1)}%</td>
-                        <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 11 }}>{w.sector}</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <button style={{ fontSize: 11, padding: '3px 10px', borderRadius: 6, border: '1px solid var(--border)', background: 'var(--bg-1)', color: 'var(--text-2)', cursor: 'pointer' }}>
-                            Set Alert
-                          </button>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
-              Prices: AMZN $215.20 · GOOGL $309.41 · AMD $193.39 · CRM $195.31 · PLTR $152.72 — macrotrends.net / stockanalysis.com, March 17, 2026
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'Tax' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 18, fontWeight: 700 }}>Tax Lot Summary</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Unrealized gains/losses by holding. Realized gains from sold positions shown separately.</p>
-            </div>
-            {/* Tax math:
-                Short-term (held < 1 yr): V $308.46-$270.40=$38.06×25=$951.50 (bought ~Mar 2025)
-                Long-term (held > 1 yr): AAPL ($254.23-$182.30)×50=$3,596.50, MSFT ($399.41-$310.50)×30=$2,667.30,
-                  NVDA ($181.94-$134.25)×100=$4,769.00, JPM ($286.89-$198.60)×40=$3,531.60, KO ($77.58-$60.20)×150=$2,607.00 */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 20 }}>
-              {[
-                { label: 'Unrealized LT Gains', value: '+$14,571.40', color: '#10b981' },
-                { label: 'Unrealized ST Gains', value: '+$951.50',    color: '#10b981' },
-                { label: 'Realized Gains (YTD)', value: '+$3,190.20', color: '#10b981' },
-                { label: 'Realized Losses (YTD)', value: '-$4,578.00', color: '#ef4444' },
-              ].map(k => (
-                <div key={k.label} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 10, padding: '14px 16px' }}>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 5 }}>{k.label}</div>
-                  <div style={{ fontSize: 18, fontWeight: 800, color: k.color, fontFamily: 'var(--mono)' }}>{k.value}</div>
-                </div>
-              ))}
-            </div>
-            {/* Tax lots */}
-            <h3 style={{ fontSize: 14, fontWeight: 700, margin: '0 0 12px' }}>Current Holdings — Tax Lots</h3>
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse', fontSize: 13 }}>
-                <thead>
-                  <tr style={{ borderBottom: '1px solid var(--border)' }}>
-                    {['Symbol', 'Shares', 'Avg Cost', 'Mkt Value', 'Unrealized G/L', 'Return', 'Term'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', textAlign: 'left', fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {[
-                    { symbol: 'AAPL', shares: 50,  avgCost: 182.30, current: 254.23, term: 'Long-term' },
-                    { symbol: 'MSFT', shares: 30,  avgCost: 310.50, current: 399.41, term: 'Long-term' },
-                    { symbol: 'NVDA', shares: 100, avgCost: 134.25, current: 181.94, term: 'Long-term' },
-                    { symbol: 'JPM',  shares: 40,  avgCost: 198.60, current: 286.89, term: 'Long-term' },
-                    { symbol: 'V',    shares: 25,  avgCost: 270.40, current: 308.46, term: 'Short-term' },
-                    { symbol: 'KO',   shares: 150, avgCost: 60.20,  current: 77.58,  term: 'Long-term' },
-                  ].map(p => {
-                    const mktVal = p.current * p.shares
-                    const cost = p.avgCost * p.shares
-                    const gl = mktVal - cost
-                    const ret = (gl / cost) * 100
-                    return (
-                      <tr key={p.symbol} style={{ borderBottom: '1px solid var(--border)' }}>
-                        <td style={{ padding: '10px 12px', fontWeight: 700, color: 'var(--blue)', fontFamily: 'var(--mono)' }}>{p.symbol}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{p.shares}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: 'var(--text-2)' }}>${p.avgCost.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 600 }}>${mktVal.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 })}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 700, color: gl >= 0 ? '#10b981' : '#ef4444' }}>{gl >= 0 ? '+' : ''}${gl.toFixed(2)}</td>
-                        <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: ret >= 0 ? '#10b981' : '#ef4444' }}>{ret >= 0 ? '+' : ''}{ret.toFixed(1)}%</td>
-                        <td style={{ padding: '10px 12px' }}>
-                          <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 600,
-                            background: p.term === 'Long-term' ? 'rgba(99,102,241,0.12)' : 'rgba(245,158,11,0.12)',
-                            color: p.term === 'Long-term' ? '#6366f1' : '#f59e0b',
-                            border: `1px solid ${p.term === 'Long-term' ? 'rgba(99,102,241,0.3)' : 'rgba(245,158,11,0.3)'}`
-                          }}>{p.term}</span>
-                        </td>
-                      </tr>
-                    )
-                  })}
-                </tbody>
-              </table>
-            </div>
-            <div style={{ marginTop: 12, fontSize: 11, color: 'var(--text-3)', fontStyle: 'italic' }}>
-              Tax lot classification based on assumed purchase dates. Long-term = held &gt;1 year. Short-term = held ≤1 year. Consult a tax professional for actual tax reporting.
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 // ─── Portfolio Page ───────────────────────────────────────────────────────────
 
 export default function PortfolioPage() {
   const { token: cloudToken, user } = useAuth()
 
-  // Auth gating — show demo content for unauthenticated users
-  const _demoTier = getUserTier(user)
-  if (_demoTier === 'demo') {
-    // Prices as of March 17, 2026 (macrotrends.net verified)
-    // Dividends sourced from koyfin/stockevents (quarterly × 4 = annual)
-    // AAPL: $0.26/qtr → $1.04 annual → 0.41% yield at $254.23
-    // MSFT: $0.91/qtr → $3.64 annual → 0.91% yield at $399.41
-    // NVDA: $0.01/qtr → $0.04 annual → 0.02% yield at $181.94 (post 10:1 split Jun 2024)
-    // JPM:  $1.50/qtr → $6.00 annual → 2.09% yield at $286.89
-    // V:    $0.67/qtr → $2.68 annual → 0.87% yield at $308.46
-    // KO:   $0.53/qtr → $2.12 annual → 2.73% yield at $77.58
-    const DEMO_HOLDINGS = [
-      { symbol: 'AAPL', company: 'Apple Inc.', shares: 50, avgCost: 182.30, current: 254.23, sector: 'Information Technology', divYield: 0.41 },
-      { symbol: 'MSFT', company: 'Microsoft Corp.', shares: 30, avgCost: 310.50, current: 399.41, sector: 'Information Technology', divYield: 0.91 },
-      { symbol: 'NVDA', company: 'NVIDIA Corp.', shares: 100, avgCost: 134.25, current: 181.94, sector: 'Information Technology', divYield: 0.02 },
-      { symbol: 'JPM', company: 'JPMorgan Chase & Co.', shares: 40, avgCost: 198.60, current: 286.89, sector: 'Financials', divYield: 2.09 },
-      { symbol: 'V', company: 'Visa Inc.', shares: 25, avgCost: 270.40, current: 308.46, sector: 'Information Technology', divYield: 0.87 },
-      { symbol: 'KO', company: 'Coca-Cola Co.', shares: 150, avgCost: 60.20, current: 77.58, sector: 'Consumer Staples', divYield: 2.73 },
-    ]
-    const totalValue = DEMO_HOLDINGS.reduce((s, h) => s + h.current * h.shares, 0)
-    const totalCost = DEMO_HOLDINGS.reduce((s, h) => s + h.avgCost * h.shares, 0)
-    const totalPnl = totalValue - totalCost
-    const totalPnlPct = (totalPnl / totalCost) * 100
-    const sectorMap: Record<string, number> = {}
-    DEMO_HOLDINGS.forEach(h => { sectorMap[h.sector] = (sectorMap[h.sector] || 0) + h.current * h.shares })
-    const sectorColorMap: Record<string, string> = {
-      'Information Technology': '#5b6cf9',
-      'Financials': '#3498db',
-      'Consumer Staples': '#00c06a',
-    }
-    // Note: V is classified Information Technology (GICS) like AAPL/MSFT/NVDA
+  // Auth gating — tier check (used throughout component, never causes early return)
+  const tier = getUserTier(user)
+  const isDemo = tier === 'demo'
 
-    const DEMO_PORTFOLIO_TABS = ['Dashboard', 'Holdings', 'Dividends', 'DRIP', 'Sold', 'Watchlist', 'Tax']
-
-    return (
-      <AuthGate featureName="Portfolio Tracker" featureDesc="Track your stock holdings, dividends, and portfolio performance.">
-        <DemoPortfolioContent
-          holdings={DEMO_HOLDINGS}
-          totalValue={totalValue}
-          totalPnl={totalPnl}
-          totalPnlPct={totalPnlPct}
-          sectorMap={sectorMap}
-          sectorColorMap={sectorColorMap}
-          tabs={DEMO_PORTFOLIO_TABS}
-        />
-      </AuthGate>
-    )
-  }
+  // Demo holdings data — injected into real state when isDemo (prices as of Mar 17, 2026)
+  // AAPL: $0.26/qtr → $1.04 annual → 0.41% yield at $254.23
+  // MSFT: $0.91/qtr → $3.64 annual → 0.91% yield at $399.41
+  // NVDA: $0.01/qtr → $0.04 annual → 0.02% yield at $181.94
+  // JPM:  $1.50/qtr → $6.00 annual → 2.09% yield at $286.89
+  // V:    $0.67/qtr → $2.68 annual → 0.87% yield at $308.46
+  // KO:   $0.53/qtr → $2.12 annual → 2.73% yield at $77.58
+  const DEMO_HOLDINGS: Holding[] = [
+    { id: 'demo-aapl', ticker: 'AAPL', company: 'Apple Inc.', shares: 50, avgCost: 182.30, buyDate: '2025-09-15', sector: 'Information Technology', annualDividend: 1.04, divOverrideAnnual: undefined, totalDividendsReceived: 52.00 },
+    { id: 'demo-msft', ticker: 'MSFT', company: 'Microsoft Corp.', shares: 30, avgCost: 310.50, buyDate: '2025-07-20', sector: 'Information Technology', annualDividend: 3.64, divOverrideAnnual: undefined, totalDividendsReceived: 54.60 },
+    { id: 'demo-nvda', ticker: 'NVDA', company: 'NVIDIA Corp.', shares: 100, avgCost: 134.25, buyDate: '2025-06-10', sector: 'Information Technology', annualDividend: 0.04, divOverrideAnnual: undefined, totalDividendsReceived: 2.00 },
+    { id: 'demo-jpm', ticker: 'JPM', company: 'JPMorgan Chase & Co.', shares: 40, avgCost: 198.60, buyDate: '2025-05-08', sector: 'Financials', annualDividend: 6.00, divOverrideAnnual: undefined, totalDividendsReceived: 240.00 },
+    { id: 'demo-v', ticker: 'V', company: 'Visa Inc.', shares: 25, avgCost: 270.40, buyDate: '2025-08-01', sector: 'Information Technology', annualDividend: 2.68, divOverrideAnnual: undefined, totalDividendsReceived: 33.50 },
+    { id: 'demo-ko', ticker: 'KO', company: 'Coca-Cola Co.', shares: 150, avgCost: 60.20, buyDate: '2025-04-15', sector: 'Consumer Staples', annualDividend: 2.12, divOverrideAnnual: undefined, totalDividendsReceived: 318.00 },
+  ]
   const [activeTab, setActiveTab] = useState<'dashboard' | 'holdings' | 'dividends' | 'drip' | 'sold' | 'watchlist' | 'tax'>('dashboard')
   const [isLoggedIn, setIsLoggedIn] = useState(false)
   const [authModalOpen, setAuthModalOpen] = useState(false)
@@ -1729,6 +1163,13 @@ export default function PortfolioPage() {
     const token = getAuthToken()
     const loggedIn = !!token
     setIsLoggedIn(loggedIn)
+
+    if (isDemo) {
+      // Demo mode: inject sample data, skip localStorage
+      setHoldings(DEMO_HOLDINGS)
+      setDataLoaded(true)
+      return
+    }
 
     // Always load from localStorage first (single source of truth for UI).
     // Cloud sync (initPortfolioSync) handles merging cloud ↔ localStorage separately.
@@ -2154,7 +1595,7 @@ export default function PortfolioPage() {
 
   // ─── Render ───────────────────────────────────────────────────────────────
 
-  return (
+  const pageContent = (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)', fontFamily: 'var(--font)' }}>
       {/* Persistent Navigation */}
       <PersistentNav />
@@ -2272,6 +1713,7 @@ export default function PortfolioPage() {
             priceAlerts={priceAlerts} addPriceAlert={addPriceAlert} deletePriceAlert={deletePriceAlert}
             portfolioSettings={portfolioSettings} toggleDRIP={toggleDRIP}
             privacyMode={privacyMode}
+            isDemo={isDemo} onDemoAction={() => setAuthModalOpen(true)}
           />
         )}
         {activeTab === 'dividends' && (
@@ -2284,6 +1726,7 @@ export default function PortfolioPage() {
             updateHoldingDivOverride={(ticker, val) => {
               setHoldings(prev => prev.map(h => h.ticker === ticker ? { ...h, divOverrideAnnual: val } : h))
             }}
+            isDemo={isDemo} onDemoAction={() => setAuthModalOpen(true)}
           />
         )}
         {activeTab === 'drip' && (
@@ -2299,6 +1742,7 @@ export default function PortfolioPage() {
             autoFillFrom={sellFromHolding}
             onAutoFillConsumed={() => setSellFromHolding(null)}
             persistSold={persistSold} deleteSoldAPI={deleteSoldAPI}
+            isDemo={isDemo} onDemoAction={() => setAuthModalOpen(true)}
           />
         )}
         {activeTab === 'watchlist' && (
@@ -2306,6 +1750,7 @@ export default function PortfolioPage() {
             watchlist={watchlist} setWatchlist={setWatchlist} stockInfos={stockInfos}
             persistWatchlistItem={persistWatchlistItem} deleteWatchlistAPI={deleteWatchlistAPI}
             priceAlerts={priceAlerts} addPriceAlert={addPriceAlert} deletePriceAlert={deletePriceAlert}
+            isDemo={isDemo} onDemoAction={() => setAuthModalOpen(true)}
           />
         )}
         {activeTab === 'tax' && (
@@ -2346,6 +1791,15 @@ export default function PortfolioPage() {
       {authModalOpen && <AuthModal onClose={() => setAuthModalOpen(false)} />}
     </div>
   )
+
+  if (isDemo) {
+    return (
+      <AuthGate featureName="Portfolio Tracker" featureDesc="Track your stock holdings, dividends, and portfolio performance.">
+        {pageContent}
+      </AuthGate>
+    )
+  }
+  return pageContent
 }
 
 // ─── Tab 1: Dashboard ─────────────────────────────────────────────────────────
@@ -2549,6 +2003,7 @@ function HoldingsTab({
   holdings, setHoldings, holdingsEnriched, totalMarketValue, stockInfos,
   isLoggedIn, persistHolding, deleteHoldingAPI, onSellPosition,
   priceAlerts, addPriceAlert, deletePriceAlert, portfolioSettings, toggleDRIP, privacyMode = false,
+  isDemo = false, onDemoAction,
 }: {
   holdings: Holding[]
   setHoldings: React.Dispatch<React.SetStateAction<Holding[]>>
@@ -2565,6 +2020,8 @@ function HoldingsTab({
   portfolioSettings: PortfolioSettings
   toggleDRIP: (ticker: string, enabled: boolean) => Promise<void>
   privacyMode?: boolean
+  isDemo?: boolean
+  onDemoAction?: () => void
 }) {
   const [showModal, setShowModal] = useState(false)
   const [showImportModal, setShowImportModal] = useState(false)
@@ -2787,13 +2244,13 @@ function HoldingsTab({
             <button onClick={handleExportPDF} style={{ fontSize: 11, color: 'var(--text-2)', cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>↓ PDF</button>
           </>}
           <button
-            onClick={() => setShowImportModal(true)}
+            onClick={isDemo ? onDemoAction : () => setShowImportModal(true)}
             data-testid="import-csv-button"
             style={{ fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--accent)', borderRadius: 4, background: 'transparent' }}
           >
             ↑ Import CSV
           </button>
-          <button onClick={openAdd} style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={isDemo ? onDemoAction : openAdd} style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             + Add Position
           </button>
         </div>
@@ -2813,7 +2270,7 @@ function HoldingsTab({
           <div style={{ fontSize: 13, color: 'var(--text-2)', maxWidth: 420, margin: '0 auto 16px', lineHeight: 1.65 }}>
             Add your first stock position. You&apos;ll need: <strong style={{ color: 'var(--text-1)' }}>ticker</strong>, <strong style={{ color: 'var(--text-1)' }}>shares</strong>, <strong style={{ color: 'var(--text-1)' }}>buy date</strong>, and <strong style={{ color: 'var(--text-1)' }}>average cost</strong>. Company info and current prices are fetched automatically.
           </div>
-          <button onClick={openAdd} style={{
+          <button onClick={isDemo ? onDemoAction : openAdd} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: 'var(--accent)', color: '#fff',
             padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -2896,16 +2353,16 @@ function HoldingsTab({
                     <td style={cell}>{privacyMode ? '•••' : fmtDollar(h.totalDividendsReceived)}</td>
                     <td style={{ ...cell, textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4, flexWrap: 'nowrap' }}>
-                        <button onClick={() => openEdit(h)} style={{ fontSize: 9.5, color: 'var(--accent)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
-                        <button onClick={() => openAddShares(h)} style={{ fontSize: 9.5, color: 'var(--green)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>+Shares</button>
-                        <button onClick={() => onSellPosition(h)} style={{ fontSize: 9.5, color: 'var(--yellow)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Sell</button>
-                        <button onClick={() => openAlertModal(h.ticker, h.currentPrice)} style={{ fontSize: 9.5, color: '#f59e0b', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Alert</button>
+                        <button onClick={isDemo ? onDemoAction : () => openEdit(h)} style={{ fontSize: 9.5, color: 'var(--accent)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
+                        <button onClick={isDemo ? onDemoAction : () => openAddShares(h)} style={{ fontSize: 9.5, color: 'var(--green)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>+Shares</button>
+                        <button onClick={isDemo ? onDemoAction : () => onSellPosition(h)} style={{ fontSize: 9.5, color: 'var(--yellow)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Sell</button>
+                        <button onClick={isDemo ? onDemoAction : () => openAlertModal(h.ticker, h.currentPrice)} style={{ fontSize: 9.5, color: '#f59e0b', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Alert</button>
                         <button
-                          onClick={() => toggleDRIP(h.ticker, !portfolioSettings.dripEnabled[h.ticker])}
+                          onClick={isDemo ? onDemoAction : () => toggleDRIP(h.ticker, !portfolioSettings.dripEnabled[h.ticker])}
                           title={portfolioSettings.dripEnabled[h.ticker] ? 'DRIP enabled — click to disable' : 'Enable DRIP'}
                           style={{ fontSize: 9.5, color: portfolioSettings.dripEnabled[h.ticker] ? 'var(--green)' : 'var(--text-3)', cursor: 'pointer', padding: '2px 5px', border: `1px solid ${portfolioSettings.dripEnabled[h.ticker] ? 'var(--green)' : 'var(--border)'}`, borderRadius: 3 }}
                         >DRIP</button>
-                        <button onClick={() => handleDelete(h)} style={{ fontSize: 9.5, color: 'var(--red)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
+                        <button onClick={isDemo ? onDemoAction : () => handleDelete(h)} style={{ fontSize: 9.5, color: 'var(--red)', cursor: 'pointer', padding: '2px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
                       </div>
                     </td>
                   </tr>
@@ -3079,6 +2536,7 @@ function HoldingsTab({
 function DividendsTab({
   holdings, effectiveDividendData, autoCalculatedDividends, dividendOverrides,
   setDividendOverrides, stockInfos, persistDivOverride, updateHoldingDivOverride,
+  isDemo = false, onDemoAction,
 }: {
   holdings: Holding[]
   effectiveDividendData: DividendCell
@@ -3088,6 +2546,8 @@ function DividendsTab({
   stockInfos: Record<string, StockInfo>
   persistDivOverride: (key: string, amount: number | null) => Promise<void>
   updateHoldingDivOverride: (ticker: string, val: number | undefined) => void
+  isDemo?: boolean
+  onDemoAction?: () => void
 }) {
   const currentYear = new Date().getFullYear()
   const [selectedYear, setSelectedYear] = useState<number>(currentYear)
@@ -3244,12 +2704,12 @@ function DividendsTab({
                     <span style={{ fontSize: 9.5, color: hasOverride ? 'var(--yellow)' : 'var(--text-3)' }}>
                       {hasOverride ? `Override: $${fmt(h.divOverrideAnnual!, 4)}/sh/yr` : 'Override ann. div rate:'}
                     </span>
-                    <button onClick={() => { setEditingDivOverride(ticker); setDivOverrideVal(hasOverride ? String(h.divOverrideAnnual) : '') }}
+                    <button onClick={() => { if (isDemo) { onDemoAction?.(); return } setEditingDivOverride(ticker); setDivOverrideVal(hasOverride ? String(h.divOverrideAnnual) : '') }}
                       style={{ fontSize: 9, color: 'var(--accent)', cursor: 'pointer', padding: '1px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>
                       {hasOverride ? 'Edit' : 'Set'}
                     </button>
                     {hasOverride && (
-                      <button onClick={() => updateHoldingDivOverride(ticker, undefined)}
+                      <button onClick={() => { if (isDemo) { onDemoAction?.(); return } updateHoldingDivOverride(ticker, undefined) }}
                         style={{ fontSize: 9, color: 'var(--red)', cursor: 'pointer', padding: '1px 5px', border: '1px solid var(--border)', borderRadius: 3 }}>Reset</button>
                     )}
                   </div>
@@ -3306,7 +2766,7 @@ function DividendsTab({
                           const isAuto = !!autoCalculatedDividends[key] && !dividendOverrides[key]
                           const isOverride = !!dividendOverrides[key]
                           return (
-                            <td key={tk} style={tdStyle} onClick={() => startEdit(key)} onDoubleClick={() => isOverride && clearOverride(key)}>
+                            <td key={tk} style={tdStyle} onClick={() => isDemo ? onDemoAction?.() : startEdit(key)} onDoubleClick={() => !isDemo && isOverride && clearOverride(key)}>
                               {editingKey === key ? (
                                 <input
                                   ref={inputRef}
@@ -3349,6 +2809,7 @@ function DividendsTab({
 
 function SoldTab({
   soldPositions, setSoldPositions, autoFillFrom, onAutoFillConsumed, persistSold, deleteSoldAPI,
+  isDemo = false, onDemoAction,
 }: {
   soldPositions: SoldPosition[]
   setSoldPositions: React.Dispatch<React.SetStateAction<SoldPosition[]>>
@@ -3356,6 +2817,8 @@ function SoldTab({
   onAutoFillConsumed: () => void
   persistSold: (s: SoldPosition) => Promise<unknown>
   deleteSoldAPI: (id: string) => Promise<void>
+  isDemo?: boolean
+  onDemoAction?: () => void
 }) {
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -3464,7 +2927,7 @@ function SoldTab({
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{soldPositions.length} closed position{soldPositions.length !== 1 ? 's' : ''}</span>
         <div style={{ display: 'flex', gap: 8 }}>
           {soldPositions.length > 0 && <button onClick={handleExportSoldCSV} style={{ fontSize: 11, color: 'var(--text-2)', cursor: 'pointer', padding: '5px 10px', border: '1px solid var(--border)', borderRadius: 4, background: 'transparent' }}>↓ CSV</button>}
-          <button onClick={openAdd} style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+          <button onClick={isDemo ? onDemoAction : openAdd} style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
             + Add Sold Position
           </button>
         </div>
@@ -3525,8 +2988,8 @@ function SoldTab({
                     </td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => openEdit(s)} style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
-                        <button onClick={() => handleDelete(s.id)} style={{ fontSize: 10, color: 'var(--red)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
+                        <button onClick={isDemo ? onDemoAction : () => openEdit(s)} style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
+                        <button onClick={isDemo ? onDemoAction : () => handleDelete(s.id)} style={{ fontSize: 10, color: 'var(--red)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
                       </div>
                     </td>
                   </tr>
@@ -3615,6 +3078,7 @@ function SoldTab({
 function WatchlistTab({
   watchlist, setWatchlist, stockInfos, persistWatchlistItem, deleteWatchlistAPI,
   priceAlerts, addPriceAlert, deletePriceAlert,
+  isDemo = false, onDemoAction,
 }: {
   watchlist: WatchlistItem[]
   setWatchlist: React.Dispatch<React.SetStateAction<WatchlistItem[]>>
@@ -3624,6 +3088,8 @@ function WatchlistTab({
   priceAlerts: PriceAlert[]
   addPriceAlert: (symbol: string, target_price: number, direction: 'above' | 'below') => Promise<PriceAlert | null>
   deletePriceAlert: (id: string) => Promise<void>
+  isDemo?: boolean
+  onDemoAction?: () => void
 }) {
   const [showModal, setShowModal] = useState(false)
   const [editId, setEditId] = useState<string | null>(null)
@@ -3680,7 +3146,7 @@ function WatchlistTab({
     <div>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 16 }}>
         <span style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-1)' }}>{watchlist.length} stocks watched</span>
-        <button onClick={openAdd} style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
+        <button onClick={isDemo ? onDemoAction : openAdd} style={{ background: 'var(--accent)', color: '#fff', padding: '7px 16px', borderRadius: 5, fontSize: 12, fontWeight: 600, cursor: 'pointer' }}>
           + Add to Watchlist
         </button>
       </div>
@@ -3702,7 +3168,7 @@ function WatchlistTab({
               <strong style={{ color: 'var(--text-1)' }}>③ Set a price alert</strong> — get notified when the stock hits your target (click Alert)
             </div>
           </div>
-          <button onClick={openAdd} style={{
+          <button onClick={isDemo ? onDemoAction : openAdd} style={{
             display: 'inline-flex', alignItems: 'center', gap: 8,
             background: 'var(--accent)', color: '#fff',
             padding: '10px 24px', borderRadius: 8, fontSize: 13, fontWeight: 600, cursor: 'pointer',
@@ -3762,12 +3228,12 @@ function WatchlistTab({
                     <td style={{ ...tdStyle, color: 'var(--yellow)' }}>{info?.dividendYield ? `${fmt(info.dividendYield, 2)}%` : '—'}</td>
                     <td style={{ ...tdStyle, textAlign: 'center' }}>
                       <div style={{ display: 'flex', gap: 4 }}>
-                        <button onClick={() => openEdit(w)} style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
-                        {price && <button onClick={() => {
+                        <button onClick={isDemo ? onDemoAction : () => openEdit(w)} style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Edit</button>
+                        {price && <button onClick={isDemo ? onDemoAction : () => {
                           const dir = w.targetPrice && price > w.targetPrice ? 'below' : 'above'
                           addPriceAlert(w.ticker, w.targetPrice || price, dir)
                         }} style={{ fontSize: 10, color: '#f59e0b', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Alert</button>}
-                        <button onClick={() => handleDelete(w)} style={{ fontSize: 10, color: 'var(--red)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
+                        <button onClick={isDemo ? onDemoAction : () => handleDelete(w)} style={{ fontSize: 10, color: 'var(--red)', cursor: 'pointer', padding: '2px 6px', border: '1px solid var(--border)', borderRadius: 3 }}>Del</button>
                       </div>
                     </td>
                   </tr>

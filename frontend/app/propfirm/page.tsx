@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useMemo } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getUserTier } from '../utils/tierAccess'
+import dynamic from 'next/dynamic'
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
 import { IconTarget } from '../components/Icons'
@@ -1601,6 +1603,7 @@ export default function PropFirmPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [selectedAccount, setSelectedAccount] = useState<PropFirmAccount | null>(null)
   const [mounted, setMounted]         = useState(false)
+  const [authModalOpenProp, setAuthModalOpenProp] = useState(false)
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -1694,6 +1697,7 @@ export default function PropFirmPage() {
       <AuthGate featureName="Prop Firm Tracker" featureDesc="Track your prop firm account rules, drawdown limits, and daily loss caps.">
         <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
           <PersistentNav />
+          {authModalOpenProp && <AuthModal onClose={() => setAuthModalOpenProp(false)} />}
           <main style={{ maxWidth: 960, margin: '0 auto', padding: '32px 20px 60px', fontFamily: 'var(--font)' }}>
             {/* Header */}
             <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'flex-start', marginBottom: 28 }}>
@@ -1706,7 +1710,7 @@ export default function PropFirmPage() {
                 </h1>
                 <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0 }}>Track your prop firm challenges and funded account rules in one place.</p>
               </div>
-              <button style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#0a0a0c', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
+              <button onClick={() => setAuthModalOpenProp(true)} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '10px 18px', color: '#0a0a0c', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>
                 <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
                 Add Account
               </button>

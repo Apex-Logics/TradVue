@@ -4,6 +4,8 @@ import { useState, useEffect, useRef, useCallback } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getUserTier } from '../utils/tierAccess'
 import AuthGate from '../components/AuthGate'
+import dynamic from 'next/dynamic'
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 import PersistentNav from '../components/PersistentNav'
 import PushNotificationPanel from '../components/PushNotificationPanel'
 import {
@@ -1146,206 +1148,19 @@ const btnGhost: React.CSSProperties = {
   fontSize: 14,
 }
 
-// ─── Demo Ritual Content ─────────────────────────────────────────────────────
-
-function DemoRitualContent() {
-  const [activeStep, setActiveStep] = useState(3)
-
-  const DEMO_STEPS = [
-    {
-      num: 1,
-      title: 'How did today go?',
-      answer: 'Traded NQ and AAPL. Two NQ momentum plays and one AAPL breakout. All three closed before 3 PM.',
-      done: true,
-    },
-    {
-      num: 2,
-      title: 'Did you follow your rules?',
-      answer: 'Followed rules on NQ — waited for the right entry and respected my stop. The AAPL trade was slightly rushed but still within my parameters.',
-      done: true,
-    },
-    {
-      num: 3,
-      title: 'Emotional state today?',
-      answer: null,
-      done: false,
-      isCurrent: true,
-    },
-    {
-      num: 4,
-      title: 'Attach chart screenshot',
-      answer: null,
-      done: false,
-    },
-    {
-      num: 5,
-      title: 'Key lesson or insight',
-      answer: null,
-      done: false,
-    },
-  ]
-
-  const EMOTION_OPTIONS = [
-    { label: 'Disciplined', color: '#22c55e' },
-    { label: 'Confident', color: '#3b82f6' },
-    { label: 'Patient', color: '#8b5cf6' },
-    { label: 'Focused', color: '#6366f1' },
-    { label: 'Anxious', color: '#f59e0b' },
-    { label: 'FOMO', color: '#f97316' },
-    { label: 'Neutral', color: 'var(--text-3)' },
-  ]
-
-  const [selectedEmotion, setSelectedEmotion] = useState('Focused')
-  const [emotionScore, setEmotionScore] = useState(4)
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg, #0a0a0a)', color: 'var(--text-0, #f9fafb)' }}>
-      <PersistentNav />
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '40px 20px 80px' }}>
-        {/* Header with streak */}
-        <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 40 }}>
-          <div>
-            <h1 style={{ fontSize: 32, fontWeight: 700, color: 'var(--text-1, #e0e0e0)', marginBottom: 6, letterSpacing: '-0.5px' }}>
-              Post-Trade Ritual
-            </h1>
-            <p style={{ fontSize: 14, color: 'var(--text-3, #666)' }}>Wednesday, March 14, 2026</p>
-          </div>
-          <div style={{
-            display: 'flex', alignItems: 'center', gap: 8,
-            padding: '10px 16px',
-            background: '#1a1a0a',
-            border: '1px solid #f97316',
-            borderRadius: 12,
-          }}>
-            <span style={{ color: '#f97316', display: 'flex', alignItems: 'center' }}>
-              <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M8.5 14.5A2.5 2.5 0 0 0 11 12c0-1.38-.5-2-1-3-1.072-2.143-.224-4.054 2-6 .5 2.5 2 4.9 4 6.5 2 1.6 3 3.5 3 5.5a7 7 0 1 1-14 0c0-1.153.433-2.294 1-3a2.5 2.5 0 0 0 2.5 2.5z"/></svg>
-            </span>
-            <div>
-              <div style={{ fontSize: 20, fontWeight: 700, color: '#f97316', lineHeight: 1 }}>5</div>
-              <div style={{ fontSize: 10, color: 'var(--text-3, #666)' }}>day streak</div>
-            </div>
-          </div>
-        </div>
-
-        {/* Progress bar */}
-        <div style={{ marginBottom: 32 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 8 }}>
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>Step {activeStep} of 5</span>
-            <span style={{ fontSize: 12, color: 'var(--text-3)' }}>{Math.round((activeStep - 1) / 5 * 100)}% complete</span>
-          </div>
-          <div style={{ background: 'var(--border)', borderRadius: 4, height: 6 }}>
-            <div style={{ height: '100%', width: `${(activeStep - 1) / 5 * 100}%`, background: '#f97316', borderRadius: 4, transition: 'width 0.3s' }} />
-          </div>
-        </div>
-
-        {/* Steps */}
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {DEMO_STEPS.map(s => (
-            <div
-              key={s.num}
-              onClick={() => !s.done && setActiveStep(s.num)}
-              style={{
-                background: s.isCurrent || s.num === activeStep ? 'rgba(99,102,241,0.06)' : 'var(--card-bg, #1a1a1a)',
-                border: `1px solid ${s.isCurrent || s.num === activeStep ? 'rgba(99,102,241,0.3)' : 'var(--border, #2a2a2a)'}`,
-                borderRadius: 12,
-                padding: 20,
-                cursor: s.done ? 'default' : 'pointer',
-                opacity: !s.done && s.num > activeStep ? 0.5 : 1,
-              }}
-            >
-              <div style={{ display: 'flex', alignItems: 'center', gap: 12, marginBottom: s.done && s.answer ? 10 : (s.num === activeStep ? 14 : 0) }}>
-                <div style={{
-                  width: 28, height: 28, borderRadius: '50%',
-                  background: s.done ? 'rgba(16,185,129,0.12)' : (s.num === activeStep ? 'rgba(99,102,241,0.12)' : 'var(--bg-1)'),
-                  border: `1px solid ${s.done ? 'rgba(16,185,129,0.4)' : s.num === activeStep ? 'rgba(99,102,241,0.4)' : 'var(--border)'}`,
-                  display: 'flex', alignItems: 'center', justifyContent: 'center', flexShrink: 0,
-                }}>
-                  {s.done ? (
-                    <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="#10b981" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
-                  ) : (
-                    <span style={{ fontSize: 11, fontWeight: 700, color: s.num === activeStep ? '#6366f1' : 'var(--text-3)' }}>{s.num}</span>
-                  )}
-                </div>
-                <div style={{ fontSize: 13, fontWeight: 600, color: s.done ? 'var(--text-2)' : 'var(--text-0)' }}>
-                  Step {s.num} — {s.title}
-                </div>
-              </div>
-
-              {/* Completed step answer */}
-              {s.done && s.answer && (
-                <div style={{ marginLeft: 40, fontSize: 13, color: 'var(--text-1, #e5e7eb)', lineHeight: 1.65 }}>
-                  {s.answer}
-                </div>
-              )}
-
-              {/* Current step — emotion picker */}
-              {s.num === activeStep && s.num === 3 && (
-                <div style={{ marginLeft: 40 }}>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 12 }}>Rate your emotional discipline today (1–5)</div>
-                  <div style={{ display: 'flex', gap: 6, marginBottom: 16 }}>
-                    {[1,2,3,4,5].map(n => (
-                      <button
-                        key={n}
-                        onClick={() => setEmotionScore(n)}
-                        style={{
-                          width: 40, height: 40, borderRadius: 8,
-                          background: n <= emotionScore ? 'rgba(99,102,241,0.15)' : 'var(--bg-1)',
-                          border: `1px solid ${n <= emotionScore ? 'rgba(99,102,241,0.5)' : 'var(--border)'}`,
-                          color: n <= emotionScore ? '#6366f1' : 'var(--text-3)',
-                          fontWeight: 700, fontSize: 16, cursor: 'pointer',
-                        }}
-                      >{n}</button>
-                    ))}
-                  </div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Emotional tags</div>
-                  <div style={{ display: 'flex', gap: 6, flexWrap: 'wrap' }}>
-                    {EMOTION_OPTIONS.map(e => (
-                      <button
-                        key={e.label}
-                        onClick={() => setSelectedEmotion(e.label)}
-                        style={{
-                          padding: '5px 12px', borderRadius: 20,
-                          border: `1px solid ${selectedEmotion === e.label ? e.color : 'var(--border)'}`,
-                          background: selectedEmotion === e.label ? e.color + '22' : 'transparent',
-                          color: selectedEmotion === e.label ? e.color : 'var(--text-2)',
-                          fontSize: 12, cursor: 'pointer', fontWeight: selectedEmotion === e.label ? 700 : 400,
-                        }}
-                      >{e.label}</button>
-                    ))}
-                  </div>
-                  <button
-                    onClick={() => setActiveStep(4)}
-                    style={{ marginTop: 16, background: '#6366f1', border: 'none', borderRadius: 8, padding: '10px 24px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-                  >
-                    Continue
-                  </button>
-                </div>
-              )}
-
-              {/* Steps 4 and 5 — show completed content */}
-              {s.num === activeStep && s.num > 3 && s.done && s.answer && (
-                <div style={{ marginLeft: 40, fontSize: 13, color: 'var(--text-1)', lineHeight: 1.65 }}>
-                  {s.answer}
-                </div>
-              )}
-            </div>
-          ))}
-        </div>
-      </div>
-    </div>
-  )
-}
-
 // ─── Main Page ────────────────────────────────────────────────────────────────
 
 export default function RitualPage() {
   const { user } = useAuth()
+  const tier = getUserTier(user)
+  const isDemo = tier === 'demo'
   const [entries, setEntries] = useState<RitualEntry[]>([])
   const [streak, setStreak] = useState<StreakData>({ currentStreak: 0, longestStreak: 0, lastCompletedDate: '', milestones: [] })
   const [todayEntry, setTodayEntry] = useState<RitualEntry | undefined>(undefined)
   const [editing, setEditing] = useState(false)
   const [showConfetti, setShowConfetti] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [authModalOpenRitual, setAuthModalOpenRitual] = useState(false)
 
   const today = todayDateString()
 
@@ -1385,19 +1200,11 @@ export default function RitualPage() {
     )
   }
 
-  // Auth gating
-  const tier = getUserTier(user)
-  if (tier === 'demo') {
-    return (
-      <AuthGate featureName="Post-Trade Ritual" featureDesc="Build daily trading habits. Review trades, track emotional state, and build consistency.">
-        <DemoRitualContent />
-      </AuthGate>
-    )
-  }
+  // Auth gating — isDemo set at top of component
 
-  const showWizard = !todayEntry || editing
+  const showWizard = isDemo || !todayEntry || editing
 
-  return (
+  const ritualContent = (
     <div style={{ minHeight: '100vh', background: 'var(--bg, #0a0a0a)' }}>
       <PersistentNav />
       <Confetti active={showConfetti} />
@@ -1487,7 +1294,7 @@ export default function RitualPage() {
         {showWizard ? (
           <WizardFlow
             key={editing ? 'edit' : 'new'}
-            onComplete={handleComplete}
+            onComplete={isDemo ? () => setAuthModalOpenRitual(true) : handleComplete}
             editEntry={editing ? todayEntry : undefined}
           />
         ) : (
@@ -1509,7 +1316,7 @@ export default function RitualPage() {
         )}
 
         {/* ── Push Notification Panel ──────────────────────────────────────── */}
-        <PushNotificationPanel />
+        {!isDemo && <PushNotificationPanel />}
 
         {/* ── Disclaimer ──────────────────────────────────────────────────── */}
         <div style={{ padding: '12px 0', marginTop: 24, borderTop: '1px solid var(--border)' }}>
@@ -1521,6 +1328,16 @@ export default function RitualPage() {
           </p>
         </div>
       </div>
+      {authModalOpenRitual && <AuthModal onClose={() => setAuthModalOpenRitual(false)} />}
     </div>
   )
+
+  if (isDemo) {
+    return (
+      <AuthGate featureName="Post-Trade Ritual" featureDesc="Build daily trading habits. Review trades, track emotional state, and build consistency.">
+        {ritualContent}
+      </AuthGate>
+    )
+  }
+  return ritualContent
 }

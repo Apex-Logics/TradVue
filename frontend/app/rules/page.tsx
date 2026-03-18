@@ -3,6 +3,8 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getUserTier } from '../utils/tierAccess'
+import dynamic from 'next/dynamic'
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 import AuthGate from '../components/AuthGate'
 import PersistentNav from '../components/PersistentNav'
 import { IconShield } from '../components/Icons'
@@ -437,6 +439,7 @@ export default function RulesPage() {
   const [showAddModal, setShowAddModal] = useState(false)
   const [checking, setChecking] = useState(false)
   const [loaded, setLoaded] = useState(false)
+  const [authModalOpenRules, setAuthModalOpenRules] = useState(false)
 
   // Load from localStorage on mount
   useEffect(() => {
@@ -585,7 +588,7 @@ export default function RulesPage() {
                   <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>Your personal rule enforcer — self-accountability only</div>
                 </div>
               </div>
-              <button style={{ padding: '8px 16px', borderRadius: 7, border: 'none', background: 'var(--accent)', color: '#0a0a0c', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <button onClick={() => setAuthModalOpenRules(true)} style={{ padding: '8px 16px', borderRadius: 7, border: 'none', background: 'var(--accent)', color: '#0a0a0c', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                 Check Rules Now
               </button>
             </div>
@@ -602,7 +605,7 @@ export default function RulesPage() {
             {/* Rules list */}
             <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 12 }}>
               <h2 style={{ margin: 0, fontSize: 15, fontWeight: 700 }}>Your Rules ({DEMO_RULES_DATA.length})</h2>
-              <button style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
+              <button onClick={() => setAuthModalOpenRules(true)} style={{ padding: '6px 14px', borderRadius: 6, border: '1px solid var(--accent)', background: 'transparent', color: 'var(--accent)', cursor: 'pointer', fontSize: 13, fontWeight: 600 }}>
                 + Add Custom Rule
               </button>
             </div>
@@ -660,6 +663,7 @@ export default function RulesPage() {
             <div style={{ marginTop: 24, fontSize: 11, color: 'var(--text-3)', textAlign: 'center' as const, fontStyle: 'italic' }}>Sample rules — create an account to define your own trading rules and get violation alerts</div>
           </main>
         </div>
+        {authModalOpenRules && <AuthModal onClose={() => setAuthModalOpenRules(false)} />}
       </AuthGate>
     )
   }

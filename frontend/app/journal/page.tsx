@@ -31,6 +31,8 @@ import { ExportButton, ImportBackupModal } from './ExportImport'
 import WeeklySummary from './WeeklySummary'
 import { loadPlaybooks, initPlaybooks, type Playbook, CATEGORY_COLORS, CATEGORY_LABELS } from '../utils/playbookData'
 import { DEFAULT_PLAYBOOKS } from '../utils/playbookDefaults'
+import dynamic from 'next/dynamic'
+const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -1024,12 +1026,14 @@ function StreakTracker({ trades }: { trades: Trade[] }) {
   )
 }
 
-function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, currentUser, onUpgrade }: {
+function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, currentUser, onUpgrade, isDemo = false, onDemoAction }: {
   trades: Trade[]; setTrades: (t: Trade[]) => void
   customTags: TagDefinition[]; onAddCustomTag: (tag: TagDefinition) => void
   prefill?: { symbol?: string; price?: string; asset?: string } | null
   currentUser?: import('../lib/api').AuthUser | null
   onUpgrade?: (name: string, desc?: string) => void
+  isDemo?: boolean
+  onDemoAction?: () => void
 }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
@@ -1307,7 +1311,7 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
       {/* Action bar */}
       <div style={{ display: 'flex', gap: 12, marginBottom: 20, flexWrap: 'wrap' }}>
         <button
-          onClick={() => setShowForm(f => !f)}
+          onClick={isDemo ? onDemoAction : () => setShowForm(f => !f)}
           style={{
             background: 'var(--accent)', border: 'none', borderRadius: 'var(--btn-radius)', padding: '10px 20px',
             color: '#0a0a0c', fontSize: 13, fontWeight: 700, cursor: 'pointer',
@@ -3491,502 +3495,6 @@ const TABS: { id: string; label: string; Icon: React.FC<{ size?: number; classNa
 ]
 
 
-// ─── Demo Journal Content ──────────────────────────────────────────────────
-
-function DemoJournalContent({ trades, totalPnl, winRate, avgR, wins, tabs }: {
-  trades: Trade[]
-  totalPnl: number
-  winRate: string
-  avgR: string
-  wins: number
-  tabs: Array<{ id: string; label: string; iconPath: string }>
-}) {
-  const [activeTab, setActiveTab] = useState('log')
-  const BLUE = 'var(--blue)'
-  const GREEN = 'var(--green)'
-  const RED = 'var(--red)'
-
-  const totalPnlPositive = totalPnl >= 0
-
-  // Mini equity curve points
-  const eqPoints = (() => {
-    let cum = 0
-    return trades.slice().sort((a, b) => a.date.localeCompare(b.date)).map(t => { cum += t.pnl; return cum })
-  })()
-  const eqMin = Math.min(0, ...eqPoints)
-  const eqMax = Math.max(...eqPoints, 1)
-  const W = 500, H = 100
-  const xs = eqPoints.map((_, i) => (i / (eqPoints.length - 1)) * W)
-  const ys = eqPoints.map(p => H - ((p - eqMin) / (eqMax - eqMin)) * H * 0.85)
-  const eqPath = xs.map((x, i) => `${i === 0 ? 'M' : 'L'}${x},${ys[i]}`).join(' ')
-
-  const profitFactor = (() => {
-    const grossWins = trades.filter(t => t.pnl > 0).reduce((s, t) => s + t.pnl, 0)
-    const grossLoss = Math.abs(trades.filter(t => t.pnl < 0).reduce((s, t) => s + t.pnl, 0))
-    return grossLoss === 0 ? Infinity : grossWins / grossLoss
-  })()
-
-  const kpis = [
-    { label: 'Total Trades', value: String(trades.length), icon: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2', color: 'var(--text-0)' },
-    { label: 'Win Rate', value: `${winRate}%`, icon: 'M9 12l2 2 4-4m6 2a9 9 0 11-18 0 9 9 0 0118 0z', color: GREEN, sub: `${wins}W / ${trades.length - wins}L` },
-    { label: 'Net P&L', value: `${totalPnlPositive ? '+$' : '-$'}${Math.abs(totalPnl).toFixed(2)}`, icon: 'M12 8c-1.657 0-3 .895-3 2s1.343 2 3 2 3 .895 3 2-1.343 2-3 2m0-8c1.11 0 2.08.402 2.599 1M12 8V7m0 1v8m0 0v1m0-1c-1.11 0-2.08-.402-2.599-1M21 12a9 9 0 11-18 0 9 9 0 0118 0z', color: totalPnlPositive ? GREEN : RED },
-    { label: 'Avg R-Multiple', value: `${parseFloat(avgR) >= 0 ? '+' : ''}${avgR}R`, icon: 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z', color: parseFloat(avgR) >= 0 ? GREEN : RED },
-    { label: 'Profit Factor', value: profitFactor === Infinity ? '∞' : profitFactor.toFixed(2), icon: 'M9 7h6m0 10v-3m-3 3h.01M9 17h.01M9 14h.01M12 14h.01M15 11h.01M12 11h.01M9 11h.01M7 21h10a2 2 0 002-2V5a2 2 0 00-2-2H7a2 2 0 00-2 2v14a2 2 0 002 2z', color: profitFactor >= 1.5 ? GREEN : profitFactor >= 1 ? 'var(--yellow)' : RED },
-    { label: 'Best Trade', value: `+$${Math.max(...trades.map(t => t.pnl)).toFixed(2)}`, icon: 'M5 3v4M3 5h4M6 17v4m-2-2h4m5-16l2.286 6.857L21 12l-5.714 2.143L13 21l-2.286-6.857L5 12l5.714-2.143L13 3z', color: GREEN },
-  ]
-
-  return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
-      <PersistentNav />
-      <header className="page-header">
-        <div className="page-header-title">
-          <span style={{ color: 'var(--accent)' }}><IconBook size={18} /></span>
-          Trading Journal
-        </div>
-        <div className="page-header-desc">Track and analyze your trading patterns</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{trades.length} trades</span>
-          <button className="btn btn-secondary btn-sm">
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
-            Import CSV
-          </button>
-        </div>
-      </header>
-
-      {/* Tab bar */}
-      <div style={{ borderBottom: '1px solid var(--border)', background: 'var(--bg-2)', padding: '0 24px', display: 'flex', gap: 0, overflowX: 'auto' }}>
-        {tabs.map(tab => (
-          <button
-            key={tab.id}
-            onClick={() => setActiveTab(tab.id)}
-            style={{
-              background: 'none', border: 'none',
-              borderBottom: `2px solid ${activeTab === tab.id ? BLUE : 'transparent'}`,
-              padding: '14px 20px',
-              color: activeTab === tab.id ? BLUE : 'var(--text-2)',
-              fontSize: 13, fontWeight: activeTab === tab.id ? 700 : 400,
-              cursor: 'pointer', whiteSpace: 'nowrap',
-              transition: 'color 0.15s, border-color 0.15s',
-              display: 'inline-flex', alignItems: 'center', gap: 6,
-            }}
-          >
-            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.85 }}>
-              <path d={tab.iconPath} />
-            </svg>
-            {tab.label}
-          </button>
-        ))}
-      </div>
-
-      <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
-        {activeTab === 'dashboard' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Dashboard</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Your trading performance at a glance.</p>
-            </div>
-            {/* KPI cards */}
-            <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(160px, 1fr))', gap: 12, marginBottom: 24 }}>
-              {kpis.map(k => (
-                <div key={k.label} className="ds-card" style={{ display: 'flex', flexDirection: 'column', gap: 6 }}>
-                  <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-                    <div className="tv-card-icon" style={{ width: 32, height: 32, fontSize: 15 }}>
-                      <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><path d={k.icon} /></svg>
-                    </div>
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', fontWeight: 700, textTransform: 'uppercase', letterSpacing: '0.06em' }}>{k.label}</div>
-                  </div>
-                  <div style={{ fontSize: 22, fontWeight: 800, color: k.color, fontFamily: 'var(--mono)' }}>{k.value}</div>
-                  {k.sub && <div style={{ fontSize: 11, color: 'var(--text-2)' }}>{k.sub}</div>}
-                </div>
-              ))}
-            </div>
-            {/* Equity curve */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Cumulative P&L Curve</div>
-                <svg viewBox={`0 0 ${W} ${H + 20}`} style={{ width: '100%', maxHeight: 140 }}>
-                  <defs>
-                    <linearGradient id="demoGrad" x1="0" y1="0" x2="0" y2="1">
-                      <stop offset="0%" stopColor="var(--green)" stopOpacity={0.3} />
-                      <stop offset="100%" stopColor="var(--green)" stopOpacity={0.01} />
-                    </linearGradient>
-                  </defs>
-                  <path d={`${eqPath} L${W},${H} L0,${H} Z`} fill="url(#demoGrad)" />
-                  <path d={eqPath} fill="none" stroke="var(--green)" strokeWidth={2} strokeLinejoin="round" />
-                  <circle cx={xs[xs.length - 1]} cy={ys[ys.length - 1]} r={4} fill="var(--green)" />
-                </svg>
-              </div>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>P&L by Setup Tag</div>
-                {[
-                  { label: 'Breakout', value: 1262.50 },
-                  { label: 'Momentum', value: 1500.00 },
-                  { label: 'Reversal', value: 1115.00 },
-                  { label: 'Support/Resistance', value: 650.00 },
-                  { label: 'Trend Follow', value: 746.00 },
-                  { label: 'Pullback', value: 91.00 },
-                ].map(s => (
-                  <div key={s.label} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-                      <span style={{ color: 'var(--text-2)' }}>{s.label}</span>
-                      <span style={{ color: s.value >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>+${s.value.toFixed(2)}</span>
-                    </div>
-                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 7 }}>
-                      <div style={{ height: '100%', width: `${(s.value / 1500) * 100}%`, background: GREEN, borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'log' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Trade Log</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Record every trade you make — even the bad ones!</p>
-            </div>
-            {/* Summary stat bar */}
-            <div style={{ background: 'var(--bg-2)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 10, padding: '12px 18px', marginBottom: 16, display: 'flex', gap: 24, flexWrap: 'wrap', alignItems: 'center' }}>
-              <span style={{ fontSize: 13, fontWeight: 700 }}>{trades.length} trades</span>
-              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Win Rate: <strong style={{ color: GREEN }}>{winRate}%</strong></span>
-              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Net P&L: <strong style={{ color: totalPnlPositive ? GREEN : RED, fontFamily: 'var(--mono)' }}>{totalPnlPositive ? '+$' : '-$'}{Math.abs(totalPnl).toFixed(2)}</strong></span>
-              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Avg R: <strong style={{ color: 'var(--blue)' }}>{avgR}R</strong></span>
-              <span style={{ fontSize: 13, color: 'var(--text-2)' }}>Profit Factor: <strong style={{ color: GREEN }}>{profitFactor.toFixed(2)}</strong></span>
-            </div>
-            {/* Action bar */}
-            <div style={{ display: 'flex', gap: 12, marginBottom: 16, flexWrap: 'wrap', alignItems: 'center' }}>
-              <button
-                style={{ background: 'var(--accent)', border: 'none', borderRadius: 'var(--btn-radius)', padding: '10px 20px', color: '#0a0a0c', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-              >
-                + Log Trade
-              </button>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 12px', display: 'flex', gap: 8, alignItems: 'center' }}>
-                <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"><circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/></svg>
-                <span style={{ fontSize: 11, color: 'var(--text-2)' }}>Filter: All Assets | All Directions | Win/Loss</span>
-              </div>
-              <span style={{ fontSize: 12, color: 'var(--text-2)', marginLeft: 'auto' }}>{trades.length} of {trades.length} trades shown</span>
-            </div>
-            {/* Trade table */}
-            <div style={{ overflowX: 'auto' }}>
-              <table style={{ width: '100%', borderCollapse: 'collapse' as const, fontSize: 12 }}>
-                <thead>
-                  <tr>
-                    {['Date', 'Symbol', 'Dir', 'Asset', 'Entry', 'Exit', 'Size', 'P&L', 'R', 'Setup', '★'].map(h => (
-                      <th key={h} style={{ padding: '8px 12px', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', textAlign: 'left', textTransform: 'uppercase', letterSpacing: '0.06em', borderBottom: '1px solid var(--border)', whiteSpace: 'nowrap' }}>{h}</th>
-                    ))}
-                  </tr>
-                </thead>
-                <tbody>
-                  {trades.map(t => (
-                    <tr key={t.id} style={{ borderBottom: '1px solid var(--border)', background: t.pnl > 0 ? 'rgba(16,185,129,0.03)' : 'rgba(239,68,68,0.03)', cursor: 'pointer' }}>
-                      <td style={{ padding: '10px 12px' }}>{t.date}</td>
-                      <td style={{ padding: '10px 12px', fontWeight: 700, fontFamily: 'var(--mono)', color: BLUE }}>{t.symbol}</td>
-                      <td style={{ padding: '10px 12px', color: t.direction === 'Long' ? GREEN : RED }}>{t.direction}</td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-2)' }}>{t.assetClass}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>${t.entryPrice.toFixed(2)}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>${t.exitPrice.toFixed(2)}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)' }}>{t.positionSize}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? GREEN : RED }}>{t.pnl >= 0 ? '+$' : '-$'}{Math.abs(t.pnl).toFixed(2)}</td>
-                      <td style={{ padding: '10px 12px', fontFamily: 'var(--mono)', color: t.rMultiple >= 0 ? GREEN : RED }}>{t.rMultiple >= 0 ? '+' : ''}{t.rMultiple.toFixed(2)}R</td>
-                      <td style={{ padding: '10px 12px', color: 'var(--text-2)', fontSize: 11 }}>{t.setupTag}</td>
-                      <td style={{ padding: '10px 12px', fontSize: 11, color: 'var(--yellow)' }}>{'★'.repeat(t.rating)}{'○'.repeat(5 - t.rating)}</td>
-                    </tr>
-                  ))}
-                </tbody>
-              </table>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'calendar' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Calendar</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>See your trading performance by day. Click any day to see the trades.</p>
-            </div>
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 24 }}>
-              <div style={{ display: 'flex', alignItems: 'center', gap: 16, marginBottom: 20 }}>
-                <button style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', color: 'var(--text-0)', cursor: 'pointer', fontSize: 14 }}>‹</button>
-                <span style={{ fontSize: 18, fontWeight: 700, minWidth: 160, textAlign: 'center' }}>March 2026</span>
-                <button style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 6, padding: '6px 14px', color: 'var(--text-0)', cursor: 'pointer', fontSize: 14 }}>›</button>
-                <span style={{ marginLeft: 'auto', fontSize: 15, fontWeight: 700, color: GREEN, fontFamily: 'var(--mono)' }}>Month: +${totalPnl.toFixed(2)}</span>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 4 }}>
-                {['Sun','Mon','Tue','Wed','Thu','Fri','Sat'].map(d => (
-                  <div key={d} style={{ textAlign: 'center', fontSize: 11, fontWeight: 600, color: 'var(--text-2)', padding: '4px 0', textTransform: 'uppercase' }}>{d}</div>
-                ))}
-                {[null,null,...Array(31)].slice(0,35).map((_, i) => {
-                  const day = i - 0
-                  const dateStr = day <= 0 ? null : `2026-03-${String(day).padStart(2, '0')}`
-                  const dayTrades = dateStr ? trades.filter(t => t.date === dateStr) : []
-                  const dayPnl = dayTrades.reduce((s, t) => s + t.pnl, 0)
-                  const hasData = dayTrades.length > 0
-                  return (
-                    <div key={i} style={{
-                      background: hasData ? (dayPnl >= 0 ? 'rgba(16,185,129,0.35)' : 'rgba(239,68,68,0.35)') : 'var(--bg-1)',
-                      border: `1px solid ${hasData ? (dayPnl >= 0 ? 'rgba(16,185,129,0.5)' : 'rgba(239,68,68,0.5)') : 'var(--border)'}`,
-                      borderRadius: 8, minHeight: 56, padding: '6px 4px',
-                      display: 'flex', flexDirection: 'column', alignItems: 'center',
-                    }}>
-                      {day > 0 && <div style={{ fontSize: 11 }}>{day}</div>}
-                      {hasData && <div style={{ fontSize: 9, fontFamily: 'var(--mono)', color: '#fff', fontWeight: 700, marginTop: 2 }}>{dayPnl >= 0 ? '+' : ''}{Math.round(dayPnl)}</div>}
-                      {hasData && <div style={{ fontSize: 8, color: 'rgba(255,255,255,0.7)' }}>{dayTrades.length}t</div>}
-                    </div>
-                  )
-                })}
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'analytics' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Analytics</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Deep dive into your trading patterns. Find what works, eliminate what doesn't.</p>
-            </div>
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Avg P&L by Day of Week</div>
-                {[
-                  { label: 'Mon', value: 925.00 },
-                  { label: 'Tue', value: 577.50 },
-                  { label: 'Wed', value: 342.50 },
-                  { label: 'Thu', value: 668.00 },
-                  { label: 'Fri', value: -192.00 },
-                ].map(d => (
-                  <div key={d.label} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-                      <span style={{ color: 'var(--text-2)' }}>{d.label}</span>
-                      <span style={{ color: d.value >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>{d.value >= 0 ? '+$' : '-$'}{Math.abs(d.value).toFixed(2)}</span>
-                    </div>
-                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 7 }}>
-                      <div style={{ height: '100%', width: `${(Math.abs(d.value) / 925) * 100}%`, background: d.value >= 0 ? GREEN : RED, borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Long vs Short Performance</div>
-                {[
-                  { label: 'Long', value: trades.filter(t => t.direction === 'Long').reduce((s, t) => s + t.pnl, 0) },
-                  { label: 'Short', value: trades.filter(t => t.direction === 'Short').reduce((s, t) => s + t.pnl, 0) },
-                ].map(d => (
-                  <div key={d.label} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 2 }}>
-                      <span style={{ color: 'var(--text-2)' }}>{d.label}</span>
-                      <span style={{ color: d.value >= 0 ? GREEN : RED, fontFamily: 'var(--mono)' }}>{d.value >= 0 ? '+$' : '-$'}{Math.abs(d.value).toFixed(2)}</span>
-                    </div>
-                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 7 }}>
-                      <div style={{ height: '100%', width: `${(Math.abs(d.value) / Math.max(Math.abs(trades.filter(t => t.direction === 'Long').reduce((s, t) => s + t.pnl, 0)), Math.abs(trades.filter(t => t.direction === 'Short').reduce((s, t) => s + t.pnl, 0)))) * 100}%`, background: d.value >= 0 ? GREEN : RED, borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-                <div style={{ marginTop: 20, fontSize: 13, fontWeight: 700, marginBottom: 12 }}>Win/Loss Streaks</div>
-                <div style={{ display: 'flex', gap: 12 }}>
-                  <div style={{ flex: 1, background: 'var(--bg-1)', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4 }}>Best Win Streak</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: GREEN }}>7</div>
-                  </div>
-                  <div style={{ flex: 1, background: 'var(--bg-1)', borderRadius: 8, padding: 12, textAlign: 'center' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-2)', marginBottom: 4 }}>Current</div>
-                    <div style={{ fontSize: 22, fontWeight: 800, color: GREEN }}>+8W</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'notebook' && (
-          <div>
-            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20 }}>
-              <div>
-                <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Notebook</h2>
-                <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Daily plans, weekly recaps, and strategy playbooks.</p>
-              </div>
-              <button style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '9px 18px', color: '#0a0a0c', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}>+ New Note</button>
-            </div>
-            <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-              {[
-                {
-                  title: 'Pre-Market Plan — March 14, 2026',
-                  date: '2026-03-14',
-                  tag: 'Pre-Market',
-                  tagColor: '#6366f1',
-                  preview: 'Watching NVDA for a break above $183 resistance — volume needs to confirm. NQ overnight session shows continuation bias. Key levels: NQ 19,700 support, 19,850 resistance. Plan: Long NVDA on breakout, long NQ if holds above 19,700. Max 2 trades. No FOMO.',
-                },
-                {
-                  title: 'Weekly Review — Week of March 10',
-                  date: '2026-03-10',
-                  tag: 'Weekly Review',
-                  tagColor: '#10b981',
-                  preview: 'Strong week overall. Best trade: NQ long on Monday open (+$1,492). Biggest mistake: TSLA early exit — left $80+ on the table by closing at $416 instead of letting it run to $422 target. Win rate 78% (7W/2L). P&L: +$3,584. Focus next week: hold winners longer, trust the setup.',
-                },
-                {
-                  title: 'Strategy Playbook — NQ Momentum Opens',
-                  date: '2026-03-05',
-                  tag: 'Playbook',
-                  tagColor: '#f59e0b',
-                  preview: 'Setup: Wait for first 15-min candle to close above prior day high. Entry on pullback to breakout level. Stop below the 15-min candle low. Target: 1.5R minimum. Best session: 9:45-10:30 AM ET. Avoid Fridays (low follow-through). NQ $20/pt — size 1 contract max until 10 consecutive wins.',
-                },
-              ].map((note, i) => (
-                <div key={i} style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20, cursor: 'pointer' }}>
-                  <div style={{ display: 'flex', alignItems: 'flex-start', justifyContent: 'space-between', marginBottom: 10 }}>
-                    <div>
-                      <div style={{ fontSize: 15, fontWeight: 700, marginBottom: 6 }}>{note.title}</div>
-                      <div style={{ display: 'flex', gap: 8, alignItems: 'center' }}>
-                        <span style={{ fontSize: 11, padding: '2px 8px', borderRadius: 20, fontWeight: 600, background: note.tagColor + '22', color: note.tagColor, border: `1px solid ${note.tagColor}44` }}>{note.tag}</span>
-                        <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{note.date}</span>
-                      </div>
-                    </div>
-                    <button style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 6, padding: '4px 10px', color: 'var(--text-2)', fontSize: 11, cursor: 'pointer' }}>Edit</button>
-                  </div>
-                  <p style={{ fontSize: 13, color: 'var(--text-1)', lineHeight: 1.65, margin: 0 }}>{note.preview}</p>
-                </div>
-              ))}
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'reports' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Reports</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Performance breakdowns by date range. Export to CSV for tax prep or deeper analysis.</p>
-            </div>
-            {/* Weekly report card — computed from DEMO_TRADES
-                Week of March 10-14: 9 trades, 8W/1L, net P&L = sum of all trades */}
-            <div style={{ background: 'var(--bg-2)', border: '1px solid rgba(99,102,241,0.2)', borderRadius: 12, padding: 24, marginBottom: 16 }}>
-              <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', marginBottom: 20, flexWrap: 'wrap', gap: 10 }}>
-                <div>
-                  <div style={{ fontSize: 16, fontWeight: 800 }}>Week of March 10–14, 2026</div>
-                  <div style={{ fontSize: 12, color: 'var(--text-3)', marginTop: 2 }}>9 trades · 8 wins · 1 loss</div>
-                </div>
-                <button style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer' }}>
-                  Export CSV
-                </button>
-              </div>
-              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(140px, 1fr))', gap: 10, marginBottom: 20 }}>
-                {[
-                  { label: 'Net P&L', value: '+$3,610.00', color: '#10b981' },
-                  { label: 'Win Rate', value: '88.9%', color: '#10b981' },
-                  { label: 'Avg R-Multiple', value: '+1.40R', color: 'var(--blue)' },
-                  { label: 'Profit Factor', value: '78.5×', color: '#10b981' },
-                  { label: 'Best Trade', value: '+$1,492', color: '#10b981' },
-                  { label: 'Worst Trade', value: '-$46', color: '#ef4444' },
-                ].map(m => (
-                  <div key={m.label} style={{ background: 'var(--bg-1)', borderRadius: 8, padding: '12px 14px' }}>
-                    <div style={{ fontSize: 10, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.06em', marginBottom: 4 }}>{m.label}</div>
-                    <div style={{ fontSize: 18, fontWeight: 800, color: m.color, fontFamily: 'var(--mono)' }}>{m.value}</div>
-                  </div>
-                ))}
-              </div>
-              <div style={{ marginBottom: 12 }}>
-                <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-2)', marginBottom: 8 }}>P&L by Day</div>
-                {[
-                  { day: 'Mon Mar 10', pnl: -46.00,   trades: 1 },
-                  { day: 'Tue Mar 11', pnl: 1023.00,  trades: 2 },
-                  { day: 'Wed Mar 12', pnl: 145.00,   trades: 2 },
-                  { day: 'Thu Mar 13', pnl: 874.00,   trades: 2 },
-                  { day: 'Fri Mar 14', pnl: 1614.00,  trades: 2 },
-                ].map(d => (
-                  <div key={d.day} style={{ marginBottom: 7 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                      <span style={{ color: 'var(--text-2)' }}>{d.day} <span style={{ color: 'var(--text-3)' }}>({d.trades} trades)</span></span>
-                      <span style={{ color: d.pnl >= 0 ? '#10b981' : '#ef4444', fontFamily: 'var(--mono)', fontWeight: 700 }}>{d.pnl >= 0 ? '+$' : '-$'}{Math.abs(d.pnl).toFixed(2)}</span>
-                    </div>
-                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 8 }}>
-                      <div style={{ height: '100%', width: `${(Math.abs(d.pnl) / 1614) * 100}%`, background: d.pnl >= 0 ? '#10b981' : '#ef4444', borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-              <button style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer' }}>This Month</button>
-              <button style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer' }}>Last Month</button>
-              <button style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer' }}>YTD</button>
-              <button style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-0)', fontSize: 13, cursor: 'pointer' }}>Custom Range</button>
-            </div>
-          </div>
-        )}
-
-        {activeTab === 'advanced' && (
-          <div>
-            <div style={{ marginBottom: 20 }}>
-              <h2 style={{ margin: 0, fontSize: 20, fontWeight: 700 }}>Advanced Analytics</h2>
-              <p style={{ margin: '4px 0 0', fontSize: 13, color: 'var(--text-2)' }}>Deep pattern detection, expectancy, and behavioral analysis.</p>
-            </div>
-            {/* Expectancy = (WinRate × AvgWin) - (LossRate × AvgLoss)
-                WinRate = 8/9 = 0.889; AvgWin = 3,656/8 = $457; LossRate = 1/9 = 0.111; AvgLoss = $46
-                Expectancy = (0.889 × 457) - (0.111 × 46) = 406.27 - 5.11 = $401.16/trade */}
-            <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16, marginBottom: 16 }}>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Expectancy Calculator</div>
-                <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 8, marginBottom: 14 }}>
-                  {[
-                    { label: 'Win Rate', value: '88.9%' },
-                    { label: 'Avg Win', value: '+$457.00' },
-                    { label: 'Loss Rate', value: '11.1%' },
-                    { label: 'Avg Loss', value: '-$46.00' },
-                  ].map(m => (
-                    <div key={m.label} style={{ background: 'var(--bg-1)', borderRadius: 8, padding: '10px 12px' }}>
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 3 }}>{m.label}</div>
-                      <div style={{ fontSize: 16, fontWeight: 700, fontFamily: 'var(--mono)', color: 'var(--text-0)' }}>{m.value}</div>
-                    </div>
-                  ))}
-                </div>
-                <div style={{ background: 'rgba(16,185,129,0.08)', border: '1px solid rgba(16,185,129,0.2)', borderRadius: 8, padding: '12px 14px' }}>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginBottom: 4 }}>Expectancy per Trade</div>
-                  <div style={{ fontSize: 24, fontWeight: 800, color: '#10b981', fontFamily: 'var(--mono)' }}>+$401.16</div>
-                  <div style={{ fontSize: 11, color: 'var(--text-3)', marginTop: 4 }}>(0.889 × $457) − (0.111 × $46) = $401.16</div>
-                </div>
-              </div>
-              <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>P&L Distribution</div>
-                {[
-                  { range: '$500+',       count: 3, pct: 33 },
-                  { range: '$100–$499',   count: 3, pct: 33 },
-                  { range: '$1–$99',      count: 2, pct: 22 },
-                  { range: 'Loss',        count: 1, pct: 11 },
-                ].map(r => (
-                  <div key={r.range} style={{ marginBottom: 8 }}>
-                    <div style={{ display: 'flex', justifyContent: 'space-between', fontSize: 11, marginBottom: 3 }}>
-                      <span style={{ color: 'var(--text-2)' }}>{r.range}</span>
-                      <span style={{ color: 'var(--text-3)', fontFamily: 'var(--mono)' }}>{r.count} trades ({r.pct}%)</span>
-                    </div>
-                    <div style={{ background: 'var(--bg-1)', borderRadius: 4, height: 8 }}>
-                      <div style={{ height: '100%', width: `${r.pct}%`, background: r.range === 'Loss' ? '#ef4444' : '#10b981', borderRadius: 4 }} />
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-            <div style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 12, padding: 20 }}>
-              <div style={{ fontSize: 13, fontWeight: 700, marginBottom: 14 }}>Filters &amp; Custom Analysis</div>
-              <div style={{ display: 'flex', gap: 10, flexWrap: 'wrap', marginBottom: 14 }}>
-                {['Asset Class', 'Setup Tag', 'Direction', 'Date Range', 'R-Multiple', 'Session'].map(f => (
-                  <div key={f} style={{ background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 8, padding: '7px 14px', fontSize: 12, color: 'var(--text-2)', cursor: 'pointer', display: 'flex', alignItems: 'center', gap: 6 }}>
-                    {f}
-                    <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><polyline points="6 9 12 15 18 9"/></svg>
-                  </div>
-                ))}
-                <div style={{ background: 'var(--accent)', border: 'none', borderRadius: 8, padding: '7px 14px', fontSize: 12, color: '#0a0a0c', cursor: 'pointer', fontWeight: 700 }}>Apply</div>
-              </div>
-              <div style={{ fontSize: 12, color: 'var(--text-3)', padding: '16px', background: 'var(--bg-1)', borderRadius: 8, textAlign: 'center' }}>
-                Active filters: <strong style={{ color: 'var(--text-1)' }}>All trades · All assets · March 10–14, 2026</strong> · 9 trades loaded
-              </div>
-            </div>
-          </div>
-        )}
-      </div>
-    </div>
-  )
-}
-
 function JournalPageInner() {
   const [activeTab, setActiveTab] = useState('dashboard')
   const [trades, setTrades] = useState<Trade[]>([])
@@ -4001,6 +3509,7 @@ function JournalPageInner() {
   const [showUpgradePrompt, setShowUpgradePrompt] = useState(false)
   const [upgradeFeatureName, setUpgradeFeatureName] = useState('')
   const [upgradeFeatureDesc, setUpgradeFeatureDesc] = useState('')
+  const [authModalOpenJournal, setAuthModalOpenJournal] = useState(false)
   const initialSyncDone = useRef(false)
   const initialLoadDone = useRef(false)
 
@@ -4010,61 +3519,29 @@ function JournalPageInner() {
     setShowUpgradePrompt(true)
   }
 
-  // Auth gating — show demo content for unauthenticated users
+  // Auth gating — tier check (never causes early return; isDemo propagates to write ops)
   const tier = getUserTier(user)
-  if (tier === 'demo') {
-    // Trade prices sourced from macrotrends.net / tradingview.com for each date:
-    // NVDA March 17 close $181.94; Mar 14 range ~$183-189
-    // NQ (E-mini Nasdaq) Mar 14 ~19,680-19,755 (NDX ~19,700 area)
-    // AAPL Mar 17 close $254.23; Mar 13 range ~$252-255
-    // ES (E-mini S&P 500) Mar 13 ~6,645-6,665 (SPX ~6,650 area, SPY=$665 / 0.1 approx)
-    // TSLA Mar 17 close $399.27; Mar 12 range ~$406-417
-    // META Mar 14 close ~$613.71; Mar 12 range ~$615-628
-    // CL (Crude Oil) Mar 11 ~$67.15-68.05/barrel (WTI March 2026)
-    // SPY Mar 17 $671.85; Mar 11 range ~$663-668
-    // MSFT Mar 17 close $399.41; Mar 10 range ~$397-403
-    // P&L formulas verified: (exit-entry)*shares-commissions (stocks); points*$20/pt-comm (NQ); points*$50/pt-comm (ES); (exit-entry)*1000-comm (CL)
-    const DEMO_TRADES: Trade[] = [
-      { id: 'd1', symbol: 'NVDA', direction: 'Long', assetClass: 'Stock', entryPrice: 183.20, exitPrice: 189.40, positionSize: 20, stopLoss: 178.00, takeProfit: 196.00, commissions: 2.00, pnl: 122.00, rMultiple: 1.19, pctGainLoss: 3.38, holdMinutes: 45, setupTag: 'Breakout', mistakeTag: 'None', rating: 5, notes: 'Clean breakout above $183 resistance on high volume. NVDA closed $181.94 on Mar 17; intraday Mar 14 ran to $189.', screenshot: '', date: '2026-03-14', time: '10:15' },
-      { id: 'd2', symbol: 'NQ', direction: 'Long', assetClass: 'Futures', entryPrice: 19680, exitPrice: 19755, positionSize: 1, stopLoss: 19640, takeProfit: 19810, commissions: 8.00, pnl: 1492.00, rMultiple: 1.88, pctGainLoss: 0.38, holdMinutes: 32, setupTag: 'Momentum', mistakeTag: 'None', rating: 4, notes: 'NQ momentum continuation. 75 pts × $20/pt = $1,500 gross - $8 comm = $1,492 net. 1 E-mini contract.', screenshot: '', date: '2026-03-14', time: '09:52' },
-      { id: 'd3', symbol: 'AAPL', direction: 'Short', assetClass: 'Stock', entryPrice: 254.80, exitPrice: 250.20, positionSize: 50, stopLoss: 257.00, takeProfit: 248.00, commissions: 2.00, pnl: 228.00, rMultiple: 2.09, pctGainLoss: 1.81, holdMinutes: 78, setupTag: 'Reversal', mistakeTag: 'None', rating: 4, notes: 'AAPL rejection at VWAP. (254.80-250.20)×50 - $2 comm = $228. AAPL closed $254.23 on Mar 17.', screenshot: '', date: '2026-03-13', time: '11:30' },
-      { id: 'd4', symbol: 'ES', direction: 'Short', assetClass: 'Futures', entryPrice: 6658, exitPrice: 6645, positionSize: 1, stopLoss: 6665, takeProfit: 6630, commissions: 4.00, pnl: 646.00, rMultiple: 1.86, pctGainLoss: 0.20, holdMinutes: 22, setupTag: 'Support/Resistance', mistakeTag: 'None', rating: 5, notes: 'ES rejection at key resistance. 13 pts × $50/pt = $650 gross - $4 comm = $646 net. 1 E-mini S&P contract.', screenshot: '', date: '2026-03-13', time: '14:20' },
-      { id: 'd5', symbol: 'TSLA', direction: 'Long', assetClass: 'Stock', entryPrice: 408.50, exitPrice: 416.80, positionSize: 10, stopLoss: 404.00, takeProfit: 422.00, commissions: 2.00, pnl: 81.00, rMultiple: 1.84, pctGainLoss: 2.03, holdMinutes: 110, setupTag: 'Pullback', mistakeTag: 'Early Exit', rating: 3, notes: 'TSLA pullback to 20 EMA. (416.80-408.50)×10 - $2 = $81. Exited early — TSLA closed $399.27 on Mar 17.', screenshot: '', date: '2026-03-12', time: '10:45' },
-      { id: 'd6', symbol: 'META', direction: 'Long', assetClass: 'Stock', entryPrice: 615.20, exitPrice: 628.40, positionSize: 5, stopLoss: 608.00, takeProfit: 638.00, commissions: 2.00, pnl: 64.00, rMultiple: 1.83, pctGainLoss: 2.15, holdMinutes: 95, setupTag: 'Breakout', mistakeTag: 'None', rating: 4, notes: 'META gap-up continuation. (628.40-615.20)×5 - $2 = $64. META traded ~$613-620 on Mar 14.', screenshot: '', date: '2026-03-12', time: '09:42' },
-      { id: 'd7', symbol: 'CL', direction: 'Long', assetClass: 'Futures', entryPrice: 67.15, exitPrice: 68.05, positionSize: 1, stopLoss: 66.60, takeProfit: 69.00, commissions: 4.00, pnl: 896.00, rMultiple: 1.64, pctGainLoss: 1.34, holdMinutes: 55, setupTag: 'Trend Follow', mistakeTag: 'None', rating: 4, notes: 'WTI crude trend follow. (68.05-67.15)×1,000 bbl - $4 = $896. CL contract = 1,000 barrels.', screenshot: '', date: '2026-03-11', time: '10:05' },
-      { id: 'd8', symbol: 'SPY', direction: 'Short', assetClass: 'Stock', entryPrice: 665.80, exitPrice: 661.50, positionSize: 30, stopLoss: 668.00, takeProfit: 660.00, commissions: 2.00, pnl: 127.00, rMultiple: 1.95, pctGainLoss: 0.65, holdMinutes: 38, setupTag: 'Reversal', mistakeTag: 'None', rating: 4, notes: 'SPY bearish divergence fade. (665.80-661.50)×30 - $2 = $127. SPY Mar 17 close $671.85.', screenshot: '', date: '2026-03-11', time: '11:22' },
-      { id: 'd9', symbol: 'MSFT', direction: 'Long', assetClass: 'Stock', entryPrice: 399.20, exitPrice: 394.80, positionSize: 10, stopLoss: 395.00, takeProfit: 410.00, commissions: 2.00, pnl: -46.00, rMultiple: -1.05, pctGainLoss: -1.10, holdMinutes: 60, setupTag: 'Pullback', mistakeTag: 'Early Exit', rating: 2, notes: 'MSFT pullback buy stopped out. (394.80-399.20)×10 - $2 = -$46. MSFT closed $399.41 on Mar 17.', screenshot: '', date: '2026-03-10', time: '13:15' },
-    ]
-    const demoTotalPnl = DEMO_TRADES.reduce((s, t) => s + t.pnl, 0)
-    const demoWins = DEMO_TRADES.filter(t => t.pnl > 0)
-    const demoWinRate = (demoWins.length / DEMO_TRADES.length * 100).toFixed(1)
-    const demoAvgR = (DEMO_TRADES.reduce((s, t) => s + t.rMultiple, 0) / DEMO_TRADES.length).toFixed(2)
+  const isDemo = tier === 'demo'
 
-    const DEMO_JOURNAL_TABS = [
-      { id: 'dashboard', label: 'Dashboard', iconPath: 'M3 12l2-2m0 0l7-7 7 7M5 10v10a1 1 0 001 1h3m10-11l2 2m-2-2v10a1 1 0 01-1 1h-3m-6 0a1 1 0 001-1v-4a1 1 0 011-1h2a1 1 0 011 1v4a1 1 0 001 1m-6 0h6' },
-      { id: 'log',       label: 'Trade Log',  iconPath: 'M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2M9 5a2 2 0 002 2h2a2 2 0 002-2M9 5a2 2 0 012-2h2a2 2 0 012 2' },
-      { id: 'calendar',  label: 'Calendar',   iconPath: 'M8 7V3m8 4V3m-9 8h10M5 21h14a2 2 0 002-2V7a2 2 0 00-2-2H5a2 2 0 00-2 2v12a2 2 0 002 2z' },
-      { id: 'analytics', label: 'Analytics',  iconPath: 'M9 19v-6a2 2 0 00-2-2H5a2 2 0 00-2 2v6a2 2 0 002 2h2a2 2 0 002-2zm0 0V9a2 2 0 012-2h2a2 2 0 012 2v10m-6 0a2 2 0 002 2h2a2 2 0 002-2m0 0V5a2 2 0 012-2h2a2 2 0 012 2v14a2 2 0 01-2 2h-2a2 2 0 01-2-2z' },
-      { id: 'notebook',  label: 'Notebook',   iconPath: 'M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z' },
-      { id: 'reports',   label: 'Reports',    iconPath: 'M7 12l3-3 3 3 4-4M8 21l4-4 4 4M3 4h18M4 4h16v12a1 1 0 01-1 1H5a1 1 0 01-1-1V4z' },
-      { id: 'advanced',  label: 'Advanced',   iconPath: 'M9.663 17h4.673M12 3v1m6.364 1.636l-.707.707M21 12h-1M4 12H3m3.343-5.657l-.707-.707m2.828 9.9a5 5 0 117.072 0l-.548.547A3.374 3.374 0 0014 18.469V19a2 2 0 11-4 0v-.531c0-.895-.356-1.754-.988-2.386l-.548-.547z' },
-    ]
-
-    return (
-      <AuthGate featureName="Trading Journal" featureDesc="Track every trade, analyze your patterns, and improve your consistency.">
-        <DemoJournalContent
-          trades={DEMO_TRADES}
-          totalPnl={demoTotalPnl}
-          winRate={demoWinRate}
-          avgR={demoAvgR}
-          wins={demoWins.length}
-          tabs={DEMO_JOURNAL_TABS}
-        />
-      </AuthGate>
-    )
-  }
+  // Demo trades — injected into real state when isDemo (prices verified Mar 2026)
+  const DEMO_TRADES: Trade[] = [
+    { id: 'd1', symbol: 'NVDA', direction: 'Long', assetClass: 'Stock', entryPrice: 183.20, exitPrice: 189.40, positionSize: 20, stopLoss: 178.00, takeProfit: 196.00, commissions: 2.00, pnl: 122.00, rMultiple: 1.19, pctGainLoss: 3.38, holdMinutes: 45, setupTag: 'Breakout', mistakeTag: 'None', rating: 5, notes: 'Clean breakout above $183 resistance on high volume.', screenshot: '', date: '2026-03-14', time: '10:15' },
+    { id: 'd2', symbol: 'NQ', direction: 'Long', assetClass: 'Futures', entryPrice: 19680, exitPrice: 19755, positionSize: 1, stopLoss: 19640, takeProfit: 19810, commissions: 8.00, pnl: 1492.00, rMultiple: 1.88, pctGainLoss: 0.38, holdMinutes: 32, setupTag: 'Momentum', mistakeTag: 'None', rating: 4, notes: 'NQ momentum continuation. 75 pts × $20/pt = $1,500 gross - $8 comm = $1,492 net.', screenshot: '', date: '2026-03-14', time: '09:52' },
+    { id: 'd3', symbol: 'AAPL', direction: 'Short', assetClass: 'Stock', entryPrice: 254.80, exitPrice: 250.20, positionSize: 50, stopLoss: 257.00, takeProfit: 248.00, commissions: 2.00, pnl: 228.00, rMultiple: 2.09, pctGainLoss: 1.81, holdMinutes: 78, setupTag: 'Reversal', mistakeTag: 'None', rating: 4, notes: 'AAPL rejection at VWAP.', screenshot: '', date: '2026-03-13', time: '11:30' },
+    { id: 'd4', symbol: 'ES', direction: 'Short', assetClass: 'Futures', entryPrice: 6658, exitPrice: 6645, positionSize: 1, stopLoss: 6665, takeProfit: 6630, commissions: 4.00, pnl: 646.00, rMultiple: 1.86, pctGainLoss: 0.20, holdMinutes: 22, setupTag: 'Support/Resistance', mistakeTag: 'None', rating: 5, notes: 'ES rejection at key resistance. 13 pts × $50/pt = $650 gross - $4 comm = $646 net.', screenshot: '', date: '2026-03-13', time: '14:20' },
+    { id: 'd5', symbol: 'TSLA', direction: 'Long', assetClass: 'Stock', entryPrice: 408.50, exitPrice: 416.80, positionSize: 10, stopLoss: 404.00, takeProfit: 422.00, commissions: 2.00, pnl: 81.00, rMultiple: 1.84, pctGainLoss: 2.03, holdMinutes: 110, setupTag: 'Pullback', mistakeTag: 'Early Exit', rating: 3, notes: 'TSLA pullback to 20 EMA. Exited early.', screenshot: '', date: '2026-03-12', time: '10:45' },
+    { id: 'd6', symbol: 'META', direction: 'Long', assetClass: 'Stock', entryPrice: 615.20, exitPrice: 628.40, positionSize: 5, stopLoss: 608.00, takeProfit: 638.00, commissions: 2.00, pnl: 64.00, rMultiple: 1.83, pctGainLoss: 2.15, holdMinutes: 95, setupTag: 'Breakout', mistakeTag: 'None', rating: 4, notes: 'META gap-up continuation.', screenshot: '', date: '2026-03-12', time: '09:42' },
+    { id: 'd7', symbol: 'CL', direction: 'Long', assetClass: 'Futures', entryPrice: 67.15, exitPrice: 68.05, positionSize: 1, stopLoss: 66.60, takeProfit: 69.00, commissions: 4.00, pnl: 896.00, rMultiple: 1.64, pctGainLoss: 1.34, holdMinutes: 55, setupTag: 'Trend Follow', mistakeTag: 'None', rating: 4, notes: 'WTI crude trend follow. (68.05-67.15)×1,000 bbl - $4 = $896.', screenshot: '', date: '2026-03-11', time: '10:05' },
+    { id: 'd8', symbol: 'SPY', direction: 'Short', assetClass: 'Stock', entryPrice: 665.80, exitPrice: 661.50, positionSize: 30, stopLoss: 668.00, takeProfit: 660.00, commissions: 2.00, pnl: 127.00, rMultiple: 1.95, pctGainLoss: 0.65, holdMinutes: 38, setupTag: 'Reversal', mistakeTag: 'None', rating: 4, notes: 'SPY bearish divergence fade.', screenshot: '', date: '2026-03-11', time: '11:22' },
+    { id: 'd9', symbol: 'MSFT', direction: 'Long', assetClass: 'Stock', entryPrice: 399.20, exitPrice: 394.80, positionSize: 10, stopLoss: 395.00, takeProfit: 410.00, commissions: 2.00, pnl: -46.00, rMultiple: -1.05, pctGainLoss: -1.10, holdMinutes: 60, setupTag: 'Pullback', mistakeTag: 'Early Exit', rating: 2, notes: 'MSFT pullback buy stopped out.', screenshot: '', date: '2026-03-10', time: '13:15' },
+  ]
 
   useEffect(() => {
+    if (isDemo) {
+      setTrades(DEMO_TRADES)
+      initialLoadDone.current = true
+      return
+    }
     setTrades(loadTrades())
     setNotes(loadNotes())
     setCustomTags(loadCustomTags())
@@ -4172,7 +3649,7 @@ function JournalPageInner() {
     saveCustomTags(updated)
   }
 
-  return (
+  const journalContent = (
     <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
       {/* Persistent Navigation */}
       <PersistentNav />
@@ -4283,7 +3760,7 @@ function JournalPageInner() {
       {/* Content */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '28px 24px' }}>
         {activeTab === 'dashboard' && <TabDashboard trades={trades} />}
-        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} customTags={customTags} onAddCustomTag={handleAddCustomTag} prefill={prefillParams} currentUser={user} onUpgrade={openUpgrade} />}
+        {activeTab === 'log'       && <TabTradeLog  trades={trades} setTrades={setTrades} customTags={customTags} onAddCustomTag={handleAddCustomTag} prefill={prefillParams} currentUser={user} onUpgrade={openUpgrade} isDemo={isDemo} onDemoAction={() => setAuthModalOpenJournal(true)} />}
         {activeTab === 'calendar'  && <TabCalendar  trades={trades} />}
         {activeTab === 'analytics' && <TabAnalytics trades={trades} />}
         {activeTab === 'notebook'  && <TabNotebook  notes={notes}   setNotes={setNotes} />}
@@ -4318,8 +3795,18 @@ function JournalPageInner() {
         lockedCount={getLockedEntryCount(user, trades.map(t => t.date))}
         variant="upgrade"
       />
+      {authModalOpenJournal && <AuthModal onClose={() => setAuthModalOpenJournal(false)} />}
     </div>
   )
+
+  if (isDemo) {
+    return (
+      <AuthGate featureName="Trading Journal" featureDesc="Track every trade, analyze your patterns, and improve your consistency.">
+        {journalContent}
+      </AuthGate>
+    )
+  }
+  return journalContent
 }
 
 export default function JournalPage() {
