@@ -301,6 +301,12 @@ const features = [
     desc: 'Account creation, email verification, and encrypted cloud sync. Your watchlists, journal, and portfolio follow you everywhere.',
     color: 'var(--red)',
   },
+  {
+    icon: <IconEye />,
+    title: 'Free Insider Trading Data',
+    desc: 'Track what corporate insiders are buying and selling. Real SEC Form 4 filings for AAPL, MSFT, NVDA, TSLA, and more. Earnings calendar and IPO tracker included. No account required.',
+    color: 'var(--blue)',
+  },
 ]
 
 // ─────────────────────────────────────────────────────────────────────────────

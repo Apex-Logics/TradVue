@@ -43,6 +43,7 @@ const SEO_LINKS: FooterLink[] = [
   { label: 'Options Journal',         href: '/options-trading-journal' },
   { label: 'Trading Calculators',     href: '/trading-calculators' },
   { label: 'Post-Trade Ritual',       href: '/post-trade-ritual' },
+  { label: 'Market Intel',             href: '/market-intel' },
 ]
 
 // ─── Separator ────────────────────────────────────────────────────────────────

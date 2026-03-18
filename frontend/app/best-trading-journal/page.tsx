@@ -392,6 +392,7 @@ export default function BestTradingJournalPage() {
               { href: '/options-trading-journal', title: 'Options Journal', desc: 'Track Greeks & multi-leg strategies', emoji: '*' },
               { href: '/post-trade-ritual', title: 'Post-Trade Ritual', desc: 'Build your daily journaling habit', emoji: '!' },
               { href: '/coach', title: 'AI Coach', desc: 'Get AI analysis of your trading patterns', emoji: '?' },
+              { href: '/market-intel', title: 'Market Intel', desc: 'Free insider trading data — SEC Form 4 filings', emoji: '' },
             ].map(item => (
               <Link key={item.href} href={item.href} className="seo-related-card">
                 <div className="seo-related-card-title">{item.title}</div>
@@ -408,6 +409,7 @@ export default function BestTradingJournalPage() {
                 { href: '/post-trade-ritual', text: 'Post-Trade Ritual — Build Your Journaling Habit in 60 Seconds' },
                 { href: '/futures-trading-journal', text: 'Futures Trading Journal — Track NQ, ES, CL with Tick-Based P&L' },
                 { href: '/options-trading-journal', text: 'Options Trading Journal — Track Greeks & Multi-Leg Strategies' },
+                { href: '/market-intel', text: 'Market Intel — Free Insider Trading Data (SEC Form 4)' },
               ].map(link => (
                 <li key={link.href}><Link href={link.href}>→ {link.text}</Link></li>
               ))}
