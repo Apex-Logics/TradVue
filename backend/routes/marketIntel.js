@@ -54,6 +54,62 @@ function setLastGood(key, data) {
   }
 }
 
+// ─── Default tickers for general insider feed ─────────────────────────────────
+
+const DEFAULT_INSIDER_TICKERS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META', 'GOOGL', 'JPM', 'V', 'SPY'];
+const BATCH_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+let batchInsiderCache = null; // { data, timestamp }
+
+/**
+ * Fetch Finnhub insider trades for all DEFAULT_INSIDER_TICKERS with 200ms delay between each call.
+ * Results are merged, deduplicated, and sorted by date descending.
+ * Cached for 30 minutes.
+ */
+async function fetchBatchInsiderTrades() {
+  // Return cached batch if fresh
+  if (batchInsiderCache && (Date.now() - batchInsiderCache.timestamp < BATCH_CACHE_TTL_MS)) {
+    return batchInsiderCache.data;
+  }
+
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  const allItems = [];
+
+  for (const ticker of DEFAULT_INSIDER_TICKERS) {
+    try {
+      const result = await finnhub.getInsiderTransactions(ticker);
+      const items = (result?.data || []).map(t => ({
+        title: `${t.transactionType}: ${ticker} — ${t.name}`,
+        summary: `${t.transactionType} ${Math.abs(t.change || 0).toLocaleString()} shares on ${t.transactionDate || 'N/A'}`,
+        url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${ticker}&type=4&dateb=&owner=include&count=10`,
+        source: 'Finnhub',
+        category: 'insider',
+        ticker,
+        filingType: '4',
+        date: t.transactionDate || t.filingDate || new Date().toISOString(),
+        transactionType: t.transactionType,
+        shares: Math.abs(t.change || 0),
+        name: t.name,
+      }));
+      allItems.push(...items);
+    } catch (err) {
+      console.warn(`[BatchInsider] Failed to fetch ${ticker}:`, err.message);
+    }
+    await delay(200);
+  }
+
+  // Deduplicate by (ticker + name + date + transactionType)
+  const seen = new Set();
+  const deduped = allItems.filter(item => {
+    const key = `${item.ticker}:${item.name}:${item.date}:${item.transactionType}`;
+    if (seen.has(key)) return false;
+    seen.add(key);
+    return true;
+  }).sort((a, b) => new Date(b.date) - new Date(a.date));
+
+  batchInsiderCache = { data: deduped, timestamp: Date.now() };
+  return deduped;
+}
+
 // ─── GET /api/economic-indicators ────────────────────────────────────────────
 
 router.get('/economic-indicators', intelLimiter, async (req, res) => {
@@ -74,37 +130,52 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
   const cacheKey = `insider:${symbol || 'all'}`;
 
   try {
-    // Fetch from both SEC EDGAR and Finnhub in parallel
-    const [secData, finnhubData] = await Promise.allSettled([
+    // Fetch SEC EDGAR + Finnhub in parallel
+    // For no-symbol: batch-fetch Finnhub for curated tickers (cached 30 min)
+    // For symbol: fetch single-symbol Finnhub (cached 15 min by finnhub service)
+    const [secData, finnhubBatch] = await Promise.allSettled([
       secEdgar.getRecentActivity({ symbol }),
-      symbol ? finnhub.getInsiderTransactions(symbol) : Promise.resolve({ data: [] }),
+      symbol
+        ? finnhub.getInsiderTransactions(symbol).then(result =>
+            (result?.data || []).map(t => ({
+              title: `${t.transactionType}: ${symbol} — ${t.name}`,
+              summary: `${t.transactionType} ${Math.abs(t.change || 0).toLocaleString()} shares on ${t.transactionDate || 'N/A'}`,
+              url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${symbol}&type=4&dateb=&owner=include&count=10`,
+              source: 'Finnhub',
+              category: 'insider',
+              ticker: symbol,
+              filingType: '4',
+              date: t.transactionDate || t.filingDate || new Date().toISOString(),
+              transactionType: t.transactionType,
+              shares: Math.abs(t.change || 0),
+              name: t.name,
+            }))
+          )
+        : fetchBatchInsiderTrades(),
     ]);
 
     const secItems = secData.status === 'fulfilled' ? secData.value : [];
-    const finnhubItems = finnhubData.status === 'fulfilled'
-      ? (finnhubData.value?.data || []).map(t => ({
-          title: `${t.transactionType}: ${t.symbol} — ${t.name}`,
-          summary: `${t.transactionType} ${Math.abs(t.change || 0).toLocaleString()} shares on ${t.transactionDate || 'N/A'}`,
-          url: `https://www.sec.gov/cgi-bin/browse-edgar?action=getcompany&company=${t.symbol}&type=4&dateb=&owner=include&count=10`,
-          source: 'Finnhub',
-          category: 'insider',
-          ticker: t.symbol,
-          filingType: '4',
-          date: t.transactionDate || t.filingDate || new Date().toISOString(),
-          transactionType: t.transactionType,
-          shares: Math.abs(t.change || 0),
-          name: t.name,
-        }))
-      : [];
+    const finnhubItems = finnhubBatch.status === 'fulfilled' ? (finnhubBatch.value || []) : [];
 
-    // Merge and deduplicate by title+date
+    // Merge: Finnhub data takes priority. Deduplicate by (ticker+name+date+transactionType) for Finnhub,
+    // then merge SEC items that don't duplicate existing Finnhub entries.
     const seen = new Set();
-    const combined = [...secItems, ...finnhubItems].filter(item => {
-      const key = `${item.title}:${item.date}`;
+    // Add Finnhub items first (priority)
+    const combined = [...finnhubItems].filter(item => {
+      const key = `${item.ticker}:${item.name}:${item.date}:${item.transactionType}`;
       if (seen.has(key)) return false;
       seen.add(key);
       return true;
-    }).sort((a, b) => new Date(b.date) - new Date(a.date));
+    });
+    // Append SEC items that aren't duplicated
+    for (const item of secItems) {
+      const key = `${item.title}:${item.date}`;
+      if (!seen.has(key)) {
+        seen.add(key);
+        combined.push(item);
+      }
+    }
+    combined.sort((a, b) => new Date(b.date) - new Date(a.date));
 
     // Save to last-good cache if we got results
     if (combined.length > 0) {
