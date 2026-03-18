@@ -30,7 +30,7 @@ interface NewsArticle {
 
 // ─── Constants ────────────────────────────────────────────────────────────────
 
-const CATEGORIES = ['All', 'Equities', 'Forex', 'Crypto', 'Commodities', 'Macro']
+const CATEGORIES = ['All', 'Equities', 'Forex', 'Crypto', 'Commodities', 'Macro', '📊 Market Intel']
 const CAT_MAP: Record<string, string> = {
   All: 'all',
   Equities: 'stocks',
@@ -282,8 +282,15 @@ export default function NewsPage() {
         </div>
       </div>
 
+      {/* Market Intel Tab — shows instead of articles */}
+      {category === '📊 Market Intel' && (
+        <div style={{ padding: '24px' }}>
+          <MarketIntel />
+        </div>
+      )}
+
       {/* Grid */}
-      <div className="news-page-content">
+      <div className="news-page-content" style={{ display: category === '📊 Market Intel' ? 'none' : undefined }}>
         {error && !loading && (
           <div style={{ gridColumn: '1 / -1', textAlign: 'center', padding: 60, color: 'var(--text-3)' }}>
             <div style={{ fontSize: 24, marginBottom: 12 }}>⚠️</div>
@@ -313,7 +320,7 @@ export default function NewsPage() {
       </div>
 
       {/* Load More */}
-      {!loading && hasMore && filtered.length > 0 && (
+      {category !== '📊 Market Intel' && !loading && hasMore && filtered.length > 0 && (
         <div style={{ textAlign: 'center', padding: '24px 0' }}>
           <button className="btn btn-secondary" onClick={loadMore}>
             Load More
@@ -321,16 +328,13 @@ export default function NewsPage() {
         </div>
       )}
 
-      {loading && articles.length > 0 && (
+      {category !== '📊 Market Intel' && loading && articles.length > 0 && (
         <div style={{ textAlign: 'center', padding: 20, color: 'var(--text-3)', fontSize: 12 }}>
           Loading more…
         </div>
       )}
 
-      {/* Market Intelligence Section */}
-      <div style={{ padding: '0 24px 24px' }}>
-        <MarketIntel />
-      </div>
+
 
             {/* Footer */}
       <footer style={{

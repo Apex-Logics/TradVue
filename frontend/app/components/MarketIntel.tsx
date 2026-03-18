@@ -167,6 +167,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
   const [data, setData] = useState<InsiderTrade[]>([])
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true); setError(false)
@@ -183,8 +184,39 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
 
   if (error) return <ErrorMsg msg="Failed to load insider trades" onRetry={load} />
 
+  const filtered = search.trim()
+    ? data.filter(item => {
+        const q = search.toLowerCase()
+        return (item.ticker || '').toLowerCase().includes(q) ||
+               (item.name || '').toLowerCase().includes(q) ||
+               (item.title || '').toLowerCase().includes(q) ||
+               (item.transactionType || '').toLowerCase().includes(q) ||
+               (item.source || '').toLowerCase().includes(q)
+      })
+    : data
+
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div>
+      {/* Search bar */}
+      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Filter by ticker, insider, type…"
+          style={{
+            background: 'none', border: 'none', outline: 'none',
+            fontSize: 12, color: 'var(--text-0)', width: '100%',
+          }}
+        />
+        {search && (
+          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: 0 }}>✕</button>
+        )}
+      </div>
+      <div style={{ overflowX: 'auto' }}>
       <table className="intel-table">
         <thead>
           <tr>
@@ -197,9 +229,9 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
           </tr>
         </thead>
         <tbody>
-          {loading ? <LoadingRows rows={8} /> : data.length === 0 ? (
-            <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>No insider trades found</td></tr>
-          ) : data.slice(0, 50).map((item, i) => {
+          {loading ? <LoadingRows rows={8} /> : filtered.length === 0 ? (
+            <tr><td colSpan={6} style={{ textAlign: 'center', padding: 32, color: 'var(--text-3)' }}>{search ? `No results for "${search}"` : 'No insider trades found'}</td></tr>
+          ) : filtered.slice(0, 50).map((item, i) => {
             const isBuy = (item.transactionType || '').toLowerCase().includes('buy') ||
                           (item.title || '').toLowerCase().includes('purchase')
             const isSell = (item.transactionType || '').toLowerCase().includes('sell') ||
@@ -238,6 +270,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }
@@ -248,6 +281,7 @@ function EarningsCalendarTab() {
   const [data, setData] = useState<EarningsCalendar | null>(null)
   const [loading, setLoading] = useState(true)
   const [error, setError] = useState(false)
+  const [search, setSearch] = useState('')
 
   const load = useCallback(async () => {
     setLoading(true); setError(false)
@@ -263,10 +297,33 @@ function EarningsCalendarTab() {
 
   if (error) return <ErrorMsg msg="Failed to load earnings calendar" onRetry={load} />
 
-  const items = data?.earningsCalendar || []
+  const allItems = data?.earningsCalendar || []
+  const items = search.trim()
+    ? allItems.filter(item => item.symbol.toLowerCase().includes(search.toLowerCase()))
+    : allItems
 
   return (
-    <div style={{ overflowX: 'auto' }}>
+    <div>
+      {/* Search bar */}
+      <div style={{ padding: '10px 16px', borderBottom: '1px solid var(--border)', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+          <circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>
+        </svg>
+        <input
+          type="text"
+          value={search}
+          onChange={e => setSearch(e.target.value)}
+          placeholder="Filter by symbol…"
+          style={{
+            background: 'none', border: 'none', outline: 'none',
+            fontSize: 12, color: 'var(--text-0)', width: '100%',
+          }}
+        />
+        {search && (
+          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: 0 }}>✕</button>
+        )}
+      </div>
+      <div style={{ overflowX: 'auto' }}>
       <table className="intel-table">
         <thead>
           <tr>
@@ -308,6 +365,7 @@ function EarningsCalendarTab() {
           })}
         </tbody>
       </table>
+      </div>
     </div>
   )
 }

@@ -54,6 +54,29 @@ function setCache(key, data) {
   eventsCache.set(key, { data, timestamp: Date.now() });
 }
 
+
+// ─── Last-good-response cache (1 hour) ────────────────────────────────────────
+// Serves stale data when upstream (ForexFactory, Finnhub) is temporarily unavailable.
+
+const lastGoodEventsCache = new Map();
+const LAST_GOOD_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function getLastGoodEvents(key) {
+  const entry = lastGoodEventsCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > LAST_GOOD_TTL_MS) {
+    lastGoodEventsCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setLastGoodEvents(key, data) {
+  if (Array.isArray(data) && data.length > 0) {
+    lastGoodEventsCache.set(key, { data, timestamp: Date.now() });
+  }
+}
+
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
 function toDateStr(d) {
@@ -77,8 +100,19 @@ router.get('/events', async (req, res) => {
     let allEvents = getCached(cacheKey);
 
     if (!allEvents) {
-      allEvents = await calendarService.getEvents({ from: fromStr, to: toStr, type });
-      setCache(cacheKey, allEvents);
+      try {
+        allEvents = await calendarService.getEvents({ from: fromStr, to: toStr, type });
+        if (allEvents && allEvents.length > 0) {
+          setCache(cacheKey, allEvents);
+          setLastGoodEvents(cacheKey, allEvents);
+        } else {
+          // Empty result — try last-good before showing empty
+          allEvents = getLastGoodEvents(cacheKey) || allEvents || [];
+        }
+      } catch (fetchErr) {
+        console.error('[Calendar] /events upstream error:', fetchErr.message);
+        allEvents = getLastGoodEvents(cacheKey) || [];
+      }
     }
 
     const total = allEvents.length;

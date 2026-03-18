@@ -34,8 +34,25 @@ function NavIconRules() {
 }
 
 // ─── Nav items ───────────────────────────────────────────────────────────────
+function NavIconUpgrade() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  )
+}
 
-const NAV_ITEMS: Array<{ label: string; href: string; icon?: React.ReactNode }> = [
+function NavIconAccount() {
+  return (
+    <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" aria-hidden="true">
+      <path d="M20 21v-2a4 4 0 0 0-4-4H8a4 4 0 0 0-4 4v2"/>
+      <circle cx="12" cy="7" r="4"/>
+    </svg>
+  )
+}
+
+
+const NAV_ITEMS: Array<{ label: string; href: string; icon?: React.ReactNode; authOnly?: boolean }> = [
   { label: 'Dashboard', href: '/' },
   { label: 'News',      href: '/news' },
   { label: 'Analysis',  href: '/?view=analysis' },
@@ -49,6 +66,8 @@ const NAV_ITEMS: Array<{ label: string; href: string; icon?: React.ReactNode }> 
   { label: 'AI Coach',  href: '/coach',   icon: <NavIconCoach /> },
   { label: 'Rules',     href: '/rules',   icon: <NavIconRules /> },
   { label: 'Help',      href: '/help' },
+  { label: '⚡ Upgrade', href: '/pricing', icon: <NavIconUpgrade /> },
+  { label: 'Account',   href: '/account', icon: <NavIconAccount />, authOnly: true },
 ]
 
 // ─── Cloud Sync Indicator ─────────────────────────────────────────────────────
@@ -176,7 +195,7 @@ function NavInner() {
 
         {/* Desktop + non-landscape tab bar */}
         <div className="apn-items">
-          {NAV_ITEMS.map(item => (
+          {NAV_ITEMS.filter(item => !item.authOnly || user).map(item => (
             <Link
               key={item.label}
               href={item.href}
@@ -234,7 +253,7 @@ function NavInner() {
         </div>
 
         <div className="apn-drawer-items">
-          {NAV_ITEMS.map(item => (
+          {NAV_ITEMS.filter(item => !item.authOnly || user).map(item => (
             <Link
               key={item.label}
               href={item.href}

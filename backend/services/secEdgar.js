@@ -92,7 +92,7 @@ async function getInsiderTrades({ count = 40 } = {}) {
   return cache.cacheAPICall(cacheKey, async () => {
     await _secDelay();
 
-    const url = `${SEC_BASE}/cgi-bin/browse-edgar?action=getcompany&type=4&dateb=&owner=include&count=${count}&search_text=&output=atom`;
+    const url = `${SEC_BASE}/cgi-bin/browse-edgar?action=getcurrent&type=4&dateb=&owner=include&count=${count}&search_text=&output=atom`;
 
     try {
       const feed = await rssParser.parseURL(url);
@@ -115,7 +115,7 @@ async function getFilingsByType(formType, { count = 20 } = {}) {
     await _secDelay();
 
     const encodedType = encodeURIComponent(formType);
-    const url = `${SEC_BASE}/cgi-bin/browse-edgar?action=getcompany&type=${encodedType}&dateb=&owner=include&count=${count}&search_text=&output=atom`;
+    const url = `${SEC_BASE}/cgi-bin/browse-edgar?action=getcurrent&type=${encodedType}&dateb=&owner=include&count=${count}&search_text=&output=atom`;
 
     try {
       const feed = await rssParser.parseURL(url);

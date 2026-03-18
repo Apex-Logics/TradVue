@@ -272,6 +272,14 @@ const SECTOR_COLORS: Record<string, string> = {
   'Other': '#888888',
 }
 
+// Fallback color palette — cycles through these when a sector has no dedicated color
+// (e.g. multiple holdings all assigned "Other" get distinct colors instead of all gray)
+const FALLBACK_COLORS = [
+  '#4a9eff', '#f0a500', '#00c06a', '#ff6b35', '#9b59b6',
+  '#3498db', '#e74c3c', '#95a5a6', '#d4a017', '#2ecc71',
+  '#1abc9c', '#5b6cf9', '#e67e22', '#16a085', '#8e44ad',
+]
+
 // ─── DRIP Dividend Yield Map ──────────────────────────────────────────────────
 // Hardcoded approximate annual dividend yields (%) for common stocks.
 // Fallback when live API data is unavailable.
@@ -1501,7 +1509,18 @@ export default function PortfolioPage() {
   const sectorData = useMemo(() => {
     const m: Record<string, number> = {}
     holdingsEnriched.forEach(h => { m[h.sector || 'Other'] = (m[h.sector || 'Other'] || 0) + h.marketValue })
-    return Object.entries(m).map(([label, value]) => ({ label, value, color: SECTOR_COLORS[label] || '#888888' }))
+    const entries = Object.entries(m)
+    // Track how many "Other" or unknown sectors we've seen to assign unique fallback colors
+    let fallbackIdx = 0
+    return entries.map(([label, value]) => {
+      if (SECTOR_COLORS[label]) {
+        return { label, value, color: SECTOR_COLORS[label] }
+      }
+      // Cycle through fallback palette so multiple "Other"-ish slices get distinct colors
+      const color = FALLBACK_COLORS[fallbackIdx % FALLBACK_COLORS.length]
+      fallbackIdx++
+      return { label, value, color }
+    })
   }, [holdingsEnriched])
 
   const annualDivByYear: Record<number, number> = {}

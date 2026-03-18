@@ -30,6 +30,30 @@ const intelLimiter = rateLimit({
   legacyHeaders: false,
 });
 
+
+// ─── Last-good-response cache (1 hour) ────────────────────────────────────────
+// If the upstream source (SEC EDGAR) is temporarily down or returns empty,
+// serve the last successful response to avoid showing empty tables.
+
+const lastGoodCache = new Map(); // key -> { data, timestamp }
+const LAST_GOOD_TTL_MS = 60 * 60 * 1000; // 1 hour
+
+function getLastGood(key) {
+  const entry = lastGoodCache.get(key);
+  if (!entry) return null;
+  if (Date.now() - entry.timestamp > LAST_GOOD_TTL_MS) {
+    lastGoodCache.delete(key);
+    return null;
+  }
+  return entry.data;
+}
+
+function setLastGood(key, data) {
+  if (data && Array.isArray(data) && data.length > 0) {
+    lastGoodCache.set(key, { data, timestamp: Date.now() });
+  }
+}
+
 // ─── GET /api/economic-indicators ────────────────────────────────────────────
 
 router.get('/economic-indicators', intelLimiter, async (req, res) => {
@@ -46,6 +70,8 @@ router.get('/economic-indicators', intelLimiter, async (req, res) => {
 
 router.get('/insider-trades', intelLimiter, async (req, res) => {
   const symbol = req.query.symbol ? req.query.symbol.toUpperCase().trim() : null;
+
+  const cacheKey = `insider:${symbol || 'all'}`;
 
   try {
     // Fetch from both SEC EDGAR and Finnhub in parallel
@@ -80,14 +106,28 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
       return true;
     }).sort((a, b) => new Date(b.date) - new Date(a.date));
 
+    // Save to last-good cache if we got results
+    if (combined.length > 0) {
+      setLastGood(cacheKey, combined);
+    }
+
+    // If empty (upstream flaky), try last-good cache
+    const finalData = combined.length > 0 ? combined : (getLastGood(cacheKey) || []);
+
     return res.json({
       success: true,
-      data: combined,
+      data: finalData,
       symbol: symbol || null,
-      count: combined.length,
+      count: finalData.length,
+      cached: combined.length === 0 && finalData.length > 0,
     });
   } catch (err) {
     console.error('[Route] /insider-trades error:', err.message);
+    // Try last-good cache on error
+    const cached = getLastGood(cacheKey);
+    if (cached) {
+      return res.json({ success: true, data: cached, symbol: symbol || null, count: cached.length, cached: true });
+    }
     return res.status(500).json({ success: false, error: 'Failed to fetch insider trades' });
   }
 });
