@@ -88,6 +88,17 @@ try {
   console.warn('[Stripe] Webhook route failed to load:', e.message);
 }
 
+// ── TradingView Webhook receiver — MUST be before JSON body parser ─────────────
+// TradingView sends both JSON and plain-text; express.text() handles both.
+// The receiver uses its own body parser scoped to this path.
+try {
+  const { receiverRouter } = require('./routes/webhooks');
+  app.use('/api/webhook', receiverRouter);
+  console.log('[Webhook] TradingView receiver registered at /api/webhook/tv/:token');
+} catch (e) {
+  console.warn('[Webhook] Receiver route failed to load:', e.message);
+}
+
 // ── Body parsing with size limit ──────────────────────────────────────────────
 app.use(express.json({ limit: '50kb' }));
 app.use(express.urlencoded({ extended: true, limit: '50kb' }));
@@ -136,6 +147,7 @@ app.use('/api/dashboard',     cachePrivate,   require('./routes/dashboard'));   
 app.use('/api/stocks',        cachePublic1h,  require('./routes/stocks'));          // Analyst ratings + stock scoring
 app.use('/api/sentiment',     cachePublic1h,  require('./routes/sentiment'));       // Marketaux sentiment by ticker
 app.use('/api/journal',       cachePrivate,   require('./routes/journal'));         // Journal CSV import & trade management
+app.use('/api/webhooks',      cachePrivate,   (() => { const { managementRouter } = require('./routes/webhooks'); return managementRouter; })());  // Webhook token management
 app.use('/api/backup',        cachePrivate,   require('./routes/backup'));          // Data export/backup/restore
 app.use('/api/feedback',                      require('./routes/feedback'));        // User feedback & bug reports
 app.use('/api/support',                       require('./routes/support'));          // AI support chatbot
