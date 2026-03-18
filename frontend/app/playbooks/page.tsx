@@ -804,9 +804,10 @@ export default function PlaybooksPage() {
     setSelected(null)
   }
 
-  // Auth gating — demo/unauthenticated users see a sign-in prompt
+  // Playbooks are accessible to everyone — strategies are common knowledge
   const tier = getUserTier(user)
-  if (tier === 'demo') {
+  // No auth gate — guests see default playbooks, only logged-in users can create/edit
+  if (false) { // kept for reference — playbooks are public
     const DEMO_PLAYBOOKS = [
       {
         id: 'd1',
