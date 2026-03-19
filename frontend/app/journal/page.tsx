@@ -281,6 +281,20 @@ function detectAssetClass(symbol: string): AssetClass | null {
 
 const TRADES_KEY = 'cg_journal_trades' // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
 const NOTES_KEY  = 'cg_journal_notes'  // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
+const DISMISSED_WEBHOOK_KEY = 'cg_dismissed_webhook_ids'
+
+function getDismissedWebhookIds(): Set<string> {
+  try {
+    const raw = localStorage.getItem(DISMISSED_WEBHOOK_KEY)
+    return raw ? new Set(JSON.parse(raw)) : new Set()
+  } catch { return new Set() }
+}
+
+function addDismissedWebhookId(id: string) {
+  const dismissed = getDismissedWebhookIds()
+  dismissed.add(id)
+  localStorage.setItem(DISMISSED_WEBHOOK_KEY, JSON.stringify([...dismissed]))
+}
 
 function loadTrades(): Trade[] {
   try {
@@ -1251,6 +1265,8 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
 
   const deleteTrade = (id: string) => {
     if (!confirm('Delete this trade?')) return
+    // If it's a webhook trade, track it as dismissed so polling doesn't re-add it
+    if (id.startsWith('wh_')) addDismissedWebhookId(id)
     const updated = trades.filter(t => t.id !== id)
     setTrades(updated)
     saveTrades(updated)
@@ -3753,8 +3769,9 @@ function JournalPageInner() {
         if (data.trades?.length > 0) {
           setTrades(prev => {
             const existingWebhookIds = new Set(prev.filter(t => t.source === 'webhook').map(t => t.id))
+            const dismissedIds = getDismissedWebhookIds()
             const newWebhookTrades: Trade[] = data.trades
-              .filter((t: Record<string, unknown>) => !existingWebhookIds.has(`wh_${t.id}`))
+              .filter((t: Record<string, unknown>) => !existingWebhookIds.has(`wh_${t.id}`) && !dismissedIds.has(`wh_${t.id}`))
               .map((t: Record<string, unknown>) => ({
                 id: `wh_${t.id}`,
                 date: (t.traded_at as string)?.split('T')[0] || new Date().toISOString().split('T')[0],

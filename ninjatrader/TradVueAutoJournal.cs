@@ -109,24 +109,37 @@ namespace NinjaTrader.NinjaScript.Indicators
 
         private void SubscribeToAccounts()
         {
-            lock (Account.All)
+            try
             {
-                foreach (Account acct in Account.All)
+                if (LogToOutput)
+                    Print("[TradVue] Attempting to subscribe... State=" + State);
+
+                lock (Account.All)
                 {
-                    if (!string.IsNullOrWhiteSpace(AccountName) &&
-                        !acct.Name.Equals(AccountName, StringComparison.OrdinalIgnoreCase))
-                        continue;
-
-                    acct.ExecutionUpdate += OnAccountExecutionUpdate;
-                    subscribedAccounts.Add(acct);
-
                     if (LogToOutput)
-                        Print("[TradVue] Subscribed to account: " + acct.Name);
-                }
-            }
+                        Print("[TradVue] Found " + Account.All.Count + " accounts");
 
-            if (LogToOutput && subscribedAccounts.Count == 0)
-                Print("[TradVue] WARNING: No accounts found. Check AccountName setting.");
+                    foreach (Account acct in Account.All)
+                    {
+                        if (!string.IsNullOrWhiteSpace(AccountName) &&
+                            !acct.Name.Equals(AccountName, StringComparison.OrdinalIgnoreCase))
+                            continue;
+
+                        acct.ExecutionUpdate += OnAccountExecutionUpdate;
+                        subscribedAccounts.Add(acct);
+
+                        if (LogToOutput)
+                            Print("[TradVue] Subscribed to account: " + acct.Name);
+                    }
+                }
+
+                if (LogToOutput && subscribedAccounts.Count == 0)
+                    Print("[TradVue] WARNING: No accounts found. Check AccountName setting.");
+            }
+            catch (Exception ex)
+            {
+                Print("[TradVue] ERROR subscribing: " + ex.Message);
+            }
         }
 
         private void UnsubscribeFromAccounts()
