@@ -40,9 +40,6 @@ const TRADINGVIEW_IPS = new Set([
   '127.0.0.1',
   '::1',
   '::ffff:127.0.0.1',
-  // TEMPORARY — Erick testing from home (remove after testing)
-  '76.108.47.115',
-  '::ffff:76.108.47.115',
 ]);
 
 // ── Per-token rate limiter (in-memory, 30 req/min) ────────────────────────────
