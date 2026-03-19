@@ -435,14 +435,13 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                 </a>
               </StepCard>
 
-              <StepCard number={2} title="Copy to NinjaTrader Strategies Folder">
+              <StepCard number={2} title="Import the Indicator into NinjaTrader">
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2, #9ca3af)', lineHeight: 1.6 }}>
-                  Copy <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>TradVueJournal.cs</code> into your NinjaTrader strategies folder:<br />
-                  <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.08)', padding: '2px 6px', borderRadius: 4, fontSize: 11, display: 'inline-block', marginTop: 6 }}>
-                    Documents\NinjaTrader 8\bin\Custom\Strategies\
-                  </code><br />
+                  In NinjaTrader, go to <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>Tools → Import → NinjaScript Add-On</strong> and select the downloaded{' '}
+                  <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>TradVueJournal.cs</code> file.
+                  NinjaTrader will compile and install it automatically as an <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>Indicator</strong>.<br />
                   <span style={{ fontSize: 12, marginTop: 6, display: 'inline-block' }}>
-                    Then in NinjaTrader, open the <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>NinjaScript Editor</strong> (New → NinjaScript Editor) and click <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>Compile</strong> (F5). The addon will compile automatically.
+                    (Using an Indicator — not a Strategy — lets it capture fills from <em>all</em> sources: manual orders, Chart Trader, ATM, SuperDOM, and other strategies.)
                   </span>
                 </p>
               </StepCard>
@@ -450,8 +449,8 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
               <StepCard number={3} title="Configure Your Webhook URL">
                 <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
                   <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2, #9ca3af)', lineHeight: 1.6 }}>
-                    Add <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>TradVueJournal</strong> to your chart or workspace
-                    (Strategies tab → right-click → Add Strategy).
+                    Add <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>TradVueJournal</strong> to any chart
+                    (right-click chart → Indicators → select TradVueJournal).
                     Set the <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>WebhookUrl</strong> parameter to:
                   </p>
                   {webhookUrl ? (

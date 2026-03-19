@@ -182,13 +182,13 @@ const NT_SETUP_STEPS = [
   },
   {
     n: 2,
-    title: 'Copy to NinjaTrader Strategies Folder',
-    body: 'Copy TradVueJournal.cs into: Documents\\NinjaTrader 8\\bin\\Custom\\Strategies\\. Then open the NinjaScript Editor in NinjaTrader (New → NinjaScript Editor) and press Compile (F5).',
+    title: 'Import the Indicator into NinjaTrader',
+    body: 'In NinjaTrader, go to Tools → Import → NinjaScript Add-On and select TradVueJournal.cs. NinjaTrader compiles and installs it automatically as an Indicator (not a Strategy), so it can capture fills from all sources: manual orders, Chart Trader, ATM, SuperDOM, and other strategies.',
   },
   {
     n: 3,
-    title: 'Add the strategy to your workspace',
-    body: 'Open your chart or Strategies tab, right-click → Add Strategy → select TradVueJournal. You can add it to any instrument you trade.',
+    title: 'Add the Indicator to your chart',
+    body: 'Right-click any chart → Indicators → find TradVueJournal → click Add. You can add it to any chart. It runs silently in the background with no visible plots.',
   },
   {
     n: 4,
