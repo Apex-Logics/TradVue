@@ -32,6 +32,7 @@ import WeeklySummary from './WeeklySummary'
 import { loadPlaybooks, initPlaybooks, type Playbook, CATEGORY_COLORS, CATEGORY_LABELS } from '../utils/playbookData'
 import { DEFAULT_PLAYBOOKS } from '../utils/playbookDefaults'
 import dynamic from 'next/dynamic'
+import { tradeFingerprint, batchInsertTrades, type ParsedTrade } from '../utils/brokerParsers'
 const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 const NinjaTraderConnect = dynamic(() => import('../components/NinjaTraderConnect'), { ssr: false })
 
@@ -3670,7 +3671,7 @@ function JournalPageInner() {
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [token, isDemo])
 
-  const handleImportTrades = (importedTrades: Record<string, unknown>[]) => {
+  const handleImportTrades = async (importedTrades: Record<string, unknown>[]) => {
     // Apply date filter for free-tier post-trial users
     const dateLimit = getCsvDateLimit(user)
     const filteredImports = dateLimit
@@ -3683,36 +3684,91 @@ function JournalPageInner() {
 
     if (dateLimit && filteredImports.length < importedTrades.length) {
       const skipped = importedTrades.length - filteredImports.length
-      // Non-blocking notice
       console.info(`[TierAccess] Free tier: filtered ${skipped} trade(s) older than 30 days from CSV import.`)
     }
 
-    const newTrades: Trade[] = filteredImports.map(t => ({
-      date: String(t.date || ''),
-      time: String(t.time || ''),
-      symbol: String(t.symbol || ''),
-      assetClass: (String(t.assetClass || 'Stock')) as AssetClass,
-      direction: (String(t.direction || 'Long')) as Direction,
-      entryPrice: Number(t.entryPrice) || 0,
-      exitPrice: Number(t.exitPrice) || 0,
-      positionSize: Number(t.positionSize) || 0,
-      stopLoss: Number(t.stopLoss) || 0,
-      takeProfit: Number(t.takeProfit) || 0,
-      commissions: Number(t.commissions) || 0,
-      pnl: Number(t.pnl) || 0,
-      rMultiple: Number(t.rMultiple) || 0,
-      pctGainLoss: Number(t.pctGainLoss) || 0,
-      holdMinutes: Number(t.holdMinutes) || 0,
-      setupTag: String(t.setupTag || ''),
-      mistakeTag: String(t.mistakeTag || 'None'),
-      rating: Number(t.rating) || 3,
-      notes: String(t.notes || 'Imported from CSV'),
-      screenshot: '',
-      id: uid(),
-      tags_setup_types: (t.tags_setup_types as string[]) || [],
-      tags_mistakes: (t.tags_mistakes as string[]) || [],
-      tags_strategies: (t.tags_strategies as string[]) || [],
-    }))
+    // ── Deduplication: build fingerprint set from existing journal trades ──
+    // We compare on date+symbol+side+qty+price so the same trade can't be imported twice.
+    const existingFingerprints = new Set<string>(
+      trades.map(t => tradeFingerprint({
+        date: t.date,
+        symbol: t.symbol,
+        side: (t.direction === 'Long' ? 'buy' : 'sell') as 'buy' | 'sell',
+        quantity: t.positionSize,
+        price: t.entryPrice,
+        total: t.entryPrice * t.positionSize,
+        fees: t.commissions,
+        broker: '',
+        type: t.assetClass === 'Option' ? 'option' : t.assetClass === 'Crypto' ? 'crypto' : 'stock',
+      } as ParsedTrade))
+    )
+
+    const seen = new Set<string>(existingFingerprints)
+    const uniqueImports: typeof filteredImports = []
+    let dupCount = 0
+    for (const t of filteredImports) {
+      const fp = tradeFingerprint({
+        date: String(t.date || ''),
+        symbol: String(t.symbol || ''),
+        side: (String(t.direction || 'Long') === 'Long' ? 'buy' : 'sell') as 'buy' | 'sell',
+        quantity: Number(t.positionSize) || 0,
+        price: Number(t.entryPrice) || 0,
+        total: (Number(t.entryPrice) || 0) * (Number(t.positionSize) || 0),
+        fees: Number(t.commissions) || 0,
+        broker: '',
+        type: 'stock',
+      } as ParsedTrade)
+      if (seen.has(fp)) { dupCount++; continue }
+      seen.add(fp)
+      uniqueImports.push(t)
+    }
+
+    if (dupCount > 0) {
+      console.info(`[CSV Import] Deduplication: skipped ${dupCount} duplicate trade(s).`)
+    }
+
+    if (uniqueImports.length === 0) {
+      console.info('[CSV Import] No new trades to import (all duplicates).')
+      setShowImportModal(false)
+      return
+    }
+
+    // ── Batch insert: build Trade objects in batches of 50 ──
+    const newTrades: Trade[] = []
+    await batchInsertTrades(
+      uniqueImports,
+      async (batch) => {
+        const mapped: Trade[] = batch.map(t => ({
+          date: String(t.date || ''),
+          time: String(t.time || ''),
+          symbol: String(t.symbol || ''),
+          assetClass: (String(t.assetClass || 'Stock')) as AssetClass,
+          direction: (String(t.direction || 'Long')) as Direction,
+          entryPrice: Number(t.entryPrice) || 0,
+          exitPrice: Number(t.exitPrice) || 0,
+          positionSize: Number(t.positionSize) || 0,
+          stopLoss: Number(t.stopLoss) || 0,
+          takeProfit: Number(t.takeProfit) || 0,
+          commissions: Number(t.commissions) || 0,
+          pnl: Number(t.pnl) || 0,
+          rMultiple: Number(t.rMultiple) || 0,
+          pctGainLoss: Number(t.pctGainLoss) || 0,
+          holdMinutes: Number(t.holdMinutes) || 0,
+          setupTag: String(t.setupTag || ''),
+          mistakeTag: String(t.mistakeTag || 'None'),
+          rating: Number(t.rating) || 3,
+          notes: String(t.notes || 'Imported from CSV'),
+          screenshot: '',
+          id: uid(),
+          tags_setup_types: (t.tags_setup_types as string[]) || [],
+          tags_mistakes: (t.tags_mistakes as string[]) || [],
+          tags_strategies: (t.tags_strategies as string[]) || [],
+        }))
+        newTrades.push(...mapped)
+      },
+      50,  // batch size — no tight one-at-a-time loops
+    )
+
     const updated = [...newTrades, ...trades]
     setTrades(updated)
     saveTrades(updated)

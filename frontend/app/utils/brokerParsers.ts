@@ -217,6 +217,10 @@ export function detectBroker(headers: string[], firstRow?: Record<string, string
   // IBKR: flex query CSV columns
   if (has('t. price') || has('comm/fee') || has('datadiscriminator') || has('asset category')) return 'IBKR'
 
+  // Robinhood Activity Report format (the real Robinhood export)
+  // Columns: Activity Date, Process Date, Settle Date, Instrument, Description, Trans Code, Quantity, Price, Amount
+  if (hasIncludes('activity date') || (hasIncludes('trans code') && hasIncludes('instrument'))) return 'RobinhoodActivity'
+
   // Webull vs Robinhood: identical headers — differentiate by date format in first row
   if (has('side') && has('amount') && has('symbol') && has('quantity') && has('price')) {
     if (firstRow) {
@@ -560,6 +564,96 @@ export function parseTradeStation(rows: Record<string, string>[], errors: string
   return trades
 }
 
+
+/**
+ * Robinhood Activity Report format (real Robinhood account export).
+ * Columns: Activity Date, Process Date, Settle Date, Instrument, Description,
+ *          Trans Code, Quantity, Price, Amount
+ *
+ * Trans Code meanings:
+ *   Buy  → buy order
+ *   Sell → sell order
+ *   STO  → Sell To Open (option)
+ *   STC  → Sell To Close (option)
+ *   BTO  → Buy To Open (option)
+ *   BTC  → Buy To Close (option)
+ *
+ * Non-trade rows to skip: CDIV, ACATS, JNLS, MLD, MISC, SPL, DFEE, etc.
+ */
+export function parseRobinhoodActivity(rows: Record<string, string>[], errors: string[]): ParsedTrade[] {
+  // Trans codes that are buys
+  const BUY_CODES = new Set(['BUY', 'BTO', 'BTC'])
+  // Trans codes that are sells
+  const SELL_CODES = new Set(['SELL', 'STO', 'STC'])
+
+  const trades: ParsedTrade[] = []
+  rows.forEach((row, i) => {
+    try {
+      const activityDate = getField(row, ['activity date', 'activity_date'])
+      const instrument = getField(row, ['instrument', 'symbol']).toUpperCase()
+      const description = getField(row, ['description', 'desc'])
+      const transCode = getField(row, ['trans code', 'trans_code', 'transcode', 'code']).toUpperCase().trim()
+      const quantityRaw = getField(row, ['quantity', 'qty'])
+      const priceRaw = getField(row, ['price'])
+      const amountRaw = getField(row, ['amount'])
+
+      // Must have a date and instrument
+      if (!activityDate || !instrument) return
+
+      // Determine buy/sell from Trans Code
+      let side: 'buy' | 'sell'
+      if (BUY_CODES.has(transCode)) {
+        side = 'buy'
+      } else if (SELL_CODES.has(transCode)) {
+        side = 'sell'
+      } else {
+        // Check description as fallback for ambiguous/abbreviated codes
+        const descUp = description.toUpperCase()
+        if (descUp.includes('BOUGHT') || descUp.includes('BUY')) {
+          side = 'buy'
+        } else if (descUp.includes('SOLD') || descUp.includes('SELL')) {
+          side = 'sell'
+        } else {
+          // Skip non-trade rows (dividends, transfers, fees, etc.)
+          return
+        }
+      }
+
+      const quantity = Math.abs(parseNumber(quantityRaw))
+      const price = parseNumber(priceRaw.replace('$', ''))
+      const amount = Math.abs(parseNumber(amountRaw.replace('$', '')))
+
+      if (quantity === 0 && price === 0) return  // skip empty/non-numeric rows
+
+      // Detect options: Robinhood option symbols are described in the Description field
+      // or the Instrument may contain option-like suffixes
+      // Detect options: option trans codes are BTO/BTC/STO/STC (3-letter)
+      // or if description mentions CALL/PUT
+      const isOptionCode = ['BTO', 'BTC', 'STO', 'STC'].includes(transCode)
+      const descHasOption = /CALL|PUT/i.test(description)
+      const isOption = isOptionCode || descHasOption
+      const type = detectTradeType(instrument, isOption ? 'option' : undefined)
+
+      trades.push({
+        date: normalizeDate(activityDate),
+        symbol: instrument,
+        side,
+        quantity,
+        price: price || (quantity > 0 ? amount / quantity : 0),
+        total: amount || quantity * price,
+        fees: 0,  // Robinhood is commission-free; amount is already net
+        broker: 'Robinhood',
+        type,
+        notes: description || undefined,
+        rawAction: transCode,
+      })
+    } catch (e) {
+      errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
+    }
+  })
+  return trades
+}
+
 function parseGenericBroker(rows: Record<string, string>[], errors: string[]): ParsedTrade[] {
   const trades: ParsedTrade[] = []
   rows.forEach((row, i) => {
@@ -611,7 +705,7 @@ export function parseBrokerCSV(csvText: string): ParseResult {
 
   // Find the actual header row — some brokers (e.g. Schwab) prefix CSV with a metadata line.
   // Scan first 5 lines and pick the one that contains recognizable header fields.
-  const recognizedHeaders = ['date', 'symbol', 'action', 'quantity', 'price', 'side', 'transaction', 'run date', 'buy/sell']
+  const recognizedHeaders = ['date', 'symbol', 'action', 'quantity', 'price', 'side', 'transaction', 'run date', 'buy/sell', 'activity date', 'trans code', 'instrument']
   let startLine = 0
   for (let i = 0; i < Math.min(5, allLines.length); i++) {
     const line = allLines[i].trim()
@@ -635,7 +729,8 @@ export function parseBrokerCSV(csvText: string): ParseResult {
   let trades: ParsedTrade[] = []
 
   switch (broker) {
-    case 'Robinhood':    trades = parseRobinhood(rows, errors);    break
+    case 'Robinhood':         trades = parseRobinhood(rows, errors);         break
+    case 'RobinhoodActivity': trades = parseRobinhoodActivity(rows, errors); break
     case 'Fidelity':     trades = parseFidelity(rows, errors);     break
     case 'Schwab':       trades = parseSchwab(rows, errors);       break
     case 'Webull':       trades = parseWebull(rows, errors);       break
@@ -653,4 +748,74 @@ export function parseBrokerCSV(csvText: string): ParseResult {
   }
 
   return { broker, trades, errors }
+}
+
+// ── Deduplication ─────────────────────────────────────────────────────────────
+
+/**
+ * Generate a deterministic fingerprint for a parsed trade.
+ * Two trades with the same fingerprint are considered duplicates.
+ * Fingerprint is based on: date + symbol + side + quantity + price (rounded to 2dp).
+ * This is intentionally loose — same stock/day/quantity/price is a dupe.
+ */
+export function tradeFingerprint(trade: ParsedTrade): string {
+  const price = trade.price.toFixed(2)
+  const qty = trade.quantity.toFixed(6)
+  return `${trade.date}|${trade.symbol}|${trade.side}|${qty}|${price}`
+}
+
+/**
+ * Deduplicate a list of parsed trades against an existing set of fingerprints.
+ * Returns only the trades that are NOT already in existingFingerprints.
+ *
+ * Usage:
+ *   const existing = new Set(currentTrades.map(t => tradeFingerprint(t)))
+ *   const newTrades = deduplicateTrades(parsedTrades, existing)
+ */
+export function deduplicateTrades(
+  incoming: ParsedTrade[],
+  existingFingerprints: Set<string>,
+): { unique: ParsedTrade[]; duplicateCount: number } {
+  const seen = new Set(existingFingerprints)
+  const unique: ParsedTrade[] = []
+  let duplicateCount = 0
+
+  for (const trade of incoming) {
+    const fp = tradeFingerprint(trade)
+    if (seen.has(fp)) {
+      duplicateCount++
+    } else {
+      seen.add(fp)
+      unique.push(trade)
+    }
+  }
+
+  return { unique, duplicateCount }
+}
+
+// ── Batch Processing ──────────────────────────────────────────────────────────
+
+/**
+ * Process a large list of trade inserts in batches to avoid blocking the UI
+ * thread and to respect any rate limits on downstream APIs.
+ *
+ * @param trades         - Full list of trades to insert
+ * @param batchSize      - Number of trades per batch (default: 50)
+ * @param onBatch        - Called with each batch; can be async (e.g. API call)
+ * @param delayBetween   - Milliseconds to wait between batches (default: 0)
+ */
+export async function batchInsertTrades<T>(
+  trades: T[],
+  onBatch: (batch: T[], batchIndex: number, total: number) => Promise<void> | void,
+  batchSize = 50,
+  delayBetween = 0,
+): Promise<void> {
+  const totalBatches = Math.ceil(trades.length / batchSize)
+  for (let i = 0; i < totalBatches; i++) {
+    const batch = trades.slice(i * batchSize, (i + 1) * batchSize)
+    await onBatch(batch, i, totalBatches)
+    if (delayBetween > 0 && i < totalBatches - 1) {
+      await new Promise(resolve => setTimeout(resolve, delayBetween))
+    }
+  }
 }

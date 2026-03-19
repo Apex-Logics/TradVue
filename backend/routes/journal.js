@@ -196,6 +196,75 @@ function parseInteractiveBrokers(records) {
   return trades;
 }
 
+
+/**
+ * Robinhood Activity Report format (real Robinhood account export):
+ * Activity Date, Process Date, Settle Date, Instrument, Description,
+ * Trans Code, Quantity, Price, Amount
+ *
+ * Trans Codes: Buy/Sell (stocks), BTO/BTC (buy option), STO/STC (sell option)
+ * Non-trade codes to skip: CDIV, ACATS, JNLS, DFEE, MLD, MISC, SPL, etc.
+ */
+function parseRobinhoodActivity(records) {
+  const BUY_CODES  = new Set(['BUY', 'BTO', 'BTC'])
+  const SELL_CODES = new Set(['SELL', 'STO', 'STC'])
+
+  const trades = [];
+  for (const row of records) {
+    const keys = Object.keys(row);
+    const get = (candidates) => {
+      for (const c of candidates) {
+        const found = keys.find(k => k.trim().toLowerCase().includes(c.toLowerCase()));
+        if (found && row[found] != null && String(row[found]).trim() !== '') return String(row[found]).trim();
+      }
+      return '';
+    };
+
+    const activityDate = get(['Activity Date', 'activity date']);
+    const instrument   = get(['Instrument', 'instrument', 'Symbol', 'symbol']).toUpperCase();
+    const description  = get(['Description', 'description']);
+    const transCode    = get(['Trans Code', 'trans code', 'transcode']).toUpperCase().trim();
+    const quantity     = get(['Quantity', 'quantity', 'qty']);
+    const price        = get(['Price', 'price']);
+    const amount       = get(['Amount', 'amount']);
+
+    // Must have a date and instrument
+    if (!activityDate || !instrument) continue;
+
+    // Determine side from Trans Code
+    let side;
+    if (BUY_CODES.has(transCode)) {
+      side = 'buy';
+    } else if (SELL_CODES.has(transCode)) {
+      side = 'sell';
+    } else {
+      // Check description fallback for ambiguous codes
+      const descUp = description.toUpperCase();
+      if (descUp.includes('BOUGHT') || descUp.includes('BUY')) side = 'buy';
+      else if (descUp.includes('SOLD') || descUp.includes('SELL')) side = 'sell';
+      else continue; // skip non-trade rows (dividends, transfers, fees)
+    }
+
+    const qty = Math.abs(parseFloat(quantity) || 0);
+    const px  = parseFloat(price.replace('$', '').replace(',', '')) || 0;
+    const amt = Math.abs(parseFloat(amount.replace('$', '').replace(',', '').replace('(', '-').replace(')', '')) || 0);
+
+    if (qty === 0 && px === 0) continue; // skip empty rows
+
+    trades.push({
+      date: normalizeDate(activityDate),
+      time: '',
+      symbol: instrument,
+      side,
+      quantity: qty,
+      price: px || (qty > 0 ? amt / qty : 0),
+      total: amt || qty * px,
+      fees: 0,  // Robinhood is commission-free
+    });
+  }
+  return trades;
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function normalizeDate(raw) {
@@ -366,6 +435,10 @@ router.post('/import', optionalAuth, upload.single('file'), (req, res) => {
     switch (format) {
       case 'robinhood':
         rawTrades = parseRobinhood(records);
+        break;
+      case 'robinhood_activity':
+      case 'robinhoodactivity':
+        rawTrades = parseRobinhoodActivity(records);
         break;
       case 'ibkr':
       case 'interactive_brokers':
