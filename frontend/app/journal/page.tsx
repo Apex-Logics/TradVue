@@ -20,7 +20,7 @@ import {
 } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import { useAuth } from '../context/AuthContext'
-import { debouncedSyncJournal, initJournalSync } from '../utils/cloudSync'
+import { debouncedSyncJournal, initJournalSync, forceSyncFromCloud } from '../utils/cloudSync'
 import { getUserTier, isDataLocked, canAccessFeature, getLockedEntryCount, getCsvDateLimit } from '../utils/tierAccess'
 import UpgradePrompt from '../components/UpgradePrompt'
 import AuthGate from '../components/AuthGate'
@@ -1043,6 +1043,13 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
   const [expandedId, setExpandedId] = useState<string | null>(null)
+  // Inline edit state for expanded trade row (used for all trades, critical for webhook trades)
+  const [editingTradeId, setEditingTradeId] = useState<string | null>(null)
+  const [editForm, setEditForm] = useState<{
+    rating: number; setupTag: string; mistakeTag: string; notes: string;
+    screenshot: string; propFirmAccountId: string;
+    tags_setup_types: string[]; tags_mistakes: string[]
+  }>({ rating: 3, setupTag: '', mistakeTag: 'None', notes: '', screenshot: '', propFirmAccountId: '', tags_setup_types: [], tags_mistakes: [] })
   const [filterAsset, setFilterAsset] = useState('All')
   const [filterDir, setFilterDir] = useState('All')
   const [filterWL, setFilterWL] = useState('All')
@@ -1247,6 +1254,40 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
     const updated = trades.filter(t => t.id !== id)
     setTrades(updated)
     saveTrades(updated)
+  }
+
+  const openInlineEdit = (t: Trade) => {
+    setEditingTradeId(t.id)
+    setEditForm({
+      rating: t.rating || 3,
+      setupTag: t.setupTag || '',
+      mistakeTag: t.mistakeTag || 'None',
+      notes: t.notes || '',
+      screenshot: t.screenshot || '',
+      propFirmAccountId: t.propFirmAccountId || '',
+      tags_setup_types: t.tags_setup_types || (t.setupTag ? [t.setupTag] : []),
+      tags_mistakes: t.tags_mistakes || (t.mistakeTag && t.mistakeTag !== 'None' ? [t.mistakeTag] : []),
+    })
+  }
+
+  const saveInlineEdit = (tradeId: string) => {
+    const updated = trades.map(t => {
+      if (t.id !== tradeId) return t
+      return {
+        ...t,
+        rating: editForm.rating,
+        setupTag: editForm.setupTag,
+        mistakeTag: editForm.mistakeTag,
+        notes: editForm.notes,
+        screenshot: editForm.screenshot,
+        propFirmAccountId: editForm.propFirmAccountId || undefined,
+        tags_setup_types: editForm.tags_setup_types,
+        tags_mistakes: editForm.tags_mistakes,
+      }
+    })
+    setTrades(updated)
+    saveTrades(updated)
+    setEditingTradeId(null)
   }
 
   // Filter + sort
@@ -2047,6 +2088,86 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                   {expandedId === t.id && (
                     <tr key={t.id + '-exp'}>
                       <td colSpan={12} style={{ padding: '16px 24px', background: 'var(--bg-1)', borderBottom: '2px solid var(--border)' }}>
+                        {/* ── Inline edit mode (all trades, critical path for webhook trades) ── */}
+                        {editingTradeId === t.id ? (
+                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
+                            {t.source === 'webhook' && (
+                              <div style={{ gridColumn: '1 / -1', padding: '8px 12px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                <span style={{ color: 'var(--accent)' }}>⚡</span>
+                                Auto-imported from NinjaTrader. Core data (symbol, price, qty) is locked — add your own metadata below.
+                              </div>
+                            )}
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Rating</div>
+                              <StarRating value={editForm.rating} onChange={v => setEditForm(f => ({ ...f, rating: v }))} />
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Setup / Strategy</div>
+                              <select
+                                value={editForm.setupTag}
+                                onChange={e => setEditForm(f => ({ ...f, setupTag: e.target.value, tags_setup_types: e.target.value ? [e.target.value] : [] }))}
+                                style={inputSx}
+                              >
+                                <option value="">— None —</option>
+                                {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Mistake Tag</div>
+                              <select
+                                value={editForm.mistakeTag}
+                                onChange={e => setEditForm(f => ({ ...f, mistakeTag: e.target.value, tags_mistakes: e.target.value && e.target.value !== 'None' ? [e.target.value] : [] }))}
+                                style={inputSx}
+                              >
+                                {MISTAKE_TAGS.map(m => <option key={m} value={m}>{m}</option>)}
+                              </select>
+                            </div>
+                            <div>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Prop Firm Account</div>
+                              <PropFirmDropdown value={editForm.propFirmAccountId} onChange={id => setEditForm(f => ({ ...f, propFirmAccountId: id }))} />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Notes</div>
+                              <textarea
+                                value={editForm.notes}
+                                onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
+                                rows={3}
+                                style={{ ...inputSx, resize: 'vertical', fontFamily: 'inherit' }}
+                                placeholder="Add notes, reasoning, lessons learned..."
+                              />
+                            </div>
+                            <div style={{ gridColumn: '1 / -1' }}>
+                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Screenshot</div>
+                              <input type="file" accept="image/*" onChange={e => {
+                                const file = e.target.files?.[0]
+                                if (!file) return
+                                const reader = new FileReader()
+                                reader.onload = () => setEditForm(f => ({ ...f, screenshot: reader.result as string }))
+                                reader.readAsDataURL(file)
+                              }} style={{ fontSize: 12, color: 'var(--text-2)' }} />
+                              {editForm.screenshot && (
+                                <div style={{ marginTop: 8 }}>
+                                  <img src={editForm.screenshot} alt="Screenshot preview" loading="lazy" style={{ maxWidth: 200, maxHeight: 120, borderRadius: 6, border: '1px solid var(--border)' }} />
+                                  <button type="button" onClick={() => setEditForm(f => ({ ...f, screenshot: '' }))} style={{ marginLeft: 8, background: 'none', border: 'none', color: RED, cursor: 'pointer', fontSize: 12 }}>Remove</button>
+                                </div>
+                              )}
+                            </div>
+                            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
+                              <button
+                                onClick={() => saveInlineEdit(t.id)}
+                                style={{ background: BLUE, border: 'none', borderRadius: 8, padding: '8px 20px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
+                              >
+                                ✓ Save
+                              </button>
+                              <button
+                                onClick={() => setEditingTradeId(null)}
+                                style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-2)', fontSize: 13, cursor: 'pointer' }}
+                              >
+                                Cancel
+                              </button>
+                            </div>
+                          </div>
+                        ) : (
                         <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
                           <div>
                             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Trade Details</div>
@@ -2142,7 +2263,18 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                               </>
                             )}
                           </div>
+                          {/* ── Edit button ── */}
+                          <div style={{ gridColumn: '1 / -1', marginTop: 8, display: 'flex', gap: 8 }}>
+                            <button
+                              onClick={e => { e.stopPropagation(); openInlineEdit(t) }}
+                              style={{ background: 'var(--bg-2)', border: `1px solid ${BLUE}55`, borderRadius: 8, padding: '6px 14px', color: BLUE, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
+                            >
+                              <IconPencil size={11} style={{ verticalAlign: 'middle', marginRight: 4 }} />
+                              {t.source === 'webhook' ? '⚡ Add Metadata' : 'Edit Metadata'}
+                            </button>
+                          </div>
                         </div>
+                        )}
                       </td>
                     </tr>
                   )}
@@ -3832,6 +3964,24 @@ function JournalPageInner() {
                 <path d="M3 3l18 18M3 21l18-18" /><rect x="2" y="2" width="20" height="20" rx="4" />
               </svg>
               Setup NinjaTrader
+            </button>
+          )}
+          {!isDemo && token && (
+            <button
+              onClick={async () => {
+                const ok = await forceSyncFromCloud()
+                if (ok) {
+                  setTrades(loadTrades())
+                  setNotes(loadNotes())
+                } else {
+                  alert('Sync failed — no cloud data or not logged in.')
+                }
+              }}
+              className="btn btn-secondary btn-sm"
+              title="Pull your journal from the cloud (overwrites local)"
+              style={{ fontSize: 11, opacity: 0.7 }}
+            >
+              ☁ Sync from Cloud
             </button>
           )}
         </div>

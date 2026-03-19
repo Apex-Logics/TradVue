@@ -123,37 +123,57 @@ interface CloudJournalData {
 
 /**
  * Initial sync on login/app load.
- * Fetches cloud journal and merges with localStorage.
+ * Strategy:
+ *   - If localStorage already has data → local is source of truth, push to cloud.
+ *     This ensures deletes propagate: what the user has locally IS the canonical state.
+ *   - If localStorage is empty (new device) → pull from cloud.
  */
 export async function initJournalSync(token: string): Promise<void> {
   setStatus('syncing')
   try {
-    const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
-
     const localTrades = lsGet<unknown[]>(TRADES_KEY, [])
     const localNotes  = lsGet<unknown[]>(NOTES_KEY,  [])
-    const cloudTrades = cloudData?.trades ?? []
-    const cloudNotes  = cloudData?.notes  ?? []
 
-    const mergedTrades = mergeArrays(localTrades, cloudTrades)
-    const mergedNotes  = mergeArrays(localNotes,  cloudNotes)
-
-    // Save merged to localStorage
-    lsSet(TRADES_KEY, mergedTrades)
-    lsSet(NOTES_KEY,  mergedNotes)
-
-    // If local had data the cloud didn't, push up
-    const needsCloudUpdate =
-      mergedTrades.length !== cloudTrades.length ||
-      mergedNotes.length  !== cloudNotes.length
-
-    if (needsCloudUpdate) {
-      await cloudPut(token, 'journal', { trades: mergedTrades, notes: mergedNotes })
+    if (localTrades.length > 0 || localNotes.length > 0) {
+      // Local has data — push it to cloud as-is (full replace, not merge)
+      // This propagates deletes: removed trades don't come back from cloud.
+      await cloudPut(token, 'journal', { trades: localTrades, notes: localNotes })
+    } else {
+      // Local is empty (new device or first login) — pull from cloud
+      const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
+      const cloudTrades = cloudData?.trades ?? []
+      const cloudNotes  = cloudData?.notes  ?? []
+      if (cloudTrades.length > 0 || cloudNotes.length > 0) {
+        lsSet(TRADES_KEY, cloudTrades)
+        lsSet(NOTES_KEY,  cloudNotes)
+      }
     }
 
     setStatus('synced')
   } catch {
     setStatus('error')
+  }
+}
+
+/**
+ * Force pull from cloud, overwriting local data.
+ * Use this when the user explicitly wants to restore cloud state.
+ */
+export async function forceSyncFromCloud(): Promise<boolean> {
+  const token = getToken()
+  if (!token) return false
+  setStatus('syncing')
+  try {
+    const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
+    const cloudTrades = cloudData?.trades ?? []
+    const cloudNotes  = cloudData?.notes  ?? []
+    lsSet(TRADES_KEY, cloudTrades)
+    lsSet(NOTES_KEY,  cloudNotes)
+    setStatus('synced')
+    return true
+  } catch {
+    setStatus('error')
+    return false
   }
 }
 
