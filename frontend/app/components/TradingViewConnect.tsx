@@ -648,6 +648,18 @@ export default function TradingViewConnect({ onClose }: TradingViewConnectProps)
             </div>
           )}
 
+          {/* Security disclaimer */}
+          <div style={{ marginTop: 20, padding: '12px 14px', background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.06)', borderRadius: 8 }}>
+            <div style={{ display: 'flex', gap: 8, alignItems: 'flex-start' }}>
+              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: 'var(--text-3)', flexShrink: 0, marginTop: 1 }}>
+                <rect x="3" y="11" width="18" height="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0110 0v4"/>
+              </svg>
+              <p style={{ margin: 0, fontSize: 10, color: 'var(--text-3)', lineHeight: 1.6 }}>
+                TradVue only receives trade data. We cannot access your TradingView account, broker account, place trades, or modify your positions. Your broker credentials are never shared with TradVue. All data is transmitted over HTTPS. See our <a href="/legal/privacy" style={{ color: 'var(--accent)', textDecoration: 'none' }}>Privacy Policy</a>.
+              </p>
+            </div>
+          </div>
+
         </div>
       </div>
     </div>
