@@ -1,7 +1,13 @@
 /**
  * cloudSync.ts — localStorage ↔ cloud sync utility for TradVue
  *
- * Only activates when user is logged in (token in localStorage).
+ * Simple model:
+ *   - Cloud is the source of truth, always.
+ *   - Login / page load  → pull from cloud → overwrite localStorage.
+ *   - User change        → push full local state to cloud.
+ *   - forceSyncFromCloud → manual pull (same as login).
+ *
+ * No timestamp comparisons. No conflict resolution. Just push and pull.
  * Fails silently — localStorage-only flow always works.
  */
 
@@ -56,9 +62,8 @@ function lsSet<T>(key: string, val: T): void {
 
 // ── Journal keys (matching journal/page.tsx) ──────────────────────────────────
 
-const TRADES_KEY    = 'cg_journal_trades'
-const NOTES_KEY     = 'cg_journal_notes'
-const LAST_SYNC_KEY = 'cg_last_sync_at'
+const TRADES_KEY   = 'cg_journal_trades'
+const NOTES_KEY    = 'cg_journal_notes'
 
 // ── Settings key ──────────────────────────────────────────────────────────────
 
@@ -66,31 +71,24 @@ const SETTINGS_KEY = 'cg_settings'
 
 // ── Cloud API calls ───────────────────────────────────────────────────────────
 
-async function cloudGetRaw<T>(token: string, type: string): Promise<{ data: T | null; updated_at: string | null }> {
+async function cloudGet<T>(token: string, type: string): Promise<T | null> {
   try {
     const res = await fetch(`${API_BASE}/api/user/data/${type}`, {
       headers: authHeaders(token),
     })
-    if (!res.ok) return { data: null, updated_at: null }
+    if (!res.ok) return null
     const json = await res.json()
     // Backend returns { type, data: <JSONB>, updated_at }
-    const updated_at: string | null = json.updated_at ?? null
     // The JSONB column may itself be { data: ... } if cloudPut wrapped it.
     // Unwrap both layers to get the actual payload.
     let payload = json.data ?? json[type] ?? json
-    // If payload is { data: <actual> }, unwrap the inner layer
     if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
       payload = payload.data
     }
-    return { data: payload as T, updated_at }
+    return payload as T
   } catch {
-    return { data: null, updated_at: null }
+    return null
   }
-}
-
-async function cloudGet<T>(token: string, type: string): Promise<T | null> {
-  const { data } = await cloudGetRaw<T>(token, type)
-  return data
 }
 
 async function cloudPut(token: string, type: string, data: unknown): Promise<boolean> {
@@ -106,21 +104,6 @@ async function cloudPut(token: string, type: string, data: unknown): Promise<boo
   }
 }
 
-// ── Merge logic ───────────────────────────────────────────────────────────────
-
-/**
- * Merge two arrays using entry count as the "more complete" heuristic.
- * If both non-empty, pick the larger one.
- * Cloud sync is ADDITIVE — designed to preserve local data.
- */
-function mergeArrays<T>(local: T[], cloud: T[]): T[] {
-  if (!local.length && !cloud.length) return []
-  if (!local.length) return cloud  // local empty → use cloud
-  if (!cloud.length) return local  // cloud empty → keep local (additive!)
-  // Both have data — use whichever has more entries (more complete)
-  return cloud.length > local.length ? cloud : local
-}
-
 // ── Journal sync ──────────────────────────────────────────────────────────────
 
 interface CloudJournalData {
@@ -129,60 +112,20 @@ interface CloudJournalData {
 }
 
 /**
- * Initial sync on login/app load.
- * Strategy (timestamp-based conflict resolution):
- *   - No local data at all → pull from cloud (new device)
- *   - No cloud data → push local to cloud (first sync ever)
- *   - Cloud updated_at > local lastSyncAt → cloud is newer, pull it down
- *   - Local lastSyncAt >= cloud updated_at → local is current, push to cloud
- *
- * This prevents an old device from overwriting newer cloud data.
- * The debounced sync for ongoing changes is unaffected by this logic.
+ * Initial sync on login / app load.
+ * Cloud is the source of truth — always pull and overwrite localStorage.
+ * No timestamp comparisons, no "is local newer" checks.
  */
 export async function initJournalSync(token: string): Promise<void> {
   setStatus('syncing')
   try {
-    const localTrades = lsGet<unknown[]>(TRADES_KEY, [])
-    const localNotes  = lsGet<unknown[]>(NOTES_KEY,  [])
-    const hasLocalData = localTrades.length > 0 || localNotes.length > 0
-
-    // Always fetch cloud data so we can compare timestamps
-    const { data: cloudData, updated_at: cloudUpdatedAt } = await cloudGetRaw<CloudJournalData>(token, 'journal')
-    const cloudTrades = cloudData?.trades ?? []
-    const cloudNotes  = cloudData?.notes  ?? []
-    const hasCloudData = cloudTrades.length > 0 || cloudNotes.length > 0
-
-    if (!hasLocalData) {
-      // No local data — pull from cloud regardless of timestamps (new device / fresh install)
-      if (hasCloudData) {
-        lsSet(TRADES_KEY, cloudTrades)
-        lsSet(NOTES_KEY,  cloudNotes)
-        lsSet(LAST_SYNC_KEY, new Date().toISOString())
-      }
-      // If no cloud data either, nothing to do
-    } else if (!hasCloudData) {
-      // Local has data but cloud is empty — push to cloud (first sync ever)
-      const ok = await cloudPut(token, 'journal', { trades: localTrades, notes: localNotes })
-      if (ok) lsSet(LAST_SYNC_KEY, new Date().toISOString())
-    } else {
-      // Both have data — compare timestamps
-      const lastSyncAt = lsGet<string | null>(LAST_SYNC_KEY, null)
-      const cloudTime = cloudUpdatedAt ? new Date(cloudUpdatedAt).getTime() : 0
-      const localTime = lastSyncAt ? new Date(lastSyncAt).getTime() : 0
-
-      if (cloudTime > localTime) {
-        // Cloud is newer — another device updated it, pull cloud data down
-        lsSet(TRADES_KEY, cloudTrades)
-        lsSet(NOTES_KEY,  cloudNotes)
-        lsSet(LAST_SYNC_KEY, new Date().toISOString())
-      } else {
-        // Local is current (or equal) — push local to cloud
-        // This also propagates deletes: what the user has locally IS canonical.
-        const ok = await cloudPut(token, 'journal', { trades: localTrades, notes: localNotes })
-        if (ok) lsSet(LAST_SYNC_KEY, new Date().toISOString())
-      }
+    const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
+    if (cloudData) {
+      const cloudTrades = cloudData.trades ?? []
+      const cloudNotes  = cloudData.notes  ?? []
+      lsSet(TRADES_KEY, cloudTrades)
+      lsSet(NOTES_KEY,  cloudNotes)
     }
-
     setStatus('synced')
   } catch {
     setStatus('error')
@@ -191,20 +134,20 @@ export async function initJournalSync(token: string): Promise<void> {
 
 /**
  * Force pull from cloud, overwriting local data.
- * Use this when the user explicitly wants to restore cloud state.
+ * Identical to initJournalSync but exposed for the manual "Sync from Cloud" button.
  */
 export async function forceSyncFromCloud(): Promise<boolean> {
   const token = getToken()
   if (!token) return false
   setStatus('syncing')
   try {
-    // Always pull from cloud regardless of timestamps — this is a manual override
     const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
-    const cloudTrades = cloudData?.trades ?? []
-    const cloudNotes  = cloudData?.notes  ?? []
-    lsSet(TRADES_KEY, cloudTrades)
-    lsSet(NOTES_KEY,  cloudNotes)
-    lsSet(LAST_SYNC_KEY, new Date().toISOString())
+    if (cloudData) {
+      const cloudTrades = cloudData.trades ?? []
+      const cloudNotes  = cloudData.notes  ?? []
+      lsSet(TRADES_KEY, cloudTrades)
+      lsSet(NOTES_KEY,  cloudNotes)
+    }
     setStatus('synced')
     return true
   } catch {
@@ -214,8 +157,8 @@ export async function forceSyncFromCloud(): Promise<boolean> {
 }
 
 /**
- * Save journal data to cloud (call after every mutation).
- * Debounced — fires 5 seconds after the last call.
+ * Push full journal state to cloud after every mutation.
+ * Debounced at 1.5 seconds to handle rapid changes gracefully.
  */
 let _journalTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -230,15 +173,15 @@ export function debouncedSyncJournal(trades: unknown[], notes: unknown[]): void 
   _journalTimer = setTimeout(async () => {
     _journalTimer = null
     const ok = await cloudPut(token, 'journal', { trades, notes })
-    if (ok) lsSet(LAST_SYNC_KEY, new Date().toISOString())
     setStatus(ok ? 'synced' : 'error')
-  }, 5000)
+  }, 1500)
 }
 
 // ── Settings sync ─────────────────────────────────────────────────────────────
 
 /**
  * Initial sync for settings on login.
+ * Pull from cloud if available; push local if cloud is empty.
  */
 export async function initSettingsSync(token: string): Promise<void> {
   try {
@@ -246,10 +189,8 @@ export async function initSettingsSync(token: string): Promise<void> {
     const localSettings = lsGet<Record<string, unknown>>(SETTINGS_KEY, {})
 
     if (cloudSettings && Object.keys(cloudSettings).length > 0 && Object.keys(localSettings).length === 0) {
-      // Cloud has settings, local is empty → populate local
       lsSet(SETTINGS_KEY, cloudSettings)
     } else if (Object.keys(localSettings).length > 0 && (!cloudSettings || Object.keys(cloudSettings).length === 0)) {
-      // Local has settings, cloud is empty → push to cloud
       await cloudPut(token, 'settings', localSettings)
     }
     // Both have settings → keep local (user's current preferences win)
@@ -267,7 +208,7 @@ export function debouncedSyncSettings(settings: Record<string, unknown>): void {
   _settingsTimer = setTimeout(async () => {
     _settingsTimer = null
     await cloudPut(token, 'settings', settings)
-  }, 5000)
+  }, 1500)
 }
 
 // ── Portfolio sync ────────────────────────────────────────────────────────────
@@ -276,7 +217,7 @@ const PORTFOLIO_KEY = 'cg_portfolio_holdings'
 
 /**
  * Initial sync for portfolio holdings on login/app load.
- * Merges cloud holdings with localStorage holdings.
+ * Pull from cloud if available; push local if cloud is empty.
  */
 export async function initPortfolioSync(token: string): Promise<void> {
   try {
@@ -284,11 +225,10 @@ export async function initPortfolioSync(token: string): Promise<void> {
     const localHoldings = lsGet<unknown[]>(PORTFOLIO_KEY, [])
     const cloud = Array.isArray(cloudHoldings) ? cloudHoldings : []
 
-    const merged = mergeArrays(localHoldings, cloud)
-    lsSet(PORTFOLIO_KEY, merged)
-
-    if (merged.length !== cloud.length) {
-      await cloudPut(token, 'portfolio', merged)
+    if (cloud.length > 0) {
+      lsSet(PORTFOLIO_KEY, cloud)
+    } else if (localHoldings.length > 0) {
+      await cloudPut(token, 'portfolio', localHoldings)
     }
   } catch {
     // Fail silently — localStorage-only flow always works
@@ -304,7 +244,7 @@ export function debouncedSyncPortfolio(holdings: unknown[]): void {
   _portfolioTimer = setTimeout(async () => {
     _portfolioTimer = null
     await cloudPut(token, 'portfolio', holdings)
-  }, 5000)
+  }, 1500)
 }
 
 // ── Watchlist sync ────────────────────────────────────────────────────────────
@@ -313,7 +253,7 @@ const WATCHLIST_KEY = 'cg_wl'
 
 /**
  * Initial sync for watchlist on login/app load.
- * Merges cloud watchlist with localStorage watchlist.
+ * Pull from cloud if available; push local if cloud is empty.
  */
 export async function initWatchlistSync(token: string): Promise<void> {
   try {
@@ -321,11 +261,10 @@ export async function initWatchlistSync(token: string): Promise<void> {
     const localWatchlist = lsGet<unknown[]>(WATCHLIST_KEY, [])
     const cloud = Array.isArray(cloudWatchlist) ? cloudWatchlist : []
 
-    const merged = mergeArrays(localWatchlist, cloud)
-    lsSet(WATCHLIST_KEY, merged)
-
-    if (merged.length !== cloud.length) {
-      await cloudPut(token, 'watchlist', merged)
+    if (cloud.length > 0) {
+      lsSet(WATCHLIST_KEY, cloud)
+    } else if (localWatchlist.length > 0) {
+      await cloudPut(token, 'watchlist', localWatchlist)
     }
   } catch {
     // Fail silently — localStorage-only flow always works
@@ -341,7 +280,7 @@ export function debouncedSyncWatchlist(tickers: unknown[]): void {
   _watchlistTimer = setTimeout(async () => {
     _watchlistTimer = null
     await cloudPut(token, 'watchlist', tickers)
-  }, 5000)
+  }, 1500)
 }
 
 // ── Full initial sync (journal + settings + portfolio + watchlist) ─────────────
