@@ -177,7 +177,7 @@ const NT_SETUP_STEPS = [
   {
     n: 1,
     title: 'Download the TradVue Addon',
-    body: 'Download TradVueJournal.zip — the NinjaScript strategy that connects NinjaTrader to your TradVue account.',
+    body: 'Download TradVueAutoJournal.zip — the NinjaScript strategy that connects NinjaTrader to your TradVue account.',
     hasDownload: true,
   },
   {
@@ -260,8 +260,8 @@ function NinjaTraderSetupSection({ webhookUrl }: { webhookUrl: string | null }) 
 
               {step.hasDownload && (
                 <a
-                  href="/downloads/TradVueJournal.zip"
-                  download="TradVueJournal.zip"
+                  href="/downloads/TradVueAutoJournal.zip"
+                  download="TradVueAutoJournal.zip"
                   style={{
                     display: 'inline-flex', alignItems: 'center', gap: 7,
                     padding: '9px 18px',
@@ -270,7 +270,7 @@ function NinjaTraderSetupSection({ webhookUrl }: { webhookUrl: string | null }) 
                     fontSize: 13, fontWeight: 700, textDecoration: 'none',
                   }}
                 >
-                  ⬇ Download TradVueJournal.zip
+                  ⬇ Download TradVueAutoJournal.zip
                 </a>
               )}
 

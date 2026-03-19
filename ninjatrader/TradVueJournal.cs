@@ -37,7 +37,7 @@ using NinjaTrader.NinjaScript.Indicators;
 
 namespace NinjaTrader.NinjaScript.Indicators
 {
-    public class TradVueJournal : Indicator
+    public class TradVueAutoJournal : Indicator
     {
         // ── HTTP ──────────────────────────────────────────────────────────────
         // Static HttpClient: shared across all indicator instances, never recreated.
@@ -74,7 +74,7 @@ namespace NinjaTrader.NinjaScript.Indicators
             if (State == State.SetDefaults)
             {
                 Description  = "TradVue Auto-Journal — sends all account executions to TradVue automatically.";
-                Name         = "TradVueJournal";
+                Name         = "TradVueAutoJournal";
                 Calculate    = Calculate.OnBarClose;
                 IsOverlay    = true;
                 IsSuspendedWhileInactive = false;
