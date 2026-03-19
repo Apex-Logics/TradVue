@@ -414,8 +414,8 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                   Download the <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>TradVueJournal.cs</strong> NinjaScript addon file from your account.
                 </p>
                 <a
-                  href="/downloads/TradVueJournal.cs"
-                  download="TradVueJournal.cs"
+                  href="/downloads/TradVueJournal.zip"
+                  download="TradVueJournal.zip"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -431,7 +431,7 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                   }}
                 >
                   <IconDownload size={14} />
-                  Download TradVueJournal.cs
+                  Download TradVueJournal.zip
                 </a>
               </StepCard>
 
@@ -439,7 +439,7 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                 <p style={{ margin: 0, fontSize: 13, color: 'var(--text-2, #9ca3af)', lineHeight: 1.6 }}>
                   In NinjaTrader 8, go to{' '}
                   <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>Tools → Import → NinjaScript Add-On</strong>.
-                  Select the <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>TradVueJournal.cs</code> file you downloaded.
+                  In NinjaTrader 8, go to Tools → Import → NinjaScript Add-On. Select the <code style={{ fontFamily: 'monospace', background: 'rgba(255,255,255,0.08)', padding: '1px 5px', borderRadius: 4, fontSize: 11 }}>TradVueJournal.zip</code> file you downloaded.
                   NinjaTrader will compile and install the addon automatically.
                 </p>
               </StepCard>

@@ -1,5 +1,23 @@
 [
   {
+    "date": "2026-03-19T08:31:00Z",
+    "type": "monitor",
+    "result": "error",
+    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. Only 1 error in recent history (1 < 3), no Discord alert sent per protocol."
+  },
+  {
+    "date": "2026-03-19T08:01:59.591Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T07:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
     "date": "2026-03-19T02:31:00Z",
     "type": "monitor",
     "result": "error",
@@ -21,7 +39,7 @@
     "date": "2026-03-19T01:01:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all quiet"
   },
   {
     "date": "2026-03-19T00:31:00Z",
@@ -36,255 +54,81 @@
     "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
   },
   {
-    "date": "2026-03-18T23:31:00Z",
+    "date": "2026-03-19T09:31:47.961Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T23:01:00Z",
+    "date": "2026-03-19T10:02:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T22:31:00Z",
+    "date": "2026-03-19T10:02:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T22:01:00Z",
+    "date": "2026-03-19T10:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T11:01:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T11:31:50.534Z",
     "type": "monitor",
     "result": "error",
-    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. Last previous entry was clean, no Discord alert sent per protocol."
+    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. 3 consecutive errors detected — check database connectivity."
   },
   {
-    "date": "2026-03-18T21:31:00Z",
+    "date": "2026-03-19T12:01:59.431Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins in last 30 min, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T21:02:34.919Z",
+    "date": "2026-03-19T12:31:48.308Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T20:31:00Z",
+    "date": "2026-03-19T13:04:39.221Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T20:01:00Z",
-    "type": "monitor",
-    "result": "error",
-    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. Previous 3 entries clean, no Discord alert sent per protocol."
-  },
-  {
-    "date": "2026-03-18T19:01:54.608Z",
+    "date": "2026-03-19T13:31:58.268Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 4 login actions in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T18:31:52.181Z",
+    "date": "2026-03-19T14:01:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 7 login actions in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T18:04:00Z",
+    "date": "2026-03-19T14:31:00Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 3 login actions in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   },
   {
-    "date": "2026-03-18T14:31:00Z",
+    "date": "2026-03-19T15:01:56.301Z",
     "type": "monitor",
     "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 unusual activity in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T14:01:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 unusual activity in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T13:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 unusual activity in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T13:01:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 suspicious logins from previously failed IPs, 0 unusual activity volume in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T12:01:48.090251+00:00",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all clean"
-  },
-  {
-    "date": "2026-03-18T11:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs with success logins, 0 API actions in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T11:01:48.895Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T10:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T09:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T09:01:56.228Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T08:01:52.347Z",
-    "type": "alert",
-    "result": "alert",
-    "details": "DATABASE CONNECTION FAILED — Unable to connect to Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Security checks could not be executed. Connection refused — check network/firewall or Supabase service status."
-  },
-  {
-    "date": "2026-03-18T07:31:00Z",
-    "type": "alert",
-    "result": "alert",
-    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Queries not executed. Manual verification required."
-  },
-  {
-    "date": "2026-03-18T07:01:56.409Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions in last 30 min — all quiet"
-  },
-  {
-    "date": "2026-03-18T04:02:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins, 0 API actions — all quiet"
-  },
-  {
-    "date": "2026-03-18T03:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 0 total API actions — all quiet"
-  },
-  {
-    "date": "2026-03-18T03:02:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 4 total API actions (logins) — all normal"
-  },
-  {
-    "date": "2026-03-18T02:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 2 total API actions (logins) — all normal"
-  },
-  {
-    "date": "2026-03-18T02:01:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 0 total API actions — all quiet"
-  },
-  {
-    "date": "2026-03-18T01:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious IPs, 1 API action (login) — all normal"
-  },
-  {
-    "date": "2026-03-16T22:00:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "No suspicious activity detected in last 30 min"
-  },
-  {
-    "date": "2026-03-16T06:00:00Z",
-    "type": "weekly_audit",
-    "result": "pass",
-    "details": "All 10 checks passed. Score: 10/10. No critical issues."
-  },
-  {
-    "date": "2026-03-16T18:00:00Z",
-    "type": "pen_test",
-    "result": "pass",
-    "details": "Score 8.5/10. 0 critical, 0 high, 0 medium, 3 low (now fixed), 1 info."
-  },
-  {
-    "date": "2026-03-18T15:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins from previously failed IPs, 0 unusual activity volume in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T16:02:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 1 login action in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T16:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts, 0 suspicious logins from previously failed IPs, 1 login action in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T17:02:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-18T17:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "No suspicious activity detected"
-  },
-  {
-    "date": "2026-03-18T19:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-19T03:02:04.092Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-19T03:31:00Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 1 login action in last 30 min — all systems nominal"
-  },
-  {
-    "date": "2026-03-19T04:02:41.277Z",
-    "type": "monitor",
-    "result": "clean",
-    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   }
 ]
