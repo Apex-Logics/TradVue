@@ -88,16 +88,13 @@ namespace NinjaTrader.NinjaScript.Strategies
         
         private void OnAccountExecutionUpdate(object sender, ExecutionEventArgs e)
         {
-            if (e.Execution == null || e.Order == null) return;
+            if (e.Execution == null) return;
             
             var execution = e.Execution;
-            var order = e.Order;
+            var order = execution.Order;
             
-            // Only process filled orders
-            if (order.OrderState != OrderState.Filled && order.OrderState != OrderState.PartFilled) return;
-            
-            // Skip if this came from the TradVueJournal strategy itself (shouldn't happen, but safety check)
-            if (order.Name == "TradVueJournal") return;
+            // Only process if we have order info and it's filled
+            if (order != null && order.OrderState != OrderState.Filled && order.OrderState != OrderState.PartFilled) return;
             
             // Determine direction from the order action
             string action = "";
@@ -129,7 +126,7 @@ namespace NinjaTrader.NinjaScript.Strategies
             int quantity = execution.Quantity;
             DateTime time = execution.Time;
             string symbol = execution.Instrument.MasterInstrument.Name;
-            string orderId = order.OrderId;
+            string orderId = order != null ? order.OrderId : "";
             
             string assetClass = execution.Instrument.MasterInstrument.InstrumentType == InstrumentType.Future 
                 ? "Futures" 
