@@ -1,5 +1,11 @@
 [
   {
+    "date": "2026-03-18T19:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
     "date": "2026-03-18T17:31:00Z",
     "type": "monitor",
     "result": "clean",
@@ -172,5 +178,77 @@
     "type": "monitor",
     "result": "clean",
     "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 7 login actions in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T19:01:54.608Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 4 login actions in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T20:01:00Z",
+    "type": "monitor",
+    "result": "error",
+    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. Previous 3 entries clean, no Discord alert sent per protocol."
+  },
+  {
+    "date": "2026-03-18T20:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T21:02:34.919Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T21:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T22:01:00Z",
+    "type": "monitor",
+    "result": "error",
+    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. Last previous entry was clean, no Discord alert sent per protocol."
+  },
+  {
+    "date": "2026-03-18T22:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T23:01:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-18T23:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-19T00:01:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-19T00:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 API actions in last 30 min — all systems nominal"
+  },
+  {
+    "date": "2026-03-19T01:01:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — all systems nominal"
   }
 ]
