@@ -414,8 +414,8 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                   Download the <strong style={{ color: 'var(--text-1, #e0e0e0)' }}>TradVueJournal.cs</strong> NinjaScript file.
                 </p>
                 <a
-                  href="/downloads/TradVueJournal.cs"
-                  download="TradVueJournal.cs"
+                  href="/downloads/TradVueJournal.zip"
+                  download="TradVueJournal.zip"
                   style={{
                     display: 'inline-flex',
                     alignItems: 'center',
@@ -431,7 +431,7 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                   }}
                 >
                   <IconDownload size={14} />
-                  Download TradVueJournal.cs
+                  Download TradVueJournal.zip
                 </a>
               </StepCard>
 
