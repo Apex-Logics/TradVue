@@ -89,6 +89,18 @@ namespace NinjaTrader.NinjaScript.Indicators
             {
                 SubscribeToAccounts();
             }
+            else if (State == State.Historical)
+            {
+                // Fallback: if DataLoaded didn't find accounts yet, try again
+                if (subscribedAccounts.Count == 0)
+                    SubscribeToAccounts();
+            }
+            else if (State == State.Realtime)
+            {
+                // Final fallback: ensure subscription before live trading starts
+                if (subscribedAccounts.Count == 0)
+                    SubscribeToAccounts();
+            }
             else if (State == State.Terminated)
             {
                 UnsubscribeFromAccounts();

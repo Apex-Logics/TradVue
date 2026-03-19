@@ -142,5 +142,23 @@
     "type": "monitor",
     "result": "clean",
     "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 1 login action in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T17:34:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T18:04:35.650Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T18:31:57.413Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
   }
 ]
