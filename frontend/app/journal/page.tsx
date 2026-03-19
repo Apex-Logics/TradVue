@@ -17,6 +17,8 @@ import {
   IconCalendar, IconMicroscope, IconBrain, IconNotebook,
   IconPencil, IconFolder, IconSave, IconTrophy, IconSkull,
   IconTag, IconSearch, IconAlert, IconCheck, IconArrowUpDown, IconInfo,
+  IconShield, IconCamera, IconFileText, IconChevronUp,
+  IconBuilding, IconLightningBolt,
 } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import { useAuth } from '../context/AuthContext'
@@ -1056,14 +1058,16 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
 }) {
   const [showForm, setShowForm] = useState(false)
   const [form, setForm] = useState({ ...EMPTY_FORM })
-  const [expandedId, setExpandedId] = useState<string | null>(null)
-  // Inline edit state for expanded trade row (used for all trades, critical for webhook trades)
-  const [editingTradeId, setEditingTradeId] = useState<string | null>(null)
-  const [editForm, setEditForm] = useState<{
+  const [expandedTradeId, setExpandedTradeId] = useState<string | null>(null)
+  // Expanded row edit form — initialized when row expands, auto-saved on change
+  const [expandedEditForm, setExpandedEditForm] = useState<{
+    stopLoss: string; takeProfit: string;
     rating: number; setupTag: string; mistakeTag: string; notes: string;
     screenshot: string; propFirmAccountId: string;
     tags_setup_types: string[]; tags_mistakes: string[]
-  }>({ rating: 3, setupTag: '', mistakeTag: 'None', notes: '', screenshot: '', propFirmAccountId: '', tags_setup_types: [], tags_mistakes: [] })
+  }>({ stopLoss: '', takeProfit: '', rating: 3, setupTag: '', mistakeTag: 'None', notes: '', screenshot: '', propFirmAccountId: '', tags_setup_types: [], tags_mistakes: [] })
+  const [savedNoticeTradeId, setSavedNoticeTradeId] = useState<string | null>(null)
+  const autoSaveTimer = useRef<ReturnType<typeof setTimeout> | null>(null)
   const [filterAsset, setFilterAsset] = useState('All')
   const [filterDir, setFilterDir] = useState('All')
   const [filterWL, setFilterWL] = useState('All')
@@ -1272,9 +1276,11 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
     saveTrades(updated)
   }
 
-  const openInlineEdit = (t: Trade) => {
-    setEditingTradeId(t.id)
-    setEditForm({
+  const openExpandedRow = (t: Trade) => {
+    setExpandedTradeId(t.id)
+    setExpandedEditForm({
+      stopLoss: t.stopLoss ? String(t.stopLoss) : '',
+      takeProfit: t.takeProfit ? String(t.takeProfit) : '',
       rating: t.rating || 3,
       setupTag: t.setupTag || '',
       mistakeTag: t.mistakeTag || 'None',
@@ -1286,25 +1292,55 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
     })
   }
 
-  const saveInlineEdit = (tradeId: string) => {
-    const updated = trades.map(t => {
-      if (t.id !== tradeId) return t
-      return {
-        ...t,
-        rating: editForm.rating,
-        setupTag: editForm.setupTag,
-        mistakeTag: editForm.mistakeTag,
-        notes: editForm.notes,
-        screenshot: editForm.screenshot,
-        propFirmAccountId: editForm.propFirmAccountId || undefined,
-        tags_setup_types: editForm.tags_setup_types,
-        tags_mistakes: editForm.tags_mistakes,
-      }
+  const applyExpandedEdit = useCallback((tradeId: string, patch: Partial<typeof expandedEditForm>) => {
+    setExpandedEditForm(f => {
+      const next = { ...f, ...patch }
+      // debounced auto-save
+      if (autoSaveTimer.current) clearTimeout(autoSaveTimer.current)
+      autoSaveTimer.current = setTimeout(() => {
+        setTrades(
+          trades.map((t: Trade) => {
+            if (t.id !== tradeId) return t
+            return {
+              ...t,
+              stopLoss: parseFloat(next.stopLoss) || 0,
+              takeProfit: parseFloat(next.takeProfit) || 0,
+              rating: next.rating,
+              setupTag: next.setupTag,
+              mistakeTag: next.mistakeTag,
+              notes: next.notes,
+              screenshot: next.screenshot,
+              propFirmAccountId: next.propFirmAccountId || undefined,
+              tags_setup_types: next.tags_setup_types,
+              tags_mistakes: next.tags_mistakes,
+            }
+          })
+        )
+        const updated = trades.map((t: Trade) => {
+          if (t.id !== tradeId) return t
+          return {
+            ...t,
+            stopLoss: parseFloat(next.stopLoss) || 0,
+            takeProfit: parseFloat(next.takeProfit) || 0,
+            rating: next.rating,
+            setupTag: next.setupTag,
+            mistakeTag: next.mistakeTag,
+            notes: next.notes,
+            screenshot: next.screenshot,
+            propFirmAccountId: next.propFirmAccountId || undefined,
+            tags_setup_types: next.tags_setup_types,
+            tags_mistakes: next.tags_mistakes,
+          }
+        })
+        saveTrades(updated)
+        debouncedSyncJournal(updated, [])
+        setSavedNoticeTradeId(tradeId)
+        setTimeout(() => setSavedNoticeTradeId((prev: string | null) => prev === tradeId ? null : prev), 2000)
+      }, 500)
+      return next
     })
-    setTrades(updated)
-    saveTrades(updated)
-    setEditingTradeId(null)
-  }
+  // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [trades])
 
   // Filter + sort
   const filtered = useMemo(() => {
@@ -2008,14 +2044,18 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                         onUpgrade?.('Full Trade History', 'Upgrade to Pro to view all your trades — your data is saved and waiting.')
                         return
                       }
-                      setExpandedId(expandedId === t.id ? null : t.id)
+                      if (expandedTradeId === t.id) {
+                        setExpandedTradeId(null)
+                      } else {
+                        openExpandedRow(t)
+                      }
                     }}
                     style={{
                       background: locked
                         ? 'rgba(0,0,0,0.2)'
-                        : expandedId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)',
+                        : expandedTradeId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)',
                       borderBottom: '1px solid var(--border)',
-                      cursor: locked ? 'pointer' : 'pointer',
+                      cursor: 'pointer',
                       transition: 'background 0.15s',
                       opacity: locked ? 0.55 : 1,
                       filter: locked ? 'blur(1.5px)' : 'none',
@@ -2024,15 +2064,17 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                       if (!locked) e.currentTarget.style.background = 'rgba(99,102,241,0.12)'
                     }}
                     onMouseLeave={e => {
-                      if (!locked) e.currentTarget.style.background = expandedId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)'
+                      if (!locked) e.currentTarget.style.background = expandedTradeId === t.id ? 'rgba(99,102,241,0.08)' : t.pnl > 0 ? 'rgba(16,185,129,0.04)' : 'rgba(239,68,68,0.04)'
                     }}
-                    title={locked ? 'Upgrade to Pro to view this trade' : undefined}
+                    title={locked ? 'Upgrade to Pro to view this trade' : 'Click to expand / collapse'}
                   >
                     <td style={{ padding: '10px 12px' }}>{t.date}</td>
                     <td style={{ padding: '10px 12px', fontWeight: 700, fontFamily: 'var(--mono)', color: BLUE }}>
                       {locked ? '••••' : t.symbol}
                       {!locked && t.source === 'webhook' && (
-                        <span title="Auto-imported via TradingView webhook" style={{ marginLeft: 4, fontSize: 10, color: 'var(--accent)', verticalAlign: 'middle' }}>&#9889;</span>
+                        <span title="Auto-imported via webhook" style={{ marginLeft: 4, verticalAlign: 'middle', display: 'inline-flex', alignItems: 'center' }}>
+                          <IconLightningBolt size={11} style={{ color: 'var(--accent)' }} />
+                        </span>
                       )}
                     </td>
                     <td style={{ padding: '10px 12px', color: t.direction === 'Long' ? GREEN : RED }}>{locked ? '—' : t.direction}</td>
@@ -2101,196 +2143,196 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                       )}
                     </td>
                   </tr>
-                  {expandedId === t.id && (
+                  {expandedTradeId === t.id && (
                     <tr key={t.id + '-exp'}>
-                      <td colSpan={12} style={{ padding: '16px 24px', background: 'var(--bg-1)', borderBottom: '2px solid var(--border)' }}>
-                        {/* ── Inline edit mode (all trades, critical path for webhook trades) ── */}
-                        {editingTradeId === t.id ? (
-                          <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 16 }}>
-                            {t.source === 'webhook' && (
-                              <div style={{ gridColumn: '1 / -1', padding: '8px 12px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
-                                <span style={{ color: 'var(--accent)' }}>⚡</span>
-                                Auto-imported from NinjaTrader. Core data (symbol, price, qty) is locked — add your own metadata below.
-                              </div>
-                            )}
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Rating</div>
-                              <StarRating value={editForm.rating} onChange={v => setEditForm(f => ({ ...f, rating: v }))} />
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Setup / Strategy</div>
-                              <select
-                                value={editForm.setupTag}
-                                onChange={e => setEditForm(f => ({ ...f, setupTag: e.target.value, tags_setup_types: e.target.value ? [e.target.value] : [] }))}
-                                style={inputSx}
-                              >
-                                <option value="">— None —</option>
-                                {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Mistake Tag</div>
-                              <select
-                                value={editForm.mistakeTag}
-                                onChange={e => setEditForm(f => ({ ...f, mistakeTag: e.target.value, tags_mistakes: e.target.value && e.target.value !== 'None' ? [e.target.value] : [] }))}
-                                style={inputSx}
-                              >
-                                {MISTAKE_TAGS.map(m => <option key={m} value={m}>{m}</option>)}
-                              </select>
-                            </div>
-                            <div>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Prop Firm Account</div>
-                              <PropFirmDropdown value={editForm.propFirmAccountId} onChange={id => setEditForm(f => ({ ...f, propFirmAccountId: id }))} />
-                            </div>
-                            <div style={{ gridColumn: '1 / -1' }}>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Notes</div>
-                              <textarea
-                                value={editForm.notes}
-                                onChange={e => setEditForm(f => ({ ...f, notes: e.target.value }))}
-                                rows={3}
-                                style={{ ...inputSx, resize: 'vertical', fontFamily: 'inherit' }}
-                                placeholder="Add notes, reasoning, lessons learned..."
-                              />
-                            </div>
-                            <div style={{ gridColumn: '1 / -1' }}>
-                              <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 6, textTransform: 'uppercase' }}>Screenshot</div>
-                              <input type="file" accept="image/*" onChange={e => {
-                                const file = e.target.files?.[0]
-                                if (!file) return
-                                const reader = new FileReader()
-                                reader.onload = () => setEditForm(f => ({ ...f, screenshot: reader.result as string }))
-                                reader.readAsDataURL(file)
-                              }} style={{ fontSize: 12, color: 'var(--text-2)' }} />
-                              {editForm.screenshot && (
-                                <div style={{ marginTop: 8 }}>
-                                  <img src={editForm.screenshot} alt="Screenshot preview" loading="lazy" style={{ maxWidth: 200, maxHeight: 120, borderRadius: 6, border: '1px solid var(--border)' }} />
-                                  <button type="button" onClick={() => setEditForm(f => ({ ...f, screenshot: '' }))} style={{ marginLeft: 8, background: 'none', border: 'none', color: RED, cursor: 'pointer', fontSize: 12 }}>Remove</button>
-                                </div>
-                              )}
-                            </div>
-                            <div style={{ gridColumn: '1 / -1', display: 'flex', gap: 8 }}>
-                              <button
-                                onClick={() => saveInlineEdit(t.id)}
-                                style={{ background: BLUE, border: 'none', borderRadius: 8, padding: '8px 20px', color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer' }}
-                              >
-                                ✓ Save
-                              </button>
-                              <button
-                                onClick={() => setEditingTradeId(null)}
-                                style={{ background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '8px 16px', color: 'var(--text-2)', fontSize: 13, cursor: 'pointer' }}
-                              >
-                                Cancel
-                              </button>
-                            </div>
-                          </div>
-                        ) : (
-                        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 16 }}>
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Trade Details</div>
-                            <div style={{ fontSize: 12, lineHeight: 2 }}>
-                              <div>Stop Loss: <span style={{ fontFamily: 'var(--mono)', color: RED }}>${fmt2(t.stopLoss)}</span></div>
-                              <div>Take Profit: <span style={{ fontFamily: 'var(--mono)', color: GREEN }}>${fmt2(t.takeProfit)}</span></div>
-                              <div>Commissions: <span style={{ fontFamily: 'var(--mono)' }}>${fmt2(t.commissions)}</span></div>
-                              <div>% Gain/Loss: <span style={{ fontFamily: 'var(--mono)', color: t.pctGainLoss >= 0 ? GREEN : RED }}>{fmtPct(t.pctGainLoss)}</span></div>
-                              {/* Multi-tags */}
-                              {(t.tags_mistakes?.length ? t.tags_mistakes : (t.mistakeTag && t.mistakeTag !== 'None' ? [t.mistakeTag] : [])).length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                  Mistakes: {(t.tags_mistakes?.length ? t.tags_mistakes : [t.mistakeTag]).filter(Boolean).filter(m => m !== 'None').map(m => (
-                                    <TagChip key={m!} tag={{ name: m!, color: '#f59e0b', category: 'mistake', id: '', isPreset: true }} size="small" />
-                                  ))}
-                                </div>
-                              )}
-                              {(t.tags_strategies || []).length > 0 && (
-                                <div style={{ display: 'flex', alignItems: 'center', gap: 4, flexWrap: 'wrap' }}>
-                                  Strategy: {t.tags_strategies!.map(s => (
-                                    <TagChip key={s} tag={{ name: s, color: '#10b981', category: 'strategy', id: '', isPreset: true }} size="small" />
-                                  ))}
-                                </div>
-                              )}
-                              {t.time && <div>Time: <span style={{ fontFamily: 'var(--mono)' }}>{t.time}</span></div>}
-                            </div>
-                          </div>
-                          <div>
-                            <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Notes</div>
-                            <div style={{ fontSize: 12, color: 'var(--text-1)', lineHeight: 1.6, whiteSpace: 'pre-wrap' }}>
-                              {t.notes || <span style={{ color: 'var(--text-2)', fontStyle: 'italic' }}>No notes recorded</span>}
-                            </div>
-                          </div>
-                          <div>
-                            {t.screenshot && (
-                              <>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Chart Screenshot</div>
-                                <img src={t.screenshot} alt="Trade screenshot" loading="lazy" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 6, border: '1px solid var(--border)' }} />
-                              </>
-                            )}
-                            {/* ── Futures details ── */}
-                            {t.assetClass === 'Futures' && t.contractType && (
-                              <>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: BLUE, marginTop: t.screenshot ? 12 : 0, marginBottom: 6, textTransform: 'uppercase' }}>Futures Details</div>
-                                <div style={{ fontSize: 12, lineHeight: 2 }}>
-                                  <div>Contract: <span style={{ fontFamily: 'var(--mono)', color: BLUE }}>{t.contractType}</span></div>
-                                  {t.futuresContracts && <div>Contracts: <span style={{ fontFamily: 'var(--mono)' }}>{t.futuresContracts}</span></div>}
-                                  {t.tickSize !== undefined && <div>Tick Size: <span style={{ fontFamily: 'var(--mono)' }}>{t.tickSize}</span></div>}
-                                  {t.tickValue !== undefined && <div>Tick Value: <span style={{ fontFamily: 'var(--mono)' }}>${t.tickValue}</span></div>}
-                                  {t.pnlTicks !== undefined && (
-                                    <div>P&amp;L (Ticks): <span style={{ fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnlTicks >= 0 ? GREEN : RED }}>
-                                      {t.pnlTicks >= 0 ? '+' : ''}{t.pnlTicks}
-                                    </span></div>
+                      <td colSpan={12} style={{ padding: '0', background: 'var(--bg-1)', borderBottom: '2px solid rgba(99,102,241,0.3)' }}>
+                        {/* ── Expanded Trade Row — 3-column edit panel ── */}
+                        {(() => {
+                          const ef = expandedEditForm
+                          // R-Multiple auto-calculation
+                          const sl = parseFloat(ef.stopLoss) || 0
+                          const tp = parseFloat(ef.takeProfit) || 0
+                          const rMultipleCalc = (() => {
+                            if (!sl || sl === t.entryPrice) return '—'
+                            const riskPerShare = Math.abs(t.entryPrice - sl)
+                            if (riskPerShare === 0) return '—'
+                            let reward: number
+                            if (t.direction === 'Long') {
+                              reward = t.exitPrice - t.entryPrice
+                            } else {
+                              reward = t.entryPrice - t.exitPrice
+                            }
+                            const r = reward / riskPerShare
+                            return isFinite(r) ? `${r.toFixed(2)}R` : '—'
+                          })()
+                          const rrCalc = (() => {
+                            if (!sl || sl === t.entryPrice || !tp) return '—'
+                            const risk = Math.abs(t.entryPrice - sl)
+                            const reward = Math.abs(tp - t.entryPrice)
+                            if (risk === 0) return '—'
+                            const rr = reward / risk
+                            return isFinite(rr) ? `1:${rr.toFixed(2)}` : '—'
+                          })()
+                          // Hold time
+                          const holdTimeStr = (() => {
+                            if (!t.date || !t.time || !t.exitPrice) return '—'
+                            // open trade (exit=0)
+                            if (t.exitPrice === 0) return 'Open'
+                            if (t.holdMinutes && t.holdMinutes > 0) {
+                              const h = Math.floor(t.holdMinutes / 60)
+                              const m = t.holdMinutes % 60
+                              return h > 0 ? `${h}h ${m}m` : `${m}m`
+                            }
+                            return '—'
+                          })()
+                          const isWebhook = t.source === 'webhook'
+                          const colLabel: React.CSSProperties = { fontSize: 10, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 12, display: 'flex', alignItems: 'center', gap: 5 }
+                          const fldLabel: React.CSSProperties = { fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 4, display: 'flex', alignItems: 'center', gap: 4 }
+                          const roSx: React.CSSProperties = { ...inputSx, color: 'var(--text-3)', cursor: 'default', background: 'var(--bg-3)' }
+                          return (
+                            <div style={{ padding: '16px 20px 20px' }}>
+                              {isWebhook && (
+                                <div style={{ marginBottom: 12, padding: '8px 12px', background: 'rgba(99,102,241,0.08)', borderRadius: 8, fontSize: 12, color: 'var(--text-2)', display: 'flex', alignItems: 'center', gap: 6 }}>
+                                  <IconLightningBolt size={12} style={{ color: 'var(--accent)' }} />
+                                  Auto-imported via webhook. Core data (symbol, price, qty, direction) is read-only — add your metadata below.
+                                  {savedNoticeTradeId === t.id && (
+                                    <span style={{ marginLeft: 'auto', color: 'var(--green)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', gap: 3 }}>
+                                      <IconCheck size={11} /> Saved ✓
+                                    </span>
                                   )}
                                 </div>
-                              </>
-                            )}
-                            {/* ── Options details (legacy + new fields) ── */}
-                            {t.assetClass === 'Option' && (t.optionData || t.strikePrice || t.strategyType) && (
-                              <>
-                                <div style={{ fontSize: 11, fontWeight: 600, color: BLUE, marginTop: t.screenshot ? 12 : 0, marginBottom: 6, textTransform: 'uppercase' }}>Option Details</div>
-                                <div style={{ fontSize: 12, lineHeight: 2 }}>
-                                  {t.strategyType && <div>Strategy: <span style={{ fontFamily: 'var(--mono)' }}>{t.strategyType.replace(/_/g, ' ')}</span></div>}
-                                  {t.optionType && <div>Type: <span style={{ fontFamily: 'var(--mono)' }}>{t.optionType}</span></div>}
-                                  {t.strikePrice != null && <div>Strike: <span style={{ fontFamily: 'var(--mono)' }}>${t.strikePrice}</span></div>}
-                                  {t.expirationDate && <div>Expiry: <span style={{ fontFamily: 'var(--mono)' }}>{t.expirationDate}</span></div>}
-                                  {t.premium != null && <div>Premium: <span style={{ fontFamily: 'var(--mono)' }}>${t.premium}</span></div>}
-                                  {/* Legacy fields fallback */}
-                                  {!t.strikePrice && t.optionData?.strike && <div>Strike: ${t.optionData.strike}</div>}
-                                  {!t.expirationDate && t.optionData?.expiry && <div>Expiry: {t.optionData.expiry}</div>}
-                                  {!t.premium && t.optionData?.premium && <div>Premium: ${t.optionData.premium}</div>}
-                                  {t.optionData?.contracts && <div>Contracts: {t.optionData.contracts}</div>}
-                                  {/* Greeks */}
-                                  {t.greeks && (t.greeks.delta != null || t.greeks.theta != null) && (
-                                    <div style={{ marginTop: 4, display: 'flex', gap: 10, flexWrap: 'wrap' }}>
-                                      {t.greeks.delta != null && <span style={{ color: 'var(--text-3)', fontSize: 11 }}>Δ {t.greeks.delta}</span>}
-                                      {t.greeks.theta != null && <span style={{ color: 'var(--text-3)', fontSize: 11 }}>Θ {t.greeks.theta}</span>}
-                                      {t.greeks.gamma != null && <span style={{ color: 'var(--text-3)', fontSize: 11 }}>Γ {t.greeks.gamma}</span>}
-                                      {t.greeks.vega != null && <span style={{ color: 'var(--text-3)', fontSize: 11 }}>V {t.greeks.vega}</span>}
-                                    </div>
-                                  )}
-                                  {/* Legs */}
-                                  {t.legs && t.legs.length > 0 && (
-                                    <div style={{ marginTop: 6 }}>
-                                      <div style={{ fontSize: 10, color: 'var(--text-2)', textTransform: 'uppercase', fontWeight: 600, marginBottom: 4 }}>Legs</div>
-                                      {t.legs.map((leg, i) => (
-                                        <div key={i} style={{ fontSize: 11, color: 'var(--text-2)', marginBottom: 2 }}>
-                                          Leg {i + 1}: {leg.side.toUpperCase()} {leg.quantity}× {leg.optionType} ${leg.strikePrice} exp {leg.expirationDate} @ ${leg.premium}
-                                        </div>
+                              )}
+                              {!isWebhook && savedNoticeTradeId === t.id && (
+                                <div style={{ marginBottom: 8, textAlign: 'right', color: 'var(--green)', fontSize: 11, fontWeight: 600, display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 3 }}>
+                                  <IconCheck size={11} /> Saved ✓
+                                </div>
+                              )}
+                              {/* 3-col grid */}
+                              <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 24 }}>
+                                {/* ── Column 1: Risk Management ── */}
+                                <div>
+                                  <div style={colLabel}><IconShield size={12} />Risk Management</div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}><IconShield size={11} />Stop Loss</div>
+                                    <input
+                                      type="number"
+                                      value={ef.stopLoss}
+                                      disabled={isWebhook}
+                                      onChange={e => applyExpandedEdit(t.id, { stopLoss: e.target.value })}
+                                      placeholder="e.g. 145.00"
+                                      step="any"
+                                      style={isWebhook ? roSx : inputSx}
+                                    />
+                                  </div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}><IconTrendingUp size={11} />Take Profit</div>
+                                    <input
+                                      type="number"
+                                      value={ef.takeProfit}
+                                      disabled={isWebhook}
+                                      onChange={e => applyExpandedEdit(t.id, { takeProfit: e.target.value })}
+                                      placeholder="e.g. 165.00"
+                                      step="any"
+                                      style={isWebhook ? roSx : inputSx}
+                                    />
+                                  </div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}>R-Multiple</div>
+                                    <input type="text" value={rMultipleCalc} readOnly style={roSx} />
+                                  </div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}>Risk / Reward</div>
+                                    <input type="text" value={rrCalc} readOnly style={roSx} />
+                                  </div>
+                                  <div>
+                                    <div style={fldLabel}>Hold Time</div>
+                                    <input type="text" value={holdTimeStr} readOnly style={roSx} />
+                                  </div>
+                                </div>
+
+                                {/* ── Column 2: Review ── */}
+                                <div>
+                                  <div style={colLabel}><IconStar size={12} />Review</div>
+                                  <div style={{ marginBottom: 14 }}>
+                                    <div style={fldLabel}><IconStar size={11} />Rating</div>
+                                    <div style={{ display: 'flex', gap: 4 }}>
+                                      {[1,2,3,4,5].map(n => (
+                                        <button
+                                          key={n}
+                                          onClick={() => applyExpandedEdit(t.id, { rating: n })}
+                                          style={{ background: 'none', border: 'none', cursor: 'pointer', padding: 0, lineHeight: 1 }}
+                                        >
+                                          <svg width="22" height="22" viewBox="0 0 24 24" fill={n <= ef.rating ? YELLOW : 'none'} stroke={n <= ef.rating ? YELLOW : 'var(--border)'} strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                                            <polygon points="12 2 15.09 8.26 22 9.27 17 14.14 18.18 21.02 12 17.77 5.82 21.02 7 14.14 2 9.27 8.91 8.26 12 2"/>
+                                          </svg>
+                                        </button>
                                       ))}
                                     </div>
-                                  )}
+                                  </div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}><IconClipboard size={11} />Setup / Strategy</div>
+                                    <select
+                                      value={ef.setupTag}
+                                      onChange={e => applyExpandedEdit(t.id, { setupTag: e.target.value, tags_setup_types: e.target.value ? [e.target.value] : [] })}
+                                      style={inputSx}
+                                    >
+                                      <option value="">— None —</option>
+                                      {SETUP_TAGS.map(s => <option key={s} value={s}>{s}</option>)}
+                                    </select>
+                                  </div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}><IconAlert size={11} />Mistake Tag</div>
+                                    <select
+                                      value={ef.mistakeTag}
+                                      onChange={e => applyExpandedEdit(t.id, { mistakeTag: e.target.value, tags_mistakes: e.target.value && e.target.value !== 'None' ? [e.target.value] : [] })}
+                                      style={inputSx}
+                                    >
+                                      {MISTAKE_TAGS.map(m => <option key={m} value={m}>{m}</option>)}
+                                    </select>
+                                  </div>
+                                  <div>
+                                    <div style={fldLabel}><IconBuilding size={11} />Prop Firm Account</div>
+                                    <PropFirmDropdown value={ef.propFirmAccountId} onChange={id => applyExpandedEdit(t.id, { propFirmAccountId: id })} />
+                                  </div>
                                 </div>
-                              </>
-                            )}
-                          </div>
-                          {/* ── Edit button ── */}
-                          <div style={{ gridColumn: '1 / -1', marginTop: 8, display: 'flex', gap: 8 }}>
-                            <button
-                              onClick={e => { e.stopPropagation(); openInlineEdit(t) }}
-                              style={{ background: 'var(--bg-2)', border: `1px solid ${BLUE}55`, borderRadius: 8, padding: '6px 14px', color: BLUE, fontSize: 12, cursor: 'pointer', fontWeight: 600 }}
-                            >
-                              <IconPencil size={11} style={{ verticalAlign: 'middle', marginRight: 4 }} />
-                              {t.source === 'webhook' ? '⚡ Add Metadata' : 'Edit Metadata'}
-                            </button>
-                          </div>
-                        </div>
-                        )}
+
+                                {/* ── Column 3: Notes ── */}
+                                <div>
+                                  <div style={colLabel}><IconFileText size={12} />Notes</div>
+                                  <div style={{ marginBottom: 12 }}>
+                                    <div style={fldLabel}><IconFileText size={11} />Trade Notes</div>
+                                    <textarea
+                                      value={ef.notes}
+                                      onChange={e => applyExpandedEdit(t.id, { notes: e.target.value })}
+                                      rows={4}
+                                      style={{ ...inputSx, resize: 'vertical', fontFamily: 'inherit' }}
+                                      placeholder="Reasoning, what happened, lessons learned…"
+                                    />
+                                  </div>
+                                  <div>
+                                    <div style={fldLabel}><IconCamera size={11} />Screenshot</div>
+                                    <label style={{ display: 'inline-flex', alignItems: 'center', gap: 6, background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 8, padding: '6px 12px', cursor: 'pointer', fontSize: 12, color: 'var(--text-1)' }}>
+                                      <IconCamera size={12} />Upload chart
+                                      <input type="file" accept="image/*" style={{ display: 'none' }} onChange={e => {
+                                        const file = e.target.files?.[0]
+                                        if (!file) return
+                                        const reader = new FileReader()
+                                        reader.onload = () => applyExpandedEdit(t.id, { screenshot: reader.result as string })
+                                        reader.readAsDataURL(file)
+                                      }} />
+                                    </label>
+                                    {ef.screenshot && (
+                                      <div style={{ marginTop: 8 }}>
+                                        <img src={ef.screenshot} alt="Screenshot preview" loading="lazy" style={{ maxWidth: '100%', maxHeight: 160, borderRadius: 6, border: '1px solid var(--border)', display: 'block' }} />
+                                        <button type="button" onClick={() => applyExpandedEdit(t.id, { screenshot: '' })} style={{ marginTop: 4, background: 'none', border: 'none', color: RED, cursor: 'pointer', fontSize: 11, padding: 0 }}>Remove</button>
+                                      </div>
+                                    )}
+                                  </div>
+                                </div>
+                              </div>
+                            </div>
+                          )
+                        })()}
                       </td>
                     </tr>
                   )}

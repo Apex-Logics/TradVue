@@ -178,5 +178,23 @@
     "type": "monitor",
     "result": "clean",
     "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 1 login action in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T20:31:00Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 3 login actions in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T21:03:18.187Z",
+    "type": "monitor",
+    "result": "clean",
+    "details": "✅ PASS: All 4 checks clean. 0 failed logins, 0 brute force attempts (3+ from same IP), 0 successful logins from suspicious IPs, 0 unusual activity volume in last 30 min — TradVue activity log secure."
+  },
+  {
+    "date": "2026-03-19T21:31:00Z",
+    "type": "monitor",
+    "result": "error",
+    "details": "DATABASE CONNECTION FAILED — Unable to reach Supabase (db.ryckpsjmsrxbiylddqnb.supabase.co:5432). Retried after 5s, connection still refused. Queries not executed. Only 2 errors in recent history (2 < 3), no Discord alert sent per protocol."
   }
 ]
