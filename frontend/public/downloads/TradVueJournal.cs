@@ -1,14 +1,15 @@
 // TradVue Auto-Journal for NinjaTrader 8
 // 
-// This strategy addon sends your real trade executions to TradVue automatically.
-// It fires ONLY on actual broker fills — real entry/exit prices, real quantities.
+// This strategy addon sends ALL real trade executions on your account to TradVue.
+// It subscribes to account-level execution events, so it captures every fill —
+// whether from Chart Trader, manual orders, other strategies, or DOM.
 //
 // Installation:
 //   1. Copy this file to: Documents\NinjaTrader 8\bin\Custom\Strategies\
 //   2. Open NinjaScript Editor → Compile (F5)
-//   3. Add "TradVueJournal" strategy to your chart/workspace
+//   3. Add "TradVueJournal" strategy to any chart
 //   4. Set the WebhookUrl parameter to your TradVue webhook URL
-//   5. Enable the strategy — trades auto-journal from this point forward
+//   5. Enable the strategy — ALL account fills auto-journal from this point
 //
 // Security:
 //   - This addon ONLY SENDS data (outbound HTTP POST)
@@ -37,23 +38,16 @@ namespace NinjaTrader.NinjaScript.Strategies
     public class TradVueJournal : Strategy
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        
-        // Track previous position to detect entry vs exit
-        private MarketPosition prevPosition = MarketPosition.Flat;
-        private double lastEntryPrice = 0;
-        private int lastEntryQty = 0;
-        private string lastEntryDirection = null;
-        private DateTime lastEntryTime = DateTime.MinValue;
+        private Account acct;
         
         protected override void OnStateChange()
         {
             if (State == State.SetDefaults)
             {
-                Description = "TradVue Auto-Journal — sends real trade executions to your TradVue account";
+                Description = "TradVue Auto-Journal — sends ALL account trade executions to your TradVue account";
                 Name = "TradVueJournal";
-                Calculate = Calculate.OnEachTick;
+                Calculate = Calculate.OnBarClose;
                 IsOverlay = true;
-                IsUnmanaged = true;
                 
                 // User-configurable parameters
                 WebhookUrl = "https://tradvue-api.onrender.com/api/webhook/nt/YOUR_TOKEN_HERE";
@@ -61,159 +55,117 @@ namespace NinjaTrader.NinjaScript.Strategies
                 SendExits = true;
                 LogToOutput = true;
             }
+            else if (State == State.DataLoaded)
+            {
+                // Subscribe to account-level execution events
+                // This captures ALL fills on the account, not just this strategy's orders
+                if (Account != null)
+                {
+                    acct = Account;
+                    acct.ExecutionUpdate += OnAccountExecutionUpdate;
+                    
+                    if (LogToOutput)
+                        Print("[TradVue] Subscribed to account execution updates for: " + acct.Name);
+                }
+            }
+            else if (State == State.Terminated)
+            {
+                // Unsubscribe to prevent memory leaks
+                if (acct != null)
+                {
+                    acct.ExecutionUpdate -= OnAccountExecutionUpdate;
+                    
+                    if (LogToOutput)
+                        Print("[TradVue] Unsubscribed from account execution updates");
+                }
+            }
         }
-
-        protected override void OnExecutionUpdate(Execution execution, string executionId, 
-            double price, int quantity, MarketPosition marketPosition, 
-            string orderId, DateTime time)
+        
+        protected override void OnBarUpdate()
         {
-            if (execution == null || execution.Order == null) return;
+            // No bar processing needed — we listen to account events only
+        }
+        
+        private void OnAccountExecutionUpdate(object sender, ExecutionEventArgs e)
+        {
+            if (e.Execution == null || e.Order == null) return;
             
-            var order = execution.Order;
+            var execution = e.Execution;
+            var order = e.Order;
             
             // Only process filled orders
             if (order.OrderState != OrderState.Filled && order.OrderState != OrderState.PartFilled) return;
             
-            // Determine entry vs exit by tracking position changes
-            // Entry: Flat → Long or Flat → Short
-            // Exit: Long → Flat or Short → Flat
-            // Reversal: Long → Short or Short → Long (treated as exit + entry)
+            // Skip if this came from the TradVueJournal strategy itself (shouldn't happen, but safety check)
+            if (order.Name == "TradVueJournal") return;
             
+            // Determine direction from the order action
             string action = "";
             string direction = "";
-            double entryPrice = 0;
-            double exitPrice = 0;
-            double pnl = 0;
             
-            bool isEntry = (prevPosition == MarketPosition.Flat && marketPosition != MarketPosition.Flat);
-            bool isExit = (prevPosition != MarketPosition.Flat && marketPosition == MarketPosition.Flat);
-            bool isReversal = (prevPosition == MarketPosition.Long && marketPosition == MarketPosition.Short) ||
-                              (prevPosition == MarketPosition.Short && marketPosition == MarketPosition.Long);
-            
-            if (isReversal)
-            {
-                // Send the exit portion first
-                if (SendExits)
-                {
-                    exitPrice = price;
-                    entryPrice = lastEntryPrice;
-                    direction = lastEntryDirection ?? "Unknown";
-                    
-                    if (entryPrice > 0)
-                    {
-                        if (direction == "Long")
-                            pnl = (exitPrice - entryPrice) * lastEntryQty;
-                        else
-                            pnl = (entryPrice - exitPrice) * lastEntryQty;
-                        
-                        if (Instrument.MasterInstrument.InstrumentType == InstrumentType.Future)
-                            pnl = pnl * Instrument.MasterInstrument.PointValue;
-                    }
-                    
-                    string exitJson = BuildJson("exit", direction, price, entryPrice, exitPrice, 
-                        lastEntryQty, pnl, orderId, time);
-                    SendWebhookAsync(exitJson, Instrument.MasterInstrument.Name, "exit", price, lastEntryQty, time);
-                }
-                
-                // Now treat as new entry
-                isEntry = true;
-            }
-            
-            if (isEntry)
+            // Buy/SellShort = entries, Sell/BuyToCover = exits
+            // But OrderAction isn't always reliable per NT support.
+            // Use a simpler heuristic: check execution.MarketPosition
+            if (execution.MarketPosition == MarketPosition.Long)
             {
                 action = "entry";
-                direction = marketPosition == MarketPosition.Long ? "Long" : "Short";
-                entryPrice = price;
-                
-                // Track for matching with exit
-                lastEntryPrice = price;
-                lastEntryQty = quantity;
-                lastEntryDirection = direction;
-                lastEntryTime = time;
-                
-                prevPosition = marketPosition;
-                
-                if (!SendEntries) return;
-                
-                string json = BuildJson(action, direction, price, entryPrice, 0, quantity, 0, orderId, time);
-                SendWebhookAsync(json, Instrument.MasterInstrument.Name, action, price, quantity, time);
-                return;
+                direction = "Long";
             }
-            
-            if (isExit)
+            else if (execution.MarketPosition == MarketPosition.Short)
+            {
+                action = "entry";
+                direction = "Short";
+            }
+            else
             {
                 action = "exit";
-                exitPrice = price;
-                entryPrice = lastEntryPrice;
-                direction = lastEntryDirection ?? (prevPosition == MarketPosition.Long ? "Long" : "Short");
-                
-                // Calculate P&L
-                if (entryPrice > 0)
-                {
-                    if (direction == "Long")
-                        pnl = (exitPrice - entryPrice) * quantity;
-                    else
-                        pnl = (entryPrice - exitPrice) * quantity;
-                    
-                    if (Instrument.MasterInstrument.InstrumentType == InstrumentType.Future)
-                        pnl = pnl * Instrument.MasterInstrument.PointValue;
-                }
-                
-                prevPosition = marketPosition;
-                
-                if (!SendExits) return;
-                
-                string json = BuildJson(action, direction, price, entryPrice, exitPrice, quantity, pnl, orderId, time);
-                SendWebhookAsync(json, Instrument.MasterInstrument.Name, action, price, quantity, time);
-                return;
+                direction = "Flat";
             }
             
-            // Scale-in or partial fill (position didn't change direction)
-            prevPosition = marketPosition;
-        }
-        
-        private string BuildJson(string action, string direction, double price, 
-            double entryPrice, double exitPrice, int quantity, double pnl,
-            string orderId, DateTime time)
-        {
-            string symbol = Instrument.MasterInstrument.Name;
-            string assetClass = Instrument.MasterInstrument.InstrumentType == InstrumentType.Future 
+            if (action == "entry" && !SendEntries) return;
+            if (action == "exit" && !SendExits) return;
+            
+            double price = execution.Price;
+            int quantity = execution.Quantity;
+            DateTime time = execution.Time;
+            string symbol = execution.Instrument.MasterInstrument.Name;
+            string orderId = order.OrderId;
+            
+            string assetClass = execution.Instrument.MasterInstrument.InstrumentType == InstrumentType.Future 
                 ? "Futures" 
-                : Instrument.MasterInstrument.InstrumentType == InstrumentType.Forex 
+                : execution.Instrument.MasterInstrument.InstrumentType == InstrumentType.Forex 
                     ? "Forex" 
                     : "Stock";
             
-            return string.Format(
+            // Build JSON payload
+            string json = string.Format(
                 "{{" +
                 "\"ticker\":\"{0}\"," +
                 "\"action\":\"{1}\"," +
                 "\"direction\":\"{2}\"," +
                 "\"price\":{3}," +
-                "\"entry_price\":{4}," +
-                "\"exit_price\":{5}," +
-                "\"qty\":{6}," +
-                "\"pnl\":{7}," +
-                "\"asset_class\":\"{8}\"," +
-                "\"order_id\":\"{9}\"," +
-                "\"time\":\"{10}\"," +
+                "\"qty\":{4}," +
+                "\"asset_class\":\"{5}\"," +
+                "\"order_id\":\"{6}\"," +
+                "\"time\":\"{7}\"," +
                 "\"source\":\"ninjatrader\"" +
                 "}}",
                 symbol,
                 action,
                 direction,
-                price.ToString("F4"),
-                entryPrice > 0 ? entryPrice.ToString("F4") : "null",
-                exitPrice > 0 ? exitPrice.ToString("F4") : "null",
+                price.ToString("F6"),
                 quantity,
-                Math.Round(pnl, 2).ToString("F2"),
                 assetClass,
                 orderId ?? "",
                 time.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             );
+            
+            // Send async — don't block the execution thread
+            SendWebhookAsync(json, symbol, action, direction, price, quantity, time);
         }
         
-        private async void SendWebhookAsync(string json, string symbol, string action, 
-            double price, int qty, DateTime time)
+        private async void SendWebhookAsync(string json, string symbol, string action,
+            string direction, double price, int qty, DateTime time)
         {
             try
             {
@@ -224,8 +176,8 @@ namespace NinjaTrader.NinjaScript.Strategies
                 {
                     if (response.IsSuccessStatusCode)
                     {
-                        Print(string.Format("[TradVue] {0} {1} {2}x @ {3:F2} — sent OK", 
-                            action.ToUpper(), symbol, qty, price));
+                        Print(string.Format("[TradVue] {0} {1} {2} {3}x @ {4:F2} — sent OK", 
+                            action.ToUpper(), direction, symbol, qty, price));
                     }
                     else
                     {
