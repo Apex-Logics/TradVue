@@ -4,9 +4,9 @@
 // It fires ONLY on actual broker fills — real entry/exit prices, real quantities.
 //
 // Installation:
-//   1. In NinjaTrader 8: Tools → Import → NinjaScript Add-On
-//   2. Select this file (TradVueJournal.cs)
-//   3. Go to Strategies tab → add "TradVueJournal" to your chart/workspace
+//   1. Copy this file to: Documents\NinjaTrader 8\bin\Custom\Strategies\
+//   2. Open NinjaScript Editor → Compile (F5)
+//   3. Add "TradVueJournal" strategy to your chart/workspace
 //   4. Set the WebhookUrl parameter to your TradVue webhook URL
 //   5. Enable the strategy — trades auto-journal from this point forward
 //
@@ -37,7 +37,9 @@ namespace NinjaTrader.NinjaScript.Strategies
     public class TradVueJournal : Strategy
     {
         private static readonly HttpClient httpClient = new HttpClient();
-        private string lastEntryOrderId = null;
+        
+        // Track previous position to detect entry vs exit
+        private MarketPosition prevPosition = MarketPosition.Flat;
         private double lastEntryPrice = 0;
         private int lastEntryQty = 0;
         private string lastEntryDirection = null;
@@ -54,18 +56,10 @@ namespace NinjaTrader.NinjaScript.Strategies
                 IsUnmanaged = true;
                 
                 // User-configurable parameters
-                WebhookUrl = "https://tradvue-api.onrender.com/api/webhook/tv/YOUR_TOKEN_HERE";
+                WebhookUrl = "https://tradvue-api.onrender.com/api/webhook/nt/YOUR_TOKEN_HERE";
                 SendEntries = true;
                 SendExits = true;
                 LogToOutput = true;
-            }
-            else if (State == State.Configure)
-            {
-                // Nothing to configure
-            }
-            else if (State == State.Terminated)
-            {
-                // Cleanup
             }
         }
 
@@ -80,36 +74,78 @@ namespace NinjaTrader.NinjaScript.Strategies
             // Only process filled orders
             if (order.OrderState != OrderState.Filled && order.OrderState != OrderState.PartFilled) return;
             
-            // Determine if this is an entry or exit
+            // Determine entry vs exit by tracking position changes
+            // Entry: Flat → Long or Flat → Short
+            // Exit: Long → Flat or Short → Flat
+            // Reversal: Long → Short or Short → Long (treated as exit + entry)
+            
             string action = "";
             string direction = "";
             double entryPrice = 0;
             double exitPrice = 0;
             double pnl = 0;
             
-            if (order.IsEntry || order.Name.Contains("Entry"))
+            bool isEntry = (prevPosition == MarketPosition.Flat && marketPosition != MarketPosition.Flat);
+            bool isExit = (prevPosition != MarketPosition.Flat && marketPosition == MarketPosition.Flat);
+            bool isReversal = (prevPosition == MarketPosition.Long && marketPosition == MarketPosition.Short) ||
+                              (prevPosition == MarketPosition.Short && marketPosition == MarketPosition.Long);
+            
+            if (isReversal)
             {
-                // This is an ENTRY fill
+                // Send the exit portion first
+                if (SendExits)
+                {
+                    exitPrice = price;
+                    entryPrice = lastEntryPrice;
+                    direction = lastEntryDirection ?? "Unknown";
+                    
+                    if (entryPrice > 0)
+                    {
+                        if (direction == "Long")
+                            pnl = (exitPrice - entryPrice) * lastEntryQty;
+                        else
+                            pnl = (entryPrice - exitPrice) * lastEntryQty;
+                        
+                        if (Instrument.MasterInstrument.InstrumentType == InstrumentType.Future)
+                            pnl = pnl * Instrument.MasterInstrument.PointValue;
+                    }
+                    
+                    string exitJson = BuildJson("exit", direction, price, entryPrice, exitPrice, 
+                        lastEntryQty, pnl, orderId, time);
+                    SendWebhookAsync(exitJson, Instrument.MasterInstrument.Name, "exit", price, lastEntryQty, time);
+                }
+                
+                // Now treat as new entry
+                isEntry = true;
+            }
+            
+            if (isEntry)
+            {
                 action = "entry";
                 direction = marketPosition == MarketPosition.Long ? "Long" : "Short";
                 entryPrice = price;
                 
                 // Track for matching with exit
-                lastEntryOrderId = orderId;
                 lastEntryPrice = price;
                 lastEntryQty = quantity;
                 lastEntryDirection = direction;
                 lastEntryTime = time;
                 
+                prevPosition = marketPosition;
+                
                 if (!SendEntries) return;
+                
+                string json = BuildJson(action, direction, price, entryPrice, 0, quantity, 0, orderId, time);
+                SendWebhookAsync(json, Instrument.MasterInstrument.Name, action, price, quantity, time);
+                return;
             }
-            else
+            
+            if (isExit)
             {
-                // This is an EXIT fill
                 action = "exit";
                 exitPrice = price;
                 entryPrice = lastEntryPrice;
-                direction = lastEntryDirection ?? (marketPosition == MarketPosition.Long ? "Short" : "Long");
+                direction = lastEntryDirection ?? (prevPosition == MarketPosition.Long ? "Long" : "Short");
                 
                 // Calculate P&L
                 if (entryPrice > 0)
@@ -119,17 +155,27 @@ namespace NinjaTrader.NinjaScript.Strategies
                     else
                         pnl = (entryPrice - exitPrice) * quantity;
                     
-                    // Adjust for futures tick value
                     if (Instrument.MasterInstrument.InstrumentType == InstrumentType.Future)
-                    {
                         pnl = pnl * Instrument.MasterInstrument.PointValue;
-                    }
                 }
                 
+                prevPosition = marketPosition;
+                
                 if (!SendExits) return;
+                
+                string json = BuildJson(action, direction, price, entryPrice, exitPrice, quantity, pnl, orderId, time);
+                SendWebhookAsync(json, Instrument.MasterInstrument.Name, action, price, quantity, time);
+                return;
             }
             
-            // Build JSON payload
+            // Scale-in or partial fill (position didn't change direction)
+            prevPosition = marketPosition;
+        }
+        
+        private string BuildJson(string action, string direction, double price, 
+            double entryPrice, double exitPrice, int quantity, double pnl,
+            string orderId, DateTime time)
+        {
             string symbol = Instrument.MasterInstrument.Name;
             string assetClass = Instrument.MasterInstrument.InstrumentType == InstrumentType.Future 
                 ? "Futures" 
@@ -137,7 +183,7 @@ namespace NinjaTrader.NinjaScript.Strategies
                     ? "Forex" 
                     : "Stock";
             
-            string json = string.Format(
+            return string.Format(
                 "{{" +
                 "\"ticker\":\"{0}\"," +
                 "\"action\":\"{1}\"," +
@@ -164,9 +210,6 @@ namespace NinjaTrader.NinjaScript.Strategies
                 orderId ?? "",
                 time.ToString("yyyy-MM-ddTHH:mm:ss.fffZ")
             );
-            
-            // Send async — don't block the execution thread
-            SendWebhookAsync(json, symbol, action, price, quantity, time);
         }
         
         private async void SendWebhookAsync(string json, string symbol, string action, 
@@ -200,7 +243,7 @@ namespace NinjaTrader.NinjaScript.Strategies
 
         #region Properties
         [NinjaScriptProperty]
-        [Display(Name = "Webhook URL", Description = "Your TradVue webhook URL (from TradVue → Journal → Connect NinjaTrader)", 
+        [Display(Name = "Webhook URL", Description = "Your TradVue webhook URL (from Integrations page)", 
             Order = 1, GroupName = "TradVue Settings")]
         public string WebhookUrl { get; set; }
 
