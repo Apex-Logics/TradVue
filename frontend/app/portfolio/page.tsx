@@ -1771,6 +1771,30 @@ export default function PortfolioPage() {
             autoFillFrom={sellFromHolding}
             onAutoFillConsumed={() => setSellFromHolding(null)}
             persistSold={persistSold} deleteSoldAPI={deleteSoldAPI}
+            holdings={holdings}
+            holdingsEnriched={holdingsEnriched}
+            stockInfos={stockInfos}
+            onSellRecorded={async (ticker, sharesSold, salePrice, saleDate) => {
+              // Find the holding and reduce shares (or remove if fully sold)
+              const existing = holdings.find(h => h.ticker === ticker)
+              if (!existing) return
+              const remaining = existing.shares - sharesSold
+              if (remaining <= 0.000001) {
+                // Fully sold — remove from holdings
+                setHoldings(prev => prev.filter(h => h.ticker !== ticker))
+                await deleteHoldingAPI(ticker)
+              } else {
+                // Partial sell — reduce shares
+                const sellTx = { id: uid(), type: 'sell' as const, shares: sharesSold, price: salePrice, date: saleDate }
+                const updated: Holding = {
+                  ...existing,
+                  shares: parseFloat(remaining.toFixed(6)),
+                  transactions: [...(existing.transactions || [{ id: uid(), type: 'buy' as const, shares: existing.shares, price: existing.avgCost, date: existing.buyDate }]), sellTx],
+                }
+                setHoldings(prev => prev.map(h => h.ticker === ticker ? updated : h))
+                await persistHolding(updated)
+              }
+            }}
             isDemo={isDemo} onDemoAction={() => setAuthModalOpen(true)}
           />
         )}
@@ -2473,6 +2497,18 @@ function HoldingsTab({
               })()
             )}
 
+            {/* Already-hold warning for Buy mode */}
+            {modalMode === 'add' && form.ticker.length >= 1 && (() => {
+              const existingHolding = holdings.find(h => h.ticker === form.ticker.trim().toUpperCase())
+              if (!existingHolding) return null
+              return (
+                <div style={{ background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.4)', borderRadius: 6, padding: '8px 12px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 8 }}>
+                  <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#f59e0b" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>
+                  <span>You already hold <strong>{existingHolding.shares} shares</strong> of {existingHolding.ticker} at <strong style={{ fontFamily: 'var(--mono)' }}>${parseFloat(existingHolding.avgCost.toFixed(2))}</strong> avg cost — use <strong>Add Shares</strong> instead to update your position.</span>
+                </div>
+              )
+            })()}
+
             {/* Stock info preview */}
             {peekInfo && modalMode !== 'add-shares' && (
               <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px', fontSize: 11 }}>
@@ -2839,6 +2875,8 @@ function DividendsTab({
 
 function SoldTab({
   soldPositions, setSoldPositions, autoFillFrom, onAutoFillConsumed, persistSold, deleteSoldAPI,
+  holdings = [], holdingsEnriched = [], stockInfos = {},
+  onSellRecorded,
   isDemo = false, onDemoAction,
 }: {
   soldPositions: SoldPosition[]
@@ -2847,6 +2885,10 @@ function SoldTab({
   onAutoFillConsumed: () => void
   persistSold: (s: SoldPosition) => Promise<unknown>
   deleteSoldAPI: (id: string) => Promise<void>
+  holdings?: Holding[]
+  holdingsEnriched?: HoldingEnriched[]
+  stockInfos?: Record<string, StockInfo>
+  onSellRecorded?: (ticker: string, sharesSold: number, salePrice: number, saleDate: string) => Promise<void>
   isDemo?: boolean
   onDemoAction?: () => void
 }) {
@@ -2855,6 +2897,28 @@ function SoldTab({
   const blank = { ticker: '', company: '', sector: 'Other', buyDate: '', dateSold: new Date().toISOString().slice(0, 10), shares: '', avgCost: '', salePrice: '', totalDividendsWhileHeld: '', notes: '', isPartial: false }
   const [form, setForm] = useState(blank)
   const [formError, setFormError] = useState('')
+  const [selectedHoldingId, setSelectedHoldingId] = useState<string>('')
+
+  const handleHoldingSelect = (holdingId: string) => {
+    setSelectedHoldingId(holdingId)
+    if (!holdingId) { setForm(blank); return }
+    const h = holdingsEnriched?.find(x => x.id === holdingId) || holdings?.find(x => x.id === holdingId)
+    if (!h) return
+    const info = stockInfos?.[h.ticker]
+    const currentPrice = (h as HoldingEnriched).currentPrice || info?.currentPrice || h.avgCost
+    const totalDivs = (h as HoldingEnriched).totalDividendsReceived ?? h.totalDividendsReceived ?? 0
+    setForm(f => ({
+      ...f,
+      ticker: h.ticker,
+      company: h.company,
+      sector: h.sector || 'Other',
+      buyDate: h.buyDate || '',
+      shares: String(h.shares),
+      avgCost: String(h.avgCost),
+      salePrice: String(currentPrice ? parseFloat(currentPrice.toFixed(2)) : h.avgCost),
+      totalDividendsWhileHeld: String(Math.round(totalDivs * 100) / 100),
+    }))
+  }
 
   // Auto-open modal when navigated here via Sell button
   useEffect(() => {
@@ -2880,7 +2944,7 @@ function SoldTab({
     }
   }, [autoFillFrom, onAutoFillConsumed])
 
-  const openAdd = () => { setForm(blank); setEditId(null); setFormError(''); setShowModal(true) }
+  const openAdd = () => { setForm(blank); setEditId(null); setFormError(''); setSelectedHoldingId(''); setShowModal(true) }
   const openEdit = (s: SoldPosition) => {
     setForm({
       ticker: s.ticker, company: s.company, sector: s.sector || 'Other',
@@ -2918,7 +2982,12 @@ function SoldTab({
     } else {
       setSoldPositions(prev => [...prev, entry])
       await persistSold(entry)
+      // Reduce (or remove) the holding shares immediately
+      if (onSellRecorded) {
+        await onSellRecorded(ticker, shares, salePrice, entry.dateSold)
+      }
     }
+    setSelectedHoldingId('')
     setShowModal(false)
   }
 
@@ -3031,18 +3100,71 @@ function SoldTab({
       )}
 
       {showModal && (
-        <Modal title={editId ? 'Edit Sold Position' : 'Record Sale'} onClose={() => setShowModal(false)}>
+        <Modal title={editId ? 'Edit Sold Position' : 'Record Sale'} onClose={() => { setSelectedHoldingId(''); setShowModal(false) }}>
           <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-            {/* Auto-fill notice */}
-            {!editId && form.ticker && (
-              <div style={{ background: 'rgba(0,192,106,0.1)', border: '1px solid rgba(0,192,106,0.3)', borderRadius: 6, padding: '8px 12px', fontSize: 11 }}>
-                ✓ Auto-filled from holdings. Confirm sale price and date.
+            {/* Step 1 for new sells: pick from holdings dropdown */}
+            {!editId && holdings.length > 0 && (
+              <div>
+                <label style={labelStyle}>Select holding to sell *</label>
+                <select
+                  style={{ ...inputStyle, color: selectedHoldingId ? 'var(--text-0)' : 'var(--text-3)' }}
+                  value={selectedHoldingId}
+                  onChange={e => handleHoldingSelect(e.target.value)}
+                >
+                  <option value="">— pick a holding —</option>
+                  {holdingsEnriched?.length ? holdingsEnriched.map(h => (
+                    <option key={h.id} value={h.id}>
+                      {h.ticker} — {h.company} ({h.shares} sh @ ${parseFloat(h.avgCost.toFixed(2))})
+                    </option>
+                  )) : holdings.map(h => (
+                    <option key={h.id} value={h.id}>
+                      {h.ticker} — {h.company} ({h.shares} sh @ ${parseFloat(h.avgCost.toFixed(2))})
+                    </option>
+                  ))}
+                </select>
+                {!selectedHoldingId && !form.ticker && (
+                  <div style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 4, fontStyle: 'italic' }}>
+                    💡 Tip: Use the Sell button on your Holdings tab for even faster entry
+                  </div>
+                )}
               </div>
             )}
+            {/* Auto-fill notice */}
+            {!editId && form.ticker && (
+              <div style={{ background: 'rgba(0,192,106,0.1)', border: '1px solid rgba(0,192,106,0.3)', borderRadius: 6, padding: '8px 12px', fontSize: 11, display: 'flex', alignItems: 'center', gap: 8 }}>
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="var(--green)" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
+                Auto-filled from holdings — confirm sale price &amp; date below
+              </div>
+            )}
+            {/* P&L snapshot before the form when a holding is selected */}
+            {!editId && selectedHoldingId && (() => {
+              const he = holdingsEnriched?.find(x => x.id === selectedHoldingId)
+              if (!he) return null
+              const info = stockInfos?.[he.ticker]
+              return (
+                <div style={{ background: 'var(--bg-3)', border: '1px solid var(--border)', borderRadius: 6, padding: '10px 12px', fontSize: 11 }}>
+                  <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 6 }}>
+                    <div style={{ display: 'flex', alignItems: 'center', gap: 6 }}>
+                      {info?.logo && <img src={info.logo} alt="" style={{ width: 16, height: 16, borderRadius: 2, objectFit: 'contain' }} loading="lazy" onError={e => { (e.target as HTMLImageElement).style.display = 'none' }} />}
+                      <span style={{ fontWeight: 700 }}>{he.ticker}</span>
+                      <span style={{ color: 'var(--text-3)', fontSize: 10 }}>{he.company}</span>
+                    </div>
+                    {he.currentPrice > 0 && (
+                      <span style={{ fontFamily: 'var(--mono)', fontWeight: 700 }}>${parseFloat(he.currentPrice.toFixed(2))}</span>
+                    )}
+                  </div>
+                  <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr 1fr', gap: 6, fontSize: 10 }}>
+                    <div><span style={{ color: 'var(--text-3)' }}>Shares held: </span><span style={{ fontFamily: 'var(--mono)', fontWeight: 600 }}>{he.shares}</span></div>
+                    <div><span style={{ color: 'var(--text-3)' }}>Avg cost: </span><span style={{ fontFamily: 'var(--mono)' }}>${parseFloat(he.avgCost.toFixed(2))}</span></div>
+                    <div><span style={{ color: 'var(--text-3)' }}>Unrealized: </span><span style={{ fontFamily: 'var(--mono)', color: he.marketReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>{parseFloat(he.marketReturn.toFixed(2)) >= 0 ? '+' : ''}{parseFloat(he.marketReturn.toFixed(0)).toLocaleString()}</span></div>
+                  </div>
+                </div>
+              )
+            })()}
             <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 10 }}>
               <div>
                 <label style={labelStyle}>Ticker *</label>
-                <input style={inputStyle} value={form.ticker} onChange={e => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} placeholder="AAPL" readOnly={!!autoFillFrom || !!editId} />
+                <input style={inputStyle} value={form.ticker} onChange={e => setForm(f => ({ ...f, ticker: e.target.value.toUpperCase() }))} placeholder="AAPL" readOnly={!!selectedHoldingId || !!autoFillFrom || !!editId} />
               </div>
               <div>
                 <label style={labelStyle}>Company</label>
