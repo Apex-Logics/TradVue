@@ -95,11 +95,14 @@ router.use(requireAuth);
 
 router.get('/', async (req, res) => {
   try {
-    const { rows } = await db.query(
-      `SELECT * FROM price_alerts WHERE user_id = $1 ORDER BY created_at DESC`,
-      [req.user.id]
-    );
-    res.json({ alerts: rows });
+    const supabase = getSupabase();
+    const { data, error } = await supabase
+      .from('price_alerts')
+      .select('*')
+      .eq('user_id', req.user.id)
+      .order('created_at', { ascending: false });
+    if (error) throw new Error(error.message);
+    res.json({ alerts: data || [] });
   } catch (e) {
     console.error('[PriceAlerts] GET error:', e.message);
     res.status(500).json({ error: 'Internal error' });
@@ -124,15 +127,22 @@ router.post('/', async (req, res) => {
     }
 
     console.log('[PriceAlerts] Creating alert:', { userId: req.user.id, symbol: symbol.toUpperCase(), price, direction });
-    const { rows } = await db.query(
-      `INSERT INTO price_alerts (user_id, symbol, target_price, direction)
-       VALUES ($1, $2, $3, $4)
-       RETURNING *`,
-      [req.user.id, symbol.toUpperCase(), price, direction]
-    );
-    console.log('[PriceAlerts] Created:', rows[0]?.id);
+    const supabase = getSupabase();
+    const { data: inserted, error: insertErr } = await supabase
+      .from('price_alerts')
+      .insert({
+        user_id: req.user.id,
+        symbol: symbol.toUpperCase(),
+        target_price: price,
+        direction: direction,
+      })
+      .select('*')
+      .single();
 
-    res.json({ alert: rows[0] });
+    if (insertErr) throw new Error(insertErr.message);
+    console.log('[PriceAlerts] Created:', inserted?.id);
+
+    res.json({ alert: inserted });
   } catch (e) {
     console.error('[PriceAlerts] POST error:', e.message, e.stack);
     res.status(500).json({ error: 'Internal error', detail: e.message });
@@ -143,11 +153,14 @@ router.post('/', async (req, res) => {
 
 router.delete('/:id', async (req, res) => {
   try {
-    const { rowCount } = await db.query(
-      `DELETE FROM price_alerts WHERE id = $1 AND user_id = $2`,
-      [req.params.id, req.user.id]
-    );
-    if (rowCount === 0) return res.status(404).json({ error: 'Alert not found' });
+    const supabase = getSupabase();
+    const { error, count } = await supabase
+      .from('price_alerts')
+      .delete({ count: 'exact' })
+      .eq('id', req.params.id)
+      .eq('user_id', req.user.id);
+    if (error) throw new Error(error.message);
+    if (count === 0) return res.status(404).json({ error: 'Alert not found' });
     res.json({ ok: true });
   } catch (e) {
     console.error('[PriceAlerts] DELETE error:', e.message);
@@ -224,9 +237,13 @@ router.post('/check', requireAdmin, async (req, res) => {
 
 async function checkAndTriggerAlerts() {
   try {
-    const { rows: alerts } = await db.query(
-      `SELECT * FROM price_alerts WHERE triggered = FALSE AND is_active = TRUE`
-    );
+    const supabase = getSupabase();
+    const { data: alerts, error: fetchErr } = await supabase
+      .from('price_alerts')
+      .select('*')
+      .eq('triggered', false)
+      .eq('is_active', true);
+    if (fetchErr) throw new Error(fetchErr.message);
     if (!alerts.length) return 0;
 
     // Batch fetch prices — group by symbol to minimise API calls
@@ -264,11 +281,11 @@ async function checkAndTriggerAlerts() {
 
     // Mark triggered in DB
     const ids = toTrigger.map(a => a.id);
-    await db.query(
-      `UPDATE price_alerts SET triggered = TRUE, is_active = FALSE, triggered_at = NOW()
-       WHERE id = ANY($1)`,
-      [ids]
-    );
+    const { error: updateErr } = await supabase
+      .from('price_alerts')
+      .update({ triggered: true, is_active: false, triggered_at: new Date().toISOString() })
+      .in('id', ids);
+    if (updateErr) console.error('[PriceAlerts] Trigger update error:', updateErr.message);
 
     console.log(`[PriceAlerts] Triggered ${toTrigger.length} price alert(s): ${toTrigger.map(a => a.symbol).join(', ')}`);
 
