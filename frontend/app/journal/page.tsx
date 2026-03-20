@@ -2217,7 +2217,6 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                                     <input
                                       type="number"
                                       value={ef.stopLoss}
-                                      disabled={isWebhook}
                                       onChange={e => applyExpandedEdit(t.id, { stopLoss: e.target.value })}
                                       placeholder="e.g. 145.00"
                                       step="any"
@@ -2229,7 +2228,6 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
                                     <input
                                       type="number"
                                       value={ef.takeProfit}
-                                      disabled={isWebhook}
                                       onChange={e => applyExpandedEdit(t.id, { takeProfit: e.target.value })}
                                       placeholder="e.g. 165.00"
                                       step="any"
