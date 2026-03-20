@@ -1006,4 +1006,4 @@ managementRouter.post('/test', requireAuth, async (req, res) => {
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-module.exports = { receiverRouter, managementRouter, tradesRouter };
+module.exports = { receiverRouter, managementRouter, tradesRouter, _matchAndJournalTrade, matchAndJournalTrade };
