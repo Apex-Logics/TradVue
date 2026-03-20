@@ -1397,11 +1397,13 @@ export default function PortfolioPage() {
       return newAlert
     }
     const res = await apiPost<{ alert: PriceAlert }>('/api/alerts/price', { symbol, target_price, direction })
+    console.log('[PriceAlert] API response:', res)
     if (res?.alert) {
       setPriceAlerts(prev => [res.alert, ...prev])
       saveLS('cg_price_alerts', [...loadLS<PriceAlert[]>('cg_price_alerts', []), res.alert])
       return res.alert
     }
+    console.warn('[PriceAlert] API failed, falling back to localStorage')
     // API failed, fallback to localStorage
     const fallbackAlert: PriceAlert = {
       id: uid(), symbol, target_price, direction, triggered: false, created_at: new Date().toISOString()
