@@ -14,6 +14,7 @@ const TYPES: { value: FeedbackType; label: string; placeholder: string }[] = [
 
 export default function FeedbackWidget() {
   const [open, setOpen]           = useState(false);
+  const [hidden, setHidden]       = useState(false);
   const [type, setType]           = useState<FeedbackType>('bug');
   const [message, setMessage]     = useState('');
   const [email, setEmail]         = useState('');
@@ -59,6 +60,33 @@ export default function FeedbackWidget() {
   return (
     <>
       {/* Floating trigger button */}
+      {hidden ? (
+        <button
+          onClick={() => setHidden(false)}
+          aria-label="Show feedback"
+          style={{
+            position: 'fixed',
+            bottom: '24px',
+            right: '24px',
+            zIndex: 9999,
+            width: '24px',
+            height: '24px',
+            borderRadius: '50%',
+            background: 'var(--bg-3, #333)',
+            border: '1px solid var(--border, #444)',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            opacity: 0.4,
+            transition: 'opacity 0.2s',
+          }}
+          onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8' }}
+          onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
+        >
+          <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round"><path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z"/></svg>
+        </button>
+      ) : (
       <button
         onClick={() => setOpen(true)}
         aria-label="Send feedback"
@@ -92,7 +120,18 @@ export default function FeedbackWidget() {
         <svg width="22" height="22" viewBox="0 0 24 24" fill="white" xmlns="http://www.w3.org/2000/svg">
           <path d="M20 2H4C2.9 2 2 2.9 2 4v18l4-4h14c1.1 0 2-.9 2-2V4c0-1.1-.9-2-2-2zm0 12H6l-2 2V4h16v10z"/>
         </svg>
+        {/* Hide button */}
+        <span
+          onClick={e => { e.stopPropagation(); setHidden(true) }}
+          style={{
+            position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%',
+            background: 'var(--bg-0, #111)', border: '1px solid var(--border, #333)', cursor: 'pointer',
+            display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'var(--text-3)',
+          }}
+          title="Hide feedback button"
+        >✕</span>
       </button>
+      )}
 
       {/* Backdrop */}
       {open && (
