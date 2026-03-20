@@ -4138,6 +4138,27 @@ function JournalPageInner() {
           setTrades(prev => {
             const existingWebhookIds = new Set(prev.filter(t => t.source === 'webhook').map(t => t.id))
             const dismissedIds = getDismissedWebhookIds()
+
+            // UPDATE existing webhook trades if DB has new data (e.g. exit arrived)
+            let updated = false
+            const updatedPrev = prev.map(t => {
+              if (t.source !== 'webhook') return t
+              const dbTrade = data.trades.find((dt: Record<string, unknown>) => `wh_${dt.id}` === t.id)
+              if (!dbTrade) return t
+              const dbExit = dbTrade.exit_price ? parseFloat(dbTrade.exit_price as string) : 0
+              const dbPnl = dbTrade.pnl !== null && dbTrade.pnl !== undefined ? parseFloat(dbTrade.pnl as string) : null
+              // If DB has exit data that local doesn't, update
+              if (dbExit && !t.exitPrice) {
+                updated = true
+                return {
+                  ...t,
+                  exitPrice: dbExit,
+                  pnl: dbPnl !== null ? dbPnl : t.pnl,
+                }
+              }
+              return t
+            })
+
             const newWebhookTrades: Trade[] = data.trades
               .filter((t: Record<string, unknown>) => !existingWebhookIds.has(`wh_${t.id}`) && !dismissedIds.has(`wh_${t.id}`))
               .map((t: Record<string, unknown>) => ({
@@ -4175,8 +4196,9 @@ function JournalPageInner() {
                 source: 'webhook',
               } as Trade))
 
-            if (newWebhookTrades.length === 0) return prev
-            const merged = [...newWebhookTrades, ...prev]
+            if (newWebhookTrades.length === 0 && !updated) return prev
+            const base = updated ? updatedPrev : prev
+            const merged = [...newWebhookTrades, ...base]
             saveTrades(merged)
             return merged
           })
