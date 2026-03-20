@@ -62,9 +62,37 @@ function lsSet<T>(key: string, val: T): void {
 
 // ── Journal keys (matching journal/page.tsx) ──────────────────────────────────
 
-const TRADES_KEY     = 'cg_journal_trades'
-const NOTES_KEY      = 'cg_journal_notes'
-const TEMPLATES_KEY  = 'cg_note_templates'
+const TRADES_KEY              = 'cg_journal_trades'
+const NOTES_KEY               = 'cg_journal_notes'
+const TEMPLATES_KEY           = 'cg_note_templates'
+const PROP_FIRM_ACCOUNTS_KEY  = 'cg_propfirm_accounts'
+const DISMISSED_WEBHOOKS_KEY  = 'cg_dismissed_webhook_ids'
+const PRIVACY_KEY             = 'pf_privacy'
+const JOURNAL_DEFAULTS_PREFIX = 'cg_journal_defaults_'
+
+/** Collect all cg_journal_defaults_* keys into { AssetClass: {...}, ... } */
+function getJournalDefaults(): Record<string, unknown> {
+  const result: Record<string, unknown> = {}
+  try {
+    for (let i = 0; i < localStorage.length; i++) {
+      const key = localStorage.key(i)
+      if (key && key.startsWith(JOURNAL_DEFAULTS_PREFIX)) {
+        const assetClass = key.slice(JOURNAL_DEFAULTS_PREFIX.length)
+        try { result[assetClass] = JSON.parse(localStorage.getItem(key) || '') } catch {}
+      }
+    }
+  } catch {}
+  return result
+}
+
+/** Restore all cg_journal_defaults_* keys from a cloud-sourced object */
+function setJournalDefaults(defaults: Record<string, unknown>): void {
+  for (const [assetClass, val] of Object.entries(defaults)) {
+    if (val !== null && val !== undefined) {
+      lsSet(`${JOURNAL_DEFAULTS_PREFIX}${assetClass}`, val)
+    }
+  }
+}
 
 // ── Settings key ──────────────────────────────────────────────────────────────
 
@@ -111,6 +139,10 @@ interface CloudJournalData {
   trades?: unknown[]
   notes?: unknown[]
   templates?: unknown[]
+  propFirmAccounts?: unknown[]
+  journalDefaults?: Record<string, unknown>
+  dismissedWebhookIds?: unknown[]
+  privacyMode?: string
 }
 
 /**
@@ -129,6 +161,16 @@ export async function initJournalSync(token: string): Promise<void> {
       lsSet(TRADES_KEY,    cloudTrades)
       lsSet(NOTES_KEY,     cloudNotes)
       if (cloudTemplates.length > 0) lsSet(TEMPLATES_KEY, cloudTemplates)
+      // Restore extra keys — only if cloud has data (backward compat)
+      if (cloudData.propFirmAccounts && cloudData.propFirmAccounts.length > 0)
+        lsSet(PROP_FIRM_ACCOUNTS_KEY, cloudData.propFirmAccounts)
+      if (cloudData.journalDefaults && Object.keys(cloudData.journalDefaults).length > 0)
+        setJournalDefaults(cloudData.journalDefaults)
+      if (cloudData.dismissedWebhookIds && cloudData.dismissedWebhookIds.length > 0)
+        lsSet(DISMISSED_WEBHOOKS_KEY, cloudData.dismissedWebhookIds)
+      if (cloudData.privacyMode != null && cloudData.privacyMode !== '') {
+        try { localStorage.setItem(PRIVACY_KEY, cloudData.privacyMode) } catch {}
+      }
     }
     setStatus('synced')
   } catch {
@@ -153,6 +195,16 @@ export async function forceSyncFromCloud(): Promise<boolean> {
       lsSet(TRADES_KEY,    cloudTrades)
       lsSet(NOTES_KEY,     cloudNotes)
       if (cloudTemplates.length > 0) lsSet(TEMPLATES_KEY, cloudTemplates)
+      // Restore extra keys — only if cloud has data (backward compat)
+      if (cloudData.propFirmAccounts && cloudData.propFirmAccounts.length > 0)
+        lsSet(PROP_FIRM_ACCOUNTS_KEY, cloudData.propFirmAccounts)
+      if (cloudData.journalDefaults && Object.keys(cloudData.journalDefaults).length > 0)
+        setJournalDefaults(cloudData.journalDefaults)
+      if (cloudData.dismissedWebhookIds && cloudData.dismissedWebhookIds.length > 0)
+        lsSet(DISMISSED_WEBHOOKS_KEY, cloudData.dismissedWebhookIds)
+      if (cloudData.privacyMode != null && cloudData.privacyMode !== '') {
+        try { localStorage.setItem(PRIVACY_KEY, cloudData.privacyMode) } catch {}
+      }
     }
     setStatus('synced')
     return true
@@ -183,7 +235,20 @@ export function debouncedSyncJournal(trades: unknown[], notes: unknown[], templa
     if (tpls === undefined) {
       try { tpls = JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]') } catch { tpls = [] }
     }
-    const ok = await cloudPut(token, 'journal', { trades, notes, templates: tpls })
+    const propFirmAccounts    = lsGet<unknown[]>(PROP_FIRM_ACCOUNTS_KEY, [])
+    const journalDefaults     = getJournalDefaults()
+    const dismissedWebhookIds = lsGet<unknown[]>(DISMISSED_WEBHOOKS_KEY, [])
+    let privacyMode: string | null = null
+    try { privacyMode = localStorage.getItem(PRIVACY_KEY) } catch {}
+    const ok = await cloudPut(token, 'journal', {
+      trades,
+      notes,
+      templates: tpls,
+      propFirmAccounts,
+      journalDefaults,
+      dismissedWebhookIds,
+      ...(privacyMode != null ? { privacyMode } : {}),
+    })
     setStatus(ok ? 'synced' : 'error')
   }, 1500)
 }
