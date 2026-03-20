@@ -466,7 +466,7 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
                   <div style={{ display: 'flex', flexDirection: 'column', gap: 6, padding: '10px 12px', background: 'rgba(255,255,255,0.03)', borderRadius: 8 }}>
                     {[
                       { param: 'Webhook URL', desc: 'Paste your webhook URL from Step 3' },
-                      { param: 'Account Name', desc: 'Your account number (e.g. 1779953), or blank for all accounts' },
+                      { param: 'Account Name', desc: 'Your account number (e.g. Sim101), or blank for all accounts' },
                       { param: 'Send Entries', desc: '✅ Enabled' },
                       { param: 'Send Exits', desc: '✅ Enabled' },
                       { param: 'Log to Output', desc: '✅ Enabled for troubleshooting' },

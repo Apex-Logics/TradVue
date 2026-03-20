@@ -364,7 +364,7 @@ function InstallGuide({ webhookUrl, tokens, loading, onGenerate, generating }: {
           <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)' }}>
             {[
               { param: 'Webhook URL', desc: 'Paste your webhook URL from Step 3' },
-              { param: 'Account Name', desc: 'Enter your account name (e.g. 1779953) to track only that account. Leave blank to track all accounts.' },
+              { param: 'Account Name', desc: 'Enter your account name (e.g. Sim101) to track only that account. Leave blank to track all accounts.' },
               { param: 'Send Entries', desc: '✅ Enabled (recommended)' },
               { param: 'Send Exits', desc: '✅ Enabled (recommended)' },
               { param: 'Log to Output', desc: '✅ Enabled for troubleshooting — disable once confirmed working' },
@@ -528,7 +528,7 @@ function Troubleshooting() {
     },
     {
       problem: 'Duplicate trades',
-      fix: 'Set Account Name to your specific account number (e.g. 1779953) to avoid copy-trade duplicates',
+      fix: 'Set Account Name to your specific account number (e.g. Sim101) to avoid copy-trade duplicates',
     },
     {
       problem: 'Trades show but no exit',
