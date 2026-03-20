@@ -620,6 +620,11 @@ function SecuritySection() {
       <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>
         TradVue is not affiliated with NinjaTrader LLC. This integration is provided as-is. The addon is read-only — it cannot place, modify, or cancel orders.
       </p>
+      <p style={{ fontSize: 12, color: 'var(--text-2)', margin: '10px 0 0', lineHeight: 1.6 }}>
+        🔌 You can disconnect NinjaTrader anytime from your{' '}
+        <a href="/account" style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600 }}>Account Settings</a>
+        {' '}page.
+      </p>
     </div>
   )
 }

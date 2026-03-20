@@ -22,6 +22,7 @@ import { useSearchParams, useRouter } from 'next/navigation'
 import Link from 'next/link'
 import { useAuth } from '../context/AuthContext'
 import { useSettings } from '../context/SettingsContext'
+import { useToast } from '../context/ToastContext'
 import { API_BASE } from '../lib/api'
 import { getUserTier, isTrialActive, TRIAL_DAYS, MONTHLY_PRICE, ANNUAL_PRICE } from '../utils/tierAccess'
 import PricingCard from '../components/PricingCard'
@@ -153,6 +154,7 @@ function AccountPageInner() {
   const router = useRouter()
   const { user, token, loading: authLoading } = useAuth()
   const { settings, setAiCoachEnabled, setNotificationsEnabled, requestNotifications, openSettings } = useSettings()
+  const { showToast } = useToast()
 
   const sessionId = searchParams.get('session_id')
   const canceled = searchParams.get('canceled')
@@ -180,6 +182,11 @@ function AccountPageInner() {
   const [deleteLoading, setDeleteLoading] = useState(false)
   const [deleteError, setDeleteError] = useState<string | null>(null)
 
+  // Disconnect NinjaTrader state
+  const [ntTokens, setNtTokens] = useState<{ id: number; is_active: boolean }[]>([])
+  const [showDisconnectModal, setShowDisconnectModal] = useState(false)
+  const [disconnecting, setDisconnecting] = useState(false)
+
   // Fetch subscription status
   useEffect(() => {
     if (authLoading) return
@@ -202,7 +209,8 @@ function AccountPageInner() {
     })
       .then(r => r.json())
       .then(data => {
-        const list = Array.isArray(data) ? data : (data.tokens ?? [])
+        const list: { id: number; is_active: boolean }[] = Array.isArray(data) ? data : (data.tokens ?? [])
+        setNtTokens(list)
         setNtConnected(list.some((t: { is_active: boolean }) => t.is_active))
       })
       .catch(() => setNtConnected(false))
@@ -266,6 +274,30 @@ function AccountPageInner() {
       setPortalError(err instanceof Error ? err.message : 'Something went wrong')
     } finally {
       setPortalLoading(false)
+    }
+  }
+
+  async function handleDisconnectNT() {
+    if (!token) return
+    setDisconnecting(true)
+    try {
+      const activeTokens = ntTokens.filter(t => t.is_active)
+      await Promise.all(
+        activeTokens.map(t =>
+          fetch(`${API_BASE}/api/webhooks/tokens/${t.id}`, {
+            method: 'DELETE',
+            headers: { Authorization: `Bearer ${token}` },
+          })
+        )
+      )
+      setNtConnected(false)
+      setNtTokens([])
+      setShowDisconnectModal(false)
+      showToast('NinjaTrader disconnected. Your trade history is preserved.', 'success', 5000)
+    } catch {
+      showToast('Failed to disconnect. Please try again.', 'error')
+    } finally {
+      setDisconnecting(false)
     }
   }
 
@@ -643,6 +675,31 @@ Delete My Account
           <p style={{ margin: '12px 0 0', fontSize: 12, color: 'var(--text-3, #6b7280)', lineHeight: 1.6 }}>
             Install the TradVue addon in NinjaTrader 8 and every real broker fill auto-journals — no manual entry needed.
           </p>
+          {ntConnected && (
+            <div style={{ marginTop: 12 }}>
+              <button
+                onClick={() => setShowDisconnectModal(true)}
+                style={{
+                  display: 'inline-flex',
+                  alignItems: 'center',
+                  gap: 6,
+                  background: 'transparent',
+                  border: '1px solid rgba(248,113,113,0.4)',
+                  borderRadius: 8,
+                  padding: '7px 14px',
+                  color: '#f87171',
+                  fontSize: 12,
+                  fontWeight: 600,
+                  cursor: 'pointer',
+                }}
+              >
+                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+                  <path d="M18.36 6.64a9 9 0 1 1-12.73 0"/><line x1="12" y1="2" x2="12" y2="12"/>
+                </svg>
+                Disconnect NinjaTrader
+              </button>
+            </div>
+          )}
         </SectionCard>
 
         {/* ── Notifications ─────────────────────────────────────────────────── */}
@@ -857,6 +914,93 @@ Delete My Account
         </div>
       )}
 
+      {/* ── Disconnect NinjaTrader confirmation modal ───────────────────────── */}
+      {showDisconnectModal && (
+        <div
+          style={{
+            position: 'fixed',
+            inset: 0,
+            zIndex: 9999,
+            background: 'rgba(0,0,0,0.75)',
+            backdropFilter: 'blur(6px)',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            padding: 20,
+          }}
+          onClick={e => { if (e.target === e.currentTarget) setShowDisconnectModal(false) }}
+        >
+          <div style={{
+            background: 'var(--bg-1, #1a1a2e)',
+            border: '1px solid rgba(248,113,113,0.25)',
+            borderRadius: 16,
+            padding: '32px 28px',
+            maxWidth: 440,
+            width: '100%',
+          }}>
+            <div style={{ marginBottom: 14 }}>
+              <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="#f87171" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                <path d="M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/>
+                <line x1="12" y1="9" x2="12" y2="13"/>
+                <line x1="12" y1="17" x2="12.01" y2="17"/>
+              </svg>
+            </div>
+            <h3 style={{ fontSize: 20, fontWeight: 800, color: 'var(--text-0)', margin: '0 0 14px' }}>
+              Disconnect NinjaTrader?
+            </h3>
+            <ul style={{ margin: '0 0 20px', padding: '0 0 0 18px', display: 'flex', flexDirection: 'column', gap: 8 }}>
+              {[
+                { icon: '🗑', text: 'Your webhook token will be permanently deleted' },
+                { icon: '⏹', text: 'NinjaTrader will stop sending trade data to TradVue' },
+                { icon: '✅', text: 'Your existing journal entries will NOT be deleted — all past trades are safe', safe: true },
+                { icon: '🔄', text: 'You can reconnect anytime by generating a new token on the Integrations page' },
+              ].map(item => (
+                <li key={item.text} style={{ listStyle: 'none', marginLeft: -18, display: 'flex', gap: 9, fontSize: 13, color: item.safe ? '#4ade80' : 'var(--text-2)', lineHeight: 1.6 }}>
+                  <span style={{ flexShrink: 0 }}>{item.icon}</span>
+                  <span>{item.text}</span>
+                </li>
+              ))}
+            </ul>
+            <div style={{ display: 'flex', gap: 10 }}>
+              <button
+                onClick={handleDisconnectNT}
+                disabled={disconnecting}
+                style={{
+                  flex: 1,
+                  padding: '11px 16px',
+                  background: 'rgba(248,113,113,0.15)',
+                  border: '1px solid rgba(248,113,113,0.4)',
+                  borderRadius: 10,
+                  color: '#f87171',
+                  fontSize: 13,
+                  fontWeight: 700,
+                  cursor: disconnecting ? 'wait' : 'pointer',
+                  opacity: disconnecting ? 0.6 : 1,
+                }}
+              >
+                {disconnecting ? 'Disconnecting…' : 'Disconnect'}
+              </button>
+              <button
+                onClick={() => setShowDisconnectModal(false)}
+                disabled={disconnecting}
+                style={{
+                  flex: 1,
+                  padding: '11px 16px',
+                  background: 'transparent',
+                  border: '1px solid rgba(255,255,255,0.12)',
+                  borderRadius: 10,
+                  color: 'var(--text-1)',
+                  fontSize: 13,
+                  cursor: 'pointer',
+                }}
+              >
+                Cancel
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
       {showNTConnect && (
         <NinjaTraderConnect
           onClose={() => {
@@ -866,7 +1010,8 @@ Delete My Account
               fetch(API_BASE + '/api/webhooks/tokens', { headers: { Authorization: 'Bearer ' + token } })
                 .then(r => r.json())
                 .then(data => {
-                  const list = Array.isArray(data) ? data : (data.tokens ?? [])
+                  const list: { id: number; is_active: boolean }[] = Array.isArray(data) ? data : (data.tokens ?? [])
+                  setNtTokens(list)
                   setNtConnected(list.some((t: { is_active: boolean }) => t.is_active))
                 })
                 .catch(() => {})
