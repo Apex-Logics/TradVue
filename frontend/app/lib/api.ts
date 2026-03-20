@@ -11,6 +11,7 @@ export interface AuthUser {
   email_verified: boolean
   created_at: string
   tier: 'free' | 'pro'
+  is_admin?: boolean
 }
 
 export interface AuthSession {

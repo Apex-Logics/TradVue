@@ -19,6 +19,9 @@
  */
 
 const express = require('express');
+
+// Admin allowlist — same source of truth as admin.js
+const ADMIN_ALLOWLIST = (process.env.ADMIN_EMAILS || '').split(',').map(e => e.trim()).filter(Boolean);
 const rateLimit = require('express-rate-limit');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
@@ -408,6 +411,7 @@ router.get('/me', requireAuth, async (req, res) => {
     const user = userResult.status === 'fulfilled' ? userResult.value.data?.user : null;
     const profile = profileResult.status === 'fulfilled' ? profileResult.value.data : null;
 
+    const email = sanitizeUser(user)?.email || req.user?.email || null;
     res.json({
       user: {
         ...sanitizeUser(user),
@@ -415,6 +419,7 @@ router.get('/me', requireAuth, async (req, res) => {
         tier: profile?.tier || 'free',
         preferences: profile?.preferences || {},
         trial_ends_at: profile?.trial_ends_at || null,
+        is_admin: ADMIN_ALLOWLIST.length > 0 && ADMIN_ALLOWLIST.includes(email),
       },
     });
   } catch (err) {

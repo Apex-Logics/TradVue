@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 
 // ── Auth ──────────────────────────────────────────────────────────────────────
-const ADMIN_EMAILS = ['apexlogicsfl@gmail.com', 'axle-test@tradvue.com']
+// Admin check is done server-side via is_admin flag from /api/auth/me
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -586,7 +586,7 @@ export default function OpsPage() {
   // Auth guard
   useEffect(() => {
     if (authLoading) return
-    if (!user || !ADMIN_EMAILS.includes(user.email)) router.replace('/')
+    if (!user || !user.is_admin) router.replace('/')
   }, [user, authLoading, router])
 
   // Persist on change
@@ -635,7 +635,7 @@ export default function OpsPage() {
     </div>
   )
 
-  if (!user || !ADMIN_EMAILS.includes(user.email)) return null
+  if (!user || !user.is_admin) return null
 
   // ── Render ─────────────────────────────────────────────────────────────────
 

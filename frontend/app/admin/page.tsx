@@ -5,7 +5,7 @@ import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://tradvue-api.onrender.com'
-const ADMIN_EMAILS = ['apexlogicsfl@gmail.com', 'axle-test@tradvue.com']
+// Admin check is done server-side via is_admin flag from /api/auth/me
 
 type TabId = 'overview' | 'users' | 'feedback' | 'activity' | 'analytics' | 'revenue' | 'email' | 'security' | 'health'
 
@@ -240,7 +240,7 @@ export default function AdminPage() {
   // ── Auth guard ──────────────────────────────────────────────────────────────
   useEffect(() => {
     if (authLoading) return
-    if (!user || !ADMIN_EMAILS.includes(user.email)) router.replace('/')
+    if (!user || !user.is_admin) router.replace('/')
   }, [user, authLoading, router])
 
   const apiFetch = useCallback(async (path: string, opts?: RequestInit) => {
@@ -373,7 +373,7 @@ export default function AdminPage() {
 
   // Initial load
   useEffect(() => {
-    if (!token || authLoading || !user || !ADMIN_EMAILS.includes(user.email)) return
+    if (!token || authLoading || !user || !user.is_admin) return
     setLoading(true)
     Promise.all([loadStats(), loadUsers(), loadFeedback(), loadHealth(), loadActivity(), loadAnalytics(), loadEmails(), loadAbuse(), loadAnnouncements(), loadSecurity()])
       .finally(() => setLoading(false))
@@ -496,7 +496,7 @@ export default function AdminPage() {
       <div style={{ color: 'var(--text-1)' }}>Loading…</div>
     </div>
   )
-  if (!user || !ADMIN_EMAILS.includes(user.email)) return null
+  if (!user || !user.is_admin) return null
 
   const newFeedbackCount = feedback.filter(f => f.status === 'new').length
   const activeAnnouncement = announcements.find(a => a.active)
