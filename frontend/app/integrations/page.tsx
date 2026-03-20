@@ -1,13 +1,17 @@
 'use client'
 
 /**
- * /integrations — TradVue Integration Settings
+ * /integrations — NinjaTrader 8 Setup & Webhook Management
  *
  * Sections:
- *   1. NinjaTrader Setup (download addon, configure, enable)
- *   2. Webhook URL (generate, copy, rotate, delete)
- *   3. Recent Events Log (auto-refresh every 30s)
- *   4. Token Management (multiple tokens list)
+ *   Header — Title, subtitle, compatibility badge
+ *   1. Step-by-Step Install Guide (numbered accordion, 5 steps)
+ *   2. What Gets Captured (info box)
+ *   3. Troubleshooting (collapsible)
+ *   4. Security & Privacy
+ *   5. Webhook URL (generate, copy, rotate, delete)
+ *   6. Recent Events Log (auto-refresh)
+ *   7. Token Management (multi-token list)
  */
 
 import { useEffect, useState, useCallback, useRef } from 'react'
@@ -65,6 +69,60 @@ function timeAgo(iso: string | null): string {
 
 function maskToken(token: string): string {
   return token.slice(0, 6) + '...'
+}
+
+// ── Copy hook ──────────────────────────────────────────────────────────────────
+
+function useCopyText() {
+  const { showToast } = useToast()
+  return useCallback(async (text: string, label = 'Copied!') => {
+    try {
+      await navigator.clipboard.writeText(text)
+    } catch {
+      const ta = document.createElement('textarea')
+      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'
+      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
+    }
+    showToast(label, 'success', 2500)
+  }, [showToast])
+}
+
+// ── SVG Icons ──────────────────────────────────────────────────────────────────
+
+function IconDownload() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/>
+      <polyline points="7 10 12 15 17 10"/>
+      <line x1="12" y1="15" x2="12" y2="3"/>
+    </svg>
+  )
+}
+
+function IconCopy() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+      <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+    </svg>
+  )
+}
+
+function IconChevron({ open }: { open: boolean }) {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"
+      style={{ transform: open ? 'rotate(180deg)' : 'rotate(0deg)', transition: 'transform 0.2s' }}>
+      <polyline points="6 9 12 15 18 9"/>
+    </svg>
+  )
+}
+
+function IconShield() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/>
+    </svg>
+  )
 }
 
 // ── Reusable components ────────────────────────────────────────────────────────
@@ -153,165 +211,421 @@ function InlineButton({
   )
 }
 
-// ── Copy hook ──────────────────────────────────────────────────────────────────
+// ── Code inline ────────────────────────────────────────────────────────────────
 
-function useCopyText() {
-  const { showToast } = useToast()
-  return useCallback(async (text: string, label = 'Copied!') => {
-    try {
-      await navigator.clipboard.writeText(text)
-    } catch {
-      const ta = document.createElement('textarea')
-      ta.value = text; ta.style.position = 'fixed'; ta.style.opacity = '0'
-      document.body.appendChild(ta); ta.select(); document.execCommand('copy'); document.body.removeChild(ta)
-    }
-    showToast(label, 'success', 2500)
-  }, [showToast])
-}
-
-// ══════════════════════════════════════════════════════════════════════════════
-// Section 1: NinjaTrader Setup Guide
-// ══════════════════════════════════════════════════════════════════════════════
-
-const NT_SETUP_STEPS = [
-  {
-    n: 1,
-    title: 'Download the TradVue Addon',
-    body: 'Download TradVueAutoJournal.zip — the NinjaScript strategy that connects NinjaTrader to your TradVue account.',
-    hasDownload: true,
-  },
-  {
-    n: 2,
-    title: 'Import the Indicator into NinjaTrader',
-    body: 'In NinjaTrader, go to Tools → Import → NinjaScript Add-On and select TradVueAutoJournal.cs. NinjaTrader compiles and installs it automatically as an Indicator (not a Strategy), so it can capture fills from all sources: manual orders, Chart Trader, ATM, SuperDOM, and other strategies.',
-  },
-  {
-    n: 3,
-    title: 'Add the Indicator to your chart',
-    body: 'Right-click any chart → Indicators → find TradVueAutoJournal → click Add. You can add it to any chart. It runs silently in the background with no visible plots.',
-  },
-  {
-    n: 4,
-    title: 'Set your Webhook URL',
-    body: 'In the strategy parameters, set WebhookUrl to your unique TradVue webhook URL (see "Your Webhook URL" section below). Copy and paste it exactly.',
-    hasWebhookRef: true,
-  },
-  {
-    n: 5,
-    title: 'Enable the strategy — done!',
-    body: 'Activate the strategy. From this point on, every real broker fill — entries and exits — is sent to TradVue automatically. Check your Trade Journal to see trades appear within seconds.',
-  },
-]
-
-function NinjaTraderSetupSection({ webhookUrl }: { webhookUrl: string | null }) {
-  const [openStep, setOpenStep] = useState<number | null>(null)
-  const copyText = useCopyText()
-
+function Code({ children }: { children: React.ReactNode }) {
   return (
-    <SectionCard
-      title="NinjaTrader 8 Setup"
-      subtitle="Connect NinjaTrader to auto-journal every real futures trade. No manual entry needed."
-    >
-      {/* What gets synced */}
-      <div style={{
-        marginBottom: 20,
-        padding: '14px 16px',
-        background: 'rgba(139,92,246,0.06)',
-        border: '1px solid rgba(139,92,246,0.2)',
-        borderRadius: 12,
-        display: 'grid',
-        gridTemplateColumns: 'repeat(auto-fit, minmax(200px, 1fr))',
-        gap: 8,
-      }}>
-        {[
-          { icon: '✅', text: 'Real broker fills only (no paper)' },
-          { icon: '✅', text: 'Symbol, price, quantity, direction' },
-          { icon: '✅', text: 'Entry & exit timestamps' },
-          { icon: '✅', text: 'P&L calculated automatically' },
-          { icon: '❌', text: 'Cannot place or modify orders' },
-          { icon: '❌', text: 'No account balance or credentials' },
-        ].map(item => (
-          <div key={item.text} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)' }}>
-            <span>{item.icon}</span>
-            <span>{item.text}</span>
-          </div>
-        ))}
-      </div>
-
-      {NT_SETUP_STEPS.map(step => (
-        <div key={step.n} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
-          <button onClick={() => setOpenStep(openStep === step.n ? null : step.n)} style={{
-            width: '100%', display: 'flex', alignItems: 'center', gap: 14, padding: '14px 0',
-            background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
-          }}>
-            <span style={{
-              flexShrink: 0, width: 28, height: 28, borderRadius: '50%',
-              background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)',
-              color: '#a78bfa', fontSize: 13, fontWeight: 800,
-              display: 'flex', alignItems: 'center', justifyContent: 'center',
-            }}>{step.n}</span>
-            <span style={{ flex: 1, fontSize: 14, fontWeight: 600, color: 'var(--text-0, #f9fafb)' }}>{step.title}</span>
-            <span style={{ fontSize: 12, color: 'var(--text-3)', flexShrink: 0 }}>{openStep === step.n ? '▲' : '▼'}</span>
-          </button>
-
-          {openStep === step.n && (
-            <div style={{ padding: '0 0 16px 42px' }}>
-              <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '0 0 12px', lineHeight: 1.6 }}>{step.body}</p>
-
-              {step.hasDownload && (
-                <a
-                  href="/downloads/TradVueAutoJournal.zip"
-                  download="TradVueAutoJournal.zip"
-                  style={{
-                    display: 'inline-flex', alignItems: 'center', gap: 7,
-                    padding: '9px 18px',
-                    background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
-                    border: 'none', borderRadius: 10, color: '#fff',
-                    fontSize: 13, fontWeight: 700, textDecoration: 'none',
-                  }}
-                >
-                  ⬇ Download TradVueAutoJournal.zip
-                </a>
-              )}
-
-              {step.hasWebhookRef && webhookUrl && (
-                <div style={{ marginTop: 10 }}>
-                  <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>Your webhook URL:</p>
-                  <div style={{
-                    display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                    background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
-                    borderRadius: 8, padding: '10px 12px',
-                  }}>
-                    <code style={{ flex: 1, fontSize: 11, color: '#a78bfa', fontFamily: 'monospace', wordBreak: 'break-all', minWidth: 0 }}>
-                      {webhookUrl}
-                    </code>
-                    <button onClick={() => copyText(webhookUrl, 'Webhook URL copied!')} style={{
-                      flexShrink: 0, padding: '5px 12px',
-                      background: 'rgba(139,92,246,0.2)', border: '1px solid rgba(139,92,246,0.4)',
-                      borderRadius: 6, color: '#a78bfa', fontSize: 11, fontWeight: 700, cursor: 'pointer',
-                    }}>Copy</button>
-                  </div>
-                </div>
-              )}
-            </div>
-          )}
-        </div>
-      ))}
-
-      {/* Tip box */}
-      <div style={{
-        marginTop: 20, padding: '12px 16px',
-        background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10,
-        fontSize: 12, color: '#4ade80',
-      }}>
-        💡 <strong>Tip:</strong> The addon only captures <strong>real broker executions</strong>. Paper trading and simulated orders are ignored, so your journal always reflects actual performance.
-      </div>
-    </SectionCard>
+    <code style={{
+      fontFamily: 'monospace',
+      background: 'rgba(255,255,255,0.08)',
+      padding: '2px 6px',
+      borderRadius: 4,
+      fontSize: 11,
+      color: '#a78bfa',
+    }}>
+      {children}
+    </code>
   )
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Section 2: Webhook URL
+// Step-by-Step Install Guide
+// ══════════════════════════════════════════════════════════════════════════════
+
+function InstallGuide({ webhookUrl, tokens, loading, onGenerate, generating }: {
+  webhookUrl: string | null;
+  tokens: WebhookToken[];
+  loading: boolean;
+  onGenerate: () => void;
+  generating: boolean;
+}) {
+  const [openStep, setOpenStep] = useState<number | null>(1)
+  const copyText = useCopyText()
+
+  const steps = [
+    {
+      n: 1,
+      title: 'Download the TradVue Addon',
+      content: (
+        <div>
+          <p style={bodyText}>
+            Download <strong style={highlight}>TradVueAutoJournal.zip</strong> — the NinjaScript Add-On that connects NinjaTrader 8 to your TradVue account.
+          </p>
+          <a
+            href="/downloads/TradVueAutoJournal.zip"
+            download="TradVueAutoJournal.zip"
+            style={{
+              display: 'inline-flex', alignItems: 'center', gap: 9,
+              padding: '12px 22px',
+              background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+              border: 'none', borderRadius: 10, color: '#fff',
+              fontSize: 14, fontWeight: 700, textDecoration: 'none',
+              boxShadow: '0 4px 20px rgba(139,92,246,0.35)',
+            }}
+          >
+            <IconDownload />
+            Download TradVueAutoJournal.zip
+          </a>
+          <p style={{ ...bodyText, marginTop: 10, fontSize: 12, color: 'var(--text-3, #6b7280)' }}>
+            NinjaScript Add-On archive — works with NinjaTrader 8.1+
+          </p>
+        </div>
+      ),
+    },
+    {
+      n: 2,
+      title: 'Import into NinjaTrader',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={instructionRow}>
+            <span style={stepDot}>1</span>
+            <span style={bodyText}>In NinjaTrader: <strong style={highlight}>Tools → Import → NinjaScript Add-On</strong></span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>2</span>
+            <span style={bodyText}>Select the <Code>TradVueAutoJournal.zip</Code> file you downloaded</span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>3</span>
+            <span style={bodyText}>NinjaTrader will compile and install it automatically</span>
+          </div>
+          <div style={{
+            marginTop: 4, padding: '10px 14px',
+            background: 'rgba(234,179,8,0.08)', border: '1px solid rgba(234,179,8,0.2)',
+            borderRadius: 8, fontSize: 12, color: '#fbbf24', lineHeight: 1.6,
+          }}>
+            <strong>⚠️ If import fails:</strong> Copy <Code>TradVueAutoJournal.cs</Code> from inside the zip to{' '}
+            <Code>Documents\NinjaTrader 8\bin\Custom\Indicators\</Code> and compile (F5) in the NinjaScript Editor
+          </div>
+        </div>
+      ),
+    },
+    {
+      n: 3,
+      title: 'Generate Your Webhook URL',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+          <p style={bodyText}>
+            Your webhook URL is how NinjaTrader sends trade data to your TradVue account. Generate one below and copy it for the next step.
+          </p>
+          {loading ? (
+            <div style={{ color: 'var(--text-2)', fontSize: 13 }}>Loading…</div>
+          ) : !webhookUrl ? (
+            <div>
+              <p style={{ ...bodyText, marginBottom: 12 }}>No webhook URL yet. Generate one to get started.</p>
+              <button onClick={onGenerate} disabled={generating} style={{
+                padding: '11px 22px',
+                background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+                border: 'none', borderRadius: 10, color: '#fff',
+                fontSize: 13, fontWeight: 700, cursor: generating ? 'wait' : 'pointer',
+              }}>
+                {generating ? 'Generating…' : '⚡ Generate Webhook URL'}
+              </button>
+            </div>
+          ) : (
+            <div>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>Your webhook URL:</p>
+              <div style={{
+                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
+                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
+                borderRadius: 8, padding: '10px 12px',
+              }}>
+                <code style={{ flex: 1, fontSize: 11, color: '#a78bfa', fontFamily: 'monospace', wordBreak: 'break-all', minWidth: 0 }}>
+                  {webhookUrl}
+                </code>
+                <button onClick={() => copyText(webhookUrl, 'Webhook URL copied!')} style={{
+                  flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+                  padding: '6px 12px',
+                  background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+                  border: 'none', borderRadius: 6, color: '#fff', fontSize: 11, fontWeight: 700, cursor: 'pointer',
+                }}>
+                  <IconCopy /> Copy
+                </button>
+              </div>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
+                Keep this URL private. If compromised, rotate it below.
+              </p>
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      n: 4,
+      title: 'Configure the Indicator',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={bodyText}>Add TradVueAutoJournal to any chart:</p>
+          <div style={instructionRow}>
+            <span style={stepDot}>1</span>
+            <span style={bodyText}>Right-click chart → <strong style={highlight}>Indicators</strong> → find <strong style={highlight}>TradVueAutoJournal</strong> → Add</span>
+          </div>
+          <p style={{ ...bodyText, marginTop: 4 }}>In the indicator settings, configure:</p>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 10, border: '1px solid rgba(255,255,255,0.07)' }}>
+            {[
+              { param: 'Webhook URL', desc: 'Paste your webhook URL from Step 3' },
+              { param: 'Account Name', desc: 'Enter your account name (e.g. 1779953) to track only that account. Leave blank to track all accounts.' },
+              { param: 'Send Entries', desc: '✅ Enabled (recommended)' },
+              { param: 'Send Exits', desc: '✅ Enabled (recommended)' },
+              { param: 'Log to Output', desc: '✅ Enabled for troubleshooting — disable once confirmed working' },
+            ].map(item => (
+              <div key={item.param} style={{ display: 'flex', gap: 10, fontSize: 13, lineHeight: 1.5 }}>
+                <span style={{ flexShrink: 0, fontWeight: 700, color: '#a78bfa', minWidth: 110 }}>{item.param}</span>
+                <span style={{ color: 'var(--text-2, #9ca3af)' }}>— {item.desc}</span>
+              </div>
+            ))}
+          </div>
+        </div>
+      ),
+    },
+    {
+      n: 5,
+      title: 'Start Trading',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <div style={instructionRow}>
+            <span style={{ fontSize: 18 }}>1️⃣</span>
+            <span style={bodyText}>Place a trade — you should see <Code>[TradVue] ENTRY...</Code> in the NinjaTrader Output window</span>
+          </div>
+          <div style={instructionRow}>
+            <span style={{ fontSize: 18 }}>2️⃣</span>
+            <span style={bodyText}>Your trade will appear in your TradVue Journal within 30 seconds</span>
+          </div>
+          <div style={{ ...instructionRow, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '12px 16px' }}>
+            <span style={{ fontSize: 18 }}>🎉</span>
+            <span style={{ ...bodyText, color: '#4ade80', fontWeight: 600 }}>That&apos;s it — every trade auto-journals from now on</span>
+          </div>
+        </div>
+      ),
+    },
+  ]
+
+  return (
+    <SectionCard title="5-Step Setup Guide">
+      {steps.map(step => (
+        <div key={step.n} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
+          <button
+            onClick={() => setOpenStep(openStep === step.n ? null : step.n)}
+            style={{
+              width: '100%', display: 'flex', alignItems: 'center', gap: 14,
+              padding: '16px 0', background: 'none', border: 'none',
+              cursor: 'pointer', textAlign: 'left',
+            }}
+          >
+            <span style={{
+              flexShrink: 0, width: 30, height: 30, borderRadius: '50%',
+              background: openStep === step.n ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.12)',
+              border: `1px solid ${openStep === step.n ? 'rgba(139,92,246,0.6)' : 'rgba(139,92,246,0.3)'}`,
+              color: '#a78bfa', fontSize: 13, fontWeight: 800,
+              display: 'flex', alignItems: 'center', justifyContent: 'center',
+              transition: 'all 0.2s',
+            }}>
+              {step.n}
+            </span>
+            <span style={{ flex: 1, fontSize: 15, fontWeight: 700, color: 'var(--text-0, #f9fafb)' }}>
+              {step.title}
+            </span>
+            <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>
+              <IconChevron open={openStep === step.n} />
+            </span>
+          </button>
+
+          {openStep === step.n && (
+            <div style={{ padding: '0 0 20px 44px' }}>
+              {step.content}
+            </div>
+          )}
+        </div>
+      ))}
+    </SectionCard>
+  )
+}
+
+// ── Inline styles ──────────────────────────────────────────────────────────────
+
+const bodyText: React.CSSProperties = {
+  fontSize: 13, color: 'var(--text-2, #9ca3af)', margin: 0, lineHeight: 1.7,
+}
+const highlight: React.CSSProperties = {
+  color: 'var(--text-0, #f9fafb)',
+}
+const instructionRow: React.CSSProperties = {
+  display: 'flex', alignItems: 'flex-start', gap: 10,
+}
+const stepDot: React.CSSProperties = {
+  flexShrink: 0,
+  width: 20, height: 20,
+  borderRadius: '50%',
+  background: 'rgba(139,92,246,0.15)',
+  border: '1px solid rgba(139,92,246,0.3)',
+  color: '#a78bfa',
+  fontSize: 11, fontWeight: 800,
+  display: 'flex', alignItems: 'center', justifyContent: 'center',
+  marginTop: 1,
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// What Gets Captured
+// ══════════════════════════════════════════════════════════════════════════════
+
+function WhatGetsCaptured() {
+  return (
+    <div style={{
+      background: 'rgba(139,92,246,0.06)',
+      border: '1px solid rgba(139,92,246,0.2)',
+      borderRadius: 14,
+      padding: '18px 20px',
+      marginBottom: 20,
+    }}>
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: '#a78bfa', margin: '0 0 14px', textTransform: 'uppercase', letterSpacing: '0.06em' }}>
+        📊 What Gets Captured
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(220px, 1fr))', gap: 8, marginBottom: 14 }}>
+        {[
+          'Symbol (e.g. ES, NQ, MES, CL)',
+          'Direction — Long or Short',
+          'Entry price & exit price',
+          'Quantity',
+          'P&L (with futures multiplier)',
+          'Timestamp',
+        ].map(item => (
+          <div key={item} style={{ display: 'flex', alignItems: 'center', gap: 8, fontSize: 12, color: 'var(--text-2)' }}>
+            <span style={{ color: '#4ade80' }}>✓</span>
+            <span>{item}</span>
+          </div>
+        ))}
+      </div>
+      <div style={{
+        padding: '10px 14px',
+        background: 'rgba(34,197,94,0.08)', border: '1px solid rgba(34,197,94,0.2)',
+        borderRadius: 8, fontSize: 12, color: '#4ade80', fontWeight: 600,
+      }}>
+        🔒 We NEVER see your account number, balance, or broker credentials
+      </div>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Troubleshooting (collapsible)
+// ══════════════════════════════════════════════════════════════════════════════
+
+function Troubleshooting() {
+  const [open, setOpen] = useState(false)
+
+  const items = [
+    {
+      problem: 'Output window shows nothing',
+      fix: 'Make sure the indicator is added to a chart and is enabled (check Enabled in indicator settings)',
+    },
+    {
+      problem: '403 Forbidden error',
+      fix: 'Check that your webhook URL uses /nt/ not /tv/ — old tokens may have the wrong path',
+    },
+    {
+      problem: 'P&L shows $0',
+      fix: 'Make sure both Send Entries and Send Exits are enabled in the indicator settings',
+    },
+    {
+      problem: 'Duplicate trades',
+      fix: 'Set Account Name to your specific account number (e.g. 1779953) to avoid copy-trade duplicates',
+    },
+    {
+      problem: 'Trades show but no exit',
+      fix: 'Wait 30 seconds — the poller updates exits automatically once the exit fill is received',
+    },
+  ]
+
+  return (
+    <div style={{
+      background: 'var(--bg-1, #1a1a2e)',
+      border: '1px solid rgba(255,255,255,0.08)',
+      borderRadius: 14,
+      marginBottom: 20,
+      overflow: 'hidden',
+    }}>
+      <button
+        onClick={() => setOpen(o => !o)}
+        style={{
+          width: '100%', display: 'flex', alignItems: 'center', justifyContent: 'space-between',
+          padding: '18px 20px', background: 'none', border: 'none', cursor: 'pointer', textAlign: 'left',
+        }}
+      >
+        <div>
+          <h2 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: 0 }}>
+            🛠 Troubleshooting
+          </h2>
+          {!open && (
+            <p style={{ fontSize: 13, color: 'var(--text-2)', margin: '4px 0 0' }}>Common issues and how to fix them</p>
+          )}
+        </div>
+        <span style={{ color: 'var(--text-3)', flexShrink: 0, marginLeft: 12 }}>
+          <IconChevron open={open} />
+        </span>
+      </button>
+
+      {open && (
+        <div style={{ padding: '0 20px 20px' }}>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {items.map(item => (
+              <div key={item.problem} style={{
+                padding: '12px 14px',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 10,
+              }}>
+                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 4 }}>
+                  &ldquo;{item.problem}&rdquo;
+                </div>
+                <div style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6 }}>
+                  → {item.fix}
+                </div>
+              </div>
+            ))}
+          </div>
+        </div>
+      )}
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Security & Privacy
+// ══════════════════════════════════════════════════════════════════════════════
+
+function SecuritySection() {
+  return (
+    <div style={{
+      background: 'rgba(255,255,255,0.02)',
+      border: '1px solid rgba(255,255,255,0.07)',
+      borderRadius: 14,
+      padding: '18px 20px',
+      marginBottom: 20,
+    }}>
+      <h3 style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.08em', margin: '0 0 14px', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <span style={{ color: '#4ade80' }}><IconShield /></span> Security & Privacy
+      </h3>
+      <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fit, minmax(240px, 1fr))', gap: 8, marginBottom: 14 }}>
+        {[
+          { icon: '✅', text: 'Data sent: symbol, price, qty, direction, time only' },
+          { icon: '❌', text: 'Data NOT sent: account numbers, balances, credentials, broker info' },
+          { icon: '🔐', text: 'All data encrypted via HTTPS' },
+          { icon: '🔑', text: 'Revoke access anytime by deleting your webhook token' },
+        ].map(item => (
+          <div key={item.text} style={{ display: 'flex', alignItems: 'flex-start', gap: 8, fontSize: 12, color: 'var(--text-2)', lineHeight: 1.5 }}>
+            <span style={{ flexShrink: 0 }}>{item.icon}</span>
+            <span>{item.text}</span>
+          </div>
+        ))}
+      </div>
+      <p style={{ fontSize: 11, color: 'var(--text-3)', margin: 0, lineHeight: 1.6 }}>
+        TradVue is not affiliated with NinjaTrader LLC. This integration is provided as-is. The addon is read-only — it cannot place, modify, or cancel orders.
+      </p>
+    </div>
+  )
+}
+
+// ══════════════════════════════════════════════════════════════════════════════
+// Webhook URL Section
 // ══════════════════════════════════════════════════════════════════════════════
 
 function WebhookURLSection({ tokens, loading, onGenerate, onRotate, onDelete, generating }: {
@@ -327,7 +641,7 @@ function WebhookURLSection({ tokens, loading, onGenerate, onRotate, onDelete, ge
 
   function getStatus(tk: WebhookToken) {
     if (!tk.is_active) return { icon: '🔴', label: 'Disabled' }
-    if (!tk.last_used_at) return { icon: '🟡', label: 'Never used' }
+    if (!tk.last_used_at) return { icon: '🟡', label: 'Active — no trades yet' }
     return { icon: '🟢', label: `Active · Last event ${timeAgo(tk.last_used_at)}` }
   }
 
@@ -338,7 +652,7 @@ function WebhookURLSection({ tokens, loading, onGenerate, onRotate, onDelete, ge
   )
 
   return (
-    <SectionCard title="Your Webhook URL" subtitle="Paste this URL into the NinjaTrader addon's WebhookUrl parameter.">
+    <SectionCard title="Your Webhook URL" subtitle="Paste this URL into the NinjaTrader indicator's Webhook URL parameter.">
       {!primaryToken ? (
         <div style={{ textAlign: 'center', padding: '20px 0' }}>
           <p style={{ fontSize: 14, color: 'var(--text-2)', marginBottom: 16 }}>
@@ -377,12 +691,13 @@ function WebhookURLSection({ tokens, loading, onGenerate, onRotate, onDelete, ge
               {webhookUrl}
             </code>
             <button onClick={() => copyText(webhookUrl!, 'Webhook URL copied!')} style={{
-              flexShrink: 0, padding: '7px 14px',
+              flexShrink: 0, display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '7px 14px',
               background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
               border: 'none', borderRadius: 8, color: '#fff',
               fontSize: 12, fontWeight: 700, cursor: 'pointer', whiteSpace: 'nowrap',
             }}>
-              📋 Copy URL
+              <IconCopy /> Copy URL
             </button>
           </div>
 
@@ -394,7 +709,7 @@ function WebhookURLSection({ tokens, loading, onGenerate, onRotate, onDelete, ge
                 background: 'rgba(234,179,8,0.1)', border: '1px solid rgba(234,179,8,0.3)',
                 borderRadius: 8, fontSize: 13, color: '#fbbf24',
               }}>
-                <span>⚠️ This will break the NinjaTrader addon connection. Sure?</span>
+                <span>⚠️ This will break the NinjaTrader connection. Sure?</span>
                 <button onClick={() => { onRotate(primaryToken.id); setRotateConfirm(null) }} style={{
                   padding: '4px 12px', background: 'rgba(234,179,8,0.2)', border: '1px solid rgba(234,179,8,0.4)',
                   borderRadius: 6, color: '#fbbf24', fontSize: 12, fontWeight: 700, cursor: 'pointer',
@@ -440,7 +755,7 @@ function WebhookURLSection({ tokens, loading, onGenerate, onRotate, onDelete, ge
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Section 3: Recent Events Log
+// Recent Events Log
 // ══════════════════════════════════════════════════════════════════════════════
 
 function EventsSection({ token, refreshKey }: { token: string; refreshKey: number }) {
@@ -465,9 +780,7 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
     }
   }, [token])
 
-  useEffect(() => {
-    fetchEvents()
-  }, [fetchEvents, refreshKey])
+  useEffect(() => { fetchEvents() }, [fetchEvents, refreshKey])
 
   useEffect(() => {
     intervalRef.current = setInterval(() => { if (!document.hidden) fetchEvents() }, 30000)
@@ -500,7 +813,7 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
       ) : events.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-2)', fontSize: 14 }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>
-          <p style={{ margin: 0 }}>No events yet. Complete the NinjaTrader setup above and execute a trade to see it appear here.</p>
+          <p style={{ margin: 0 }}>No events yet. Complete the setup above and place a trade — it&apos;ll appear here within seconds.</p>
         </div>
       ) : (
         <div style={{ overflowX: 'auto' }}>
@@ -524,7 +837,7 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
                   <td style={{ padding: '10px 10px' }}>
                     {ev.parsed_action ? (
                       <span style={{ fontWeight: 700, color: ev.parsed_action === 'buy' ? '#4ade80' : '#f87171', textTransform: 'capitalize' }}>
-                        {ev.parsed_action === 'buy' ? '▲ Buy' : '▼ Sell'}
+                        {ev.parsed_action === 'buy' ? '▲ Long' : '▼ Short'}
                       </span>
                     ) : '—'}
                   </td>
@@ -548,7 +861,7 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
 }
 
 // ══════════════════════════════════════════════════════════════════════════════
-// Section 4: Token Management (multi-token)
+// Token Management (multi-token)
 // ══════════════════════════════════════════════════════════════════════════════
 
 function TokenManagementSection({ tokens, onDelete, onGenerate, generating }: {
@@ -658,6 +971,7 @@ export default function IntegrationsPage() {
       if (!res.ok) throw new Error(data.error || 'Failed to generate token')
       showToast('Webhook URL generated!', 'success')
       await fetchTokens()
+      setEventsRefreshKey(k => k + 1)
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to generate token', 'error')
     } finally {
@@ -673,7 +987,7 @@ export default function IntegrationsPage() {
       })
       const data = await res.json()
       if (!res.ok) throw new Error(data.error || 'Failed to rotate token')
-      showToast('Webhook URL rotated! Update your NinjaTrader addon settings.', 'warning', 6000)
+      showToast('Webhook URL rotated! Update your NinjaTrader indicator settings.', 'warning', 6000)
       await fetchTokens()
     } catch (err: unknown) {
       showToast(err instanceof Error ? err.message : 'Failed to rotate token', 'error')
@@ -730,53 +1044,72 @@ export default function IntegrationsPage() {
   return (
     <div style={pageStyle}>
       <PersistentNav />
-      <div style={{ maxWidth: 720, margin: '0 auto', padding: '32px 20px 80px' }}>
+      <div style={{ maxWidth: 740, margin: '0 auto', padding: '36px 20px 80px' }}>
 
-        {/* Header */}
-        <div style={{ marginBottom: 28 }}>
-          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 6 }}>
-            <span style={{ fontSize: 28 }}>🔗</span>
-            <h1 style={{ fontSize: 28, fontWeight: 800, color: 'var(--text-0)', letterSpacing: '-0.02em', margin: 0 }}>
-              Integrations
+        {/* ── Header ── */}
+        <div style={{ marginBottom: 32 }}>
+          <div style={{ display: 'flex', alignItems: 'center', gap: 10, marginBottom: 10 }}>
+            <span style={{ fontSize: 30 }}>📊</span>
+            <h1 style={{ fontSize: 30, fontWeight: 900, color: 'var(--text-0)', letterSpacing: '-0.03em', margin: 0 }}>
+              Connect NinjaTrader 8
             </h1>
           </div>
-          <p style={{ fontSize: 14, color: 'var(--text-2)', margin: 0 }}>
-            Connect NinjaTrader 8 to auto-journal your futures trades via the TradVue addon.
+          <p style={{ fontSize: 16, color: 'var(--text-2)', margin: '0 0 14px', lineHeight: 1.5 }}>
+            Auto-journal every futures trade. No manual entry needed.
           </p>
+          <div style={{
+            display: 'inline-flex', alignItems: 'center', gap: 6,
+            padding: '6px 12px',
+            background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.25)',
+            borderRadius: 20, fontSize: 12, color: '#a78bfa',
+          }}>
+            ✓ Works with all NinjaTrader 8 connections — NinjaTrader, Tradovate, Rithmic, CQG
+          </div>
         </div>
 
-        {/* NinjaTrader connection card */}
+        {/* ── Connection status pill ── */}
         <div style={{
-          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 14px',
+          display: 'flex', alignItems: 'center', gap: 10, padding: '10px 16px',
           background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.08)',
-          borderRadius: 10, marginBottom: 20,
+          borderRadius: 10, marginBottom: 24,
         }}>
-          <span style={{ fontSize: 20 }}>📊</span>
+          <span style={{ fontSize: 20 }}>🖥</span>
           <div>
             <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>NinjaTrader 8</div>
             <div style={{ fontSize: 12, color: 'var(--text-3)' }}>TradVue Addon — Real-time trade sync</div>
           </div>
           <div style={{ marginLeft: 'auto' }}>
             <Badge
-              label={tokens.some(t => t.is_active) ? '🟡 Token active — awaiting first trade' : '⚪ Not set up'}
-              color={tokens.some(t => t.is_active) ? 'amber' : 'gray'}
+              label={tokens.some(t => t.is_active && t.last_used_at) ? '🟢 Connected & active' : tokens.some(t => t.is_active) ? '🟡 Token ready — awaiting first trade' : '⚪ Not configured'}
+              color={tokens.some(t => t.is_active && t.last_used_at) ? 'green' : tokens.some(t => t.is_active) ? 'yellow' : 'gray'}
             />
           </div>
         </div>
 
-        <NinjaTraderSetupSection webhookUrl={webhookUrl} />
-        <WebhookURLSection tokens={tokens} loading={tokensLoading} onGenerate={handleGenerate} onRotate={handleRotate} onDelete={handleDelete} generating={generating} />
+        {/* ── Main content ── */}
+        <InstallGuide
+          webhookUrl={webhookUrl}
+          tokens={tokens}
+          loading={tokensLoading}
+          onGenerate={handleGenerate}
+          generating={generating}
+        />
+
+        <WhatGetsCaptured />
+        <Troubleshooting />
+        <SecuritySection />
+
+        <WebhookURLSection
+          tokens={tokens}
+          loading={tokensLoading}
+          onGenerate={handleGenerate}
+          onRotate={handleRotate}
+          onDelete={handleDelete}
+          generating={generating}
+        />
+
         <EventsSection token={token} refreshKey={eventsRefreshKey} />
         <TokenManagementSection tokens={tokens} onDelete={handleDelete} onGenerate={handleGenerate} generating={generating} />
-
-        {/* Footer */}
-        <div style={{ marginTop: 32, padding: '12px 16px', background: 'rgba(255,255,255,0.03)', borderRadius: 8, border: '1px solid rgba(255,255,255,0.07)' }}>
-          <p style={{ margin: 0, fontSize: 11, color: 'var(--text-3)', lineHeight: 1.6 }}>
-            The TradVue addon is read-only — it cannot place, modify, or cancel orders. It cannot access your broker account balance or credentials.
-            Your webhook URL is private — do not share it. If compromised, use &ldquo;Rotate URL&rdquo; to generate a new one.
-            This is not financial advice.
-          </p>
-        </div>
 
       </div>
     </div>
