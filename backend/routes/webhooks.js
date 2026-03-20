@@ -290,7 +290,7 @@ async function _matchAndJournalTrade(supabase, userId, parsed, eventId) {
       // Determine which direction of open trade to close.
       // NinjaTrader always sends direction — use it for exact matching.
       // TradingView 'sell' is ambiguous — try Long first, then Short.
-      let openTrade = null;
+      let openTrades = [];
 
       if (direction) {
         const rawDir = direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase();
@@ -303,10 +303,8 @@ async function _matchAndJournalTrade(supabase, userId, parsed, eventId) {
             .eq('symbol', ticker)
             .eq('direction', safeDir)
             .eq('status', 'open')
-            .order('traded_at', { ascending: true })   // FIFO: close oldest first
-            .limit(1)
-            .maybeSingle();
-          openTrade = data || null;
+            .order('traded_at', { ascending: true });  // FIFO: close oldest first
+          openTrades = data || [];
         }
       } else {
         // TradingView fallback: try Long first, then Short
@@ -318,50 +316,134 @@ async function _matchAndJournalTrade(supabase, userId, parsed, eventId) {
             .eq('symbol', ticker)
             .eq('direction', dir)
             .eq('status', 'open')
-            .order('traded_at', { ascending: true })
-            .limit(1)
-            .maybeSingle();
-          if (data) { openTrade = data; break; }
+            .order('traded_at', { ascending: true });
+          if (data && data.length > 0) { openTrades = data; break; }
         }
       }
 
-      if (openTrade) {
-        // Compute P&L:
-        //   - Use payload pnl when non-zero (NinjaTrader has already applied futures multiplier)
-        //   - Fall back to raw price diff only when pnl is absent / zero
-        let computedPnl = null;
-        if (pnl !== null && pnl !== undefined && pnl !== 0) {
-          computedPnl = pnl;
-        } else if (price !== null && openTrade.entry_price !== null) {
-          const entryPx        = parseFloat(openTrade.entry_price);
-          const exitPx         = parseFloat(exitPrice || price);
-          const qty            = parseFloat(openTrade.quantity) || 1;
-          const directionFactor = openTrade.direction === 'Long' ? 1 : -1;
-          computedPnl = (exitPx - entryPx) * qty * directionFactor;
+      if (openTrades.length > 0) {
+        // ── Multi-contract FIFO exit matching ─────────────────────────────
+        // Consume exit qty across open trades in FIFO order.
+        // Each matched trade gets its own per-contract P&L calculated from
+        // actual entry/exit prices (not the addon's aggregate pnl).
+        //
+        // Point value lookup: fetch from instruments table if available.
+        // MNQ = $2/point; fall back to pnl/qty from payload if no instrument row.
+        let pointValue = null;
+        try {
+          const { data: instrRow } = await supabase
+            .from('instruments')
+            .select('point_value')
+            .eq('symbol', ticker)
+            .maybeSingle();
+          if (instrRow && instrRow.point_value) {
+            pointValue = parseFloat(instrRow.point_value);
+          }
+        } catch (_) { /* ignore — instruments table may not exist yet */ }
+
+        const exitPx        = parseFloat(exitPrice || price);
+        let   remainingQty  = parseFloat(quantity) || 1;
+        const matchedIds    = [];
+        let   firstTradeId  = null;
+
+        for (const openTrade of openTrades) {
+          if (remainingQty <= 0) break;
+
+          const tradeQty      = parseFloat(openTrade.quantity) || 1;
+          const entryPx       = parseFloat(openTrade.entry_price);
+          const dirFactor     = openTrade.direction === 'Long' ? 1 : -1;
+          const closeQty      = Math.min(remainingQty, tradeQty);
+
+          // Per-contract P&L: use point value if known, else pnl/qty from payload
+          let tradePnl = null;
+          if (!isNaN(entryPx) && !isNaN(exitPx)) {
+            if (pointValue !== null) {
+              tradePnl = (exitPx - entryPx) * closeQty * dirFactor * pointValue;
+            } else if (pnl !== null && (quantity || 1) > 0) {
+              // Distribute payload pnl proportionally by closeQty/totalExitQty
+              tradePnl = (pnl / (parseFloat(quantity) || 1)) * closeQty;
+            } else {
+              tradePnl = (exitPx - entryPx) * closeQty * dirFactor;
+            }
+          } else if (pnl !== null && (quantity || 1) > 0) {
+            tradePnl = (pnl / (parseFloat(quantity) || 1)) * closeQty;
+          }
+
+          if (closeQty < tradeQty) {
+            // ── Partial close: split the open trade ────────────────────
+            // Reduce the open trade's qty by closeQty (it stays open)
+            const { error: partialUpdateErr } = await supabase
+              .from('webhook_trades')
+              .update({ quantity: tradeQty - closeQty })
+              .eq('id', openTrade.id);
+
+            if (partialUpdateErr) {
+              console.error('[Webhook] Partial trade update error:', partialUpdateErr.message);
+              continue;
+            }
+
+            // Insert a new closed record for the matched portion
+            const { data: partialClosed, error: partialInsertErr } = await supabase
+              .from('webhook_trades')
+              .insert({
+                user_id:     userId,
+                event_id:    eventId,
+                symbol:      ticker,
+                direction:   openTrade.direction,
+                asset_class: assetClass || 'Stock',
+                entry_price: openTrade.entry_price,
+                exit_price:  exitPx,
+                quantity:    closeQty,
+                pnl:         tradePnl !== null ? Math.round(tradePnl * 100) / 100 : null,
+                strategy:    strategy || null,
+                notes:       'Auto-journaled via NinjaTrader (partial close)',
+                status:      'closed',
+                source:      source || 'webhook',
+                traded_at:   now,
+                account_id:  accountId || null,
+              })
+              .select('id')
+              .single();
+
+            if (!partialInsertErr && partialClosed) {
+              matchedIds.push(partialClosed.id);
+              if (!firstTradeId) firstTradeId = partialClosed.id;
+            }
+          } else {
+            // ── Full close ─────────────────────────────────────────────
+            const { error: updateErr } = await supabase
+              .from('webhook_trades')
+              .update({
+                exit_price: exitPx,
+                pnl:        tradePnl !== null ? Math.round(tradePnl * 100) / 100 : null,
+                status:     'closed',
+              })
+              .eq('id', openTrade.id);
+
+            if (!updateErr) {
+              matchedIds.push(openTrade.id);
+              if (!firstTradeId) firstTradeId = openTrade.id;
+            } else {
+              console.error('[Webhook] Close trade error:', updateErr.message);
+            }
+          }
+
+          remainingQty -= closeQty;
         }
 
-        const { error: updateErr } = await supabase
-          .from('webhook_trades')
-          .update({
-            exit_price: exitPrice || price,
-            pnl:        computedPnl,
-            status:     'closed',
-          })
-          .eq('id', openTrade.id);
+        if (matchedIds.length > 0) {
+          await supabase
+            .from('webhook_events')
+            .update({ status: 'matched', trade_id: firstTradeId })
+            .eq('id', eventId);
 
-        if (updateErr) {
-          console.error('[Webhook] Close trade error:', updateErr.message);
-          return { matched: false, error: updateErr.message };
+          console.log(`[Webhook] Multi-exit matched ${matchedIds.length} trade(s): [${matchedIds.join(', ')}]`);
+          return { matched: true, tradeId: firstTradeId, matchedIds };
         }
+      }
 
-        await supabase
-          .from('webhook_events')
-          .update({ status: 'matched', trade_id: openTrade.id })
-          .eq('id', eventId);
-
-        return { matched: true, tradeId: openTrade.id };
-
-      } else {
+      // No matching open trades — fallback to standalone closed insert:
+      if (openTrades.length === 0) {
         // No matching open trade — create a standalone closed record.
         // This happens when the trade was opened before webhook integration,
         // or when events arrive out of order.
