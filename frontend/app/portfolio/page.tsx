@@ -1468,8 +1468,8 @@ export default function PortfolioPage() {
   // ─── Fetch stock prices ───────────────────────────────────────────────────
 
   const allTickers = useMemo(() => [
-    ...new Set([...holdings.map(h => h.ticker), ...watchlist.map(w => w.ticker)]),
-  ], [holdings, watchlist])
+    ...new Set([...holdings.map(h => h.ticker), ...watchlist.map(w => w.ticker), ...priceAlerts.filter(a => a.symbol).map(a => a.symbol)]),
+  ], [holdings, watchlist, priceAlerts])
 
   const fetchStockInfos = useCallback(async () => {
     if (allTickers.length === 0) return
@@ -5799,10 +5799,19 @@ function AlertsTab({
                       <span style={{ color: 'var(--text-1)', fontFamily: 'var(--mono)', fontWeight: 600 }}>${fmt(a.target_price)}</span>
                     </div>
                   </div>
-                  {/* Current price */}
+                  {/* Current price + % away */}
                   <div style={{ textAlign: 'right', fontSize: 11, flexShrink: 0 }}>
                     <div style={{ color: 'var(--text-3)', fontSize: 9.5, marginBottom: 1 }}>CURRENT</div>
                     <div style={{ fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>{curPrice ? `$${fmt(curPrice)}` : '—'}</div>
+                    {curPrice && a.target_price ? (() => {
+                      const pctAway = ((a.target_price - curPrice) / curPrice) * 100
+                      const isClose = Math.abs(pctAway) < 2
+                      return (
+                        <div style={{ fontSize: 9.5, color: isClose ? 'var(--yellow)' : 'var(--text-3)', marginTop: 1, fontFamily: 'var(--mono)' }}>
+                          {pctAway >= 0 ? '+' : ''}{pctAway.toFixed(2)}% away
+                        </div>
+                      )
+                    })() : null}
                   </div>
                   {/* Created date */}
                   <div style={{ textAlign: 'right', fontSize: 10, color: 'var(--text-3)', flexShrink: 0, minWidth: 70 }}>
