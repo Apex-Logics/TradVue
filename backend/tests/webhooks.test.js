@@ -496,6 +496,176 @@ function simulateMatch(trades, action, ticker, price, quantity) {
   return { matched, newTrade, updatedTrades };
 }
 
+// ── NinjaTrader-specific matching tests ──────────────────────────────────────
+
+describe('NinjaTrader Direction-Aware & P&L Matching', () => {
+  // simulateNTMatch mirrors the new _matchAndJournalTrade logic:
+  // - Uses direction from payload to match open trades
+  // - Uses payload pnl when non-zero (bypasses recalc)
+  function simulateNTMatch(trades, action, ticker, { price, direction, entryPrice, exitPrice, pnl, qty } = {}) {
+    const quantity = qty || 1;
+    const updatedTrades = trades.map(t => ({ ...t }));
+    let matched = false;
+    let newTrade = null;
+    let closedTrade = null;
+
+    if (action === 'buy') {
+      // Entry: use explicit direction from payload
+      const rawDir = direction
+        ? (direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase())
+        : 'Long';
+      const tradeDirection = ['Long', 'Short'].includes(rawDir) ? rawDir : 'Long';
+      newTrade = {
+        symbol: ticker, direction: tradeDirection,
+        entryPrice: entryPrice || price, exitPrice: null,
+        pnl: null, status: 'open', quantity,
+      };
+      updatedTrades.push(newTrade);
+      matched = true;
+
+    } else if (action === 'sell') {
+      // Exit: find open trade matching payload direction (FIFO)
+      const rawDir = direction
+        ? (direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase())
+        : null;
+      const lookupDir = rawDir && ['Long', 'Short'].includes(rawDir) ? rawDir : null;
+
+      let openIdx = -1;
+      if (lookupDir) {
+        // Sort by traded_at asc (FIFO) — simulate with array order
+        openIdx = updatedTrades.findIndex(
+          t => t.symbol === ticker && t.direction === lookupDir && t.status === 'open'
+        );
+      } else {
+        // TradingView fallback: try Long first
+        openIdx = updatedTrades.findIndex(t => t.symbol === ticker && t.direction === 'Long' && t.status === 'open');
+        if (openIdx === -1) {
+          openIdx = updatedTrades.findIndex(t => t.symbol === ticker && t.direction === 'Short' && t.status === 'open');
+        }
+      }
+
+      if (openIdx >= 0) {
+        const openTrade = updatedTrades[openIdx];
+        // P&L: use payload pnl when non-zero
+        let computedPnl;
+        if (pnl !== null && pnl !== undefined && pnl !== 0) {
+          computedPnl = pnl;
+        } else {
+          const entryPx = parseFloat(openTrade.entryPrice);
+          const exitPx  = parseFloat(exitPrice || price);
+          const q       = parseFloat(openTrade.quantity) || 1;
+          const factor  = openTrade.direction === 'Long' ? 1 : -1;
+          computedPnl = Math.round((exitPx - entryPx) * q * factor * 100) / 100;
+        }
+        updatedTrades[openIdx] = { ...openTrade, exitPrice: exitPrice || price, pnl: computedPnl, status: 'closed' };
+        closedTrade = updatedTrades[openIdx];
+        matched = true;
+      } else {
+        // No open trade — standalone closed record
+        const rawDir2 = direction
+          ? (direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase())
+          : 'Short';
+        newTrade = {
+          symbol: ticker,
+          direction: ['Long', 'Short'].includes(rawDir2) ? rawDir2 : 'Short',
+          entryPrice: entryPrice || null,
+          exitPrice: exitPrice || price,
+          pnl: (pnl !== null && pnl !== undefined && pnl !== 0) ? pnl : null,
+          status: 'closed', quantity,
+        };
+        updatedTrades.push(newTrade);
+        matched = true;
+      }
+    }
+
+    return { matched, newTrade, closedTrade, updatedTrades };
+  }
+
+  test('NinjaTrader Short entry → creates open Short trade', () => {
+    const { newTrade } = simulateNTMatch([], 'buy', 'MNQ', {
+      price: 24242.0, direction: 'Short', entryPrice: 24242.0, pnl: 0,
+    });
+    expect(newTrade.direction).toBe('Short');
+    expect(newTrade.status).toBe('open');
+    expect(newTrade.entryPrice).toBe(24242.0);
+  });
+
+  test('NinjaTrader Short exit → closes open Short (not Long) via direction matching', () => {
+    const trades = [
+      { symbol: 'MNQ', direction: 'Short', entryPrice: 24242.0, exitPrice: null, status: 'open', quantity: 1 },
+      { symbol: 'MNQ', direction: 'Long',  entryPrice: 24200.0, exitPrice: null, status: 'open', quantity: 1 },
+    ];
+    const { closedTrade, updatedTrades } = simulateNTMatch(trades, 'sell', 'MNQ', {
+      price: 24252.0, direction: 'Short', exitPrice: 24252.0, pnl: -20.0,
+    });
+    expect(closedTrade).toBeTruthy();
+    expect(closedTrade.direction).toBe('Short');
+    expect(closedTrade.status).toBe('closed');
+    // Long trade should remain open
+    const longTrade = updatedTrades.find(t => t.direction === 'Long');
+    expect(longTrade.status).toBe('open');
+  });
+
+  test('NinjaTrader pnl from payload is used as-is (not recalculated)', () => {
+    const trades = [
+      { symbol: 'MNQ', direction: 'Short', entryPrice: 24242.0, exitPrice: null, status: 'open', quantity: 1 },
+    ];
+    // 10-point move on MNQ. Raw diff = -10. With $2/point multiplier, actual = -20.
+    const { closedTrade } = simulateNTMatch(trades, 'sell', 'MNQ', {
+      price: 24252.0, direction: 'Short', exitPrice: 24252.0, pnl: -20.0,
+    });
+    expect(closedTrade.pnl).toBe(-20.0);  // Must use payload value, not raw -10
+  });
+
+  test('pnl is recalculated when payload pnl is 0/null', () => {
+    const trades = [
+      { symbol: 'AAPL', direction: 'Long', entryPrice: 180.0, exitPrice: null, status: 'open', quantity: 10 },
+    ];
+    const { closedTrade } = simulateNTMatch(trades, 'sell', 'AAPL', {
+      price: 190.0, exitPrice: 190.0, pnl: 0,  // pnl=0 → recalculate
+    });
+    expect(closedTrade.pnl).toBe(100.0);  // (190-180) * 10 * 1 = 100
+  });
+
+  test('simultaneous exits: 4 exits for 4 open entries all match (no duplicates)', () => {
+    // Simulates the 14:14:57 scenario: 4 open Shorts, 4 exits arrive at same time
+    const trades = [
+      { symbol: 'MNQ', direction: 'Short', entryPrice: 24242.0, exitPrice: null, status: 'open', quantity: 1, id: 1 },
+      { symbol: 'MNQ', direction: 'Short', entryPrice: 24242.25, exitPrice: null, status: 'open', quantity: 1, id: 2 },
+      { symbol: 'MNQ', direction: 'Short', entryPrice: 24243.0, exitPrice: null, status: 'open', quantity: 1, id: 3 },
+      { symbol: 'MNQ', direction: 'Short', entryPrice: 24242.0, exitPrice: null, status: 'open', quantity: 1, id: 4 },
+    ];
+    const exits = [
+      { price: 24252.0, direction: 'Short', exitPrice: 24252.0, pnl: -20.0 },
+      { price: 24252.0, direction: 'Short', exitPrice: 24252.0, pnl: -20.0 },
+      { price: 24252.5, direction: 'Short', exitPrice: 24252.5, pnl: -20.5 },
+      { price: 24253.0, direction: 'Short', exitPrice: 24253.0, pnl: -20.0 },
+    ];
+    // Simulate sequential processing (the lock ensures this in production)
+    let currentTrades = [...trades];
+    let closedCount = 0;
+    for (const exit of exits) {
+      const { closedTrade, updatedTrades } = simulateNTMatch(currentTrades, 'sell', 'MNQ', exit);
+      currentTrades = updatedTrades;
+      if (closedTrade) closedCount++;
+    }
+    expect(closedCount).toBe(4);
+    const openTrades = currentTrades.filter(t => t.status === 'open');
+    expect(openTrades.length).toBe(0);
+  });
+
+  test('exit with no matching open trade → creates standalone closed record', () => {
+    // Exit arrives but entry was before integration started
+    const { newTrade, matched } = simulateNTMatch([], 'sell', 'MNQ', {
+      price: 24252.0, direction: 'Short', entryPrice: 24242.0, exitPrice: 24252.0, pnl: -20.0,
+    });
+    expect(matched).toBe(true);
+    expect(newTrade.status).toBe('closed');
+    expect(newTrade.pnl).toBe(-20.0);
+    expect(newTrade.direction).toBe('Short');
+  });
+});
+
 // ══════════════════════════════════════════════════════════════════════════════
 // MANAGEMENT ROUTES TESTS
 // ══════════════════════════════════════════════════════════════════════════════

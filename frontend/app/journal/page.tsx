@@ -4153,13 +4153,17 @@ function JournalPageInner() {
                 stopLoss: 0,
                 takeProfit: 0,
                 commissions: 0,
-                pnl: t.exit_price && t.entry_price
-                  ? Math.round(
-                      (parseFloat(t.exit_price as string) - parseFloat(t.entry_price as string)) *
-                      (parseFloat(t.quantity as string) || 1) *
-                      (t.direction === 'Short' ? -1 : 1) * 100
-                    ) / 100
-                  : 0,
+                // Use stored pnl when available (NinjaTrader provides this with futures multiplier).
+                // Fall back to raw price-diff calculation only when pnl is null/absent.
+                pnl: t.pnl !== null && t.pnl !== undefined
+                  ? parseFloat(t.pnl as string)
+                  : (t.exit_price && t.entry_price
+                      ? Math.round(
+                          (parseFloat(t.exit_price as string) - parseFloat(t.entry_price as string)) *
+                          (parseFloat(t.quantity as string) || 1) *
+                          (t.direction === 'Short' ? -1 : 1) * 100
+                        ) / 100
+                      : 0),
                 rMultiple: 0,
                 pctGainLoss: 0,
                 holdMinutes: 0,

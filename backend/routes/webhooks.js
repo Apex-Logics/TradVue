@@ -137,10 +137,15 @@ function parsePayload(body) {
     // Extended fields from NinjaTrader addon
     const entryPrice  = parseFloat(parsed.entry_price) || null;
     const exitPrice   = parseFloat(parsed.exit_price) || null;
-    const pnl         = parseFloat(parsed.pnl) || null;
+    // Use payload pnl as-is when non-zero (NinjaTrader already applies futures multiplier)
+    const pnlRaw      = parsed.pnl;
+    const pnl         = (pnlRaw !== undefined && pnlRaw !== null && pnlRaw !== 0)
+                        ? parseFloat(pnlRaw)
+                        : null;
     const direction   = sanitize(parsed.direction || '');
     const assetClass  = sanitize(parsed.asset_class || '');
     const orderId     = sanitize(parsed.order_id || '');
+    const accountId   = sanitize(parsed.account_id || parsed.account || '');
     const source      = sanitize(parsed.source || 'tradingview');
     const strategy    = sanitize(parsed.strategy || '');
     const tradeTime   = parsed.time || null;
@@ -149,7 +154,7 @@ function parsePayload(body) {
       ticker: ticker.toUpperCase(), 
       action: normalizedAction, 
       price, quantity, position,
-      entryPrice, exitPrice, pnl, direction, assetClass, orderId, source, strategy, tradeTime,
+      entryPrice, exitPrice, pnl, direction, assetClass, orderId, accountId, source, strategy, tradeTime,
       raw: parsed 
     };
   }
@@ -180,32 +185,73 @@ function sanitize(str) {
   return xss(str).replace(/<[^>]*>/g, '').trim().slice(0, 100);
 }
 
+// ── Per-user+instrument lock (prevents race conditions with simultaneous exits) ─
+// Maps "userId:symbol" → Promise chain. All processing for a given user+symbol
+// is serialized through this queue, preventing two exits from grabbing the same
+// open trade simultaneously.
+const processingLocks = new Map();
+
+function withLock(key, fn) {
+  const prev = processingLocks.get(key) || Promise.resolve();
+  const next = prev.then(fn).catch((err) => {
+    console.error(`[Webhook] Lock error for ${key}:`, err.message);
+  });
+  processingLocks.set(key, next);
+  // Clean up completed lock chains to avoid unbounded memory growth
+  next.finally(() => {
+    if (processingLocks.get(key) === next) {
+      processingLocks.delete(key);
+    }
+  });
+  return next;
+}
+
 // ── Trade Matching ────────────────────────────────────────────────────────────
 /**
- * Inserts a trade into the webhook_trades table.
+ * Inserts/updates a trade in the webhook_trades table.
  *
  * Rules:
- *   buy  action → INSERT direction='Long', status='open'
- *   sell action → check for open Long in webhook_trades:
- *                 if found → UPDATE with exit_price, status='closed'
- *                 if not   → INSERT direction='Short', status='open'
+ *   buy/entry:
+ *     - Insert new open trade. Direction from payload (NinjaTrader) or 'Long' (TradingView).
  *
- * Every alert creates or updates exactly one trade record. No "ignored" logic.
+ *   sell/exit:
+ *     - NinjaTrader: direction in payload → FIFO-match oldest open trade of SAME direction.
+ *     - TradingView: direction unknown → try Long first, then Short.
+ *     - If matched → UPDATE exit_price + pnl, mark closed.
+ *     - If no match → insert standalone closed record (entry opened before integration).
+ *
+ *   P&L:
+ *     - USE payload pnl when non-zero (NinjaTrader already applied futures multiplier).
+ *     - Only recalculate from raw price diff if pnl is absent/zero.
+ *
+ * All calls serialized per userId+symbol via withLock() to prevent race conditions.
  *
  * Returns { matched: true, tradeId } on success, { matched: false, error } on failure.
  */
 async function matchAndJournalTrade(supabase, userId, parsed, eventId) {
+  const lockKey = `${userId}:${parsed.ticker}`;
+  return withLock(lockKey, () => _matchAndJournalTrade(supabase, userId, parsed, eventId));
+}
+
+async function _matchAndJournalTrade(supabase, userId, parsed, eventId) {
   try {
-    const { ticker, action, price, quantity, entryPrice, exitPrice, pnl, direction, assetClass, orderId, source, strategy, tradeTime } = parsed;
+    const {
+      ticker, action, price, quantity,
+      entryPrice, exitPrice, pnl, direction,
+      assetClass, orderId, accountId, source, strategy, tradeTime,
+    } = parsed;
     const now = tradeTime || new Date().toISOString();
     const isNinjaTrader = source === 'ninjatrader';
 
+    // ── ENTRY (buy / entry) ────────────────────────────────────────────────
     if (action === 'buy') {
-      // NinjaTrader sends entry/exit with full data; TradingView sends buy/sell
-      const tradeDirection = direction || 'Long';
+      // NinjaTrader sends explicit direction; TradingView defaults to Long
+      const rawDir = direction
+        ? (direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase())
+        : 'Long';
+      const tradeDirection = ['Long', 'Short'].includes(rawDir) ? rawDir : 'Long';
       const tradeAsset = assetClass || 'Stock';
-      
-      // Insert a new Long trade (open)
+
       const { data: inserted, error: insertErr } = await supabase
         .from('webhook_trades')
         .insert({
@@ -215,23 +261,23 @@ async function matchAndJournalTrade(supabase, userId, parsed, eventId) {
           direction:   tradeDirection,
           asset_class: tradeAsset,
           entry_price: entryPrice || price,
-          exit_price:  exitPrice || null,
+          exit_price:  null,
           quantity:    quantity || 1,
           strategy:    strategy || null,
           notes:       isNinjaTrader ? 'Auto-journaled via NinjaTrader' : 'Auto-journaled via TradingView',
-          status:      exitPrice ? 'closed' : 'open',
+          status:      'open',
           source:      source || 'webhook',
           traded_at:   now,
+          account_id:  accountId || null,
         })
         .select('id')
         .single();
 
       if (insertErr) {
-        console.error('[Webhook] Insert Long trade error:', insertErr.message);
+        console.error('[Webhook] Insert trade error:', insertErr.message);
         return { matched: false, error: insertErr.message };
       }
 
-      // Update event
       await supabase
         .from('webhook_events')
         .update({ status: 'matched', trade_id: inserted.id })
@@ -239,50 +285,95 @@ async function matchAndJournalTrade(supabase, userId, parsed, eventId) {
 
       return { matched: true, tradeId: inserted.id };
 
+    // ── EXIT (sell / exit) ─────────────────────────────────────────────────
     } else if (action === 'sell') {
-      // Check for an open Long for this symbol
-      const { data: openLong } = await supabase
-        .from('webhook_trades')
-        .select('id, entry_price, quantity')
-        .eq('user_id', userId)
-        .eq('symbol', ticker)
-        .eq('direction', 'Long')
-        .eq('status', 'open')
-        .order('traded_at', { ascending: false })
-        .limit(1)
-        .maybeSingle();
+      // Determine which direction of open trade to close.
+      // NinjaTrader always sends direction — use it for exact matching.
+      // TradingView 'sell' is ambiguous — try Long first, then Short.
+      let openTrade = null;
 
-      if (openLong) {
-        // Close the existing Long
-        const entryPx = parseFloat(openLong.entry_price) || 0;
-        const exitPx  = price || 0;
-        const qty     = parseFloat(openLong.quantity) || 1;
+      if (direction) {
+        const rawDir = direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase();
+        const safeDir = ['Long', 'Short'].includes(rawDir) ? rawDir : null;
+        if (safeDir) {
+          const { data } = await supabase
+            .from('webhook_trades')
+            .select('id, entry_price, quantity, direction')
+            .eq('user_id', userId)
+            .eq('symbol', ticker)
+            .eq('direction', safeDir)
+            .eq('status', 'open')
+            .order('traded_at', { ascending: true })   // FIFO: close oldest first
+            .limit(1)
+            .maybeSingle();
+          openTrade = data || null;
+        }
+      } else {
+        // TradingView fallback: try Long first, then Short
+        for (const dir of ['Long', 'Short']) {
+          const { data } = await supabase
+            .from('webhook_trades')
+            .select('id, entry_price, quantity, direction')
+            .eq('user_id', userId)
+            .eq('symbol', ticker)
+            .eq('direction', dir)
+            .eq('status', 'open')
+            .order('traded_at', { ascending: true })
+            .limit(1)
+            .maybeSingle();
+          if (data) { openTrade = data; break; }
+        }
+      }
+
+      if (openTrade) {
+        // Compute P&L:
+        //   - Use payload pnl when non-zero (NinjaTrader has already applied futures multiplier)
+        //   - Fall back to raw price diff only when pnl is absent / zero
+        let computedPnl = null;
+        if (pnl !== null && pnl !== undefined && pnl !== 0) {
+          computedPnl = pnl;
+        } else if (price !== null && openTrade.entry_price !== null) {
+          const entryPx        = parseFloat(openTrade.entry_price);
+          const exitPx         = parseFloat(exitPrice || price);
+          const qty            = parseFloat(openTrade.quantity) || 1;
+          const directionFactor = openTrade.direction === 'Long' ? 1 : -1;
+          computedPnl = (exitPx - entryPx) * qty * directionFactor;
+        }
 
         const { error: updateErr } = await supabase
           .from('webhook_trades')
           .update({
-            exit_price: price,
+            exit_price: exitPrice || price,
+            pnl:        computedPnl,
             status:     'closed',
           })
-          .eq('id', openLong.id);
+          .eq('id', openTrade.id);
 
         if (updateErr) {
-          console.error('[Webhook] Close Long trade error:', updateErr.message);
+          console.error('[Webhook] Close trade error:', updateErr.message);
           return { matched: false, error: updateErr.message };
         }
 
         await supabase
           .from('webhook_events')
-          .update({ status: 'matched', trade_id: openLong.id })
+          .update({ status: 'matched', trade_id: openTrade.id })
           .eq('id', eventId);
 
-        return { matched: true, tradeId: openLong.id };
+        return { matched: true, tradeId: openTrade.id };
 
       } else {
-        // No open Long — insert a new Short trade (or NinjaTrader exit with full data)
-        const tradeDirection = direction || 'Short';
+        // No matching open trade — create a standalone closed record.
+        // This happens when the trade was opened before webhook integration,
+        // or when events arrive out of order.
+        const rawDir = direction
+          ? (direction.charAt(0).toUpperCase() + direction.slice(1).toLowerCase())
+          : 'Short';
+        const tradeDirection = ['Long', 'Short'].includes(rawDir) ? rawDir : 'Short';
         const tradeAsset = assetClass || 'Stock';
-        
+
+        // Use payload pnl if available; raw calc not possible without known entry
+        const computedPnl = (pnl !== null && pnl !== undefined && pnl !== 0) ? pnl : null;
+
         const { data: inserted, error: insertErr } = await supabase
           .from('webhook_trades')
           .insert({
@@ -291,20 +382,24 @@ async function matchAndJournalTrade(supabase, userId, parsed, eventId) {
             symbol:      ticker,
             direction:   tradeDirection,
             asset_class: tradeAsset,
-            entry_price: entryPrice || price,
-            exit_price:  exitPrice || null,
+            entry_price: entryPrice || null,
+            exit_price:  exitPrice || price,
             quantity:    quantity || 1,
+            pnl:         computedPnl,
             strategy:    strategy || null,
-            notes:       isNinjaTrader ? 'Auto-journaled via NinjaTrader' : 'Auto-journaled via TradingView',
-            status:      exitPrice ? 'closed' : 'open',
+            notes:       isNinjaTrader
+              ? 'Auto-journaled via NinjaTrader (entry not tracked)'
+              : 'Auto-journaled via TradingView',
+            status:      'closed',
             source:      source || 'webhook',
             traded_at:   now,
+            account_id:  accountId || null,
           })
           .select('id')
           .single();
 
         if (insertErr) {
-          console.error('[Webhook] Insert Short trade error:', insertErr.message);
+          console.error('[Webhook] Insert standalone closed trade error:', insertErr.message);
           return { matched: false, error: insertErr.message };
         }
 
@@ -564,7 +659,7 @@ tradesRouter.get('/', requireAuth, async (req, res) => {
 
     const { data, error } = await supabase
       .from('webhook_trades')
-      .select('id, symbol, direction, asset_class, entry_price, exit_price, quantity, strategy, notes, status, source, traded_at, created_at')
+      .select('id, symbol, direction, asset_class, entry_price, exit_price, quantity, pnl, account_id, strategy, notes, status, source, traded_at, created_at')
       .eq('user_id', req.user.id)
       .order('traded_at', { ascending: false })
       .limit(500);
