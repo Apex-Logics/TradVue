@@ -4,7 +4,7 @@ import { useState, useEffect, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { trackLogin, trackSignup } from '../utils/analytics'
 
-type Mode = 'login' | 'register'
+type Mode = 'login' | 'register' | 'reset'
 
 interface AuthModalProps {
   onClose: () => void
@@ -22,6 +22,8 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
   const [loading, setLoading] = useState(false)
   const [resending, setResending] = useState(false)
   const [resendSuccess, setResendSuccess] = useState(false)
+  const [resetSent, setResetSent] = useState(false)
+  const [resetLoading, setResetLoading] = useState(false)
   const emailRef = useRef<HTMLInputElement>(null)
 
   // Focus email on mount
@@ -101,6 +103,43 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
     setError(null)
     setSuccessMessage(null)
     setConfirmPassword('')
+    setResetSent(false)
+  }
+
+  const goToReset = () => {
+    setMode('reset')
+    setError(null)
+    setSuccessMessage(null)
+    setResetSent(false)
+  }
+
+  const backToLogin = () => {
+    setMode('login')
+    setError(null)
+    setResetSent(false)
+  }
+
+  const handleResetPassword = async (e: React.FormEvent) => {
+    e.preventDefault()
+    setError(null)
+    if (!email.trim()) { setError('Email is required'); return }
+    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) { setError('Enter a valid email address'); return }
+
+    setResetLoading(true)
+    try {
+      const API = process.env.NEXT_PUBLIC_API_URL || 'https://tradvue-api.onrender.com'
+      await fetch(`${API}/api/auth/forgot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      // Always show success — don't leak whether email exists
+      setResetSent(true)
+    } catch {
+      setError('Network error — please try again.')
+    } finally {
+      setResetLoading(false)
+    }
   }
 
   return (
@@ -121,16 +160,18 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
 
         {/* Title */}
         <div className="auth-modal-title">
-          <h2>{mode === 'login' ? 'Welcome back' : 'Create your account'}</h2>
+          <h2>{mode === 'login' ? 'Welcome back' : mode === 'register' ? 'Create your account' : 'Reset Password'}</h2>
           <p className="auth-modal-subtitle">
             {mode === 'login'
               ? 'Sign in to sync your watchlist and preferences'
-              : 'Start tracking markets with a free account'}
+              : mode === 'register'
+              ? 'Start tracking markets with a free account'
+              : 'Enter your email to receive a password reset link'}
           </p>
         </div>
 
         {/* Form */}
-        <form onSubmit={handleSubmit} className="auth-form">
+        <form onSubmit={mode === 'reset' ? handleResetPassword : handleSubmit} className="auth-form">
           {successMessage && (
             <div className="auth-success" role="status" style={{
               background: 'rgba(0,192,106,0.12)',
@@ -191,7 +232,7 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               </button>
             </div>
           )}
-          {error && (
+          {error && mode !== 'reset' && (
             <div className="auth-error" role="alert">
               <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4, flexShrink: 0 }}>
                 <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
@@ -200,7 +241,77 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
             </div>
           )}
 
-          {!successMessage && (
+          {mode === 'reset' && (
+            <>
+              {resetSent ? (
+                <div style={{
+                  background: 'rgba(0,192,106,0.12)',
+                  border: '1px solid rgba(0,192,106,0.35)',
+                  borderRadius: 6,
+                  padding: '14px 16px',
+                  fontSize: 13,
+                  color: '#00c06a',
+                  lineHeight: 1.5,
+                  textAlign: 'center',
+                }}>
+                  <div style={{ fontSize: 22, marginBottom: 8 }}>📬</div>
+                  If an account exists, we sent a reset link to <strong>{email}</strong>.
+                  <br />Check your inbox and spam folder.
+                </div>
+              ) : (
+                <>
+                  {error && (
+                    <div className="auth-error" role="alert">
+                      <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 4, flexShrink: 0 }}>
+                        <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+                        <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
+                      </svg>{error}
+                    </div>
+                  )}
+                  <div className="auth-field">
+                    <label htmlFor="reset-email">Email</label>
+                    <input
+                      id="reset-email"
+                      type="email"
+                      placeholder="you@example.com"
+                      value={email}
+                      onChange={e => setEmail(e.target.value)}
+                      autoComplete="email"
+                      disabled={resetLoading}
+                      className="auth-input"
+                      autoFocus
+                    />
+                  </div>
+                  <button
+                    type="submit"
+                    className={`auth-submit-btn${resetLoading ? ' auth-submit-loading' : ''}`}
+                    disabled={resetLoading}
+                  >
+                    {resetLoading ? <span className="auth-spinner" /> : 'Send Reset Link'}
+                  </button>
+                </>
+              )}
+              <div style={{ textAlign: 'center', marginTop: 4 }}>
+                <button
+                  type="button"
+                  onClick={backToLogin}
+                  style={{
+                    fontSize: 12,
+                    color: 'var(--text-3)',
+                    background: 'none',
+                    border: 'none',
+                    cursor: 'pointer',
+                    textDecoration: 'underline',
+                    textUnderlineOffset: 2,
+                  }}
+                >
+                  ← Back to login
+                </button>
+              </div>
+            </>
+          )}
+
+          {mode !== 'reset' && !successMessage && (
             <>
               <div className="auth-field">
                 <label htmlFor="auth-email">Email</label>
@@ -218,7 +329,30 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
               </div>
 
               <div className="auth-field">
-                <label htmlFor="auth-password">Password</label>
+                <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
+                  <label htmlFor="auth-password">Password</label>
+                  {mode === 'login' && (
+                    <button
+                      type="button"
+                      onClick={goToReset}
+                      style={{
+                        fontSize: 11.5,
+                        color: 'var(--text-3)',
+                        background: 'none',
+                        border: 'none',
+                        cursor: 'pointer',
+                        padding: 0,
+                        textDecoration: 'underline',
+                        textUnderlineOffset: 2,
+                        transition: 'color 0.15s',
+                      }}
+                      onMouseEnter={e => (e.currentTarget.style.color = 'var(--accent)')}
+                      onMouseLeave={e => (e.currentTarget.style.color = 'var(--text-3)')}
+                    >
+                      Forgot password?
+                    </button>
+                  )}
+                </div>
                 <input
                   id="auth-password"
                   type="password"
@@ -262,12 +396,14 @@ export default function AuthModal({ onClose, onSuccess }: AuthModalProps) {
         </form>
 
         {/* Footer */}
-        <div className="auth-modal-footer">
-          <span>{mode === 'login' ? "Don't have an account?" : 'Already have an account?'}</span>
-          <button className="auth-switch-btn" onClick={switchMode} disabled={loading}>
-            {mode === 'login' ? 'Create one free' : 'Sign in'}
-          </button>
-        </div>
+        {mode !== 'reset' && (
+          <div className="auth-modal-footer">
+            <span>{mode === 'login' ? "Don't have an account?" : 'Already have an account?'}</span>
+            <button className="auth-switch-btn" onClick={switchMode} disabled={loading}>
+              {mode === 'login' ? 'Create one free' : 'Sign in'}
+            </button>
+          </div>
+        )}
 
         {/* Features */}
         {mode === 'register' && (

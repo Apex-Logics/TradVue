@@ -91,6 +91,38 @@ const authLimiter = rateLimit({
   skipSuccessfulRequests: true, // only count failures against the limit
 });
 
+// ── Per-email reset rate limiter (3 resets per email per hour) ────────────────
+// Stored in-process memory (resets on server restart — acceptable for this use case)
+const resetEmailTracker = new Map(); // email -> [timestamp, ...]
+
+function resetEmailRateLimit(req, res, next) {
+  const email = req.body?.email?.trim().toLowerCase();
+  if (!email) return next(); // let validation handle it
+
+  const now = Date.now();
+  const windowMs = 60 * 60 * 1000; // 1 hour
+  const maxAttempts = 3;
+
+  const timestamps = (resetEmailTracker.get(email) || []).filter(t => now - t < windowMs);
+  if (timestamps.length >= maxAttempts) {
+    return res.status(429).json({
+      error: 'Too many reset attempts for this email. Please wait before trying again.',
+    });
+  }
+
+  timestamps.push(now);
+  resetEmailTracker.set(email, timestamps);
+
+  // Cleanup stale entries every ~100 requests
+  if (Math.random() < 0.01) {
+    for (const [k, v] of resetEmailTracker.entries()) {
+      if (v.every(t => now - t >= windowMs)) resetEmailTracker.delete(k);
+    }
+  }
+
+  next();
+}
+
 // ── Helpers ───────────────────────────────────────────────────────────────────
 function sanitizeSession(session) {
   if (!session) return null;
@@ -337,7 +369,7 @@ router.post('/refresh', authLimiter, async (req, res) => {
 });
 
 // ── POST /api/auth/forgot ─────────────────────────────────────────────────────
-router.post('/forgot', authLimiter, async (req, res) => {
+router.post('/forgot', authLimiter, resetEmailRateLimit, async (req, res) => {
   try {
     const { email: rawEmail } = req.body;
 
@@ -364,6 +396,25 @@ router.post('/forgot', authLimiter, async (req, res) => {
     });
   } catch (err) {
     console.error('[Auth] Forgot password error:', err.message);
+    res.status(500).json({ error: 'Internal server error' });
+  }
+});
+
+// ── POST /api/auth/reset-password (alias for /forgot) ────────────────────────
+// Provided for frontend convenience — same behavior as /forgot
+router.post('/reset-password', authLimiter, resetEmailRateLimit, async (req, res) => {
+  try {
+    const { email: rawEmail } = req.body;
+    if (!rawEmail) return res.status(400).json({ error: 'Email is required' });
+    const email = rawEmail.trim().toLowerCase();
+    if (!EMAIL_REGEX.test(email)) return res.status(400).json({ error: 'Invalid email format' });
+
+    const { error } = await authService.resetPassword(email);
+    if (error) console.error('[Auth] Reset-password error:', error.message);
+
+    res.json({ message: 'If an account exists with that email, a password reset link has been sent' });
+  } catch (err) {
+    console.error('[Auth] Reset-password error:', err.message);
     res.status(500).json({ error: 'Internal server error' });
   }
 });

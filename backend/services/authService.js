@@ -122,10 +122,9 @@ async function getUser(accessToken) {
  */
 async function resetPassword(email) {
   const supabase = getClient();
-  const redirectTo = process.env.SUPABASE_REDIRECT_URL || undefined;
-  const { data, error } = await supabase.auth.resetPasswordForEmail(email, {
-    ...(redirectTo && { redirectTo }),
-  });
+  // redirectTo must match the exact URL configured in Supabase's Allowed Redirect URLs
+  const redirectTo = process.env.SUPABASE_REDIRECT_URL || 'https://www.tradvue.com/auth/reset';
+  const { data, error } = await supabase.auth.resetPasswordForEmail(email, { redirectTo });
   return { data, error };
 }
 

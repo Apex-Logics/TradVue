@@ -251,7 +251,7 @@ const FAQ_DATA: {
       },
       {
         q: "I can't log in. What should I do?",
-        a: 'Click "Forgot Password" to reset. If you never received a reset email, check spam. If it\'s still stuck, contact support@tradvue.com with your email address.',
+        a: 'Click "Forgot password?" on the sign-in form to reset. If you never received a reset email, check spam. If it\'s still stuck, contact support@tradvue.com with your email address.',
       },
       {
         q: 'Which browsers are supported?',
