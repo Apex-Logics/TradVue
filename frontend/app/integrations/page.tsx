@@ -519,11 +519,53 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
   const steps = [
     {
       n: 1,
+      title: 'Create an Alert in TradingView',
+      content: (
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={bodyText}>
+            First, open TradingView and pull up the strategy you want to connect. You&apos;re going to create an alert that fires whenever your strategy generates a signal — that alert will send trade data straight to TradVue.
+          </p>
+          <div style={instructionRow}>
+            <span style={stepDot}>1</span>
+            <span style={bodyText}>In TradingView, right-click on your strategy on the chart → <strong style={highlight}>Add Alert</strong></span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>2</span>
+            <span style={bodyText}>Set the condition to your strategy signal (e.g., <Code>Long Entry Signal</Code> or <Code>Order fills</Code>)</span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>3</span>
+            <span style={bodyText}>In the <strong style={highlight}>Notifications</strong> tab, check <strong style={highlight}>&quot;Webhook URL&quot;</strong></span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>4</span>
+            <span style={bodyText}>Paste your webhook URL from <strong style={highlight}>Step 2</strong> into the Webhook URL field</span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>5</span>
+            <span style={bodyText}>In the <strong style={highlight}>&quot;Message&quot;</strong> field, paste the JSON template from <strong style={highlight}>Step 3</strong></span>
+          </div>
+          <div style={instructionRow}>
+            <span style={stepDot}>6</span>
+            <span style={bodyText}>Set alert frequency to <strong style={highlight}>&quot;Once Per Bar Close&quot;</strong> or <strong style={highlight}>&quot;Once Per Bar&quot;</strong></span>
+          </div>
+          <div style={{
+            marginTop: 10, padding: '10px 14px',
+            background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
+            borderRadius: 8, fontSize: 12, color: '#a78bfa', lineHeight: 1.6,
+          }}>
+            <strong>💡 Keep this alert dialog open</strong> — you&apos;ll copy the webhook URL and message template in the next two steps and paste them right in.
+          </div>
+        </div>
+      ),
+    },
+    {
+      n: 2,
       title: 'Get Your Webhook URL',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <p style={bodyText}>
-            Your webhook URL is how TradingView sends strategy signals to TradVue. Generate one below and copy it for the next step.
+            Copy your unique webhook URL below and paste it into the <strong style={highlight}>Webhook URL</strong> field in the TradingView alert dialog you just opened.
           </p>
           {loading ? (
             <div style={{ color: 'var(--text-2)', fontSize: 13 }}>Loading…</div>
@@ -541,7 +583,7 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
             </div>
           ) : (
             <div>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>Your TradingView webhook URL:</p>
+              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>Your TradingView webhook URL — copy and paste into the alert dialog:</p>
               <div style={{
                 display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
                 background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
@@ -560,7 +602,7 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
                 </button>
               </div>
               <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
-                Keep this URL private. Same token works for both NinjaTrader and TradingView.
+                Keep this URL private — it&apos;s your personal key. If compromised, rotate it below.
               </p>
             </div>
           )}
@@ -568,12 +610,12 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
       ),
     },
     {
-      n: 2,
-      title: 'Add Webhook Message Template',
+      n: 3,
+      title: 'Add the Message Template',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
           <p style={bodyText}>
-            Copy this JSON template. You&apos;ll paste it into TradingView&apos;s alert message field in the next step.
+            Copy this JSON template and paste it into the <strong style={highlight}>Message</strong> field of your TradingView alert. TradingView will auto-fill the <Code>{'{{'}</Code><Code>{'}}'}</Code> placeholders with real values when each alert fires.
           </p>
           <div style={{
             background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)',
@@ -593,60 +635,31 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
           }}>
             <IconCopy /> Copy Template
           </button>
-        </div>
-      ),
-    },
-    {
-      n: 3,
-      title: 'Create Alert in TradingView',
-      content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
-          <div style={instructionRow}>
-            <span style={stepDot}>1</span>
-            <span style={bodyText}>In TradingView: right-click on your strategy → <strong style={highlight}>Add Alert</strong></span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>2</span>
-            <span style={bodyText}>Set the condition to your strategy (e.g., <Code>Long Entry Signal</Code>)</span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>3</span>
-            <span style={bodyText}>Check <strong style={highlight}>&quot;Webhook URL&quot;</strong> and paste your URL from Step 1</span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>4</span>
-            <span style={bodyText}>In the <strong style={highlight}>&quot;Message&quot;</strong> field, paste the template from Step 2</span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>5</span>
-            <span style={bodyText}>Set frequency to <strong style={highlight}>&quot;Once Per Bar Close&quot;</strong> or <strong style={highlight}>&quot;Once Per Bar&quot;</strong></span>
-          </div>
-          <div style={{
-            marginTop: 10, padding: '10px 14px',
-            background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
-            borderRadius: 8, fontSize: 12, color: '#a78bfa', lineHeight: 1.6,
-          }}>
-            <strong>💡 Tip:</strong> You can create multiple alerts for different signals (entry, exit, position sizing, etc.)
-          </div>
+          <p style={{ ...bodyText, fontSize: 12 }}>
+            Once pasted, hit <strong style={highlight}>Save</strong> in TradingView to create the alert. That&apos;s it — you&apos;re connected.
+          </p>
         </div>
       ),
     },
     {
       n: 4,
-      title: 'Test Your Alert',
+      title: 'Test It',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+          <p style={bodyText}>
+            Verify everything is working — either wait for your strategy to generate a signal or run it in replay/paper mode.
+          </p>
           <div style={instructionRow}>
             <span style={{ fontSize: 18 }}>1️⃣</span>
             <span style={bodyText}>Run your strategy in <strong style={highlight}>paper trading mode</strong> or wait for a live signal</span>
           </div>
           <div style={instructionRow}>
             <span style={{ fontSize: 18 }}>2️⃣</span>
-            <span style={bodyText}>Check the <strong style={highlight}>Events Log</strong> below to see incoming webhook data</span>
+            <span style={bodyText}>Check the <strong style={highlight}>Events Log</strong> below — you should see an incoming event within seconds</span>
           </div>
           <div style={instructionRow}>
             <span style={{ fontSize: 18 }}>3️⃣</span>
-            <span style={bodyText}>Your signals will appear in your TradVue Journal once matched</span>
+            <span style={bodyText}>The signal will appear in your TradVue Journal once matched to a trade</span>
           </div>
           <div style={{ ...instructionRow, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '12px 16px' }}>
             <span style={{ fontSize: 18 }}>🎉</span>

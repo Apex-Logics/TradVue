@@ -4490,6 +4490,9 @@ a.alert-row-title:hover {
   align-items: flex-start;
   min-height: calc(100vh - 88px); /* 28px ticker + 60px header */
   gap: 0;
+  max-width: 100vw;
+  overflow-x: hidden;
+  box-sizing: border-box;
 }
 
 /* LEFT column: watchlist */
@@ -4503,6 +4506,7 @@ a.alert-row-title:hover {
   top: 88px;
   max-height: calc(100vh - 88px);
   background: var(--bg-1);
+  min-width: 0;
   /* watchlist header bar */
 }
 
@@ -4773,6 +4777,7 @@ a.alert-row-title:hover {
   display: flex;
   flex-direction: column;
   min-height: calc(100vh - 88px);
+  min-width: 0;
 }
 
 /* RIGHT column: calendar + alerts + portfolio */
@@ -4784,6 +4789,7 @@ a.alert-row-title:hover {
   position: sticky;
   top: 88px;
   max-height: calc(100vh - 88px);
+  min-width: 0;
 }
 
 /* ── News toolbar (category + count selector) ── */
