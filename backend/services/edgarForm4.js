@@ -359,7 +359,7 @@ async function getBatchInsiderTrades({ count = 30, maxXmlFetch = 25 } = {}) {
     }
 
     return results;
-  }, 30 * 60); // 30 min cache
+  }, 5 * 60 * 60); // 5 hour cache — batch Form 4 data is semi-static
 }
 
 /**
@@ -399,7 +399,7 @@ async function getInsiderTradesBySymbol(symbol) {
     }
 
     return results;
-  }, 15 * 60); // 15 min cache
+  }, 5 * 60 * 60); // 5 hour cache — per-symbol Form 4 data changes slowly
 }
 
 module.exports = {

@@ -48,11 +48,26 @@ insiderTradeStore.ensureTable().catch(err => {
 
 // ─── Background ingestion state ───────────────────────────────────────────────
 
-const BATCH_CACHE_TTL_MS = 30 * 60 * 1000; // 30 minutes
+const BATCH_CACHE_TTL_MS = 5 * 60 * 60 * 1000; // 5 hours — insider data changes slowly
 let lastIngestionTime = 0;
 let ingestionInFlight = false;
 
-const DEFAULT_INSIDER_TICKERS = ['AAPL', 'MSFT', 'NVDA', 'TSLA', 'AMZN', 'META', 'GOOGL', 'JPM', 'V', 'SPY'];
+// S&P 500 Top 50 by market cap + watchlist + portfolio defaults
+// Expanded from 10 → 75+ tickers for broader insider trade coverage
+const DEFAULT_INSIDER_TICKERS = [
+  // Mega cap (S&P 500 Top 20)
+  'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'BRK.B', 'AVGO', 'LLY',
+  'JPM', 'V', 'UNH', 'XOM', 'MA', 'COST', 'HD', 'NFLX', 'PG', 'JNJ',
+  // S&P 500 Top 21–50
+  'ORCL', 'WMT', 'CRM', 'BAC', 'MRK', 'ABBV', 'CVX', 'KO', 'AMD', 'PEP',
+  'CSCO', 'ACN', 'TMO', 'MCD', 'ABT', 'GS', 'ISRG', 'CAT', 'AXP', 'BKNG',
+  'INTU', 'PFE', 'TXN', 'AMGN', 'SPGI', 'RTX', 'BLK', 'NOW', 'SCHW', 'DE',
+  // Watchlist & portfolio defaults
+  'SPY', 'QQQ', 'DIA', 'IWM',
+  'INTC', 'PLTR', 'COIN', 'SQ', 'SHOP', 'UBER',
+  'PYPL', 'DIS', 'BA', 'NKE', 'SNOW', 'HOOD', 'SOFI',
+  'RIVN', 'ROKU', 'RBLX', 'GME', 'AMC',
+];
 
 /**
  * Normalize a raw Finnhub transaction record into a standard trade object.
@@ -81,16 +96,30 @@ async function _fetchFinnhubBatch() {
   const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
   const allItems = [];
 
+  console.log(`[InsiderBatch] Pre-warming Finnhub insider data for ${DEFAULT_INSIDER_TICKERS.length} tickers...`);
+  let fetchedCount = 0;
+  let cacheHitCount = 0;
   for (const ticker of DEFAULT_INSIDER_TICKERS) {
     try {
+      const cacheKey = `finnhub:insider_transactions:${ticker}`;
+      const cached = await require('../services/cache').get(cacheKey);
+      if (cached !== null) {
+        const items = (cached?.data || []).map(t => _normalizeFinnhubTrade(t, ticker));
+        allItems.push(...items);
+        cacheHitCount++;
+        continue; // skip API call — cache is warm
+      }
       const result = await finnhub.getInsiderTransactions(ticker);
       const items = (result?.data || []).map(t => _normalizeFinnhubTrade(t, ticker));
       allItems.push(...items);
+      fetchedCount++;
+      console.log(`[InsiderBatch] [MISS] ${ticker} — fetched ${items.length} trades`);
     } catch (err) {
       console.warn(`[InsiderBatch] Finnhub failed for ${ticker}:`, err.message);
     }
-    await delay(200);
+    await delay(600); // 600ms between API calls to respect Finnhub rate limits
   }
+  console.log(`[InsiderBatch] Done — ${fetchedCount} API calls, ${cacheHitCount} cache hits`);
 
   // Deduplicate by ticker+name+date+type
   const seen = new Set();

@@ -101,7 +101,7 @@ async function getInsiderTrades({ count = 40 } = {}) {
       console.error('[SEC EDGAR] Insider trades fetch error:', err.message);
       return [];
     }
-  }, 15 * 60); // 15 min
+  }, 5 * 60 * 60); // 5 hour cache — insider trades are filed daily, not per-minute
 }
 
 /**

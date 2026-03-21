@@ -730,7 +730,7 @@ class FinnhubService {
         console.error(`[Finnhub] Insider transactions error for ${upperSymbol}:`, error.message);
         return { symbol: upperSymbol, data: [], source: 'finnhub', error: error.message };
       }
-    }, 30 * 60); // 30 min cache
+    }, 5 * 60 * 60); // 5 hour cache — insider data changes slowly
   }
 
   // ──────────────────────────────────────────

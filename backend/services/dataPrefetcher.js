@@ -26,6 +26,7 @@ const { getAnalystRatings } = require('./analystRatings');
 const axios        = require('axios');
 const fredService     = require('./fred');
 const secEdgar        = require('./secEdgar');
+const finnhubService  = require('./finnhub');
 
 
 // ─── Config ──────────────────────────────────────────────────────────────────
@@ -58,6 +59,21 @@ const WATCHLIST = [
 
 /** Top coins tracked by CoinGecko prefetch */
 const TOP_COINS_LIMIT = 10;
+
+/** Top tickers for insider data pre-warming — prioritised by market cap and dashboard activity */
+const INSIDER_WARMUP_TICKERS = [
+  // Mega cap
+  'AAPL', 'MSFT', 'NVDA', 'AMZN', 'GOOGL', 'META', 'TSLA', 'BRK.B', 'AVGO', 'LLY',
+  'JPM', 'V', 'UNH', 'XOM', 'MA', 'COST', 'HD', 'NFLX', 'PG', 'JNJ',
+  // S&P 500 Top 21–50
+  'ORCL', 'WMT', 'CRM', 'BAC', 'MRK', 'ABBV', 'CVX', 'KO', 'AMD', 'PEP',
+  'CSCO', 'ACN', 'TMO', 'MCD', 'ABT', 'GS', 'ISRG', 'CAT', 'AXP', 'BKNG',
+  'INTU', 'PFE', 'TXN', 'AMGN', 'SPGI', 'RTX', 'BLK', 'NOW', 'SCHW', 'DE',
+  // Watchlist & portfolio defaults
+  'SPY', 'QQQ', 'DIA', 'IWM',
+  'INTC', 'PLTR', 'COIN', 'SQ', 'SHOP', 'UBER',
+  'PYPL', 'DIS', 'BA', 'NKE', 'SNOW',
+];
 
 /** Popular tickers for analyst-ratings prefetch (runs every 6 h — keep short to save API quota) */
 const ANALYST_TICKERS = ['AAPL', 'MSFT', 'NVDA', 'GOOGL', 'TSLA', 'AMZN', 'META'];
@@ -303,6 +319,50 @@ async function prefetchMarketIntel() {
   console.log('[Prefetch] 15m intel cycle — updated FRED, SEC insider trades, earnings/IPO calendars');
 }
 
+/**
+ * Every 5 hours (matching cache TTL):
+ *  - Pre-warm Finnhub insider transactions cache for all top tickers
+ *  - Fetches sequentially with 600ms delays to respect rate limits
+ *  - Logs cache hits/misses for monitoring
+ */
+async function prefetchInsiderTrades() {
+  const delay = ms => new Promise(resolve => setTimeout(resolve, ms));
+  let hits = 0;
+  let misses = 0;
+  let errors = 0;
+
+  console.log(`[Prefetch] Insider trade pre-warm starting for ${INSIDER_WARMUP_TICKERS.length} tickers...`);
+
+  for (const ticker of INSIDER_WARMUP_TICKERS) {
+    const cacheKey = `finnhub:insider_transactions:${ticker}`;
+    try {
+      const cached = await cache.get(cacheKey);
+      if (cached !== null) {
+        hits++;
+        continue; // Already warm — skip API call
+      }
+
+      // Cache miss — fetch from Finnhub
+      const result = await safe(`insider:${ticker}`, () => finnhub.getInsiderTransactions(ticker));
+      if (result) {
+        misses++;
+        console.log(`[Prefetch] [MISS] insider:${ticker} — fetched ${result.data?.length || 0} trades`);
+      } else {
+        errors++;
+      }
+
+      // 600ms delay between API calls — same rate limit discipline as stockInfo
+      await delay(600);
+    } catch (err) {
+      errors++;
+      console.warn(`[Prefetch] insider:${ticker} error:`, err.message);
+      await delay(600);
+    }
+  }
+
+  console.log(`[Prefetch] Insider pre-warm done — ${hits} cache hits, ${misses} API fetches, ${errors} errors`);
+}
+
 // ─── Scheduler ───────────────────────────────────────────────────────────────
 
 let _started = false;
@@ -325,6 +385,7 @@ function start() {
   prefetchLowFrequency().catch(() => {});
   prefetchRareData().catch(() => {});
   prefetchMarketIntel().catch(() => {});
+  prefetchInsiderTrades().catch(() => {}); // Pre-warm insider data on boot
 
   // ── Schedule recurring cycles ──
   setInterval(() => prefetchHighFrequency().catch(() => {}), 30 * 1000);           // 30 s — keep quotes fresh
@@ -332,6 +393,7 @@ function start() {
   setInterval(() => prefetchLowFrequency().catch(() => {}), 15 * 60 * 1000);      // 15 min (was 30)
   setInterval(() => prefetchRareData().catch(() => {}), 6 * 60 * 60 * 1000);      // 6 h
   setInterval(() => prefetchMarketIntel().catch(() => {}), 15 * 60 * 1000);        // 15 min — FRED, SEC, calendars
+  setInterval(() => prefetchInsiderTrades().catch(() => {}), 5 * 60 * 60 * 1000); // 5 h — insider trading cache refresh
 
   console.log('[Prefetch] Scheduler running. High-freq cycles active during market hours (09:30–16:00 ET).');
 }
