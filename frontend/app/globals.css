@@ -4778,9 +4778,9 @@ a.alert-row-title:hover {
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
-  position: sticky;
-  top: 88px;
-  max-height: calc(100vh - 88px);
+  
+  
+  
   min-width: 0;
 }
 
@@ -4790,9 +4790,9 @@ a.alert-row-title:hover {
   flex-direction: column;
   height: 100%;
   overflow-y: auto;
-  position: sticky;
-  top: 88px;
-  max-height: calc(100vh - 88px);
+  
+  
+  
   min-width: 0;
 }
 
