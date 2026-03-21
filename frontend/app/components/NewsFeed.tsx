@@ -9,26 +9,33 @@ import type { NewsArticle, Quote } from '../types'
 // ─── NewsRow ───────────────────────────────────────────────────────────────────
 
 function NewsRow({ article, index }: { article: NewsArticle; index: number }) {
+  // Defensive guards — backend may return articles with missing/malformed fields
   const isHigh = article.impactLabel === 'High'
+  const symbols = Array.isArray(article.symbols) ? article.symbols : []
+  const publishedAt = article.publishedAt || new Date().toISOString()
+  const title = article.title || 'Untitled'
+  const source = article.source || 'Unknown'
+  const url = article.url || '#'
+
   return (
     <a
-      href={article.url || '#'}
+      href={url}
       target="_blank"
       rel="noopener noreferrer"
       className={`news-row ${index % 2 !== 0 ? 'news-row-even' : ''}`}
-      aria-label={`${article.title} — ${article.source}, ${fmtTime(article.publishedAt)} ago`}
+      aria-label={`${title} — ${source}, ${fmtTime(publishedAt)} ago`}
     >
-      <span className="news-time">{fmtTime(article.publishedAt)}</span>
-      <span className="news-source">{article.source}</span>
+      <span className="news-time">{fmtTime(publishedAt)}</span>
+      <span className="news-source">{source}</span>
       <span className="news-title">
         {isHigh && <span className="news-flag-high" aria-label="High impact">●</span>}
-        {article.title}
+        {title}
       </span>
       <span className="news-sentiment" aria-hidden="true">
         {article.sentimentLabel === 'bullish' && <span className="sentiment-bull">▲</span>}
         {article.sentimentLabel === 'bearish' && <span className="sentiment-bear">▼</span>}
       </span>
-      <span className="news-symbols">{article.symbols.slice(0, 2).join(' ')}</span>
+      <span className="news-symbols">{symbols.slice(0, 2).join(' ')}</span>
     </a>
   )
 }
@@ -85,10 +92,12 @@ function AnalysisView({
   newsArticles: NewsArticle[]
   onOpenStock: (sym: string) => void
 }) {
-  const bullishCount = newsArticles.filter(a => a.sentimentLabel === 'bullish').length
-  const bearishCount = newsArticles.filter(a => a.sentimentLabel === 'bearish').length
-  const neutralCount  = newsArticles.filter(a => a.sentimentLabel === 'neutral').length
-  const total = newsArticles.length
+  // Guard: filter out any articles with unexpected shapes before processing
+  const safeArticles = newsArticles.filter(a => a && typeof a === 'object' && a.title)
+  const bullishCount = safeArticles.filter(a => a.sentimentLabel === 'bullish').length
+  const bearishCount = safeArticles.filter(a => a.sentimentLabel === 'bearish').length
+  const neutralCount  = safeArticles.filter(a => a.sentimentLabel === 'neutral').length
+  const total = safeArticles.length
   const bullPct = total > 0 ? Math.round((bullishCount / total) * 100) : 0
   const bearPct = total > 0 ? Math.round((bearishCount / total) * 100) : 0
   const sentimentScore = bullishCount + bearishCount > 0

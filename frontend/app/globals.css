@@ -65,14 +65,21 @@
 
 html, body { height: 100%; }
 
-/* ─── Font size scaling ───────────────────────────────────────────────────── */
-/* zoom scales everything including hardcoded px values (inline styles, etc.) */
-html.font-medium { zoom: 1.1; }
-html.font-large  { zoom: 1.2; }
+/* ─── Font size scaling ─────────────────────────────────────────────────────
+   Uses a CSS custom property so ONLY text elements scale, not layout/padding.
+   Nav, buttons, and structural elements are exempt (see nav rules below).
+   Default (no class) = medium = 15px
+─────────────────────────────────────────────────────────────────────────── */
+:root {
+  --font-size-base: 15px;   /* medium is the default */
+}
+html.font-small  { --font-size-base: 13px; }
+html.font-medium { --font-size-base: 15px; }
+html.font-large  { --font-size-base: 17px; }
 
 body {
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--font-size-base, 15px);
   line-height: 1.4;
   background: var(--bg-0);
   color: var(--text-0);
@@ -1155,6 +1162,9 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   object-fit: contain;
 }
 
+/* Hide the NEW badge in nav — belongs on landing/marketing pages only */
+.apn-logo .logo-badge { display: none !important; }
+
 .apn-items {
   display: flex;
   align-items: center;
@@ -1177,6 +1187,113 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   transition: color 0.15s;
 }
 .apn-home-link:hover { color: var(--text-1); }
+
+/* ─── Nav dropdown ─────────────────────────────────────────────────────────── */
+.apn-dropdown {
+  position: relative;
+  display: inline-flex;
+  align-items: center;
+}
+
+.apn-dropdown-trigger {
+  /* inherits .nav-item styles */
+  background: none;
+  border: none;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  gap: 0;
+  font-family: var(--font);
+  /* Override font-size — nav items do NOT scale with font-size setting */
+  font-size: 12px !important;
+}
+
+.apn-dropdown-menu {
+  position: absolute;
+  top: calc(100% + 6px);
+  left: 0;
+  background: var(--bg-1);
+  border: 1px solid var(--border);
+  border-radius: 8px;
+  box-shadow: 0 8px 28px rgba(0, 0, 0, 0.45);
+  min-width: 180px;
+  z-index: 9990;
+  overflow: hidden;
+  /* Prevent layout shift */
+  white-space: nowrap;
+}
+
+.apn-dropdown-menu-right {
+  left: auto;
+  right: 0;
+}
+
+.apn-dropdown-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 9px 14px;
+  font-size: 12.5px;
+  font-weight: 500;
+  color: var(--text-1);
+  text-decoration: none;
+  transition: background 0.12s, color 0.12s;
+  cursor: pointer;
+  border-bottom: 1px solid rgba(255, 255, 255, 0.04);
+}
+
+.apn-dropdown-item:last-child {
+  border-bottom: none;
+}
+
+.apn-dropdown-item:hover,
+.apn-dropdown-item.active {
+  background: var(--bg-2);
+  color: var(--accent);
+}
+
+.apn-dropdown-item-icon {
+  display: inline-flex;
+  align-items: center;
+  opacity: 0.65;
+  flex-shrink: 0;
+}
+
+.apn-dropdown-divider {
+  height: 1px;
+  background: var(--border);
+  margin: 3px 0;
+}
+
+/* User email shown next to avatar in top-right — truncated */
+.apn-user-email {
+  font-size: 11px;
+  color: var(--text-2);
+  max-width: 130px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+/* Mobile drawer section label */
+.apn-drawer-section-label {
+  font-size: 9.5px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  color: var(--text-3);
+  text-transform: uppercase;
+  padding: 10px 14px 4px;
+  border-top: 1px solid rgba(255,255,255,0.05);
+  margin-top: 4px;
+}
+
+/* Nav items should NOT scale with font size — fixed sizes */
+.nav-item,
+.apn-items .nav-item,
+.apn-dropdown-trigger,
+.apn-hamburger {
+  font-size: 12px !important;
+}
 
 /* ─────────────────────────────────────────────────────────────────────────────
    NEWS PAGE

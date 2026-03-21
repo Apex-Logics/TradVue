@@ -30,16 +30,18 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
   }
 
   // Font size (managed via localStorage + html class)
-  const [fontSize, setFontSizeState] = useState<'small' | 'medium' | 'large'>('small')
+  const [fontSize, setFontSizeState] = useState<'small' | 'medium' | 'large'>('medium')
   useEffect(() => {
-    try { setFontSizeState((localStorage.getItem('cg_font_size') as 'small' | 'medium' | 'large') || 'small') } catch {}
+    try { setFontSizeState((localStorage.getItem('cg_font_size') as 'small' | 'medium' | 'large') || 'medium') } catch {}
   }, [])
   function setFontSizeLocal(size: 'small' | 'medium' | 'large') {
     setFontSizeState(size)
     try { localStorage.setItem('cg_font_size', size) } catch {}
     const html = document.documentElement
+    // Remove all font-size classes, then add the right one
+    // medium = default (15px, no class needed — but we add it for active state tracking)
     html.classList.remove('font-small', 'font-medium', 'font-large')
-    if (size !== 'small') html.classList.add(`font-${size}`)
+    html.classList.add(`font-${size}`)
     trackSettingsChanged('font_size', size)
   }
 
@@ -169,7 +171,7 @@ export default function SettingsPanel({ onClose }: SettingsPanelProps) {
           <div className="settings-section-label">Font Size</div>
           <div className="settings-row settings-row-col">
             <span className="settings-row-desc" style={{ marginBottom: 8 }}>
-              Scales text across the entire app
+              Adjusts text size across the app (Medium is default)
             </span>
             <div className="settings-market-toggle">
               {(['small', 'medium', 'large'] as const).map(s => (

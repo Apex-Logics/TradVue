@@ -349,9 +349,38 @@ class RSSFeedAggregator {
       });
 
       // Always supplement with Marketaux (has sentiment data)
+      // NOTE: Marketaux returns a raw shape from _mapArticle — we must normalize
+      // it to the unified schema before mixing with RSS articles.
       try {
-        const mxNews = await marketaux.getNews({ limit: 15 });
-        allArticles.push(...mxNews);
+        const mxRaw = await marketaux.getNews({ limit: 15 });
+        const mxNormalized = (mxRaw || []).map(a => {
+          // Marketaux _mapArticle shape → unified schema
+          const sentScore = typeof a.sentimentScore === 'number' ? a.sentimentScore
+            : typeof a.sentiment === 'number' ? a.sentiment : 0;
+          const rawLabel = (a.sentimentLabel || '').toLowerCase();
+          const sentLabel = rawLabel === 'positive' || rawLabel === 'bullish' ? 'bullish'
+            : rawLabel === 'negative' || rawLabel === 'bearish' ? 'bearish' : 'neutral';
+          const publishedAt = a.publishedAt
+            || (a.datetime ? new Date(a.datetime * 1000).toISOString() : new Date().toISOString());
+          return {
+            id: a.id || a.url || `mx-${Date.now()}-${Math.random().toString(36).slice(2)}`,
+            title: a.title || '',
+            summary: a.summary || a.description || '',
+            url: a.url || null,
+            source: a.source || 'Marketaux',
+            category: a.category || 'markets',
+            publishedAt,
+            sentimentScore: sentScore,
+            sentimentLabel: sentLabel,
+            impactScore: typeof a.impactScore === 'number' ? a.impactScore : 5,
+            impactLabel: a.impactLabel || 'Medium',
+            tags: Array.isArray(a.tags) ? a.tags : [],
+            symbols: Array.isArray(a.symbols) ? a.symbols
+              : Array.isArray(a.related) ? a.related : [],
+            imageUrl: a.imageUrl || a.image || null,
+          };
+        });
+        allArticles.push(...mxNormalized);
       } catch (e) {
         console.warn('[RSS] Marketaux supplement failed:', e.message);
       }

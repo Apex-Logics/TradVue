@@ -707,7 +707,19 @@ export default function HomeClient() {
       }
       const j = await apiFetchSafe<{ success: boolean; data: NewsArticle[]; error?: string }>(url)
       if (j?.success) {
-        setNewsArticles(j.data || [])
+        // Deduplicate by id + guard against malformed articles
+        const raw = j.data || []
+        const seen = new Set<string>()
+        const deduped = raw.filter(a => {
+          if (!a || typeof a !== 'object') return false
+          // Ensure symbols is always an array
+          if (!Array.isArray(a.symbols)) (a as NewsArticle).symbols = []
+          const key = a.id || a.url || a.title || Math.random().toString(36)
+          if (seen.has(key)) return false
+          seen.add(key)
+          return true
+        })
+        setNewsArticles(deduped)
       } else {
         setNewsError('unavailable')
         setNewsArticles([])

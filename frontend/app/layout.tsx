@@ -256,7 +256,8 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           dangerouslySetInnerHTML={{ __html: JSON.stringify(jsonLd) }}
         />
         {/* Font-size preference — applied before hydration to prevent layout shift */}
-        <script dangerouslySetInnerHTML={{ __html: `try{var _fs=localStorage.getItem('cg_font_size');if(_fs==='medium')document.documentElement.classList.add('font-medium');else if(_fs==='large')document.documentElement.classList.add('font-large');}catch(e){}` }} />
+        {/* Font-size: medium is default (15px). Only small/large need an explicit class. */}
+        <script dangerouslySetInnerHTML={{ __html: `try{var _fs=localStorage.getItem('cg_font_size');if(_fs==='small')document.documentElement.classList.add('font-small');else if(_fs==='large')document.documentElement.classList.add('font-large');}catch(e){}` }} />
       </head>
       <body>
         {/* No-JavaScript fallback — shown only when JS is disabled */}
