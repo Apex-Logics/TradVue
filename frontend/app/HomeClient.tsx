@@ -960,20 +960,6 @@ export default function HomeClient() {
 
       {/* ── Header ───────────────────────────────────────────────────────────── */}
       <header className="site-header">
-        <div className="header-left">
-          <button
-            className="mobile-hamburger"
-            onClick={() => setMobileNavOpen(o => !o)}
-            aria-label="Open navigation menu"
-          >
-            <span /><span /><span />
-          </button>
-          {/* eslint-disable-next-line @next/next/no-img-element */}
-          <img src="/logo-header.svg" alt="TradVue" className="header-logo-img" />
-          <span className="logo-badge">NEW</span>
-          <span className="header-motto">AI DRIVEN ALPHA</span>
-        </div>
-
         <PersistentNav />
 
         <div className="header-right">
@@ -996,17 +982,7 @@ export default function HomeClient() {
             </svg></button>
           </OnboardingTooltip>
 
-          {user ? (
-            <a href="/account" className="header-user-email" title={user.email} style={{ textDecoration: 'none', color: 'inherit', cursor: 'pointer' }}>
-              {user.email}
-            </a>
-          ) : (
-            <OnboardingTooltip id="sign-in-btn" content="Sign in to sync your watchlist across devices" position="bottom" delayMs={6000}>
-              <button className="login-btn" onClick={() => setAuthModalOpen(true)}>Sign In</button>
-            </OnboardingTooltip>
-          )}
 
-          <a href="/pricing" className="pro-btn" style={{ textDecoration: 'none' }}>PRO</a>
         </div>
       </header>
 
