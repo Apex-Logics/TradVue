@@ -245,7 +245,21 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
         transactionType: row.transaction_type,
         shares: row.shares != null ? parseFloat(row.shares) : null,
         pricePerShare: row.price_per_share != null ? parseFloat(row.price_per_share) : null,
-        transactionValue: row.transaction_value != null ? parseFloat(row.transaction_value) : null,
+        transactionValue: (() => {
+          const tv = row.transaction_value != null ? parseFloat(row.transaction_value) : null;
+          if (tv != null) return tv;
+          const s = row.shares != null ? parseFloat(row.shares) : null;
+          const p = row.price_per_share != null ? parseFloat(row.price_per_share) : null;
+          if (s != null && p != null && s > 0 && p > 0) return Math.round(s * p * 100) / 100;
+          return null;
+        })(),
+        transactionValueCalculated: (() => {
+          const tv = row.transaction_value != null ? parseFloat(row.transaction_value) : null;
+          if (tv != null) return false;
+          const s = row.shares != null ? parseFloat(row.shares) : null;
+          const p = row.price_per_share != null ? parseFloat(row.price_per_share) : null;
+          return s != null && p != null && s > 0 && p > 0;
+        })(),
         holdingsAfter: row.holdings_after != null ? parseFloat(row.holdings_after) : null,
         date: row.filing_date ? row.filing_date.toISOString().split('T')[0] : null,
         filingUrl: row.filing_url,
@@ -325,7 +339,17 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
     const finalData = merged.length > 0 ? merged : (getLastGood(cacheKey) || []);
 
     // Apply client-side pagination on the live data slice
-    const pageSlice = finalData.slice((page - 1) * limit, page * limit);
+    // Enrich live items: calculate transactionValue from shares × price if missing
+    const enriched = finalData.map(item => {
+      if (item.transactionValue != null) return item;
+      const s = item.shares != null ? parseFloat(item.shares) : null;
+      const p = item.pricePerShare != null ? parseFloat(item.pricePerShare) : null;
+      if (s != null && p != null && s > 0 && p > 0) {
+        return { ...item, transactionValue: Math.round(s * p * 100) / 100, transactionValueCalculated: true };
+      }
+      return item;
+    });
+    const pageSlice = enriched.slice((page - 1) * limit, page * limit);
 
     return res.json({
       success: true,

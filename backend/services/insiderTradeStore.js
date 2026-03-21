@@ -136,6 +136,16 @@ async function ingestFromEdgar(trades) {
     const accessionNumber = _extractAccessionFromUrl(filingUrl);
     const cik = _extractCikFromUrl(filingUrl);
 
+    // Calculate transaction_value from shares × price if missing
+    let computedTransactionValue = trade.transactionValue || null;
+    if (computedTransactionValue == null) {
+      const s = trade.shares != null ? parseFloat(trade.shares) : null;
+      const p = trade.pricePerShare != null ? parseFloat(trade.pricePerShare) : null;
+      if (s != null && p != null && s > 0 && p > 0) {
+        computedTransactionValue = Math.round(s * p * 100) / 100;
+      }
+    }
+
     try {
       const result = await db.query(
         `INSERT INTO insider_trades (
@@ -154,7 +164,7 @@ async function ingestFromEdgar(trades) {
           transactionType,
           trade.shares || null,
           trade.pricePerShare || null,
-          trade.transactionValue || null,
+          computedTransactionValue,
           trade.holdingsAfter || null,
           filingDate,
           filingUrl,

@@ -26,6 +26,7 @@ interface InsiderTrade {
   shares?: number | null
   pricePerShare?: number | null
   transactionValue?: number | null
+  transactionValueCalculated?: boolean | null
   holdingsAfter?: number | null
   date: string
   filingUrl?: string | null
@@ -285,6 +286,11 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
              !t.includes('sale') && !t.includes('award') && !t.includes('gift')
     }
     return true
+  }).sort((a, b) => {
+    // Always sort newest first — ensures Load More pagination + search filtering stays sorted
+    const aDate = a.date ? new Date(a.date).getTime() : 0
+    const bDate = b.date ? new Date(b.date).getTime() : 0
+    return bDate - aDate
   })
 
   return (
@@ -428,12 +434,21 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
                   <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>
                     {item.shares != null ? item.shares.toLocaleString() : '—'}
                   </td>
-                  <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : item.shares != null && item.pricePerShare != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
                     {item.transactionValue != null
                       ? fmtLargeMoney(item.transactionValue)
-                      : item.pricePerShare != null
-                        ? `$${item.pricePerShare.toFixed(2)}/sh`
-                        : '—'}
+                      : item.shares != null && item.pricePerShare != null
+                        ? (
+                          <span
+                            title="Calculated from shares × price"
+                            style={{ borderBottom: '1px dashed var(--text-3)', cursor: 'help', opacity: 0.85 }}
+                          >
+                            {fmtLargeMoney(item.shares * item.pricePerShare)}
+                          </span>
+                        )
+                        : item.pricePerShare != null
+                          ? `$${item.pricePerShare.toFixed(2)}/sh`
+                          : '—'}
                   </td>
                   <td style={{ whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 11 }}>
                     {fmtDate(item.date)}
