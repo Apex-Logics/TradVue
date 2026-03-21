@@ -161,6 +161,7 @@ app.use('/api/push',          cachePrivate,   require('./routes/push'));        
 app.use('/api',               require('./routes/marketIntel'));         // FRED, SEC EDGAR, earnings/IPO calendars
 
 // ── Health check ──────────────────────────────────────────────────────────────
+app.get('/api/health', (req, res) => res.json({ status: 'OK', service: 'TradVue API' }));
 app.get('/health', (req, res) => {
   res.json({ 
     status: 'OK', 

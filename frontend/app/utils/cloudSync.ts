@@ -386,13 +386,38 @@ const PORTFOLIO_KEY = 'cg_portfolio_holdings'
  */
 export async function initPortfolioSync(token: string): Promise<void> {
   try {
-    const cloudHoldings = await cloudGet<unknown[]>(token, 'portfolio')
+    const cloudResponse = await fetch(`${API_BASE}/api/user/data/portfolio`, {
+      headers: authHeaders(token),
+    })
+    let cloudHoldings: unknown[] | null = null
+    let cloudUpdatedAt: string | null = null
+    if (cloudResponse.ok) {
+      const json = await cloudResponse.json()
+      let payload = json.data ?? json.portfolio ?? json
+      if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
+        payload = payload.data
+      }
+      cloudHoldings = Array.isArray(payload) ? payload : null
+      cloudUpdatedAt = json.updated_at ?? null
+    }
     const localHoldings = lsGet<unknown[]>(PORTFOLIO_KEY, [])
     const cloud = Array.isArray(cloudHoldings) ? cloudHoldings : []
 
-    if (cloud.length > 0) {
+    if (cloud.length > 0 && localHoldings.length === 0) {
+      // Cloud has data, local is empty — check if user intentionally cleared
+      const clearedAt = (() => { try { return localStorage.getItem('portfolio_cleared_at') } catch { return null } })()
+      if (clearedAt && cloudUpdatedAt && new Date(clearedAt) > new Date(cloudUpdatedAt)) {
+        // User cleared after last cloud update — respect the deletion, push empty to cloud
+        await cloudPut(token, 'portfolio', [])
+      } else {
+        // Fresh device or no clear record — restore from cloud (cloud wins)
+        lsSet(PORTFOLIO_KEY, cloud)
+      }
+    } else if (cloud.length > 0) {
+      // Both have data — cloud wins (existing behavior)
       lsSet(PORTFOLIO_KEY, cloud)
     } else if (localHoldings.length > 0) {
+      // Cloud empty, local has data — push local to cloud
       await cloudPut(token, 'portfolio', localHoldings)
     }
   } catch {
@@ -402,9 +427,13 @@ export async function initPortfolioSync(token: string): Promise<void> {
 
 let _portfolioTimer: ReturnType<typeof setTimeout> | null = null
 
-export function debouncedSyncPortfolio(holdings: unknown[]): void {
+export function debouncedSyncPortfolio(holdings: unknown[], prevHoldings?: unknown[]): void {
   const token = getToken()
-  if (!token || !holdings.length) return  // Never push empty arrays to cloud
+  if (!token) return
+  // Track intentional clearing: if going from non-empty → empty, record cleared timestamp
+  if (prevHoldings && prevHoldings.length > 0 && holdings.length === 0) {
+    try { localStorage.setItem('portfolio_cleared_at', new Date().toISOString()) } catch {}
+  }
   if (_portfolioTimer) clearTimeout(_portfolioTimer)
   _portfolioTimer = setTimeout(async () => {
     _portfolioTimer = null
