@@ -642,7 +642,7 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
           </div>
           <div style={instructionRow}>
             <span style={{ fontSize: 18 }}>2️⃣</span>
-            <span style={bodyText}>Check the <strong style={highlight}}>Events Log</strong> below to see incoming webhook data</span>
+            <span style={bodyText}>Check the <strong style={highlight}>Events Log</strong> below to see incoming webhook data</span>
           </div>
           <div style={instructionRow}>
             <span style={{ fontSize: 18 }}>3️⃣</span>

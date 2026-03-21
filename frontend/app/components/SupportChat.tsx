@@ -345,7 +345,20 @@ function ContactPanel({ onBack }: { onBack: () => void }) {
 
 export default function SupportChat() {
   const [isOpen, setIsOpen] = useState(false)
+  const [isHidden, setIsHidden] = useState(() => {
+    try { return localStorage.getItem('cg_support_hidden') === '1' } catch { return false }
+  })
   const [view, setView] = useState<View>({ level: 'categories' })
+
+  const hideSupport = () => {
+    setIsHidden(true)
+    setIsOpen(false)
+    try { localStorage.setItem('cg_support_hidden', '1') } catch {}
+  }
+  const showSupport = () => {
+    setIsHidden(false)
+    try { localStorage.setItem('cg_support_hidden', '0') } catch {}
+  }
 
   const handleOpen = () => {
     setIsOpen(true)
@@ -363,6 +376,42 @@ export default function SupportChat() {
     view.level === 'answer' && currentCategory
       ? currentCategory.items[view.questionIndex]
       : null
+
+  // When hidden, show a tiny dot to re-enable
+  if (isHidden) {
+    return (
+      <button
+        onClick={showSupport}
+        aria-label="Show support"
+        title="Show support"
+        style={{
+          position: 'fixed',
+          bottom: 84,
+          right: 20,
+          width: 24,
+          height: 24,
+          borderRadius: '50%',
+          background: 'var(--bg-3, #333)',
+          border: '1px solid var(--border, #444)',
+          cursor: 'pointer',
+          display: 'flex',
+          alignItems: 'center',
+          justifyContent: 'center',
+          opacity: 0.4,
+          transition: 'opacity 0.2s',
+          zIndex: 9001,
+        }}
+        onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8' }}
+        onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
+      >
+        <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+          <circle cx="12" cy="12" r="10"/>
+          <path d="M9.09 9a3 3 0 0 1 5.83 1c0 2-3 3-3 3"/>
+          <line x1="12" y1="17" x2="12.01" y2="17"/>
+        </svg>
+      </button>
+    )
+  }
 
   return (
     <>
@@ -599,48 +648,59 @@ export default function SupportChat() {
       )}
 
       {/* ── Floating Chat Bubble ── */}
-      <button
-        onClick={isOpen ? handleClose : handleOpen}
-        aria-label={isOpen ? 'Close support' : 'Open support'}
-        style={{
-          position: 'fixed',
-          bottom: 84,
-          right: 20,
-          width: 56,
-          height: 56,
-          borderRadius: '50%',
-          background: isOpen ? 'rgba(74,158,255,0.9)' : '#4a9eff',
-          border: 'none',
-          color: '#fff',
-          cursor: 'pointer',
-          display: 'flex',
-          alignItems: 'center',
-          justifyContent: 'center',
-          boxShadow: '0 6px 24px rgba(74,158,255,0.4), 0 2px 8px rgba(0,0,0,0.4)',
-          zIndex: 9001,
-          transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
-        }}
-        onMouseEnter={e => {
-          e.currentTarget.style.transform = 'scale(1.06)'
-          e.currentTarget.style.boxShadow = '0 8px 32px rgba(74,158,255,0.5), 0 2px 8px rgba(0,0,0,0.4)'
-        }}
-        onMouseLeave={e => {
-          e.currentTarget.style.transform = 'scale(1)'
-          e.currentTarget.style.boxShadow = '0 6px 24px rgba(74,158,255,0.4), 0 2px 8px rgba(0,0,0,0.4)'
-        }}
-      >
-        {/* Icon toggles between chat and X */}
-        {isOpen ? (
-          <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
-            <line x1="18" y1="6" x2="6" y2="18" />
-            <line x1="6" y1="6" x2="18" y2="18" />
-          </svg>
-        ) : (
-          <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-            <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
-          </svg>
-        )}
-      </button>
+      <div style={{ position: 'fixed', bottom: 84, right: 20, zIndex: 9001 }}>
+        <button
+          onClick={isOpen ? handleClose : handleOpen}
+          aria-label={isOpen ? 'Close support' : 'Open support'}
+          style={{
+            width: 56,
+            height: 56,
+            borderRadius: '50%',
+            background: isOpen ? 'rgba(74,158,255,0.9)' : '#4a9eff',
+            border: 'none',
+            color: '#fff',
+            cursor: 'pointer',
+            display: 'flex',
+            alignItems: 'center',
+            justifyContent: 'center',
+            boxShadow: '0 6px 24px rgba(74,158,255,0.4), 0 2px 8px rgba(0,0,0,0.4)',
+            transition: 'background 0.2s, transform 0.2s, box-shadow 0.2s',
+            position: 'relative',
+          }}
+          onMouseEnter={e => {
+            e.currentTarget.style.transform = 'scale(1.06)'
+            e.currentTarget.style.boxShadow = '0 8px 32px rgba(74,158,255,0.5), 0 2px 8px rgba(0,0,0,0.4)'
+          }}
+          onMouseLeave={e => {
+            e.currentTarget.style.transform = 'scale(1)'
+            e.currentTarget.style.boxShadow = '0 6px 24px rgba(74,158,255,0.4), 0 2px 8px rgba(0,0,0,0.4)'
+          }}
+        >
+          {/* Icon toggles between chat and X */}
+          {isOpen ? (
+            <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round">
+              <line x1="18" y1="6" x2="6" y2="18" />
+              <line x1="6" y1="6" x2="18" y2="18" />
+            </svg>
+          ) : (
+            <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <path d="M21 15a2 2 0 0 1-2 2H7l-4 4V5a2 2 0 0 1 2-2h14a2 2 0 0 1 2 2z" />
+            </svg>
+          )}
+          {/* Hide button dot */}
+          {!isOpen && (
+            <span
+              onClick={e => { e.stopPropagation(); hideSupport() }}
+              title="Hide support button"
+              style={{
+                position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%',
+                background: 'var(--bg-0, #111)', border: '1px solid var(--border, #333)', cursor: 'pointer',
+                display: 'flex', alignItems: 'center', justifyContent: 'center', fontSize: 9, color: 'var(--text-3)',
+              }}
+            >✕</span>
+          )}
+        </button>
+      </div>
     </>
   )
 }

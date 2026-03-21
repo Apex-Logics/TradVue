@@ -64,6 +64,66 @@ function trialDaysRemaining(createdAt: string | undefined): number {
   return Math.max(0, TRIAL_DAYS - diffDays)
 }
 
+// ── Reset Password Row ────────────────────────────────────────────────────────
+
+function ResetPasswordRow({ email }: { email?: string }) {
+  const [sent, setSent] = useState(false)
+  const [loading, setLoading] = useState(false)
+  const [error, setError] = useState<string | null>(null)
+
+  const handleReset = async () => {
+    if (!email) return
+    setLoading(true)
+    setError(null)
+    try {
+      await fetch(`${API_BASE}/api/auth/forgot`, {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ email: email.trim().toLowerCase() }),
+      })
+      setSent(true)
+    } catch {
+      setError('Network error — please try again.')
+    } finally {
+      setLoading(false)
+    }
+  }
+
+  return (
+    <div style={{ marginTop: 16, paddingTop: 16, borderTop: '1px solid var(--border)' }}>
+      <div style={{ fontSize: 12, color: 'var(--text-3)', marginBottom: 8 }}>Security</div>
+      {sent ? (
+        <div style={{ fontSize: 13, color: '#4ade80' }}>
+          ✓ Password reset email sent to {email}
+        </div>
+      ) : (
+        <>
+          <button
+            onClick={handleReset}
+            disabled={loading || !email}
+            style={{
+              background: 'none',
+              border: '1px solid var(--border)',
+              borderRadius: 6,
+              color: 'var(--text-1)',
+              cursor: loading || !email ? 'not-allowed' : 'pointer',
+              fontSize: 13,
+              padding: '7px 14px',
+              opacity: loading || !email ? 0.5 : 1,
+              transition: 'border-color 0.15s, color 0.15s',
+            }}
+            onMouseEnter={e => { if (!loading && email) (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--accent)' }}
+            onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.borderColor = 'var(--border)' }}
+          >
+            {loading ? 'Sending…' : 'Send Password Reset Email'}
+          </button>
+          {error && <div style={{ fontSize: 12, color: '#f87171', marginTop: 6 }}>{error}</div>}
+        </>
+      )}
+    </div>
+  )
+}
+
 // ── Section Card ──────────────────────────────────────────────────────────────
 
 function SectionCard({ title, children }: { title: string; children: React.ReactNode }) {
@@ -439,6 +499,7 @@ function AccountPageInner() {
               )
             }
           />
+          <ResetPasswordRow email={user.email} />
         </SectionCard>
 
         {/* ── Subscription ─────────────────────────────────────────────────── */}

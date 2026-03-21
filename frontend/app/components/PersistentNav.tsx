@@ -5,6 +5,8 @@ import Link from 'next/link'
 import { Suspense, useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { getSyncStatus, subscribeSyncStatus, initFullSync, type SyncStatus } from '../utils/cloudSync'
+import dynamic from 'next/dynamic'
+const AuthModal = dynamic(() => import('./AuthModal'), { ssr: false })
 
 // ─── Chevron icon ─────────────────────────────────────────────────────────────
 function ChevronDown({ size = 10 }: { size?: number }) {
@@ -259,6 +261,7 @@ function NavInner() {
   const pathname = usePathname()
   const { user, logout } = useAuth()
   const [drawerOpen, setDrawerOpen] = useState(false)
+  const [showAuthModal, setShowAuthModal] = useState(false)
 
   const isActive = (href: string) => {
     if (href === '/') return pathname === '/'
@@ -287,6 +290,19 @@ function NavInner() {
     }
     return () => { document.body.style.overflow = '' }
   }, [drawerOpen])
+
+  // Handle #signin link clicks → open auth modal
+  useEffect(() => {
+    const h = (e: MouseEvent) => {
+      const link = (e.target as HTMLElement).closest('a[href="#signin"]')
+      if (link) {
+        e.preventDefault()
+        setShowAuthModal(true)
+      }
+    }
+    document.addEventListener('click', h)
+    return () => document.removeEventListener('click', h)
+  }, [])
 
   // Truncate email for display
   const truncateEmail = (email: string) => {
@@ -339,6 +355,8 @@ function NavInner() {
     { label: 'Journal', href: '/journal', icon: <IconJournal /> },
     { label: 'Playbooks', href: '/playbooks', icon: <IconPlaybooks /> },
     { label: 'Prop Firm', href: '/propfirm', icon: <IconPropFirm /> },
+    { label: 'Rules', href: '/rules', icon: <IconRules /> },
+    { label: 'Ritual', href: '/ritual', icon: <IconRitual /> },
     // Analysis group
     { label: '── Analysis ──', href: '', divider: true },
     { label: 'Analysis', href: '/?view=analysis', icon: <IconAnalysis /> },
@@ -347,8 +365,6 @@ function NavInner() {
     { label: 'AI Coach', href: '/coach', icon: <IconAICoach /> },
     // Account group
     { label: '── Account ──', href: '', divider: true },
-    { label: 'Rules', href: '/rules', icon: <IconRules /> },
-    { label: 'Ritual', href: '/ritual', icon: <IconRitual /> },
     { label: 'Integrations', href: '/integrations', icon: <IconIntegrations /> },
     { label: 'Account', href: '/account', icon: <IconSettings /> },
     { label: 'Help', href: '/help', icon: <IconHelp /> },
@@ -407,7 +423,7 @@ function NavInner() {
                     { label: 'Sign Out', href: '#signout', icon: <IconSignOut /> },
                   ]
                 : [
-                    { label: 'Sign In', href: '/login', icon: <IconAccount /> },
+                    { label: 'Sign In', href: '#signin', icon: <IconAccount /> },
                     { label: 'Upgrade to Pro', href: '/pricing', icon: <IconUpgrade /> },
                   ]
             }
@@ -520,6 +536,7 @@ function NavInner() {
           )}
         </div>
       </div>
+      {showAuthModal && <AuthModal onClose={() => setShowAuthModal(false)} />}
     </nav>
   )
 }
