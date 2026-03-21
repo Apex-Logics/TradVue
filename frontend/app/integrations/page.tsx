@@ -129,6 +129,43 @@ function IconShield() {
   )
 }
 
+function IconAlertTriangle() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
+      <line x1="12" y1="9" x2="12" y2="13"/>
+      <line x1="12" y1="17" x2="12.01" y2="17"/>
+    </svg>
+  )
+}
+
+function IconInfo() {
+  return (
+    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <circle cx="12" cy="12" r="10"/>
+      <line x1="12" y1="8" x2="12" y2="12"/>
+      <line x1="12" y1="16" x2="12.01" y2="16"/>
+    </svg>
+  )
+}
+
+function IconZap() {
+  return (
+    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round">
+      <polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/>
+    </svg>
+  )
+}
+
+function IconCheckCircle() {
+  return (
+    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <path d="M22 11.08V12a10 10 0 1 1-5.93-9.14"/>
+      <polyline points="22 4 12 14.01 9 11.01"/>
+    </svg>
+  )
+}
+
 // ── Reusable components ────────────────────────────────────────────────────────
 
 function SectionCard({ title, children, subtitle }: { title: string; subtitle?: string; children: React.ReactNode }) {
@@ -503,7 +540,16 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
   generating: boolean;
 }) {
   const copyText = useCopyText()
-  const [openStep, setOpenStep] = useState<number | null>(1)
+  // All steps open by default — users need to see previous steps while working
+  const [openSteps, setOpenSteps] = useState<Set<number>>(new Set([1, 2, 3]))
+
+  function toggleStep(n: number) {
+    setOpenSteps(prev => {
+      const next = new Set(prev)
+      if (next.has(n)) { next.delete(n) } else { next.add(n) }
+      return next
+    })
+  }
 
   const tvTemplateJson = `{
   "ticker": "{{ticker}}",
@@ -516,79 +562,123 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
   "source": "tradingview"
 }`
 
+  const templates = [
+    {
+      name: 'Moving Average Crossover',
+      file: 'tv_ma_crossover.pine',
+      desc: 'Buy on fast MA crossing above slow MA, sell on crossunder. Good starting point for trend-following.',
+    },
+    {
+      name: 'RSI Momentum Strategy',
+      file: 'tv_rsi_strategy.pine',
+      desc: 'Enter long when RSI crosses above oversold level, exit when overbought. Classic momentum approach.',
+    },
+    {
+      name: 'Manual Webhook Template',
+      file: 'tv_manual_webhook.pine',
+      desc: 'Bare-bones strategy with all the webhook plumbing already wired in. Add your own entry/exit logic.',
+    },
+  ]
+
   const steps = [
     {
       n: 1,
-      title: 'Create an Alert in TradingView',
+      title: 'Set Up Your Strategy',
       content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={bodyText}>
-            First, open TradingView and pull up the strategy you want to connect. You&apos;re going to create an alert that fires whenever your strategy generates a signal — that alert will send trade data straight to TradVue.
+            You need a Pine Script strategy with <Code>strategy.entry()</Code> and <Code>strategy.exit()</Code> calls.
+            If you already have one, skip ahead. If not, grab one of the templates below — they&apos;re ready to use.
           </p>
-          <div style={instructionRow}>
-            <span style={stepDot}>1</span>
-            <span style={bodyText}>In TradingView, right-click on your strategy on the chart → <strong style={highlight}>Add Alert</strong></span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>2</span>
-            <span style={bodyText}>Set the condition to your strategy signal (e.g., <Code>Long Entry Signal</Code> or <Code>Order fills</Code>)</span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>3</span>
-            <span style={bodyText}>In the <strong style={highlight}>Notifications</strong> tab, check <strong style={highlight}>&quot;Webhook URL&quot;</strong></span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>4</span>
-            <span style={bodyText}>Paste your webhook URL from <strong style={highlight}>Step 2</strong> into the Webhook URL field</span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>5</span>
-            <span style={bodyText}>In the <strong style={highlight}>&quot;Message&quot;</strong> field, paste the JSON template from <strong style={highlight}>Step 3</strong></span>
-          </div>
-          <div style={instructionRow}>
-            <span style={stepDot}>6</span>
-            <span style={bodyText}>Set alert frequency to <strong style={highlight}>&quot;Once Per Bar Close&quot;</strong> or <strong style={highlight}>&quot;Once Per Bar&quot;</strong></span>
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+            {templates.map(tmpl => (
+              <div key={tmpl.file} style={{
+                display: 'flex', justifyContent: 'space-between', alignItems: 'center',
+                padding: '12px 14px',
+                background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
+                borderRadius: 10,
+              }}>
+                <div style={{ flex: 1 }}>
+                  <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 3 }}>{tmpl.name}</div>
+                  <div style={{ fontSize: 12, color: 'var(--text-3)', lineHeight: 1.5 }}>{tmpl.desc}</div>
+                </div>
+                <a
+                  href={`/downloads/${tmpl.file}`}
+                  download={tmpl.file}
+                  style={{
+                    display: 'inline-flex', alignItems: 'center', gap: 6,
+                    padding: '7px 14px',
+                    background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+                    border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700,
+                    cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', marginLeft: 12,
+                  }}
+                >
+                  <IconDownload /> Download
+                </a>
+              </div>
+            ))}
           </div>
           <div style={{
-            marginTop: 10, padding: '10px 14px',
-            background: 'rgba(139,92,246,0.08)', border: '1px solid rgba(139,92,246,0.2)',
+            padding: '10px 14px',
+            background: 'rgba(139,92,246,0.07)', border: '1px solid rgba(139,92,246,0.2)',
             borderRadius: 8, fontSize: 12, color: '#a78bfa', lineHeight: 1.6,
+            display: 'flex', gap: 8, alignItems: 'flex-start',
           }}>
-            <strong>💡 Keep this alert dialog open</strong> — you&apos;ll copy the webhook URL and message template in the next two steps and paste them right in.
+            <span style={{ flexShrink: 0, marginTop: 1 }}><IconInfo /></span>
+            <span>Already have a strategy? Use the <strong>Manual Webhook Template</strong> to see exactly what to add — it&apos;s a minimal example you can copy from.</span>
           </div>
         </div>
       ),
     },
     {
       n: 2,
-      title: 'Get Your Webhook URL',
+      title: 'Create an Alert in TradingView',
       content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 14 }}>
           <p style={bodyText}>
-            Copy your unique webhook URL below and paste it into the <strong style={highlight}>Webhook URL</strong> field in the TradingView alert dialog you just opened.
+            Open TradingView with your strategy on the chart. Create an alert, then paste your webhook URL and the message template from below directly into the alert dialog — everything you need is right here.
           </p>
-          {loading ? (
-            <div style={{ color: 'var(--text-2)', fontSize: 13 }}>Loading…</div>
-          ) : !webhookUrl ? (
-            <div>
-              <p style={{ ...bodyText, marginBottom: 12 }}>No webhook URL yet. Generate one to get started.</p>
-              <button onClick={onGenerate} disabled={generating} style={{
-                padding: '11px 22px',
-                background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
-                border: 'none', borderRadius: 10, color: '#fff',
-                fontSize: 13, fontWeight: 700, cursor: generating ? 'wait' : 'pointer',
-              }}>
-                {generating ? 'Generating…' : '⚡ Generate Webhook URL'}
-              </button>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={instructionRow}>
+              <span style={stepDot}>1</span>
+              <span style={bodyText}>Right-click your strategy on the chart → <strong style={highlight}>Add Alert</strong></span>
             </div>
-          ) : (
-            <div>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '0 0 8px' }}>Your TradingView webhook URL — copy and paste into the alert dialog:</p>
-              <div style={{
-                display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap',
-                background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.08)',
-                borderRadius: 8, padding: '10px 12px',
-              }}>
+            <div style={instructionRow}>
+              <span style={stepDot}>2</span>
+              <span style={bodyText}>Set condition to your strategy signal (e.g. <Code>Order fills</Code>)</span>
+            </div>
+            <div style={instructionRow}>
+              <span style={stepDot}>3</span>
+              <span style={bodyText}>In the <strong style={highlight}>Notifications</strong> tab, enable <strong style={highlight}>Webhook URL</strong> and paste your URL:</span>
+            </div>
+          </div>
+
+          {/* Webhook URL inline */}
+          <div style={{
+            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10, padding: '14px 16px',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+              Your Webhook URL
+            </div>
+            {loading ? (
+              <div style={{ color: 'var(--text-2)', fontSize: 13 }}>Loading…</div>
+            ) : !webhookUrl ? (
+              <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
+                <p style={{ ...bodyText, fontSize: 12 }}>Generate a webhook URL first:</p>
+                <button onClick={onGenerate} disabled={generating} style={{
+                  display: 'inline-flex', alignItems: 'center', gap: 7,
+                  padding: '10px 20px',
+                  background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+                  border: 'none', borderRadius: 10, color: '#fff',
+                  fontSize: 13, fontWeight: 700, cursor: generating ? 'wait' : 'pointer',
+                }}>
+                  <IconZap /> {generating ? 'Generating…' : 'Generate Webhook URL'}
+                </button>
+              </div>
+            ) : (
+              <div style={{ display: 'flex', alignItems: 'center', gap: 8, flexWrap: 'wrap' }}>
                 <code style={{ flex: 1, fontSize: 11, color: '#a78bfa', fontFamily: 'monospace', wordBreak: 'break-all', minWidth: 0 }}>
                   {webhookUrl}
                 </code>
@@ -601,69 +691,85 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
                   <IconCopy /> Copy
                 </button>
               </div>
-              <p style={{ fontSize: 12, color: 'var(--text-3)', margin: '8px 0 0' }}>
-                Keep this URL private — it&apos;s your personal key. If compromised, rotate it below.
-              </p>
+            )}
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={instructionRow}>
+              <span style={stepDot}>4</span>
+              <span style={bodyText}>In the <strong style={highlight}>Message</strong> field, paste this JSON template:</span>
             </div>
-          )}
+          </div>
+
+          {/* Message template inline */}
+          <div style={{
+            background: 'rgba(0,0,0,0.3)', border: '1px solid rgba(255,255,255,0.1)',
+            borderRadius: 10, padding: '14px 16px',
+          }}>
+            <div style={{ fontSize: 11, fontWeight: 700, color: 'var(--text-3)', textTransform: 'uppercase', letterSpacing: '0.07em', marginBottom: 10 }}>
+              Alert Message Template
+            </div>
+            <div style={{
+              background: 'rgba(0,0,0,0.4)',
+              borderRadius: 8, padding: '12px',
+              fontFamily: 'monospace', fontSize: 11, color: '#a78bfa',
+              overflowX: 'auto', lineHeight: 1.6, marginBottom: 10,
+            }}>
+              {tvTemplateJson.split('\n').map((line, i) => (
+                <div key={i}>{line}</div>
+              ))}
+            </div>
+            <button onClick={() => copyText(tvTemplateJson, 'Template copied!')} style={{
+              display: 'inline-flex', alignItems: 'center', gap: 5,
+              padding: '7px 14px',
+              background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
+              border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700, cursor: 'pointer',
+            }}>
+              <IconCopy /> Copy Template
+            </button>
+          </div>
+
+          <div style={{ display: 'flex', flexDirection: 'column', gap: 8 }}>
+            <div style={instructionRow}>
+              <span style={stepDot}>5</span>
+              <span style={bodyText}>Set alert frequency to <strong style={highlight}>Once Per Bar Close</strong></span>
+            </div>
+            <div style={instructionRow}>
+              <span style={stepDot}>6</span>
+              <span style={bodyText}>Click <strong style={highlight}>Create</strong> — the alert is now live</span>
+            </div>
+          </div>
         </div>
       ),
     },
     {
       n: 3,
-      title: 'Add the Message Template',
-      content: (
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          <p style={bodyText}>
-            Copy this JSON template and paste it into the <strong style={highlight}>Message</strong> field of your TradingView alert. TradingView will auto-fill the <Code>{'{{'}</Code><Code>{'}}'}</Code> placeholders with real values when each alert fires.
-          </p>
-          <div style={{
-            background: 'rgba(0,0,0,0.4)', border: '1px solid rgba(255,255,255,0.08)',
-            borderRadius: 8, padding: '12px',
-            fontFamily: 'monospace', fontSize: 11, color: '#a78bfa',
-            overflowX: 'auto', lineHeight: 1.6, position: 'relative',
-          }}>
-            {tvTemplateJson.split('\n').map((line, i) => (
-              <div key={i}>{line}</div>
-            ))}
-          </div>
-          <button onClick={() => copyText(tvTemplateJson, 'Template copied!')} style={{
-            display: 'inline-flex', alignItems: 'center', gap: 5,
-            padding: '8px 16px',
-            background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
-            border: 'none', borderRadius: 8, color: '#fff', fontSize: 13, fontWeight: 700, cursor: 'pointer',
-          }}>
-            <IconCopy /> Copy Template
-          </button>
-          <p style={{ ...bodyText, fontSize: 12 }}>
-            Once pasted, hit <strong style={highlight}>Save</strong> in TradingView to create the alert. That&apos;s it — you&apos;re connected.
-          </p>
-        </div>
-      ),
-    },
-    {
-      n: 4,
-      title: 'Test It',
+      title: 'Verify the Connection',
       content: (
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           <p style={bodyText}>
-            Verify everything is working — either wait for your strategy to generate a signal or run it in replay/paper mode.
+            Run your strategy in paper trading or replay mode to generate a signal. It should show up in the Events Log below within seconds.
           </p>
           <div style={instructionRow}>
-            <span style={{ fontSize: 18 }}>1️⃣</span>
-            <span style={bodyText}>Run your strategy in <strong style={highlight}>paper trading mode</strong> or wait for a live signal</span>
+            <span style={stepDot}>1</span>
+            <span style={bodyText}>Trigger a signal — either via live trading, paper mode, or chart replay</span>
           </div>
           <div style={instructionRow}>
-            <span style={{ fontSize: 18 }}>2️⃣</span>
-            <span style={bodyText}>Check the <strong style={highlight}>Events Log</strong> below — you should see an incoming event within seconds</span>
+            <span style={stepDot}>2</span>
+            <span style={bodyText}>Scroll down to the <strong style={highlight}>Events Log</strong> — you should see a new entry appear within seconds</span>
           </div>
           <div style={instructionRow}>
-            <span style={{ fontSize: 18 }}>3️⃣</span>
-            <span style={bodyText}>The signal will appear in your TradVue Journal once matched to a trade</span>
+            <span style={stepDot}>3</span>
+            <span style={bodyText}>Once matched, the trade appears in your <a href="/journal" style={{ color: '#a78bfa', textDecoration: 'none', fontWeight: 600 }}>Journal</a></span>
           </div>
-          <div style={{ ...instructionRow, background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)', borderRadius: 10, padding: '12px 16px' }}>
-            <span style={{ fontSize: 18 }}>🎉</span>
-            <span style={{ ...bodyText, color: '#4ade80', fontWeight: 600 }}>That&apos;s it — strategy signals auto-journal from now on</span>
+          <div style={{
+            marginTop: 6, padding: '12px 16px',
+            background: 'rgba(34,197,94,0.07)', border: '1px solid rgba(34,197,94,0.2)',
+            borderRadius: 10, fontSize: 13, color: '#4ade80', fontWeight: 600, lineHeight: 1.6,
+            display: 'flex', alignItems: 'center', gap: 10,
+          }}>
+            <span style={{ flexShrink: 0, color: '#4ade80' }}><IconCheckCircle /></span>
+            <span>Setup complete — every strategy signal auto-journals from now on</span>
           </div>
         </div>
       ),
@@ -672,11 +778,43 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
 
   return (
     <>
-      <SectionCard title="4-Step Setup Guide">
+      {/* Plain-English explanation */}
+      <div style={{
+        background: 'rgba(139,92,246,0.06)',
+        border: '1px solid rgba(139,92,246,0.2)',
+        borderRadius: 14,
+        padding: '20px 22px',
+        marginBottom: 16,
+      }}>
+        <p style={{ fontSize: 14, color: 'var(--text-1, #e5e7eb)', margin: '0 0 10px', lineHeight: 1.7 }}>
+          TradingView can automatically send your strategy&apos;s buy and sell signals to TradVue. Every time your Pine Script strategy triggers an entry or exit, the trade appears in your journal — no manual logging needed.
+        </p>
+        <p style={{ fontSize: 13, color: 'var(--text-2, #9ca3af)', margin: 0, lineHeight: 1.7 }}>
+          This works with ANY Pine Script strategy that uses <Code>strategy.entry()</Code> and <Code>strategy.exit()</Code>.
+        </p>
+      </div>
+
+      {/* Requirements */}
+      <div style={{
+        background: 'rgba(234,179,8,0.07)',
+        border: '1px solid rgba(234,179,8,0.2)',
+        borderRadius: 12,
+        padding: '14px 18px',
+        marginBottom: 24,
+        display: 'flex', alignItems: 'flex-start', gap: 10,
+      }}>
+        <span style={{ flexShrink: 0, color: '#fbbf24', marginTop: 1 }}><IconAlertTriangle /></span>
+        <p style={{ fontSize: 13, color: 'var(--text-2)', margin: 0, lineHeight: 1.7 }}>
+          <strong style={{ color: '#fbbf24' }}>You&apos;ll need:</strong> TradingView <strong style={{ color: 'var(--text-1)' }}>Essential+</strong> plan or higher (~$15/month) — free plans don&apos;t support webhooks.
+        </p>
+      </div>
+
+      {/* Setup steps */}
+      <SectionCard title="3-Step Setup Guide">
         {steps.map(step => (
           <div key={step.n} style={{ borderBottom: '1px solid rgba(255,255,255,0.06)' }}>
             <button
-              onClick={() => setOpenStep(openStep === step.n ? null : step.n)}
+              onClick={() => toggleStep(step.n)}
               style={{
                 width: '100%', display: 'flex', alignItems: 'center', gap: 14,
                 padding: '16px 0', background: 'none', border: 'none',
@@ -685,8 +823,8 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
             >
               <span style={{
                 flexShrink: 0, width: 30, height: 30, borderRadius: '50%',
-                background: openStep === step.n ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.12)',
-                border: `1px solid ${openStep === step.n ? 'rgba(139,92,246,0.6)' : 'rgba(139,92,246,0.3)'}`,
+                background: openSteps.has(step.n) ? 'rgba(139,92,246,0.3)' : 'rgba(139,92,246,0.12)',
+                border: `1px solid ${openSteps.has(step.n) ? 'rgba(139,92,246,0.6)' : 'rgba(139,92,246,0.3)'}`,
                 color: '#a78bfa', fontSize: 13, fontWeight: 800,
                 display: 'flex', alignItems: 'center', justifyContent: 'center',
                 transition: 'all 0.2s',
@@ -697,11 +835,11 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
                 {step.title}
               </span>
               <span style={{ color: 'var(--text-3)', flexShrink: 0 }}>
-                <IconChevron open={openStep === step.n} />
+                <IconChevron open={openSteps.has(step.n)} />
               </span>
             </button>
 
-            {openStep === step.n && (
+            {openSteps.has(step.n) && (
               <div style={{ padding: '0 0 20px 44px' }}>
                 {step.content}
               </div>
@@ -709,70 +847,6 @@ function TradingViewInstallGuide({ webhookUrl, tokens, loading, onGenerate, gene
           </div>
         ))}
       </SectionCard>
-
-      <SectionCard title="Pine Script Templates" subtitle="Example strategies to get started with TradingView webhooks.">
-        <div style={{ display: 'flex', flexDirection: 'column', gap: 12 }}>
-          {[
-            {
-              name: 'Moving Average Crossover',
-              file: 'tv_ma_crossover.pine',
-              desc: 'Simple strategy: buy on fast MA > slow MA, sell on crossunder',
-            },
-            {
-              name: 'RSI Momentum Strategy',
-              file: 'tv_rsi_strategy.pine',
-              desc: 'Momentum-based strategy using RSI with overbought/oversold levels',
-            },
-            {
-              name: 'Manual Webhook Template',
-              file: 'tv_manual_webhook.pine',
-              desc: 'Base template for building your own strategy with webhook functionality',
-            },
-          ].map(tmpl => (
-            <div key={tmpl.file} style={{
-              display: 'flex', justifyContent: 'space-between', alignItems: 'center',
-              padding: '12px 14px',
-              background: 'rgba(255,255,255,0.03)', border: '1px solid rgba(255,255,255,0.07)',
-              borderRadius: 10,
-            }}>
-              <div style={{ flex: 1 }}>
-                <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)', marginBottom: 2 }}>{tmpl.name}</div>
-                <div style={{ fontSize: 12, color: 'var(--text-3)' }}>{tmpl.desc}</div>
-              </div>
-              <a
-                href={`/downloads/${tmpl.file}`}
-                download={tmpl.file}
-                style={{
-                  display: 'inline-flex', alignItems: 'center', gap: 6,
-                  padding: '7px 14px',
-                  background: 'linear-gradient(135deg, #7c3aed, #8b5cf6)',
-                  border: 'none', borderRadius: 8, color: '#fff', fontSize: 12, fontWeight: 700,
-                  cursor: 'pointer', textDecoration: 'none', whiteSpace: 'nowrap', marginLeft: 12,
-                }}
-              >
-                <IconDownload /> Download
-              </a>
-            </div>
-          ))}
-        </div>
-      </SectionCard>
-
-      <div style={{
-        background: 'rgba(234,179,8,0.08)',
-        border: '1px solid rgba(234,179,8,0.2)',
-        borderRadius: 14,
-        padding: '16px 18px',
-        marginBottom: 20,
-      }}>
-        <h3 style={{ fontSize: 13, fontWeight: 700, color: '#fbbf24', margin: '0 0 10px', display: 'flex', alignItems: 'center', gap: 8 }}>
-          ⚠️ Requirements
-        </h3>
-        <ul style={{ margin: 0, paddingLeft: 20, fontSize: 13, color: 'var(--text-2)', lineHeight: 1.7 }}>
-          <li>TradingView <strong>Essential+</strong> plan or higher (~$15/month) — free plans don&apos;t support webhooks</li>
-          <li>Works with stocks, forex, crypto — any instrument on TradingView</li>
-          <li>Strategy must use alertable outputs (buy/sell signals)</li>
-        </ul>
-      </div>
     </>
   )
 }
