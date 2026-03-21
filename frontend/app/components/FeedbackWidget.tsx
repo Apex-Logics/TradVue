@@ -14,7 +14,13 @@ const TYPES: { value: FeedbackType; label: string; placeholder: string }[] = [
 
 export default function FeedbackWidget() {
   const [open, setOpen]           = useState(false);
-  const [hidden, setHidden]       = useState(false);
+  const [hidden, setHidden]       = useState(() => {
+    try { return localStorage.getItem('cg_feedback_hidden') === '1' } catch { return false }
+  });
+  const toggleHidden = (val: boolean) => {
+    setHidden(val);
+    try { localStorage.setItem('cg_feedback_hidden', val ? '1' : '0') } catch {}
+  };
   const [type, setType]           = useState<FeedbackType>('bug');
   const [message, setMessage]     = useState('');
   const [email, setEmail]         = useState('');
@@ -62,7 +68,7 @@ export default function FeedbackWidget() {
       {/* Floating trigger button */}
       {hidden ? (
         <button
-          onClick={() => setHidden(false)}
+          onClick={() => toggleHidden(false)}
           aria-label="Show feedback"
           style={{
             position: 'fixed',
@@ -122,7 +128,7 @@ export default function FeedbackWidget() {
         </svg>
         {/* Hide button */}
         <span
-          onClick={e => { e.stopPropagation(); setHidden(true) }}
+          onClick={e => { e.stopPropagation(); toggleHidden(true) }}
           style={{
             position: 'absolute', top: -6, right: -6, width: 16, height: 16, borderRadius: '50%',
             background: 'var(--bg-0, #111)', border: '1px solid var(--border, #333)', cursor: 'pointer',
