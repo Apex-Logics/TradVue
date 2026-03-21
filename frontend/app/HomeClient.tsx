@@ -210,12 +210,12 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
   return (
     <div style={{ overflowY: 'auto', maxHeight: '100%', padding: '10px 12px' }}>
       <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center', marginBottom: 10 }}>
-        <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>
-          PRICE ALERTS {active.length > 0 && <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 9, marginLeft: 4 }}>{active.length}</span>}
+        <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>
+          PRICE ALERTS {active.length > 0 && <span style={{ background: 'var(--accent)', color: '#fff', borderRadius: 10, padding: '1px 6px', fontSize: 'var(--fs-xs)', marginLeft: 4 }}>{active.length}</span>}
         </span>
         <button
           onClick={onCreateAlert}
-          style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer', padding: '3px 8px', border: '1px solid var(--accent)', borderRadius: 4, background: 'transparent', display: 'flex', alignItems: 'center', gap: 4 }}
+          style={{ fontSize: 'var(--fs-sm)', color: 'var(--accent)', cursor: 'pointer', padding: '3px 8px', border: '1px solid var(--accent)', borderRadius: 4, background: 'transparent', display: 'flex', alignItems: 'center', gap: 4 }}
         >
           <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
           New Alert
@@ -227,9 +227,9 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
           <div style={{ marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
             <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="var(--text-3)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round"><path d="M18 8A6 6 0 0 0 6 8c0 7-3 9-3 9h18s-3-2-3-9"/><path d="M13.73 21a2 2 0 0 1-3.46 0"/></svg>
           </div>
-          <div style={{ fontSize: 12, color: 'var(--text-2)', marginBottom: 4 }}>No price alerts set</div>
-          <div style={{ fontSize: 11, color: 'var(--text-3)' }}>Create alerts in Portfolio → Alerts tab</div>
-          <button onClick={onCreateAlert} style={{ marginTop: 10, fontSize: 11, color: 'var(--accent)', cursor: 'pointer', padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 5, background: 'transparent' }}>
+          <div style={{ fontSize: 'var(--fs-md)', color: 'var(--text-2)', marginBottom: 4 }}>No price alerts set</div>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>Create alerts in Portfolio → Alerts tab</div>
+          <button onClick={onCreateAlert} style={{ marginTop: 10, fontSize: 'var(--fs-sm)', color: 'var(--accent)', cursor: 'pointer', padding: '5px 12px', border: '1px solid var(--accent)', borderRadius: 5, background: 'transparent' }}>
             Go to Portfolio Alerts
           </button>
         </div>
@@ -237,7 +237,7 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
 
       {active.length > 0 && (
         <div style={{ marginBottom: 12 }}>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', marginBottom: 6 }}>ACTIVE ({active.length})</div>
+          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', marginBottom: 6 }}>ACTIVE ({active.length})</div>
           {active.map(a => {
             const cur  = liveQuotes[a.symbol]
             const pct  = pctAway(a)
@@ -251,8 +251,8 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
                   }
                 </div>
                 <div style={{ flex: 1, minWidth: 0 }}>
-                  <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-0)' }}>{a.symbol}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                  <div style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--text-0)' }}>{a.symbol}</div>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>
                     {a.direction === 'above' ? 'Above' : 'Below'} <span style={{ color: 'var(--text-1)', fontFamily: 'monospace' }}>${fmt(a.target_price)}</span>
                   </div>
                 </div>
@@ -260,9 +260,9 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
                 <div style={{ textAlign: 'right', flexShrink: 0 }}>
                   {cur ? (
                     <>
-                      <div style={{ fontSize: 11, fontFamily: 'monospace', color: 'var(--text-1)' }}>${fmt(cur)}</div>
+                      <div style={{ fontSize: 'var(--fs-sm)', fontFamily: 'monospace', color: 'var(--text-1)' }}>${fmt(cur)}</div>
                       {pct && (
-                        <div style={{ fontSize: 9, color: toward ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
+                        <div style={{ fontSize: 'var(--fs-xs)', color: toward ? 'var(--green)' : 'var(--red)', display: 'flex', alignItems: 'center', justifyContent: 'flex-end', gap: 2 }}>
                           {toward
                             ? <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"/></svg>
                             : <svg width="8" height="8" viewBox="0 0 24 24" fill="currentColor"><circle cx="12" cy="12" r="4"/></svg>
@@ -272,7 +272,7 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
                       )}
                     </>
                   ) : (
-                    <div style={{ fontSize: 10, color: 'var(--text-3)' }}>—</div>
+                    <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>—</div>
                   )}
                 </div>
                 <button
@@ -292,15 +292,15 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
 
       {triggered.length > 0 && (
         <div>
-          <div style={{ fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', marginBottom: 6 }}>TRIGGERED ({triggered.length})</div>
+          <div style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)', marginBottom: 6 }}>TRIGGERED ({triggered.length})</div>
           {triggered.map(a => (
             <div key={a.id} style={{ display: 'flex', alignItems: 'center', gap: 8, background: 'var(--bg-2)', border: '1px solid rgba(0,192,106,0.35)', borderRadius: 6, padding: '8px 10px', marginBottom: 5 }}>
               <div style={{ color: 'var(--green)', flexShrink: 0 }}>
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.5" strokeLinecap="round" strokeLinejoin="round"><polyline points="20 6 9 17 4 12"/></svg>
               </div>
               <div style={{ flex: 1, minWidth: 0 }}>
-                <div style={{ fontWeight: 700, fontSize: 12, color: 'var(--text-1)' }}>{a.symbol}</div>
-                <div style={{ fontSize: 10, color: 'var(--text-3)' }}>
+                <div style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--text-1)' }}>{a.symbol}</div>
+                <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>
                   Triggered · ${fmt(a.target_price)}
                   {a.triggered_at && <> · {new Date(a.triggered_at).toLocaleDateString(undefined, { month: 'short', day: 'numeric' })}</>}
                 </div>
@@ -324,7 +324,7 @@ function PriceAlertsWidget({ onCreateAlert }: { onCreateAlert: () => void }) {
           href="/account#notifications"
           style={{
             display: 'inline-flex', alignItems: 'center', gap: 4,
-            fontSize: 10, color: 'var(--text-3)', textDecoration: 'none',
+            fontSize: 'var(--fs-sm)', color: 'var(--text-3)', textDecoration: 'none',
             transition: 'color 0.15s',
           }}
           onMouseEnter={e => { (e.currentTarget as HTMLAnchorElement).style.color = 'var(--accent)' }}
@@ -998,8 +998,8 @@ export default function HomeClient() {
         padding: '16px 0', boxShadow: '-4px 0 24px rgba(0,0,0,0.5)', overflowY: 'auto',
       }}>
         <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', padding: '0 16px 12px', borderBottom: '1px solid var(--border)', marginBottom: 8 }}>
-          <span style={{ fontSize: 11, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-2)', textTransform: 'uppercase' }}>Navigation</span>
-          <button onClick={() => setMobileNavOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 18, cursor: 'pointer', padding: '4px 8px' }} aria-label="Close navigation">✕</button>
+          <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-2)', textTransform: 'uppercase' }}>Navigation</span>
+          <button onClick={() => setMobileNavOpen(false)} style={{ background: 'none', border: 'none', color: 'var(--text-2)', fontSize: 'var(--fs-xl)', cursor: 'pointer', padding: '4px 8px' }} aria-label="Close navigation">✕</button>
         </div>
         {[
           { label: 'Dashboard',          href: '/' },
@@ -1016,7 +1016,7 @@ export default function HomeClient() {
           { label: 'Help',               href: '/help' },
         ].map(item => (
           <a key={item.label} href={item.href} onClick={() => setMobileNavOpen(false)}
-            style={{ padding: '12px 20px', fontSize: 14, fontWeight: 500, color: 'var(--text-1)', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}
+            style={{ padding: '12px 20px', fontSize: 'var(--fs-lg)', fontWeight: 500, color: 'var(--text-1)', textDecoration: 'none', borderBottom: '1px solid var(--border)' }}
           >{item.label}</a>
         ))}
       </div>
@@ -1116,10 +1116,10 @@ export default function HomeClient() {
                 aria-label={portfolioCollapsed ? 'Show portfolio' : 'Hide portfolio'}
                 onKeyDown={e => { if (e.key === 'Enter' || e.key === ' ') setPortfolioCollapsed(c => !c) }}
               >
-                <span style={{ fontSize: 10, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>
+                <span style={{ fontSize: 'var(--fs-sm)', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-2)' }}>
                   <IconTrendingUp size={11} style={{ verticalAlign: 'middle', marginRight: 3 }} /> PORTFOLIO
                 </span>
-                <span style={{ fontSize: 11, color: 'var(--text-2)' }}>{portfolioCollapsed ? '▼ Show' : '▲ Hide'}</span>
+                <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-2)' }}>{portfolioCollapsed ? '▼ Show' : '▲ Hide'}</span>
               </div>
               {!portfolioCollapsed && (
                 <ErrorBoundary label="Portfolio">
@@ -1194,9 +1194,9 @@ export default function HomeClient() {
           <strong style={{ color: '#a0a0b0' }}>TradVue</strong> — © 2026 TradVue. All rights reserved.
         </span>
         <span>
-          <a href="/help#data-sources" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 11 }}>Data Sources</a>
+          <a href="/help#data-sources" style={{ color: 'var(--text-3)', textDecoration: 'none', fontSize: 'var(--fs-sm)' }}>Data Sources</a>
           <span style={{ margin: '0 6px', color: 'var(--text-3)' }}>·</span>
-          <span style={{ color: 'var(--text-3)', fontSize: 11 }}>
+          <span style={{ color: 'var(--text-3)', fontSize: 'var(--fs-sm)' }}>
             <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}>
               <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
               <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>

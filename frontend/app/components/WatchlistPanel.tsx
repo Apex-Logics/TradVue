@@ -202,7 +202,7 @@ export default function WatchlistPanel({
             <button
               onClick={() => setAuthModalOpen(true)}
               aria-label="Sign in to sync your watchlist"
-              style={{ fontSize: 9, color: 'var(--accent)', cursor: 'pointer' }}
+              style={{ fontSize: 'var(--fs-xs)', color: 'var(--accent)', cursor: 'pointer' }}
             >
               sync ↑
             </button>
@@ -248,7 +248,7 @@ export default function WatchlistPanel({
               borderRadius: 4,
               width: 28,
               height: 28,
-              fontSize: 16,
+              fontSize: 'var(--fs-xl)',
               fontWeight: 700,
               cursor: 'pointer',
               display: 'flex',
@@ -263,10 +263,10 @@ export default function WatchlistPanel({
       {/* Watchlist items */}
       <div className={`watchlist-list wl-${watchlistSize}`} role="list" aria-label="Watchlist">
         {watchlist.length === 0 ? (
-          <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-3)', fontSize: 11 }}>
+          <div style={{ padding: '20px 14px', textAlign: 'center', color: 'var(--text-3)', fontSize: 'var(--fs-sm)' }}>
             <div style={{ marginBottom: 8 }}>Your watchlist is empty</div>
             <button
-              style={{ fontSize: 10, color: 'var(--accent)', cursor: 'pointer' }}
+              style={{ fontSize: 'var(--fs-sm)', color: 'var(--accent)', cursor: 'pointer' }}
               onClick={() => {
                 const el = document.querySelector<HTMLInputElement>('.symbol-search')
                 el?.focus()
@@ -389,7 +389,7 @@ export default function WatchlistPanel({
                 ) : (
                   <div className="watchlist-row-right">
                     <span className="watchlist-price" style={{ color: 'var(--text-3)' }}>—</span>
-                    <span style={{ fontSize: 9, color: 'var(--text-3)' }}>n/a</span>
+                    <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-3)' }}>n/a</span>
                   </div>
                 )}
                 {!watchlistEditMode && (
@@ -404,7 +404,7 @@ export default function WatchlistPanel({
                     }}
                     title={`Log trade for ${sym}`}
                     aria-label={`Log trade for ${sym}`}
-                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', color: 'var(--text-3)', padding: '1px 5px', fontSize: 9, fontWeight: 700, marginRight: 2 }}
+                    style={{ background: 'none', border: '1px solid var(--border)', borderRadius: 4, cursor: 'pointer', color: 'var(--text-3)', padding: '1px 5px', fontSize: 'var(--fs-xs)', fontWeight: 700, marginRight: 2 }}
                   >
                     +LOG
                   </button>
@@ -455,7 +455,7 @@ export default function WatchlistPanel({
               </span>
             ))}
           </div>
-          <div style={{ fontSize: 10, color: 'var(--text-3)', padding: '2px 14px 6px', textAlign: 'right' }}>
+          <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', padding: '2px 14px 6px', textAlign: 'right' }}>
             {customTickerSymbols.length}/{MAX_TICKER_CUSTOM} slots
           </div>
         </div>

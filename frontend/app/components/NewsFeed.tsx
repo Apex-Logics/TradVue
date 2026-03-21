@@ -122,9 +122,9 @@ function AnalysisView({
 
         {/* Sentiment bar */}
         <div style={{ marginBottom: 12 }}>
-          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 11 }}>
+          <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 5, fontSize: 'var(--fs-sm)' }}>
             <span style={{ color: 'var(--green)', fontWeight: 600 }}>▲ Bullish {bullPct}%</span>
-            <span style={{ color: sentimentColor, fontWeight: 700, fontSize: 12 }}>{sentimentLabel}</span>
+            <span style={{ color: sentimentColor, fontWeight: 700, fontSize: 'var(--fs-md)' }}>{sentimentLabel}</span>
             <span style={{ color: 'var(--red)', fontWeight: 600 }}>Bearish {bearPct}% ▼</span>
           </div>
           <div style={{ height: 10, borderRadius: 5, background: 'var(--bg-3)', overflow: 'hidden', display: 'flex' }}>
@@ -132,7 +132,7 @@ function AnalysisView({
             <div style={{ height: '100%', width: `${neutralCount > 0 ? Math.round((neutralCount / total) * 100) : 0}%`, background: 'var(--accent)', opacity: 0.4 }} />
             <div style={{ height: '100%', flex: 1, background: 'var(--red)', opacity: 0.7 }} />
           </div>
-          <div style={{ fontSize: 9.5, color: 'var(--text-3)', marginTop: 4, textAlign: 'center' }}>
+          <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-3)', marginTop: 4, textAlign: 'center' }}>
             Based on {total} recent news articles
           </div>
         </div>
@@ -145,8 +145,8 @@ function AnalysisView({
             { label: 'BEARISH', val: bearishCount, col: 'var(--red)' },
           ].map(s => (
             <div key={s.label} style={{ background: 'var(--bg-2)', borderRadius: 5, padding: '6px 8px', textAlign: 'center' }}>
-              <div style={{ fontSize: 16, fontWeight: 700, color: s.col, fontFamily: 'var(--mono)' }}>{s.val}</div>
-              <div style={{ fontSize: 9, color: 'var(--text-3)', letterSpacing: '0.05em' }}>{s.label}</div>
+              <div style={{ fontSize: 'var(--fs-xl)', fontWeight: 700, color: s.col, fontFamily: 'var(--mono)' }}>{s.val}</div>
+              <div style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-3)', letterSpacing: '0.05em' }}>{s.label}</div>
             </div>
           ))}
         </div>
@@ -184,7 +184,7 @@ function AnalysisView({
       )}
 
       {gainers.length === 0 && newsArticles.length === 0 && (
-        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
+        <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 'var(--fs-md)' }}>
           Loading market analysis…
         </div>
       )}
@@ -290,7 +290,7 @@ export default function NewsFeed({
             <span className="live-dot" />
             LIVE FEED
           </span>
-          <span style={{ fontSize: 10, color: 'var(--text-3)', marginLeft: 8 }}>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', marginLeft: 8 }}>
             {hasRealTickerData ? '● LIVE' : '○ SIM'}
           </span>
           <span className="feed-count">{newsArticles.length}</span>
@@ -303,7 +303,7 @@ export default function NewsFeed({
             aria-label="Filter news by symbol"
             style={{ width: 90, marginLeft: 4 }}
           />
-          <a href="/news" style={{ fontSize: 10, color: 'var(--accent)', marginLeft: 4, whiteSpace: 'nowrap' }}>
+          <a href="/news" style={{ fontSize: 'var(--fs-sm)', color: 'var(--accent)', marginLeft: 4, whiteSpace: 'nowrap' }}>
             Full page →
           </a>
           <button
@@ -327,7 +327,7 @@ export default function NewsFeed({
           background: 'var(--bg-0)',
         }}>
           {['AGO', 'SOURCE', 'HEADLINE', '', 'SYMS'].map((h, i) => (
-            <span key={i} style={{ fontSize: 9.5, fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-3)', textAlign: i === 0 ? 'right' : 'left' }}>
+            <span key={i} style={{ fontSize: 'var(--fs-xs)', fontWeight: 700, letterSpacing: '0.06em', color: 'var(--text-3)', textAlign: i === 0 ? 'right' : 'left' }}>
               {h}
             </span>
           ))}

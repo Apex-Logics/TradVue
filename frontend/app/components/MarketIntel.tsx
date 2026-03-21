@@ -134,7 +134,7 @@ function fmtLargeMoney(n: number | null) {
 
 /** Tiny sparkline — renders 12-point trend as an inline SVG path */
 function Sparkline({ data, color = 'var(--purple)' }: { data: { value: number }[]; color?: string }) {
-  if (!data || data.length < 2) return <span style={{ fontSize: 10, color: 'var(--text-3)' }}>—</span>
+  if (!data || data.length < 2) return <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>—</span>
 
   const vals = data.map(d => d.value)
   const min = Math.min(...vals)
@@ -176,8 +176,8 @@ function LoadingRows({ rows = 5 }: { rows?: number }) {
 
 function ErrorMsg({ msg, onRetry }: { msg: string; onRetry?: () => void }) {
   return (
-    <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-      <div style={{ fontSize: 20, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+    <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 'var(--fs-md)' }}>
+      <div style={{ fontSize: 'var(--fs-xl)', marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
           <path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/>
           <line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/>
@@ -302,7 +302,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
           value={dateRange}
           onChange={e => setDateRange(e.target.value as '7' | '30' | '90')}
           style={{
-            fontSize: 11,
+            fontSize: 'var(--fs-sm)',
             padding: '3px 8px',
             borderRadius: 6,
             border: '1px solid var(--border)',
@@ -322,7 +322,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
             onClick={() => setActiveFilter(f)}
             style={{
               padding: '3px 10px',
-              fontSize: 11,
+              fontSize: 'var(--fs-sm)',
               fontWeight: activeFilter === f ? 700 : 500,
               borderRadius: 99,
               border: activeFilter === f ? '1px solid var(--purple)' : '1px solid var(--border)',
@@ -337,7 +337,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
         ))}
         {/* Source counts */}
         {!loading && (sources.edgar > 0 || sources.finnhub > 0) && (
-          <span style={{ fontSize: 10, color: 'var(--text-3)', marginLeft: 4 }}>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', marginLeft: 4 }}>
             {sources.edgar > 0 && `${sources.edgar.toLocaleString()} SEC`}
             {sources.edgar > 0 && sources.finnhub > 0 && ' · '}
             {sources.finnhub > 0 && `${sources.finnhub.toLocaleString()} Finnhub`}
@@ -354,13 +354,13 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
           value={search}
           onChange={e => setSearch(e.target.value)}
           placeholder="Search ticker, insider, company..."
-          style={{ background: 'none', border: 'none', outline: 'none', fontSize: 12, color: 'var(--text-0)', width: '100%' }}
+          style={{ background: 'none', border: 'none', outline: 'none', fontSize: 'var(--fs-md)', color: 'var(--text-0)', width: '100%' }}
         />
         {search && (
-          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: 0 }}>✕</button>
+          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 'var(--fs-md)', padding: 0 }}>✕</button>
         )}
         {!loading && total > 0 && (
-          <span style={{ fontSize: 10, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>
             {total.toLocaleString()} total
           </span>
         )}
@@ -421,20 +421,20 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
                       {item.name || '—'}
                     </div>
                     {item.officerTitle && (
-                      <div style={{ fontSize: 10, color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
+                      <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', marginTop: 1 }}>
                         {item.officerTitle}
                       </div>
                     )}
                   </td>
                   <td>
-                    <span style={{ color: typeColor, fontWeight: 600, fontSize: 11 }}>
+                    <span style={{ color: typeColor, fontWeight: 600, fontSize: 'var(--fs-sm)' }}>
                       {item.transactionType || '—'}
                     </span>
                   </td>
-                  <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)', color: 'var(--text-1)' }}>
                     {item.shares != null ? item.shares.toLocaleString() : '—'}
                   </td>
-                  <td style={{ whiteSpace: 'nowrap', fontSize: 11, fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : item.shares != null && item.pricePerShare != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
+                  <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--fs-sm)', fontFamily: 'var(--mono)', color: item.transactionValue != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : item.shares != null && item.pricePerShare != null ? (isSell ? 'var(--red, #ef4444)' : isBuy ? 'var(--green, #22c55e)' : 'var(--text-1)') : 'var(--text-3)' }}>
                     {item.transactionValue != null
                       ? fmtLargeMoney(item.transactionValue)
                       : item.shares != null && item.pricePerShare != null
@@ -450,13 +450,13 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
                           ? `$${item.pricePerShare.toFixed(2)}/sh`
                           : '—'}
                   </td>
-                  <td style={{ whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 11 }}>
+                  <td style={{ whiteSpace: 'nowrap', color: 'var(--text-2)', fontSize: 'var(--fs-sm)' }}>
                     {fmtDate(item.date)}
                   </td>
                   <td>
                     <div style={{ display: 'flex', flexDirection: 'column', alignItems: 'flex-start', gap: 2 }}>
                       <span style={{
-                        fontSize: 9,
+                        fontSize: 'var(--fs-xs)',
                         fontWeight: 700,
                         padding: '1px 5px',
                         borderRadius: 3,
@@ -468,7 +468,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
                         {isEdgar ? 'SEC' : 'FH'}
                       </span>
                       {item.accessionNumber && (
-                        <span style={{ fontSize: 9, color: 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }} title={`Accession: ${item.accessionNumber}`}>
+                        <span style={{ fontSize: 'var(--fs-xs)', color: 'var(--text-3)', fontFamily: 'var(--mono)', whiteSpace: 'nowrap' }} title={`Accession: ${item.accessionNumber}`}>
                           {item.accessionNumber.slice(-8)}
                         </span>
                       )}
@@ -483,7 +483,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
       {/* Load More / pagination footer */}
       {!loading && (
         <div style={{ padding: '12px 16px', borderTop: '1px solid var(--border)', display: 'flex', alignItems: 'center', justifyContent: 'space-between' }}>
-          <span style={{ fontSize: 11, color: 'var(--text-3)' }}>
+          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>
             Showing {filtered.length} of {total.toLocaleString()} records
           </span>
           {hasMore && (
@@ -492,7 +492,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
               disabled={loadingMore}
               style={{
                 padding: '5px 16px',
-                fontSize: 11,
+                fontSize: 'var(--fs-sm)',
                 fontWeight: 600,
                 borderRadius: 6,
                 border: '1px solid var(--border)',
@@ -506,7 +506,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
             </button>
           )}
           {!hasMore && data.length > 0 && (
-            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>All records loaded</span>
+            <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>All records loaded</span>
           )}
         </div>
       )}
@@ -555,11 +555,11 @@ function EarningsCalendarTab() {
           placeholder="Filter by symbol…"
           style={{
             background: 'none', border: 'none', outline: 'none',
-            fontSize: 12, color: 'var(--text-0)', width: '100%',
+            fontSize: 'var(--fs-md)', color: 'var(--text-0)', width: '100%',
           }}
         />
         {search && (
-          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 13, padding: 0 }}>✕</button>
+          <button onClick={() => setSearch('')} style={{ background: 'none', border: 'none', cursor: 'pointer', color: 'var(--text-3)', fontSize: 'var(--fs-md)', padding: 0 }}>✕</button>
         )}
       </div>
       <div style={{ overflowX: 'auto' }}>
@@ -585,18 +585,18 @@ function EarningsCalendarTab() {
             return (
               <tr key={i}>
                 <td><span className="intel-ticker-tag">{item.symbol}</span></td>
-                <td style={{ whiteSpace: 'nowrap', fontSize: 12 }}>{fmtDate(item.date)}</td>
-                <td style={{ fontSize: 11, color: 'var(--text-2)' }}>
+                <td style={{ whiteSpace: 'nowrap', fontSize: 'var(--fs-md)' }}>{fmtDate(item.date)}</td>
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-2)' }}>
                   {item.hour === 'bmo' ? 'BMO' : item.hour === 'amc' ? 'AMC' : item.hour || '—'}
                 </td>
-                <td style={{ fontSize: 12, color: 'var(--text-1)' }}>{fmtNum(item.epsEstimate)}</td>
-                <td style={{ fontSize: 12, fontWeight: item.epsActual != null ? 600 : 400,
+                <td style={{ fontSize: 'var(--fs-md)', color: 'var(--text-1)' }}>{fmtNum(item.epsEstimate)}</td>
+                <td style={{ fontSize: 'var(--fs-md)', fontWeight: item.epsActual != null ? 600 : 400,
                   color: hasBeat ? 'var(--green, #22c55e)' : hasMiss ? 'var(--red, #ef4444)' : 'var(--text-1)' }}>
                   {fmtNum(item.epsActual)}
                   {hasBeat && ' ▲'}
                   {hasMiss && ' ▼'}
                 </td>
-                <td style={{ fontSize: 11, color: 'var(--text-3)' }}>
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>
                   {item.year && item.quarter ? `${item.year} Q${item.quarter}` : '—'}
                 </td>
               </tr>
@@ -632,14 +632,14 @@ function EconomicDataTab() {
 
   if (!loading && data && !data.available) {
     return (
-      <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 13 }}>
-        <div style={{ fontSize: 20, marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
+      <div style={{ padding: 32, textAlign: 'center', color: 'var(--text-3)', fontSize: 'var(--fs-md)' }}>
+        <div style={{ fontSize: 'var(--fs-xl)', marginBottom: 8, display: 'flex', justifyContent: 'center' }}>
           <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
             <rect x="18" y="3" width="4" height="18" rx="1"/><rect x="10" y="8" width="4" height="13" rx="1"/><rect x="2" y="13" width="4" height="8" rx="1"/>
           </svg>
         </div>
         <div>{data.message || 'Economic data not configured yet.'}</div>
-        <div style={{ marginTop: 8, fontSize: 11 }}>Set FRED_API_KEY in your environment to enable.</div>
+        <div style={{ marginTop: 8, fontSize: 'var(--fs-sm)' }}>Set FRED_API_KEY in your environment to enable.</div>
       </div>
     )
   }
@@ -670,25 +670,25 @@ function EconomicDataTab() {
             return (
               <tr key={i}>
                 <td>
-                  <div style={{ fontWeight: 600, fontSize: 12 }}>{ind.name}</div>
-                  <div style={{ fontSize: 10, color: 'var(--text-3)' }}>{ind.seriesId}</div>
+                  <div style={{ fontWeight: 600, fontSize: 'var(--fs-md)' }}>{ind.name}</div>
+                  <div style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>{ind.seriesId}</div>
                 </td>
-                <td style={{ fontWeight: 700, fontSize: 13 }}>
+                <td style={{ fontWeight: 700, fontSize: 'var(--fs-md)' }}>
                   {ind.value != null ? `${fmtNum(ind.value)} ${ind.unit}` : '—'}
                 </td>
-                <td style={{ color: changeColor, fontSize: 12, whiteSpace: 'nowrap' }}>
+                <td style={{ color: changeColor, fontSize: 'var(--fs-md)', whiteSpace: 'nowrap' }}>
                   {ind.change != null ? `${isUp ? '+' : ''}${fmtNum(ind.change)}` : '—'}
                   {ind.changePercent != null && (
-                    <span style={{ fontSize: 10, marginLeft: 4, opacity: 0.8 }}>
+                    <span style={{ fontSize: 'var(--fs-sm)', marginLeft: 4, opacity: 0.8 }}>
                       ({isUp ? '+' : ''}{fmtNum(ind.changePercent)}%)
                     </span>
                   )}
                 </td>
                 <td>
-                  {ind.trend.length > 0 ? <Sparkline data={ind.trend} /> : <span style={{ color: 'var(--text-3)', fontSize: 10 }}>—</span>}
+                  {ind.trend.length > 0 ? <Sparkline data={ind.trend} /> : <span style={{ color: 'var(--text-3)', fontSize: 'var(--fs-sm)' }}>—</span>}
                 </td>
-                <td style={{ fontSize: 11, color: 'var(--text-3)' }}>{ind.frequency}</td>
-                <td style={{ fontSize: 11, color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDate(ind.date)}</td>
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>{ind.frequency}</td>
+                <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', whiteSpace: 'nowrap' }}>{fmtDate(ind.date)}</td>
               </tr>
             )
           })}
@@ -743,24 +743,24 @@ function IPOCalendarTab() {
           ) : items.map((ipo, i) => (
             <tr key={i}>
               <td><span className="intel-ticker-tag">{ipo.symbol || '—'}</span></td>
-              <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 12 }}>
+              <td style={{ maxWidth: 180, overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap', fontSize: 'var(--fs-md)' }}>
                 {ipo.name || '—'}
               </td>
-              <td style={{ fontSize: 11, whiteSpace: 'nowrap' }}>{fmtDate(ipo.date)}</td>
-              <td style={{ fontSize: 12 }}>{ipo.price ? `$${ipo.price}` : '—'}</td>
-              <td style={{ fontSize: 11, color: 'var(--text-2)' }}>
+              <td style={{ fontSize: 'var(--fs-sm)', whiteSpace: 'nowrap' }}>{fmtDate(ipo.date)}</td>
+              <td style={{ fontSize: 'var(--fs-md)' }}>{ipo.price ? `$${ipo.price}` : '—'}</td>
+              <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-2)' }}>
                 {ipo.numberOfShares ? `${(ipo.numberOfShares / 1e6).toFixed(1)}M` : '—'}
               </td>
               <td>
                 <span style={{
-                  fontSize: 10, fontWeight: 600, padding: '2px 6px', borderRadius: 3,
+                  fontSize: 'var(--fs-sm)', fontWeight: 600, padding: '2px 6px', borderRadius: 3,
                   background: ipo.status === 'priced' ? 'rgba(34,197,94,0.15)' : 'rgba(139,92,246,0.15)',
                   color: ipo.status === 'priced' ? 'var(--green, #22c55e)' : 'var(--purple)',
                 }}>
                   {(ipo.status || '').toUpperCase() || '—'}
                 </span>
               </td>
-              <td style={{ fontSize: 11, color: 'var(--text-3)' }}>{ipo.exchange || '—'}</td>
+              <td style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)' }}>{ipo.exchange || '—'}</td>
             </tr>
           ))}
         </tbody>
@@ -796,10 +796,10 @@ export default function MarketIntel({ symbol }: { symbol?: string }) {
         borderBottom: '1px solid var(--border)',
         background: 'var(--bg-0)',
       }}>
-        <span style={{ fontWeight: 700, fontSize: 13, color: 'var(--text-0)' }}>
+        <span style={{ fontWeight: 700, fontSize: 'var(--fs-md)', color: 'var(--text-0)' }}>
           Market Intel
         </span>
-        <span style={{ fontSize: 10, color: 'var(--text-3)', marginTop: 1 }}>
+        <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', marginTop: 1 }}>
           SEC EDGAR · FRED · Finnhub
         </span>
       </div>
@@ -817,7 +817,7 @@ export default function MarketIntel({ symbol }: { symbol?: string }) {
             onClick={() => setActiveTab(tab.id)}
             style={{
               padding: '9px 16px',
-              fontSize: 12,
+              fontSize: 'var(--fs-md)',
               fontWeight: activeTab === tab.id ? 600 : 400,
               color: activeTab === tab.id ? 'var(--purple)' : 'var(--text-2)',
               background: 'none',
@@ -846,7 +846,7 @@ export default function MarketIntel({ symbol }: { symbol?: string }) {
       <div style={{
         padding: '8px 16px',
         borderTop: '1px solid var(--border)',
-        fontSize: 10,
+        fontSize: 'var(--fs-sm)',
         color: 'var(--text-3)',
         background: 'var(--bg-0)',
       }}>

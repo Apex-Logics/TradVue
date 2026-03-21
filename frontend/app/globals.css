@@ -61,6 +61,13 @@
   --transition: 0.15s ease;
 
   color-scheme: dark;
+  /* ── Font-size scale tokens ──────────────────────────────────────────── */
+  --fs-xs: 9px;
+  --fs-sm: 11px;
+  --fs-md: 13px;
+  --fs-lg: 15px;
+  --fs-xl: 18px;
+  --fs-2xl: 22px;
 }
 
 html, body { height: 100%; }
@@ -76,6 +83,24 @@ html, body { height: 100%; }
 html.font-small  { --font-size-base: 13px; }
 html.font-medium { --font-size-base: 15px; }
 html.font-large  { --font-size-base: 17px; }
+
+html.font-small {
+  --fs-xs: 8px;
+  --fs-sm: 10px;
+  --fs-md: 12px;
+  --fs-lg: 13px;
+  --fs-xl: 16px;
+  --fs-2xl: 19px;
+}
+
+html.font-large {
+  --fs-xs: 11px;
+  --fs-sm: 13px;
+  --fs-md: 15px;
+  --fs-lg: 17px;
+  --fs-xl: 21px;
+  --fs-2xl: 26px;
+}
 
 body {
   font-family: var(--font);
@@ -5680,7 +5705,4 @@ html.font-medium .layout-3col { font-size: 14px; }
 html.font-large  .layout-3col { font-size: 16px; }
 /* v2026.03.21.nav */
 
-/* Font size override for dashboard — uses transform to scale content
-   since inline styles can't be overridden by CSS variables */
-html.font-small .layout-3col { transform: scale(0.92); transform-origin: top left; width: calc(100% / 0.92); }
-html.font-large .layout-3col { transform: scale(1.08); transform-origin: top left; width: calc(100% / 1.08); }
+/* Font size tokens now applied via CSS custom properties on :root, html.font-small, html.font-large */
