@@ -104,7 +104,7 @@ html.font-large {
 
 body {
   font-family: var(--font);
-  font-size: var(--font-size-base, 15px);
+  font-size: var(--font-size-base);
   line-height: 1.4;
   background: var(--bg-0);
   color: var(--text-0);
@@ -171,13 +171,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   justify-content: center;
   color: var(--accent);
   flex-shrink: 0;
-  font-size: 18px;
+  font-size: var(--fs-xl);
   line-height: 1;
 }
 
 /* Title text — bold white */
 .tv-card-title {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-0);
   line-height: 1.3;
@@ -186,7 +186,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Description text — muted */
 .tv-card-desc {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-2);
   line-height: 1.6;
 }
@@ -213,7 +213,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   justify-content: center;
   gap: 6px;
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 500;
   border-radius: var(--btn-radius);
   padding: 8px 16px;
@@ -225,7 +225,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .btn-sm {
-  font-size: 12px;
+  font-size: var(--fs-md);
   padding: 6px 12px;
 }
 
@@ -275,7 +275,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: var(--input-padding);
   color: var(--text-0);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--fs-md);
   outline: none;
   transition: border-color var(--transition), box-shadow var(--transition);
   -webkit-appearance: none;
@@ -297,7 +297,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: var(--input-padding);
   color: var(--text-0);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--fs-md);
   outline: none;
   cursor: pointer;
   transition: border-color var(--transition);
@@ -317,7 +317,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   align-items: center;
   gap: 4px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-2);
   margin-bottom: 5px;
@@ -329,10 +329,10 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .ds-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .ds-table th {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.07em;
   text-transform: uppercase;
@@ -347,7 +347,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 8px 12px;
   border-bottom: 1px solid var(--border-b);
   color: var(--text-0);
-  font-size: 13px;
+  font-size: var(--fs-md);
 }
 .ds-table tr:hover td { background: var(--bg-3); }
 .ds-table tr:last-child td { border-bottom: none; }
@@ -357,7 +357,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: inline-flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-2);
   text-decoration: none;
   padding: 4px 0;
@@ -380,13 +380,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 16px;
+  font-size: var(--fs-xl);
   font-weight: 600;
   color: var(--text-0);
   letter-spacing: -0.01em;
 }
 .page-header-desc {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-3);
 }
 
@@ -395,7 +395,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   align-items: center;
   gap: 8px;
-  font-size: 18px;
+  font-size: var(--fs-xl);
   font-weight: 600;
   color: var(--text-0);
   letter-spacing: -0.01em;
@@ -408,7 +408,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .tag {
   display: inline-flex;
   align-items: center;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.04em;
   padding: 2px 7px;
@@ -510,7 +510,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   gap: 6px;
   padding: 0 18px;
   border-right: 1px solid var(--border);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-family: var(--mono);
   letter-spacing: 0.02em;
 }
@@ -523,7 +523,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 /* ── Ticker Size Variants ─────────────────────────────────────────────────── */
 /* Compact = default, no changes needed */
 .ticker-compact .ticker-item {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   padding: 0 18px;
   gap: 6px;
 }
@@ -533,7 +533,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Normal ~20% bigger */
 .ticker-normal .ticker-item {
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   padding: 0 22px;
   gap: 8px;
 }
@@ -543,7 +543,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Large ~40% bigger, good for big monitors */
 .ticker-large .ticker-item {
-  font-size: 16px;
+  font-size: var(--fs-xl);
   padding: 0 28px;
   gap: 10px;
 }
@@ -585,7 +585,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Motto text next to logo */
 .header-motto {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.12em;
   color: var(--accent);
@@ -601,7 +601,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text-0);
   letter-spacing: -0.02em;
@@ -610,7 +610,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .logo svg { color: var(--blue); flex-shrink: 0; }
 
 .logo-badge {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--blue);
@@ -656,7 +656,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 /* Mobile sidebar close button (inside sidebar) */
 .mobile-sidebar-close {
   display: none;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-3);
   cursor: pointer;
   padding: 2px 6px;
@@ -671,7 +671,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .nav-item {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 500;
   color: var(--text-2);
   padding: 4px 10px;
@@ -721,13 +721,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .live-time {
   font-family: var(--mono);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   letter-spacing: 0.04em;
 }
 
 .login-btn {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-1);
   padding: 4px 10px;
@@ -772,7 +772,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .cat-tabs::-webkit-scrollbar { height: 0; }
 
 .cat-tab {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-2);
   padding: 0 14px;
@@ -794,7 +794,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .symbol-search {
   font-family: var(--font);
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   background: var(--bg-3);
   border: 1px solid var(--border);
   color: var(--text-0);
@@ -868,7 +868,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .refresh-btn {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 500;
   color: var(--text-2);
   padding: 2px 8px;
@@ -929,13 +929,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .news-flag-high {
   color: var(--red);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   margin-right: 4px;
   vertical-align: middle;
 }
 
 .news-sentiment {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   width: 14px;
   text-align: center;
   flex-shrink: 0;
@@ -946,7 +946,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .news-symbols {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   white-space: nowrap;
   min-width: 60px;
@@ -970,12 +970,12 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 40px;
   text-align: center;
   color: var(--text-3);
-  font-size: 12px;
+  font-size: var(--fs-md);
 }
 
 .retry-btn {
   margin-top: 8px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--blue);
   padding: 4px 12px;
   border: 1px solid rgba(74,158,255,0.3);
@@ -994,7 +994,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   padding: 5px 14px;
   background: var(--bg-2);
   border-bottom: 1px solid var(--border);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--text-3);
@@ -1015,18 +1015,18 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .cal-time {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 
 .cal-impact {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   letter-spacing: -2px;
 }
 
 .cal-currency {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-1);
   text-transform: uppercase;
@@ -1060,7 +1060,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .sidebar-title {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-3);
@@ -1091,7 +1091,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .mover-row:last-child { border-bottom: none; }
 
 .mover-symbol {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-0);
   font-family: var(--mono);
@@ -1099,13 +1099,13 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .mover-price {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-1);
   text-align: right;
 }
 
-.mover-up   { color: var(--green); font-size: 11.5px; font-family: var(--mono); font-weight: 600; min-width: 60px; text-align: right; }
-.mover-down { color: var(--red);   font-size: 11.5px; font-family: var(--mono); font-weight: 600; min-width: 60px; text-align: right; }
+.mover-up   { color: var(--green); font-size: var(--fs-sm); font-family: var(--mono); font-weight: 600; min-width: 60px; text-align: right; }
+.mover-down { color: var(--red);   font-size: var(--fs-sm); font-family: var(--mono); font-weight: 600; min-width: 60px; text-align: right; }
 
 .mover-row-skeleton {
   height: 29px;
@@ -1119,7 +1119,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Watchlist */
 .watchlist-empty {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   padding: 10px 14px;
   font-style: italic;
@@ -1139,7 +1139,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .watchlist-add-btn:hover { color: var(--blue); border-color: var(--blue); }
 
 .remove-btn {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   padding: 0 2px;
   transition: color 0.15s;
@@ -1206,7 +1206,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .apn-home-link {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   text-decoration: none;
   white-space: nowrap;
@@ -1231,7 +1231,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   gap: 0;
   font-family: var(--font);
   /* Override font-size — nav items do NOT scale with font-size setting */
-  font-size: 12px !important;
+  font-size: var(--fs-md) !important;
 }
 
 .apn-dropdown-menu {
@@ -1293,7 +1293,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* User email shown next to avatar in top-right — truncated */
 .apn-user-email {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   max-width: 130px;
   overflow: hidden;
@@ -1303,7 +1303,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 /* Mobile drawer section label */
 .apn-drawer-section-label {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-3);
@@ -1318,7 +1318,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .apn-items .nav-item,
 .apn-dropdown-trigger,
 .apn-hamburger {
-  font-size: 12px !important;
+  font-size: var(--fs-md) !important;
 }
 
 /* ─────────────────────────────────────────────────────────────────────────────
@@ -1343,14 +1343,14 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-1);
   text-transform: uppercase;
 }
 .news-page-header-count {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
 }
 .news-page-search {
@@ -1362,7 +1362,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border-radius: 6px;
   padding: 5px 12px;
   color: var(--text-0);
-  font-size: 12px;
+  font-size: var(--fs-md);
   outline: none;
   font-family: var(--font);
   transition: border-color 0.15s;
@@ -1439,27 +1439,27 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   flex-wrap: wrap;
 }
 .news-card-source {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--accent);
   letter-spacing: 0.04em;
   text-transform: uppercase;
 }
 .news-card-impact-high {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--red);
   letter-spacing: 0.06em;
 }
 .news-card-time {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   margin-left: auto;
   white-space: nowrap;
   font-family: var(--mono);
 }
 .news-card-title {
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-0);
   line-height: 1.4;
@@ -1472,7 +1472,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .news-card:hover .news-card-title { color: var(--accent); }
 .news-card-summary {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-2);
   line-height: 1.5;
   display: -webkit-box;
@@ -1497,7 +1497,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 .news-card-symbol-tag {
   font-family: var(--mono);
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   color: var(--accent);
   background: var(--blue-dim);
@@ -1506,7 +1506,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border-radius: 3px;
 }
 .news-card-date {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   white-space: nowrap;
   font-family: var(--mono);
@@ -1548,7 +1548,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   background: var(--yellow-dim);
   border-bottom: 1px solid rgba(240, 165, 0, 0.3);
   padding: 4px 16px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--yellow);
   text-align: center;
   letter-spacing: 0.02em;
@@ -1602,7 +1602,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .search-result-symbol {
   font-family: var(--mono);
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 700;
   color: var(--text-0);
   min-width: 64px;
@@ -1610,7 +1610,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .search-result-name {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
@@ -1684,7 +1684,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .stock-modal-company {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   white-space: nowrap;
   overflow: hidden;
@@ -1707,24 +1707,24 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   letter-spacing: -0.01em;
 }
 
-.modal-up   { font-family: var(--mono); font-size: 12px; color: var(--green); }
-.modal-down { font-family: var(--mono); font-size: 12px; color: var(--red); }
+.modal-up   { font-family: var(--mono); font-size: var(--fs-md); color: var(--green); }
+.modal-down { font-family: var(--mono); font-size: var(--fs-md); color: var(--red); }
 
 .stock-modal-source {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--text-3);
 }
 
 .stock-modal-loading {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-3);
   font-style: italic;
 }
 
 .modal-close-btn {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-3);
   padding: 4px 8px;
   border-radius: 4px;
@@ -1767,7 +1767,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   border: 1px solid rgba(255, 255, 255, 0.15);
   border-radius: 5px;
   color: rgba(255, 255, 255, 0.7);
-  font-size: 13px;
+  font-size: var(--fs-md);
   cursor: pointer;
   opacity: 0.7;
   transition: background 0.15s, color 0.15s, opacity 0.15s;
@@ -1830,7 +1830,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .stock-stat:last-child { border-right: none; }
 
 .stock-stat-label {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   color: var(--text-3);
@@ -1839,7 +1839,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 
 .stock-stat-val {
   font-family: var(--mono);
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-0);
 }
 
@@ -1854,7 +1854,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .stock-action-btn {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   letter-spacing: 0.03em;
   padding: 7px 18px;
@@ -1916,7 +1916,7 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 }
 
 .ticker-tag-remove {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   padding: 0 1px;
   transition: color 0.15s;
@@ -2072,7 +2072,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   .ticker-item {
     padding: 0 12px;
     gap: 5px;
-    font-size: 11px;
+    font-size: var(--fs-sm);
   }
 
   /* ── Header: reduce height on mobile ──────────────────────────────────── */
@@ -2117,12 +2117,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
   .login-btn {
     padding: 3px 8px;
-    font-size: 11px;
+    font-size: var(--fs-sm);
   }
 
   .pro-btn {
     padding: 3px 8px;
-    font-size: 10px;
+    font-size: var(--fs-sm);
   }
 
   /* ── Category Tabs ─────────────────────────────────────────────────────── */
@@ -2144,7 +2144,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
   .cat-tab {
     padding: 0 10px;
-    font-size: 11px;
+    font-size: var(--fs-sm);
     flex-shrink: 0;
   }
 
@@ -2202,7 +2202,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   .news-time {
     order: 2;
     text-align: left;
-    font-size: 10px;
+    font-size: var(--fs-sm);
     flex-shrink: 0;
   }
 
@@ -2213,7 +2213,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     overflow: hidden;
     text-overflow: ellipsis;
     max-width: 90px;           /* prevent super-long source names blowing layout */
-    font-size: 9.5px;
+    font-size: var(--fs-xs);
   }
 
   .news-sentiment {
@@ -2226,7 +2226,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     order: 2;
     min-width: unset;
     text-align: left;
-    font-size: 9.5px;
+    font-size: var(--fs-xs);
     color: var(--text-3);
   }
 
@@ -2249,7 +2249,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     white-space: normal;
     overflow: visible;
     text-overflow: unset;
-    font-size: 12px;
+    font-size: var(--fs-md);
     line-height: 1.35;
   }
 
@@ -2262,7 +2262,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     align-items: flex-start;
     gap: 4px;
     padding: 8px 10px;
-    font-size: 10px;
+    font-size: var(--fs-sm);
   }
 
   /* ── Stock Search ──────────────────────────────────────────────────────── */
@@ -2310,8 +2310,8 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     padding: 10px 14px;
   }
 
-  .stock-modal-symbol { font-size: 17px; }
-  .stock-modal-price  { font-size: 18px; }
+  .stock-modal-symbol { font-size: var(--fs-xl); }
+  .stock-modal-price  { font-size: var(--fs-xl); }
 
   .stock-chart-wrap {
     min-height: 260px;
@@ -2337,7 +2337,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   }
 
   .stock-action-btn {
-    font-size: 11.5px;
+    font-size: var(--fs-sm);
     padding: 8px 14px;
     min-width: 0;
   }
@@ -2370,7 +2370,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   /* ── Inputs: larger touch targets on mobile ─────────────────────────────── */
   .ds-input, .ds-select {
     min-height: 44px;
-    font-size: 14px;
+    font-size: var(--fs-lg);
     padding: 10px 12px;
   }
 
@@ -2381,7 +2381,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     display: inline-flex;
     align-items: center;
     padding: 0 8px;
-    font-size: 11.5px;
+    font-size: var(--fs-sm);
     flex-shrink: 0;
   }
 
@@ -2447,12 +2447,12 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   }
 
   .page-header-title {
-    font-size: 14px;
+    font-size: var(--fs-lg);
   }
 
   /* ── Section title smaller ───────────────────────────────────────────────── */
   .section-title {
-    font-size: 15px;
+    font-size: var(--fs-lg);
   }
 
   /* ── Table horizontal scroll: wrap all tables in scroll on mobile ───────── */
@@ -2569,7 +2569,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 @media (max-width: 480px) {
   body {
-    font-size: 14px;
+    font-size: var(--fs-lg);
   }
 
   .ds-card, .tv-card {
@@ -2582,11 +2582,11 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   }
 
   .page-header-title {
-    font-size: 13px;
+    font-size: var(--fs-md);
   }
 
   .section-title {
-    font-size: 14px;
+    font-size: var(--fs-lg);
   }
 
   .news-page-content {
@@ -2606,7 +2606,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     align-items: flex-start;
     gap: 4px;
     padding: 8px 12px;
-    font-size: 10px;
+    font-size: var(--fs-sm);
   }
 
   /* KPI grid stays 2 columns */
@@ -2630,7 +2630,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 /* ── Extra-small: 375px iPhone SE / iPhone 14 ──────────────────────────── */
 @media (max-width: 390px) {
   .logo {
-    font-size: 12px;
+    font-size: var(--fs-md);
   }
 
   .logo-badge {
@@ -2648,7 +2648,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   }
 
   .news-title {
-    font-size: 12px;
+    font-size: var(--fs-md);
   }
 }
 
@@ -2780,7 +2780,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   display: flex;
   align-items: center;
   gap: 6px;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--accent);
   letter-spacing: -0.01em;
@@ -2818,7 +2818,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .auth-field label {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-1);
   letter-spacing: 0.03em;
@@ -2832,7 +2832,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   border-radius: 6px;
   color: var(--text-0);
   font-family: var(--font);
-  font-size: 13px;
+  font-size: var(--fs-md);
   outline: none;
   transition: border-color 0.15s;
 }
@@ -2860,7 +2860,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   border: 1px solid rgba(255, 69, 96, 0.25);
   border-radius: 6px;
   color: var(--red);
-  font-size: 12px;
+  font-size: var(--fs-md);
   line-height: 1.4;
 }
 
@@ -2870,7 +2870,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   background: var(--accent);
   color: #fff;
   border-radius: 6px;
-  font-size: 13.5px;
+  font-size: var(--fs-md);
   font-weight: 600;
   cursor: pointer;
   border: none;
@@ -2911,7 +2911,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   justify-content: center;
   gap: 6px;
   padding: 4px 20px 16px;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-2);
   border-top: 1px solid var(--border);
   padding-top: 14px;
@@ -2919,7 +2919,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 .auth-switch-btn {
   color: var(--accent);
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   cursor: pointer;
   text-decoration: underline;
@@ -2938,7 +2938,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .auth-feature-item {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   display: flex;
   align-items: center;
@@ -2947,7 +2947,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 .auth-feature-check {
   color: var(--green);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
@@ -2998,7 +2998,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .settings-title {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   color: var(--text-0);
   display: flex;
@@ -3008,7 +3008,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .settings-icon {
-  font-size: 15px;
+  font-size: var(--fs-lg);
 }
 
 .settings-section {
@@ -3017,7 +3017,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .settings-section-label {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-3);
@@ -3045,13 +3045,13 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .settings-row-label {
-  font-size: 13px;
+  font-size: var(--fs-md);
   color: var(--text-0);
   font-weight: 500;
 }
 
 .settings-row-desc {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 
@@ -3068,7 +3068,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 .settings-theme-btn {
   padding: 5px 10px;
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   border-radius: 5px;
   border: 1px solid var(--border);
   background: var(--bg-3);
@@ -3099,7 +3099,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 .settings-market-btn {
   flex: 1;
   padding: 6px 8px;
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   border-radius: 5px;
   border: 1px solid var(--border);
   background: var(--bg-3);
@@ -3167,7 +3167,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   padding: 8px 10px;
   background: rgba(0, 192, 106, 0.08);
   border-radius: 5px;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--green);
   line-height: 1.4;
 }
@@ -3185,7 +3185,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   border-radius: 50%;
   background: var(--accent);
   color: #fff;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   font-weight: 700;
   display: flex;
   align-items: center;
@@ -3216,7 +3216,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 }
 
 .settings-logout-btn {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--red);
   border: 1px solid rgba(255, 69, 96, 0.3);
   border-radius: 4px;
@@ -3257,7 +3257,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 ══════════════════════════════════════════════════════════════════════════════ */
 
 .header-user-email {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-1);
   max-width: 130px;
   overflow: hidden;
@@ -3267,7 +3267,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
 
 .settings-gear-btn {
   padding: 4px 8px;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   color: var(--text-2);
   cursor: pointer;
   transition: color 0.15s;
@@ -3375,7 +3375,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
   display: inline-flex;
   align-items: center;
   gap: 4px;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--green);
   font-weight: 600;
   letter-spacing: 0.04em;
@@ -3430,7 +3430,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-banner-icon {
-  font-size: 18px;
+  font-size: var(--fs-xl);
   flex-shrink: 0;
 }
 
@@ -3443,14 +3443,14 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-banner-label {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 800;
   letter-spacing: 0.08em;
   text-transform: uppercase;
 }
 
 .alert-banner-title {
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-0);
   white-space: nowrap;
@@ -3468,7 +3468,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-banner-meta {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
 }
 
@@ -3490,7 +3490,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
   border-radius: 3px;
   border: 1px solid #ff4560;
   color: #ff4560;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   background: transparent;
   cursor: pointer;
   display: flex;
@@ -3504,7 +3504,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-nav-count {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-2);
   min-width: 28px;
   text-align: center;
@@ -3516,7 +3516,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
   border-radius: 3px;
   border: 1px solid #404050;
   color: var(--text-2);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   background: transparent;
   cursor: pointer;
   flex-shrink: 0;
@@ -3564,7 +3564,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-prefs-toggle {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   padding: 3px 10px;
   border-radius: 3px;
@@ -3586,7 +3586,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-chip {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   padding: 2px 8px;
   border-radius: 3px;
@@ -3616,7 +3616,7 @@ html.theme-light ::-webkit-scrollbar-thumb {
 .alert-cat-tabs::-webkit-scrollbar { display: none; }
 
 .alert-cat-tab {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   padding: 3px 10px;
   border-radius: 3px;
@@ -3686,12 +3686,12 @@ html.theme-light ::-webkit-scrollbar-thumb {
 }
 
 .alert-row-icon {
-  font-size: 16px;
+  font-size: var(--fs-xl);
   line-height: 1;
 }
 
 .alert-row-urgency {
-  font-size: 8.5px;
+  font-size: var(--fs-xs);
   font-weight: 800;
   letter-spacing: 0.06em;
 }
@@ -3725,18 +3725,18 @@ a.alert-row-title:hover {
 }
 
 .alert-row-source {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   font-weight: 600;
 }
 
 .alert-row-time {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
 }
 
 .alert-row-keywords {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   font-style: italic;
   max-width: 200px;
@@ -3751,7 +3751,7 @@ a.alert-row-title:hover {
 }
 
 .alert-sym-tag {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   padding: 1px 5px;
   background: #1a1a2a;
@@ -3767,7 +3767,7 @@ a.alert-row-title:hover {
   border-radius: 3px;
   border: 1px solid transparent;
   color: var(--text-3);
-  font-size: 9px;
+  font-size: var(--fs-xs);
   background: transparent;
   cursor: pointer;
   flex-shrink: 0;
@@ -3870,7 +3870,7 @@ a.alert-row-title:hover {
 }
 
 .welcome-subheading {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-1);
   margin-bottom: 32px;
   line-height: 1.5;
@@ -3882,7 +3882,7 @@ a.alert-row-title:hover {
   padding: 13px 24px;
   background: var(--accent);
   color: #fff;
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   border-radius: 8px;
   border: none;
@@ -3897,7 +3897,7 @@ a.alert-row-title:hover {
 .welcome-skip {
   display: block;
   margin: 14px auto 0;
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-3);
   cursor: pointer;
   background: none;
@@ -3957,19 +3957,19 @@ a.alert-row-title:hover {
 }
 
 .checklist-icon {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   line-height: 1;
 }
 
 .checklist-title {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-0);
   letter-spacing: 0.02em;
 }
 
 .checklist-progress-badge {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--accent);
   background: rgba(74, 158, 255, 0.12);
@@ -3979,7 +3979,7 @@ a.alert-row-title:hover {
 }
 
 .checklist-toggle {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-2);
   padding: 4px;
   border-radius: 4px;
@@ -4027,7 +4027,7 @@ a.alert-row-title:hover {
 }
 
 .checklist-check {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-3);
   line-height: 1.4;
   min-width: 14px;
@@ -4053,7 +4053,7 @@ a.alert-row-title:hover {
 }
 
 .checklist-item-label {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-1);
   line-height: 1.3;
 }
@@ -4065,7 +4065,7 @@ a.alert-row-title:hover {
 }
 
 .checklist-next-badge {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   color: var(--accent);
   background: rgba(74, 158, 255, 0.15);
@@ -4092,7 +4092,7 @@ a.alert-row-title:hover {
 }
 
 .checklist-complete-msg {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--green);
   font-weight: 600;
   flex: 1;
@@ -4181,7 +4181,7 @@ a.alert-row-title:hover {
 }
 
 .celebration-sub {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-1);
   line-height: 1.6;
   margin-bottom: 28px;
@@ -4192,7 +4192,7 @@ a.alert-row-title:hover {
   padding: 12px 28px;
   background: var(--green);
   color: #0a0a0c;
-  font-size: 13px;
+  font-size: var(--fs-md);
   font-weight: 700;
   border-radius: 8px;
   cursor: pointer;
@@ -4301,7 +4301,7 @@ a.alert-row-title:hover {
 }
 
 .ob-tooltip-content {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-1);
   line-height: 1.4;
 }
@@ -4344,14 +4344,14 @@ a.alert-row-title:hover {
 }
 
 .empty-state-headline {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   font-weight: 600;
   color: var(--text-0);
   letter-spacing: -0.01em;
 }
 
 .empty-state-subtext {
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-2);
   line-height: 1.5;
   max-width: 220px;
@@ -4362,7 +4362,7 @@ a.alert-row-title:hover {
   padding: 9px 18px;
   background: var(--accent);
   color: #fff;
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   border-radius: 7px;
   cursor: pointer;
@@ -4374,7 +4374,7 @@ a.alert-row-title:hover {
 .empty-state-cta:hover { background: #3a8ee0; }
 
 .empty-state-secondary {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   color: var(--text-2);
   background: none;
   border: none;
@@ -4458,7 +4458,7 @@ a.alert-row-title:hover {
   align-items: center;
   justify-content: center;
   border-radius: 50%;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 700;
 }
 
@@ -4481,7 +4481,7 @@ a.alert-row-title:hover {
   align-items: center;
   justify-content: center;
   border-radius: 4px;
-  font-size: 15px;
+  font-size: var(--fs-lg);
   line-height: 1;
   color: var(--text-2);
   transition: color 0.15s, background 0.15s;
@@ -4548,7 +4548,7 @@ a.alert-row-title:hover {
   z-index: 2;
 }
 .watchlist-header-title {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-2);
@@ -4583,12 +4583,12 @@ a.alert-row-title:hover {
 }
 .watchlist-sym {
   font-family: var(--mono);
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-0);
 }
 .watchlist-tag-crypto {
-  font-size: 8px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.05em;
   color: var(--yellow);
@@ -4605,24 +4605,24 @@ a.alert-row-title:hover {
 }
 .watchlist-price {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--text-0);
   font-weight: 500;
 }
 .watchlist-chg-up {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--green);
   font-weight: 600;
 }
 .watchlist-chg-down {
   font-family: var(--mono);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   color: var(--red);
   font-weight: 600;
 }
 .watchlist-remove-btn {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: transparent;
   padding: 0 2px;
   transition: color 0.15s;
@@ -4666,7 +4666,7 @@ a.alert-row-title:hover {
   padding: 8px 10px;
 }
 .wl-settings-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-3);
@@ -4679,7 +4679,7 @@ a.alert-row-title:hover {
 }
 .wl-size-opt {
   flex: 1;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-2);
   background: var(--bg-2);
@@ -4698,7 +4698,7 @@ a.alert-row-title:hover {
 }
 .wl-reorder-btn {
   width: 100%;
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   color: var(--text-2);
   background: var(--bg-2);
@@ -4716,7 +4716,7 @@ a.alert-row-title:hover {
   border-color: var(--accent);
 }
 .wl-done-btn {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   color: var(--accent);
   background: none;
@@ -4730,7 +4730,7 @@ a.alert-row-title:hover {
 
 /* Drag handle */
 .wl-drag-handle {
-  font-size: 14px;
+  font-size: var(--fs-lg);
   color: var(--text-3);
   cursor: grab;
   padding: 0 4px 0 0;
@@ -4752,7 +4752,7 @@ a.alert-row-title:hover {
 
 /* Legacy size controls (kept for compat, no longer rendered) */
 .wl-size-btn {
-  font-size: 12px;
+  font-size: var(--fs-md);
   line-height: 1;
   color: var(--text-3);
   background: none;
@@ -4771,30 +4771,30 @@ a.alert-row-title:hover {
   min-height: 24px;
   gap: 3px;
 }
-.wl-compact .watchlist-sym { font-size: 10px; }
-.wl-compact .watchlist-price { font-size: 9px; }
+.wl-compact .watchlist-sym { font-size: var(--fs-sm); }
+.wl-compact .watchlist-price { font-size: var(--fs-xs); }
 .wl-compact .watchlist-chg-up,
-.wl-compact .watchlist-chg-down { font-size: 9px; }
+.wl-compact .watchlist-chg-down { font-size: var(--fs-xs); }
 
 .wl-normal .watchlist-row {
   padding: 3px 10px;
   min-height: 28px;
   gap: 4px;
 }
-.wl-normal .watchlist-sym { font-size: 11px; }
-.wl-normal .watchlist-price { font-size: 10px; }
+.wl-normal .watchlist-sym { font-size: var(--fs-sm); }
+.wl-normal .watchlist-price { font-size: var(--fs-sm); }
 .wl-normal .watchlist-chg-up,
-.wl-normal .watchlist-chg-down { font-size: 10px; }
+.wl-normal .watchlist-chg-down { font-size: var(--fs-sm); }
 
 .wl-large .watchlist-row {
   padding: 5px 12px;
   min-height: 34px;
   gap: 5px;
 }
-.wl-large .watchlist-sym { font-size: 13px; }
-.wl-large .watchlist-price { font-size: 12px; }
+.wl-large .watchlist-sym { font-size: var(--fs-md); }
+.wl-large .watchlist-price { font-size: var(--fs-md); }
 .wl-large .watchlist-chg-up,
-.wl-large .watchlist-chg-down { font-size: 12px; }
+.wl-large .watchlist-chg-down { font-size: var(--fs-md); }
 
 /* CENTER column: news feed */
 .col-news {
@@ -4842,13 +4842,13 @@ a.alert-row-title:hover {
   flex-shrink: 0;
 }
 .news-count-label {
-  font-size: 9px;
+  font-size: var(--fs-xs);
   color: var(--text-3);
   font-weight: 600;
   white-space: nowrap;
 }
 .news-count-btn {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   padding: 2px 6px;
   border-radius: 3px;
@@ -4892,7 +4892,7 @@ a.alert-row-title:hover {
 }
 
 .ecal-filter-btn {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 600;
   padding: 2px 7px;
   border-radius: 3px;
@@ -4914,7 +4914,7 @@ a.alert-row-title:hover {
 }
 
 .ecal-day-label {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.06em;
   color: var(--text-3);
@@ -4938,7 +4938,7 @@ a.alert-row-title:hover {
 .ecal-event:last-child { border-bottom: none; }
 
 .ecal-time {
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-family: var(--mono);
   color: var(--text-2);
   text-align: right;
@@ -4956,7 +4956,7 @@ a.alert-row-title:hover {
 .ecal-impact-low { background: var(--blue); }
 
 .ecal-currency {
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   font-family: var(--mono);
   color: var(--text-1);
@@ -4971,7 +4971,7 @@ a.alert-row-title:hover {
 }
 
 .ecal-event-name {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-0);
   white-space: nowrap;
   overflow: hidden;
@@ -4982,7 +4982,7 @@ a.alert-row-title:hover {
 .ecal-values {
   display: flex;
   gap: 8px;
-  font-size: 9.5px;
+  font-size: var(--fs-xs);
   font-family: var(--mono);
 }
 .ecal-actual { color: #00c06a; font-weight: 600; }
@@ -5022,11 +5022,11 @@ a.alert-row-title:hover {
   flex: 1;
 }
 
-.company-name { font-size: 13px; font-weight: 600; color: var(--text-0); }
+.company-name { font-size: var(--fs-md); font-weight: 600; color: var(--text-0); }
 .company-industry { font-size: var(--fs-sm); color: var(--text-2); }
 
 .company-description {
-  font-size: 11.5px;
+  font-size: var(--fs-sm);
   color: var(--text-1);
   line-height: 1.5;
   display: -webkit-box;
@@ -5054,7 +5054,7 @@ a.alert-row-title:hover {
 }
 
 .company-stat-label {
-  font-size: 8.5px;
+  font-size: var(--fs-xs);
   font-weight: 700;
   letter-spacing: 0.07em;
   color: var(--text-3);
@@ -5062,7 +5062,7 @@ a.alert-row-title:hover {
 }
 
 .company-stat-val {
-  font-size: 12px;
+  font-size: var(--fs-md);
   font-weight: 600;
   color: var(--text-0);
   font-family: var(--mono);
@@ -5221,7 +5221,7 @@ a.alert-row-title:hover {
   color: var(--text-1);
   padding: 6px 10px;
   cursor: pointer;
-  font-size: 16px;
+  font-size: var(--fs-xl);
 }
 
 /* ── Tablet (≤1024px) ── */
@@ -5357,10 +5357,10 @@ a.alert-row-title:hover {
     padding: 4px 8px;
   }
   .watchlist-sym {
-    font-size: 10px;
+    font-size: var(--fs-sm);
   }
   .watchlist-price {
-    font-size: 10px;
+    font-size: var(--fs-sm);
   }
 }
 
@@ -5378,7 +5378,7 @@ a.alert-row-title:hover {
   padding: 4px 8px;
   cursor: pointer;
   color: var(--text-1);
-  font-size: 18px;
+  font-size: var(--fs-xl);
   line-height: 1;
   flex-shrink: 0;
   transition: background 0.15s;
@@ -5415,7 +5415,7 @@ a.alert-row-title:hover {
   margin-bottom: 8px;
 }
 .apn-drawer-title {
-  font-size: 11px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   letter-spacing: 0.08em;
   color: var(--text-2);
@@ -5426,7 +5426,7 @@ a.alert-row-title:hover {
   border: none;
   color: var(--text-2);
   cursor: pointer;
-  font-size: 18px;
+  font-size: var(--fs-xl);
   padding: 2px 6px;
   border-radius: 4px;
   line-height: 1;
@@ -5445,7 +5445,7 @@ a.alert-row-title:hover {
   display: block;
   padding: 10px 12px;
   border-radius: 6px;
-  font-size: 13px;
+  font-size: var(--fs-md);
   text-align: left;
   width: 100%;
   font-weight: 500;
@@ -5577,7 +5577,7 @@ a.alert-row-title:hover {
     grid-template-columns: repeat(2, 1fr) !important;
   }
   .futures-result-cards .result-card-value {
-    font-size: 15px !important;
+    font-size: var(--fs-lg) !important;
   }
 
 /* Calendar: right column, scrollable */
@@ -5647,14 +5647,14 @@ a.alert-row-title:hover {
 .intel-table {
   width: 100%;
   border-collapse: collapse;
-  font-size: 12px;
+  font-size: var(--fs-md);
   color: var(--text-1);
 }
 
 .intel-table th {
   padding: 8px 12px;
   text-align: left;
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.06em;
@@ -5682,7 +5682,7 @@ a.alert-row-title:hover {
   display: inline-block;
   background: rgba(139, 92, 246, 0.15);
   color: var(--purple);
-  font-size: 10px;
+  font-size: var(--fs-sm);
   font-weight: 700;
   padding: 2px 6px;
   border-radius: 3px;
@@ -5694,15 +5694,15 @@ a.alert-row-title:hover {
   .intel-table th,
   .intel-table td {
     padding: 6px 8px;
-    font-size: 11px;
+    font-size: var(--fs-sm);
   }
 }
 /* v2026.03.16.intel */
 
 /* ── Dashboard font-size responsiveness ─────────────────────────────────────── */
-html.font-small  .layout-3col { font-size: 12px; }
-html.font-medium .layout-3col { font-size: 14px; }
-html.font-large  .layout-3col { font-size: 16px; }
+html.font-small  .layout-3col { font-size: var(--fs-md); }
+html.font-medium .layout-3col { font-size: var(--fs-lg); }
+html.font-large  .layout-3col { font-size: var(--fs-xl); }
 /* v2026.03.21.nav */
 
 /* Font size tokens now applied via CSS custom properties on :root, html.font-small, html.font-large */
