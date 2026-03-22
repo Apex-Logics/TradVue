@@ -326,7 +326,7 @@ function NavInner() {
   // Analysis dropdown items
   const analysisItems: DropdownItem[] = [
     { label: 'Analysis', href: '/?view=analysis', icon: <IconAnalysis /> },
-    { label: 'Market Intel', href: '/market-intel', icon: <IconMarketIntel /> },
+    { label: 'Market Intel', href: '/?view=market-intel', icon: <IconMarketIntel /> },
     { label: 'Calendar', href: '/calendar', icon: <IconCalendar /> },
     { label: 'AI Coach', href: '/coach', icon: <IconAICoach /> },
   ]
@@ -360,7 +360,7 @@ function NavInner() {
     // Analysis group
     { label: '── Analysis ──', href: '', divider: true },
     { label: 'Analysis', href: '/?view=analysis', icon: <IconAnalysis /> },
-    { label: 'Market Intel', href: '/market-intel', icon: <IconMarketIntel /> },
+    { label: 'Market Intel', href: '/?view=market-intel', icon: <IconMarketIntel /> },
     { label: 'Calendar', href: '/calendar', icon: <IconCalendar /> },
     { label: 'AI Coach', href: '/coach', icon: <IconAICoach /> },
     // Account group
