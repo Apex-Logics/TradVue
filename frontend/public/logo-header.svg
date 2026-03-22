@@ -1,9 +1,9 @@
 <svg xmlns="http://www.w3.org/2000/svg" width="520" height="120" viewBox="0 0 520 120">
-  <rect width="520" height="120" fill="#1a1a2e"/>
+  <rect width="520" height="120" fill="transparent"/>
   
   <!-- Icon -->
   <g transform="translate(16, 12)">
-    <rect width="96" height="96" rx="16" fill="#1a1a2e" stroke="#00ff88" stroke-width="1" stroke-opacity="0.3"/>
+    <rect width="96" height="96" rx="16" fill="transparent" stroke="#00ff88" stroke-width="1" stroke-opacity="0.3"/>
     <g transform="scale(0.96)">
       <line x1="48" y1="14" x2="48" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
       <line x1="58" y1="14" x2="58" y2="86" stroke="#00ff88" stroke-width="0.5" opacity="0.15"/>
