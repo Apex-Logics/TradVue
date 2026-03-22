@@ -1066,7 +1066,7 @@ export default function HomeClient() {
           {/* ── Col 2 (CENTER): News / Analysis / Market Intel ──────────────── */}
           {activeNav === 'Analysis' ? (
             <ErrorBoundary label="Analysis Panel">
-              <div style={{ overflowY: 'auto', height: '100%' }}>
+              <div style={{ overflowY: 'auto', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <AnalysisPanel
                 wlQuotes={quotes}
                 tickerQuotes={tickerQuotes}
