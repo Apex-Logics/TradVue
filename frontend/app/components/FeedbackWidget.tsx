@@ -380,15 +380,6 @@ export default function FeedbackWidget() {
         )}
       </div>
 
-      {/* Mobile responsive styles */}
-      <style>{`
-        @media (max-width: 480px) {
-          [aria-label="Feedback"] {
-            border-radius: 16px 16px 0 0 !important;
-            border-left: none !important;
-          }
-        }
-      `}</style>
     </>
   );
 }
