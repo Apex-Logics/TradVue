@@ -72,6 +72,11 @@
 
 html, body { height: 100%; }
 
+@keyframes supportChatSlideUp {
+  from { opacity: 0; transform: translateY(12px) scale(0.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
 /* ─── Font size scaling ─────────────────────────────────────────────────────
    Uses a CSS custom property so ONLY text elements scale, not layout/padding.
    Nav, buttons, and structural elements are exempt (see nav rules below).
