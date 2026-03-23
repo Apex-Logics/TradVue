@@ -14,7 +14,6 @@
 
 import { useEffect } from 'react'
 import { usePathname } from 'next/navigation'
-import Script from 'next/script'
 
 const GA_ID = process.env.NEXT_PUBLIC_GA_MEASUREMENT_ID
 
@@ -52,55 +51,45 @@ export default function GoogleAnalytics() {
     return null
   }
 
+  const gaInitScript = `window.dataLayer = window.dataLayer || [];
+function gtag(){dataLayer.push(arguments);}
+gtag('js', new Date());
+
+var hasConsent = false;
+try { hasConsent = localStorage.getItem('${CONSENT_KEY}') === 'true'; } catch(e) {}
+
+if (hasConsent) {
+  gtag('config', '${GA_ID}', {
+    page_path: window.location.pathname,
+    anonymize_ip: true,
+    cookie_flags: 'SameSite=None;Secure'
+  });
+} else {
+  gtag('consent', 'default', {
+    analytics_storage: 'denied',
+    ad_storage: 'denied'
+  });
+}
+
+window.addEventListener('storage', function(e) {
+  if (e.key !== '${CONSENT_KEY}') return;
+  if (e.newValue === 'true') {
+    gtag('consent', 'update', { analytics_storage: 'granted' });
+    gtag('config', '${GA_ID}', {
+      page_path: window.location.pathname,
+      anonymize_ip: true,
+      cookie_flags: 'SameSite=None;Secure'
+    });
+  } else {
+    gtag('consent', 'update', { analytics_storage: 'denied' });
+  }
+});`
+
   return (
     <>
-      {/* Load the GA4 gtag.js library */}
-      <Script
-        src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`}
-        strategy="afterInteractive"
-      />
-
-      {/* Initialize GA4 — respect consent before sending data */}
-      <Script id="ga4-init" strategy="afterInteractive">
-        {`
-          window.dataLayer = window.dataLayer || [];
-          function gtag(){dataLayer.push(arguments);}
-          gtag('js', new Date());
-
-          // Check consent before configuring GA4
-          var hasConsent = false;
-          try { hasConsent = localStorage.getItem('${CONSENT_KEY}') === 'true'; } catch(e) {}
-
-          if (hasConsent) {
-            gtag('config', '${GA_ID}', {
-              page_path: window.location.pathname,
-              anonymize_ip: true,
-              cookie_flags: 'SameSite=None;Secure'
-            });
-          } else {
-            // Set default consent state — wait for user to grant
-            gtag('consent', 'default', {
-              analytics_storage: 'denied',
-              ad_storage: 'denied'
-            });
-          }
-
-          // Listen for consent changes from CookieConsent component
-          window.addEventListener('storage', function(e) {
-            if (e.key !== '${CONSENT_KEY}') return;
-            if (e.newValue === 'true') {
-              gtag('consent', 'update', { analytics_storage: 'granted' });
-              gtag('config', '${GA_ID}', {
-                page_path: window.location.pathname,
-                anonymize_ip: true,
-                cookie_flags: 'SameSite=None;Secure'
-              });
-            } else {
-              gtag('consent', 'update', { analytics_storage: 'denied' });
-            }
-          });
-        `}
-      </Script>
+      {/* Use plain script tags here. Next/script inline children were causing a prod-only appendChild token crash. */}
+      <script async src={`https://www.googletagmanager.com/gtag/js?id=${GA_ID}`} />
+      <script id="ga4-init" dangerouslySetInnerHTML={{ __html: gaInitScript }} />
 
       {/* SPA route change tracker */}
       <GoogleAnalyticsPageTracker />
