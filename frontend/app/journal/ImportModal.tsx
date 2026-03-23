@@ -254,6 +254,10 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
               </div>
             </div>
 
+            <div style={{ marginBottom: 16, padding: '10px 12px', background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, color: 'var(--text-2)', lineHeight: 1.55 }}>
+              Imported prices, quantities, fees, and paired entries depend on your CSV and broker export format. Review everything before importing and verify against your official broker records.
+            </div>
+
             {/* File drop zone */}
             <div
               onClick={() => fileRef.current?.click()}
@@ -407,6 +411,10 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
                     ⚠ Some trades unmatched
                   </div>
                 )}
+              </div>
+
+              <div style={{ marginBottom: 10, fontSize: 11, color: 'var(--text-3)', lineHeight: 1.5 }}>
+                Preview totals are estimated from the imported file and TradVue&apos;s pairing logic. Confirm entries, exits, fees, and P&amp;L against your broker statement before saving them to your journal.
               </div>
 
               <div style={{ overflowX: 'auto', maxHeight: '35vh', overflowY: 'auto', borderRadius: 8, border: '1px solid var(--border)' }}>

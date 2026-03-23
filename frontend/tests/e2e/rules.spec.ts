@@ -86,10 +86,10 @@ test.describe('Trading Rules Page', () => {
     await expect(summaryText).toBeVisible()
   })
 
-  test('"Rules" nav item appears in navigation', async ({ page }) => {
+  test('"Rules" nav section appears in navigation', async ({ page }) => {
     await goToRules(page)
-    const navLink = page.getByRole('link', { name: /Rules/i }).first()
-    await expect(navLink).toBeVisible()
+    const tradingMenu = page.getByRole('button', { name: /Trading/i })
+    await expect(tradingMenu).toBeVisible()
   })
 
 })

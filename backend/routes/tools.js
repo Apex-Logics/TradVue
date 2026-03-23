@@ -258,13 +258,11 @@ router.get('/earnings', async (req, res) => {
         time: e.hour === 'bmo' ? 'BMO' : e.hour === 'amc' ? 'AMC' : 'Unknown',
       }));
     } else {
-      // Mock fallback
-      earnings = [
-        { date: fromDate, symbol: 'AAPL', name: 'Apple Inc.', epsEstimate: 2.10, epsActual: null, revenueEstimate: 97200000000, time: 'AMC' },
-        { date: fromDate, symbol: 'MSFT', name: 'Microsoft', epsEstimate: 3.10, epsActual: null, revenueEstimate: 60500000000, time: 'AMC' },
-        { date: toDate, symbol: 'GOOGL', name: 'Alphabet', epsEstimate: 1.88, epsActual: null, revenueEstimate: 86200000000, time: 'AMC' },
-        { date: toDate, symbol: 'NVDA', name: 'NVIDIA', epsEstimate: 5.56, epsActual: null, revenueEstimate: 24490000000, time: 'AMC' },
-      ];
+      return res.status(503).json({
+        success: false,
+        error: 'Live earnings data unavailable',
+        message: 'This endpoint no longer returns mock earnings data in production.',
+      });
     }
 
     const response = { success: true, count: earnings.length, data: earnings, timestamp: new Date().toISOString() };
@@ -310,18 +308,10 @@ router.get('/fear-greed', async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('[Tools] /fear-greed error:', error.message);
-    // Return fallback mock data
-    res.json({
-      success: true,
-      current: { value: 45, classification: 'Fear', timestamp: Date.now() / 1000 },
-      history: Array.from({ length: 30 }, (_, i) => ({
-        value: Math.floor(30 + Math.random() * 60),
-        classification: 'Neutral',
-        timestamp: Math.floor(Date.now() / 1000) - i * 86400,
-        date: new Date(Date.now() - i * 86400000).toISOString().split('T')[0],
-      })),
-      timestamp: new Date().toISOString(),
-      _fallback: true,
+    res.status(503).json({
+      success: false,
+      error: 'Fear & Greed data unavailable',
+      message: 'This endpoint no longer returns fabricated fallback values in production.',
     });
   }
 });
@@ -369,13 +359,16 @@ router.get('/gas', async (req, res) => {
       } catch (e) { /* fall through */ }
     }
 
-    // Final fallback — reasonable mock values
     if (!gasData) {
-      gasData = { slow: 15, standard: 20, fast: 30, source: 'mock' };
+      return res.status(503).json({
+        success: false,
+        error: 'Gas fee data unavailable',
+        message: 'Live Ethereum gas data is temporarily unavailable. TradVue does not return fallback gas prices in production.',
+      });
     }
 
-    // Estimate tx costs (assuming ETH price ~$3000, simple tx = 21000 gas)
-    const ethPrice = 3000; // TODO: fetch real ETH price
+    // USD conversion is still an estimate until we wire a live ETH/USD feed.
+    const ethPrice = 3000;
     const gasUnits = 21000;
     const response = {
       success: true,
@@ -385,6 +378,7 @@ router.get('/gas', async (req, res) => {
         fast: { gwei: gasData.fast, usd: parseFloat(((gasData.fast * gasUnits * ethPrice) / 1e9).toFixed(2)) },
       },
       ethPrice,
+      ethPriceSource: 'estimated',
       source: gasData.source,
       timestamp: new Date().toISOString(),
     };
@@ -540,11 +534,10 @@ router.get('/currency-rates', async (req, res) => {
     res.json(response);
   } catch (error) {
     console.error('[Tools] /currency-rates error:', error.message);
-    // Fallback approximate rates
-    res.json({
-      success: true, base: 'USD',
-      rates: { USD: 1, EUR: 0.92, GBP: 0.79, JPY: 149.5, CHF: 0.89, AUD: 1.53, CAD: 1.36, NZD: 1.64 },
-      timestamp: new Date().toISOString(), _fallback: true,
+    res.status(503).json({
+      success: false,
+      error: 'Currency rates unavailable',
+      message: 'This endpoint no longer returns approximate fallback exchange rates in production.',
     });
   }
 });
@@ -578,21 +571,12 @@ router.get('/sectors', async (req, res) => {
       }
     }
 
-    // Structured fallback — representative sector data
     if (!sectors) {
-      sectors = [
-        { name: 'Technology',              change: 1.24,  ytdChange: 8.5  },
-        { name: 'Healthcare',              change: -0.32, ytdChange: 2.1  },
-        { name: 'Financial',               change: 0.78,  ytdChange: 5.4  },
-        { name: 'Energy',                  change: -1.15, ytdChange: -3.2 },
-        { name: 'Consumer Discretionary',  change: 0.45,  ytdChange: 4.7  },
-        { name: 'Consumer Staples',        change: -0.12, ytdChange: 1.8  },
-        { name: 'Industrials',             change: 0.63,  ytdChange: 3.9  },
-        { name: 'Materials',               change: -0.55, ytdChange: -1.5 },
-        { name: 'Utilities',               change: 0.28,  ytdChange: 0.9  },
-        { name: 'Real Estate',             change: -0.87, ytdChange: -4.1 },
-        { name: 'Communication Services',  change: 1.05,  ytdChange: 6.2  },
-      ];
+      return res.status(503).json({
+        success: false,
+        error: 'Sector performance unavailable',
+        message: 'This endpoint no longer returns representative fallback sector data in production.',
+      });
     }
 
     const response = {

@@ -399,8 +399,7 @@ export default function MarketIntelPage() {
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 11, color: 'rgba(180,180,200,0.55)', lineHeight: 1.6 }}>
-            Insider transaction data is sourced from SEC EDGAR via Finnhub and is provided for informational purposes only.
-            This is not financial advice. Past insider activity does not guarantee future stock performance. Always conduct your own due diligence.
+            Insider transaction data is sourced from SEC EDGAR via Finnhub and other public/reference feeds and is provided for informational purposes only. Data can be delayed, amended, incomplete, or categorized differently by source. This is not financial advice. Past insider activity does not guarantee future stock performance. Always confirm filings and dates with official sources before acting.
           </p>
         </div>
       </section>

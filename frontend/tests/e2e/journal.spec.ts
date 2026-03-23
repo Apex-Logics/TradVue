@@ -6,6 +6,17 @@ async function clearStorage(page: Page) {
   await page.addInitScript(() => {
     try { localStorage.clear() } catch { /* ignore */ }
     try { sessionStorage.clear() } catch { /* ignore */ }
+
+    try {
+      localStorage.setItem('cg_token', 'playwright-test-token')
+      localStorage.setItem('cg_user', JSON.stringify({
+        id: 'playwright-user',
+        email: 'playwright@example.com',
+        name: 'Playwright Tester',
+        tier: 'free',
+        created_at: '2026-03-20T12:00:00.000Z',
+      }))
+    } catch { /* ignore */ }
   })
 }
 
@@ -16,15 +27,17 @@ async function goToJournal(page: Page) {
 }
 
 async function openNewTradeForm(page: Page) {
-  // Click the "Trade Log" tab first to make sure we're on the right tab
-  const tradeLogTab = page.getByRole('button', { name: /Trade Log/i })
-  if (await tradeLogTab.isVisible()) {
-    await tradeLogTab.click()
+  const tradeLogTab = page.getByRole('button', { name: /Trade Log/i }).first()
+  await tradeLogTab.click()
+
+  const newTradeBtn = page.getByRole('button', { name: /^\+ Log Trade$/i }).first()
+  await expect(newTradeBtn).toBeVisible()
+  await newTradeBtn.click({ force: true })
+  if (!(await page.getByText(/Log a New Trade/i).first().isVisible().catch(() => false))) {
+    await newTradeBtn.evaluate((el: HTMLButtonElement) => el.click())
   }
-  // Click the "Log a New Trade" or similar button
-  const newTradeBtn = page.getByRole('button', { name: /Log a New Trade|New Trade|\+ New Trade/i }).first()
-  await newTradeBtn.click()
-  await page.waitForTimeout(300)
+
+  await expect(page.getByText(/Log a New Trade/i).first()).toBeVisible()
 }
 
 // ─── Tests ────────────────────────────────────────────────────────────────────
@@ -47,11 +60,11 @@ test.describe('Journal Page', () => {
     // Symbol field
     await expect(page.getByPlaceholder(/ticker|symbol|e\.g\. AAPL|NQ/i).first()).toBeVisible()
     // Entry price field
-    await expect(page.getByPlaceholder(/entry|150\.00/i).first()).toBeVisible()
+    await expect(page.locator('xpath=//label[contains(.,"Entry Price")]/following-sibling::div//input | //label[contains(.,"Entry Price")]/following-sibling::input').first()).toBeVisible()
     // Exit price field
-    await expect(page.getByPlaceholder(/exit|157/i).first()).toBeVisible()
-    // Direction (Long/Short)
-    await expect(page.getByText(/Long/i).first()).toBeVisible()
+    await expect(page.locator('xpath=//label[contains(.,"Exit Price")]/following-sibling::input').first()).toBeVisible()
+    // Direction selector should be visible inside the form
+    await expect(page.locator('xpath=//label[contains(.,"Direction")]/following-sibling::select').first()).toBeVisible()
   })
 
   test('typing NQ auto-detects Futures and shows tick info', async ({ page }) => {
@@ -64,11 +77,8 @@ test.describe('Journal Page', () => {
     await page.waitForTimeout(500)
 
     // Asset class should become Futures
-    const futuresOption = page.getByRole('option', { name: 'Futures' })
-    const assetSelect = page.locator('select').filter({ hasText: /Futures/i })
-    // At least one of these should indicate Futures is selected
-    const futuresIndicator = page.getByText(/Futures/i).first()
-    await expect(futuresIndicator).toBeVisible()
+    const assetSelect = page.locator('xpath=//label[contains(.,"Asset Class")]/following-sibling::select').first()
+    await expect(assetSelect).toHaveValue('Futures')
   })
 
   test('typing AAPL keeps asset class as Stock', async ({ page }) => {
@@ -81,8 +91,8 @@ test.describe('Journal Page', () => {
     await page.waitForTimeout(500)
 
     // Stock should still be selected (it's the default and AAPL doesn't trigger futures detection)
-    const stockIndicator = page.getByText(/Stock/i).first()
-    await expect(stockIndicator).toBeVisible()
+    const assetSelect = page.locator('xpath=//label[contains(.,"Asset Class")]/following-sibling::select').first()
+    await expect(assetSelect).toHaveValue('Stock')
   })
 
   test('futures symbol shows live price hint instead of fill button', async ({ page }) => {
@@ -114,31 +124,27 @@ test.describe('Journal Page', () => {
     await page.waitForTimeout(300)
 
     // Make sure asset class is Stock
-    const assetSelect = page.locator('select').filter({ has: page.getByRole('option', { name: 'Stock' }) }).first()
-    if (await assetSelect.isVisible()) {
-      await assetSelect.selectOption('Stock')
-    }
+    const assetSelect = page.locator('xpath=//label[contains(.,"Asset Class")]/following-sibling::select').first()
+    await assetSelect.selectOption('Stock')
 
-    // Direction: Long (should be default)
-    const longButton = page.getByRole('button', { name: /^Long$/i }).first()
-    if (await longButton.isVisible()) {
-      await longButton.click()
-    }
+    // Direction: Long (current UI uses a select, and Long is the default)
+    const directionSelect = page.locator('xpath=//label[contains(.,"Direction")]/following-sibling::select').first()
+    await directionSelect.selectOption('Long')
 
     // Entry price
-    const entryInput = page.getByPlaceholder(/e\.g\. 150\.00|entry/i).first()
+    const entryInput = page.locator('xpath=//label[contains(.,"Entry Price")]/following-sibling::div//input | //label[contains(.,"Entry Price")]/following-sibling::input').first()
     await entryInput.fill('150')
 
     // Exit price
-    const exitInput = page.getByPlaceholder(/e\.g\. 157\.50|exit/i).first()
+    const exitInput = page.locator('xpath=//label[contains(.,"Exit Price")]/following-sibling::input').first()
     await exitInput.fill('155')
 
     // Position size / shares
-    const sizeInput = page.getByPlaceholder(/e\.g\. 100|position/i).first()
+    const sizeInput = page.locator('xpath=//label[contains(.,"Position Size") or contains(.,"Contracts")]/following-sibling::input').first()
     await sizeInput.fill('100')
 
     // Stop loss (if present)
-    const stopInput = page.getByPlaceholder(/stop|e\.g\. 148/i).first()
+    const stopInput = page.locator('xpath=//label[contains(.,"Stop Loss")]/following-sibling::input').first()
     if (await stopInput.isVisible({ timeout: 1000 }).catch(() => false)) {
       await stopInput.fill('148')
     }
@@ -164,20 +170,20 @@ test.describe('Journal Page', () => {
     await page.waitForTimeout(500)
 
     // Select Futures asset class
-    const assetSelect = page.locator('select').first()
+    const assetSelect = page.locator('xpath=//label[contains(.,"Asset Class")]/following-sibling::select').first()
     await assetSelect.selectOption('Futures')
     await page.waitForTimeout(300)
 
     // Entry price
-    const entryInput = page.getByPlaceholder(/e\.g\. 150\.00|entry/i).first()
+    const entryInput = page.locator('xpath=//label[contains(.,"Entry Price")]/following-sibling::div//input | //label[contains(.,"Entry Price")]/following-sibling::input').first()
     await entryInput.fill('20150')
 
     // Exit price
-    const exitInput = page.getByPlaceholder(/e\.g\. 157\.50|exit/i).first()
+    const exitInput = page.locator('xpath=//label[contains(.,"Exit Price")]/following-sibling::input').first()
     await exitInput.fill('20175')
 
     // Contracts
-    const contractsInput = page.getByPlaceholder(/e\.g\. 1|contracts/i).first()
+    const contractsInput = page.locator('xpath=//label[contains(.,"Contracts")]/following-sibling::input').first()
     await contractsInput.fill('2')
 
     // Save trade
@@ -191,16 +197,26 @@ test.describe('Journal Page', () => {
 
   test('asset type filter shows only filtered trades', async ({ page }) => {
     await goToJournal(page)
+    await openNewTradeForm(page)
 
-    // The filter buttons should be present (All, Stock, Futures, etc.)
-    await expect(page.getByRole('button', { name: /^All$/i }).first()).toBeVisible()
-    // Click Futures filter
-    const futuresFilter = page.getByRole('button', { name: /^Futures$/i }).first()
-    if (await futuresFilter.isVisible({ timeout: 2000 }).catch(() => false)) {
-      await futuresFilter.click()
-      await page.waitForTimeout(300)
-      // Verify filter is active (button style changes) — just confirm no error
-    }
+    const symbolInput = page.getByPlaceholder(/ticker|symbol|e\.g\. AAPL|NQ/i).first()
+    await symbolInput.fill('NQ')
+    await symbolInput.dispatchEvent('input')
+    await page.waitForTimeout(300)
+
+    await page.locator('xpath=//label[contains(.,"Entry Price")]/following-sibling::div//input | //label[contains(.,"Entry Price")]/following-sibling::input').first().fill('20150')
+    await page.locator('xpath=//label[contains(.,"Exit Price")]/following-sibling::input').first().fill('20175')
+    await page.locator('xpath=//label[contains(.,"Contracts")]/following-sibling::input').first().fill('1')
+    await page.getByRole('button', { name: /Save Trade|Log Trade|Submit|Save/i }).first().click()
+    await page.waitForTimeout(500)
+
+    // Current UI uses a select for asset filtering instead of filter buttons.
+    const assetFilter = page.getByRole('combobox').nth(0)
+    await expect(assetFilter).toBeVisible()
+    await assetFilter.selectOption('Futures')
+    await page.waitForTimeout(300)
+    await expect(assetFilter).toHaveValue('Futures')
+    await expect(page.getByText('NQ')).toBeVisible()
   })
 
   test('playbook dropdown shows all 5 default playbooks', async ({ page }) => {

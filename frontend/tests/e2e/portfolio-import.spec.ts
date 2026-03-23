@@ -75,9 +75,9 @@ MSFT,5,300.00,2024-02-20,Information Technology,Test
     await page.waitForTimeout(400)
 
     // Preview step should show the holdings
-    await expect(page.getByText(/2 holding/i)).toBeVisible()
-    await expect(page.getByText('AAPL')).toBeVisible()
-    await expect(page.getByText('MSFT')).toBeVisible()
+    await expect(page.getByText(/2 holding/i).first()).toBeVisible()
+    await expect(page.getByText('AAPL').first()).toBeVisible()
+    await expect(page.getByText('MSFT').first()).toBeVisible()
 
     // Clean up
     fs.unlinkSync(csvPath)
@@ -97,9 +97,9 @@ KO,100,55.50
     await page.getByTestId('parse-csv-button').click()
     await page.waitForTimeout(400)
 
-    await expect(page.getByText('KO')).toBeVisible()
+    await expect(page.getByText('KO').first()).toBeVisible()
     // Should show shares count
-    await expect(page.getByText('100')).toBeVisible()
+    await expect(page.getByText('100').first()).toBeVisible()
 
     fs.unlinkSync(csvPath)
   })
@@ -132,7 +132,7 @@ TSLA,5,200.00,2024-03-01
     await page.waitForTimeout(500)
 
     // TSLA should now appear in the holdings table
-    await expect(page.getByText('TSLA')).toBeVisible()
+    await expect(page.getByText('TSLA').first()).toBeVisible()
 
     fs.unlinkSync(csvPath)
   })

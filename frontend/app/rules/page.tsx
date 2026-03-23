@@ -532,7 +532,9 @@ export default function RulesPage() {
   // Auth gating
   const tier = getUserTier(user)
   const hasStoredToken = typeof window !== "undefined" && !!localStorage.getItem("cg_token")
-  const isDemo = tier === "demo" && !hasStoredToken && !authLoading
+  // Keep Rule Cop usable in guest mode via localStorage.
+  // The demo branch hid the real rules UI and broke editing/toggle flows.
+  const isDemo = false
   if (isDemo) {
     const DEMO_RULES_DATA = [
       {
@@ -802,7 +804,7 @@ export default function RulesPage() {
             background: 'var(--surface)',
           }}
         >
-          <strong>Disclaimer:</strong> Trading rules are self-set guidelines for personal discipline. TradVue does not enforce, monitor, or guarantee compliance with any trading rules. This tool is for self-accountability only.
+          <strong>Disclaimer:</strong> Trading rules are self-set guidelines for personal discipline. TradVue does not enforce, monitor, or guarantee compliance with any trading rules, and calculations may differ from your broker, platform, or prop firm records. This tool is for self-accountability only and is not financial, legal, or tax advice.
         </div>
       </main>
 

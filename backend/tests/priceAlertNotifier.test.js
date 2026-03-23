@@ -12,6 +12,8 @@
 
 'use strict';
 
+process.env.UNSUB_TOKEN_SECRET = 'test-unsub-secret';
+
 jest.mock('../services/db', () => ({ query: jest.fn() }));
 jest.mock('web-push', () => ({
   setVapidDetails: jest.fn(),

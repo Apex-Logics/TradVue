@@ -1,23 +1,25 @@
 /**
  * Watchlist Routes Tests
  *
- * TDD: Tests written first to define expected behavior.
  * Covers: GET, POST, PUT /:id/alerts, DELETE /:id, GET /performance
  *
- * Mocks: db, finnhub, auth middleware
+ * Mocks: Supabase client, finnhub, auth middleware
  */
 
 const request = require('supertest');
 const express = require('express');
 
-// ── Mocks ────────────────────────────────────────────────────────────────────
-jest.mock('../services/db', () => ({ query: jest.fn() }));
+const mockCreateClient = jest.fn();
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: (...args) => mockCreateClient(...args),
+}));
+
 jest.mock('../services/finnhub', () => ({
   getQuote: jest.fn(),
   getBatchQuotes: jest.fn(),
 }));
 
-// Bypass JWT auth: inject req.user
 jest.mock('../middleware/auth', () => ({
   requireAuth: (req, _res, next) => {
     req.user = { id: 'user-uuid-1', email: 'test@example.com', role: 'authenticated', subscription_tier: 'free' };
@@ -29,29 +31,98 @@ jest.mock('../middleware/auth', () => ({
   },
 }));
 
-const db = require('../services/db');
 const finnhub = require('../services/finnhub');
 const watchlistRouter = require('../routes/watchlist');
 
-// Minimal express app
+function createSupabaseMock(tableMap = {}) {
+  return {
+    from(tableName) {
+      const table = tableMap[tableName];
+      if (!table) throw new Error(`No mock configured for table: ${tableName}`);
+      return table;
+    },
+  };
+}
+
+function makeSelectEqEq(result) {
+  const chain = {
+    select: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+  };
+  chain.eq.mockReturnValueOnce(chain).mockResolvedValueOnce(result);
+  return chain;
+}
+
+function makeSelectEqOrder(result) {
+  const chain = {
+    select: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    order: jest.fn(async () => result),
+  };
+  return chain;
+}
+
+function makeSelectEq(result) {
+  const chain = {
+    select: jest.fn(() => chain),
+    eq: jest.fn(async () => result),
+  };
+  return chain;
+}
+
+function makeInsertSelect(result) {
+  const chain = {
+    insert: jest.fn(() => chain),
+    select: jest.fn(async () => result),
+  };
+  return chain;
+}
+
+function makeUpdateEqEqSelect(result) {
+  const chain = {
+    update: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    select: jest.fn(async () => result),
+  };
+  chain.eq.mockReturnValueOnce(chain).mockReturnValueOnce(chain);
+  return chain;
+}
+
+function makeDeleteEqEqSelect(result) {
+  const chain = {
+    delete: jest.fn(() => chain),
+    eq: jest.fn(() => chain),
+    select: jest.fn(async () => result),
+  };
+  chain.eq.mockReturnValueOnce(chain).mockReturnValueOnce(chain);
+  return chain;
+}
+
 const app = express();
 app.use(express.json());
 app.use('/api/watchlist', watchlistRouter);
 
+beforeEach(() => {
+  process.env.SUPABASE_URL = 'https://example.supabase.co';
+  process.env.SUPABASE_SERVICE_ROLE_KEY = 'test-service-role-key';
+  mockCreateClient.mockReset();
+});
+
 afterEach(() => jest.clearAllMocks());
 
-// ── Fixtures ─────────────────────────────────────────────────────────────────
-const MOCK_ROW = {
+const MOCK_JOINED_ROW = {
   id: 1,
-  symbol: 'AAPL',
-  name: 'Apple Inc.',
-  type: 'stock',
-  exchange: 'NASDAQ',
   alert_threshold_up: null,
   alert_threshold_down: null,
   notes: null,
   purchase_price: null,
   created_at: new Date().toISOString(),
+  instruments: {
+    symbol: 'AAPL',
+    name: 'Apple Inc.',
+    type: 'stock',
+    exchange: 'NASDAQ',
+  },
 };
 
 const MOCK_QUOTE = {
@@ -61,10 +132,11 @@ const MOCK_QUOTE = {
   source: 'finnhub',
 };
 
-// ── GET /api/watchlist ────────────────────────────────────────────────────────
 describe('GET /api/watchlist', () => {
   test('returns empty watchlist when user has no items', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeSelectEqOrder({ data: [], error: null }),
+    }));
 
     const res = await request(app).get('/api/watchlist');
 
@@ -73,7 +145,9 @@ describe('GET /api/watchlist', () => {
   });
 
   test('returns enriched watchlist items with live quotes', async () => {
-    db.query.mockResolvedValueOnce({ rows: [MOCK_ROW] });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeSelectEqOrder({ data: [MOCK_JOINED_ROW], error: null }),
+    }));
     finnhub.getBatchQuotes.mockResolvedValueOnce({ AAPL: MOCK_QUOTE });
 
     const res = await request(app).get('/api/watchlist');
@@ -87,8 +161,10 @@ describe('GET /api/watchlist', () => {
     expect(item.quote_source).toBe('finnhub');
   });
 
-  test('returns 500 when db query fails', async () => {
-    db.query.mockRejectedValueOnce(new Error('DB down'));
+  test('returns 500 when supabase query fails', async () => {
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeSelectEqOrder({ data: null, error: { message: 'DB down' } }),
+    }));
 
     const res = await request(app).get('/api/watchlist');
 
@@ -97,15 +173,33 @@ describe('GET /api/watchlist', () => {
   });
 });
 
-// ── POST /api/watchlist ───────────────────────────────────────────────────────
 describe('POST /api/watchlist', () => {
   test('adds a valid instrument to the watchlist', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }] }) // instrument lookup
-      .mockResolvedValueOnce({ rows: [] })                              // duplicate check
-      .mockResolvedValueOnce({ rows: [{ count: '2' }] })               // free tier count
-      .mockResolvedValueOnce({ rows: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, purchase_price: null, created_at: new Date().toISOString() }] }); // INSERT
+    const watchlists = {
+      select: jest.fn()
+        .mockReturnValueOnce({
+          eq: jest.fn(() => ({
+            eq: jest.fn(async () => ({ data: [], error: null })),
+          })),
+        })
+        .mockReturnValueOnce({
+          eq: jest.fn(async () => ({ count: 2, error: null })),
+        }),
+      insert: jest.fn(() => ({
+        select: jest.fn(async () => ({
+          data: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, purchase_price: null, created_at: new Date().toISOString() }],
+          error: null,
+        })),
+      })),
+    };
 
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      instruments: makeSelectEqEq({
+        data: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }],
+        error: null,
+      }),
+      watchlists,
+    }));
     finnhub.getQuote.mockResolvedValueOnce(MOCK_QUOTE);
 
     const res = await request(app)
@@ -125,7 +219,9 @@ describe('POST /api/watchlist', () => {
   });
 
   test('returns 404 when symbol not found in instruments table', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] }); // no instrument
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      instruments: makeSelectEqEq({ data: [], error: null }),
+    }));
 
     const res = await request(app).post('/api/watchlist').send({ symbol: 'UNKN' });
 
@@ -134,9 +230,21 @@ describe('POST /api/watchlist', () => {
   });
 
   test('returns 409 when instrument is already in watchlist', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }] }) // instrument
-      .mockResolvedValueOnce({ rows: [{ id: 1 }] }); // existing entry
+    const watchlists = {
+      select: jest.fn(() => ({
+        eq: jest.fn(() => ({
+          eq: jest.fn(async () => ({ data: [{ id: 1 }], error: null })),
+        })),
+      })),
+    };
+
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      instruments: makeSelectEqEq({
+        data: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }],
+        error: null,
+      }),
+      watchlists,
+    }));
 
     const res = await request(app).post('/api/watchlist').send({ symbol: 'AAPL' });
 
@@ -145,10 +253,25 @@ describe('POST /api/watchlist', () => {
   });
 
   test('returns 403 when free tier limit (10 items) is reached', async () => {
-    db.query
-      .mockResolvedValueOnce({ rows: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }] }) // instrument
-      .mockResolvedValueOnce({ rows: [] })              // not duplicate
-      .mockResolvedValueOnce({ rows: [{ count: '10' }] }); // at limit
+    const watchlists = {
+      select: jest.fn()
+        .mockReturnValueOnce({
+          eq: jest.fn(() => ({
+            eq: jest.fn(async () => ({ data: [], error: null })),
+          })),
+        })
+        .mockReturnValueOnce({
+          eq: jest.fn(async () => ({ count: 10, error: null })),
+        }),
+    };
+
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      instruments: makeSelectEqEq({
+        data: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }],
+        error: null,
+      }),
+      watchlists,
+    }));
 
     const res = await request(app).post('/api/watchlist').send({ symbol: 'AAPL' });
 
@@ -157,12 +280,11 @@ describe('POST /api/watchlist', () => {
   });
 });
 
-// ── PUT /api/watchlist/:id/alerts ─────────────────────────────────────────────
 describe('PUT /api/watchlist/:id/alerts', () => {
   test('updates alert thresholds for owned watchlist item', async () => {
-    db.query.mockResolvedValueOnce({
-      rows: [{ id: 1, alert_threshold_up: 200, alert_threshold_down: 150 }],
-    });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeUpdateEqEqSelect({ data: [{ id: 1, alert_threshold_up: 200, alert_threshold_down: 150 }], error: null }),
+    }));
 
     const res = await request(app)
       .put('/api/watchlist/1/alerts')
@@ -173,7 +295,9 @@ describe('PUT /api/watchlist/:id/alerts', () => {
   });
 
   test('returns 404 when item not found or not owned', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeUpdateEqEqSelect({ data: [], error: null }),
+    }));
 
     const res = await request(app)
       .put('/api/watchlist/999/alerts')
@@ -183,10 +307,11 @@ describe('PUT /api/watchlist/:id/alerts', () => {
   });
 });
 
-// ── DELETE /api/watchlist/:id ─────────────────────────────────────────────────
 describe('DELETE /api/watchlist/:id', () => {
   test('removes watchlist item and returns removed id', async () => {
-    db.query.mockResolvedValueOnce({ rows: [{ id: 1 }] });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeDeleteEqEqSelect({ data: [{ id: 1 }], error: null }),
+    }));
 
     const res = await request(app).delete('/api/watchlist/1');
 
@@ -195,7 +320,9 @@ describe('DELETE /api/watchlist/:id', () => {
   });
 
   test('returns 404 when item not found or not owned', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeDeleteEqEqSelect({ data: [], error: null }),
+    }));
 
     const res = await request(app).delete('/api/watchlist/999');
 
@@ -203,10 +330,11 @@ describe('DELETE /api/watchlist/:id', () => {
   });
 });
 
-// ── GET /api/watchlist/performance ───────────────────────────────────────────
 describe('GET /api/watchlist/performance', () => {
   test('returns empty summary when watchlist is empty', async () => {
-    db.query.mockResolvedValueOnce({ rows: [] });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeSelectEq({ data: [], error: null }),
+    }));
 
     const res = await request(app).get('/api/watchlist/performance');
 
@@ -216,9 +344,12 @@ describe('GET /api/watchlist/performance', () => {
   });
 
   test('calculates P&L correctly for tracked items', async () => {
-    db.query.mockResolvedValueOnce({
-      rows: [{ ...MOCK_ROW, purchase_price: '160.00' }],
-    });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: makeSelectEq({
+        data: [{ ...MOCK_JOINED_ROW, purchase_price: '160.00' }],
+        error: null,
+      }),
+    }));
     finnhub.getBatchQuotes.mockResolvedValueOnce({ AAPL: MOCK_QUOTE });
 
     const res = await request(app).get('/api/watchlist/performance');

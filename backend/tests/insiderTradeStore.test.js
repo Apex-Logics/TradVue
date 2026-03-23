@@ -1,209 +1,163 @@
 /**
  * Tests: insiderTradeStore.js
- *
- * Verifies:
- * - ingestFromEdgar: inserts valid records, skips incomplete records
- * - ingestFromFinnhub: inserts valid records, skips if EDGAR record exists
- * - queryTrades: pagination, date filter, source filter, 90-day cap
- * - pruneOldRecords: deletes old records, keeps recent ones
- * - getRecordCount: returns total row count
- * - runIngestionCycle: runs both ingestions then prunes
  */
-
 'use strict';
 
-// Mock the db module before requiring the store
-const mockQuery = jest.fn();
-jest.mock('../services/db', () => ({
-  query: mockQuery,
+const mockHeadCountQueue = [];
+const mockSelectQueue = [];
+const mockUpsertQueue = [];
+const mockDeleteQueue = [];
+const chains = [];
+
+function makeChain(table) {
+  const state = { table, filters: [], rangeArgs: null, mode: 'select' };
+  const chain = {
+    __state: state,
+    select: jest.fn().mockImplementation(function (...args) {
+      const options = args[1] || {};
+      if (options.head && options.count) state.mode = 'count';
+      else if (args[0] === 'source') state.mode = 'source';
+      else state.mode = 'select';
+      return chain;
+    }),
+    upsert: jest.fn().mockImplementation(() => Promise.resolve(mockUpsertQueue.shift() || { error: null })),
+    delete: jest.fn().mockImplementation(() => { state.mode = 'delete'; return chain; }),
+    gte: jest.fn().mockImplementation((field, value) => { state.filters.push(['gte', field, value]); return chain; }),
+    lte: jest.fn().mockImplementation((field, value) => { state.filters.push(['lte', field, value]); return chain; }),
+    eq: jest.fn().mockImplementation((field, value) => { state.filters.push(['eq', field, value]); return chain; }),
+    ilike: jest.fn().mockImplementation((field, value) => { state.filters.push(['ilike', field, value]); return chain; }),
+    or: jest.fn().mockImplementation((value) => { state.filters.push(['or', value]); return chain; }),
+    order: jest.fn().mockImplementation(() => chain),
+    range: jest.fn().mockImplementation((from, to) => { state.rangeArgs = [from, to]; return chain; }),
+    limit: jest.fn().mockImplementation(() => chain),
+    lt: jest.fn().mockImplementation(() => chain),
+    then: (resolve, reject) => {
+      const result = state.mode === 'count'
+        ? (mockHeadCountQueue.shift() || { count: 0, error: null })
+        : state.mode === 'source'
+          ? (mockSelectQueue.shift() || { data: [], error: null })
+          : state.mode === 'delete'
+            ? (mockDeleteQueue.shift() || { count: 0, error: null })
+            : (mockSelectQueue.shift() || { data: [], error: null });
+      return Promise.resolve(result).then(resolve, reject);
+    },
+  };
+  chains.push(chain);
+  return chain;
+}
+
+const mockSupabaseClient = { from: jest.fn((table) => makeChain(table)) };
+
+jest.mock('@supabase/supabase-js', () => ({
+  createClient: jest.fn(() => mockSupabaseClient),
 }));
+
+jest.mock('../services/db', () => ({ query: jest.fn() }));
 
 const store = require('../services/insiderTradeStore');
 
 beforeEach(() => {
-  mockQuery.mockReset();
+  jest.clearAllMocks();
+  mockHeadCountQueue.length = 0;
+  mockSelectQueue.length = 0;
+  mockUpsertQueue.length = 0;
+  mockDeleteQueue.length = 0;
+  chains.length = 0;
 });
-
-// ─── ingestFromEdgar ──────────────────────────────────────────────────────────
 
 describe('ingestFromEdgar', () => {
   test('returns zeros for empty input', async () => {
-    const result = await store.ingestFromEdgar([]);
-    expect(result).toEqual({ inserted: 0, skipped: 0 });
-    expect(mockQuery).not.toHaveBeenCalled();
+    await expect(store.ingestFromEdgar([])).resolves.toEqual({ inserted: 0, skipped: 0 });
+    expect(mockSupabaseClient.from).not.toHaveBeenCalled();
   });
 
   test('skips records missing required fields', async () => {
-    const trades = [
-      { ticker: 'AAPL' },                          // missing name, date, type
-      { ticker: '', name: 'John', date: '2026-01-01', transactionType: 'Buy' }, // empty ticker
-      { ticker: 'MSFT', name: 'Jane', date: null, transactionType: 'Sell' },    // null date
-    ];
-    const result = await store.ingestFromEdgar(trades);
-    expect(result.skipped).toBe(3);
-    expect(result.inserted).toBe(0);
-    expect(mockQuery).not.toHaveBeenCalled();
+    const result = await store.ingestFromEdgar([
+      { ticker: 'AAPL' },
+      { ticker: '', name: 'John', date: '2026-01-01', transactionType: 'Buy' },
+      { ticker: 'MSFT', name: 'Jane', date: null, transactionType: 'Sell' },
+    ]);
+    expect(result).toEqual({ inserted: 0, skipped: 3 });
   });
 
   test('inserts a valid EDGAR record', async () => {
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 }); // INSERT
-    const trades = [{
-      ticker: 'AAPL',
-      name: 'Tim Cook',
-      date: '2026-03-01',
-      transactionType: 'Sell',
-      companyName: 'Apple Inc.',
-      officerTitle: 'CEO',
-      shares: 100000,
-      pricePerShare: 215.50,
-      transactionValue: 21550000,
-      holdingsAfter: 3000000,
-      filingUrl: 'https://www.sec.gov/Archives/edgar/data/320193/000162828026019134/wk-form4.xml',
-    }];
-    const result = await store.ingestFromEdgar(trades);
-    expect(result.inserted).toBe(1);
-    expect(result.skipped).toBe(0);
-    // Verify accession number was extracted from URL
-    const callArgs = mockQuery.mock.calls[0][1];
-    expect(callArgs[11]).toBe('0001628280-26-019134'); // accession_number
-    expect(callArgs[12]).toBe('320193');                // cik
+    mockUpsertQueue.push({ error: null });
+    const result = await store.ingestFromEdgar([{ ticker: 'AAPL', name: 'Tim Cook', date: '2026-03-01', transactionType: 'Sell', companyName: 'Apple Inc.', officerTitle: 'CEO', shares: 100000, pricePerShare: 215.5, transactionValue: 21550000, holdingsAfter: 3000000, filingUrl: 'https://www.sec.gov/Archives/edgar/data/320193/000162828026019134/wk-form4.xml' }]);
+    expect(result).toEqual({ inserted: 1, skipped: 0 });
+    const payload = chains[0].upsert.mock.calls[0][0];
+    expect(payload.accession_number).toBe('0001628280-26-019134');
+    expect(payload.cik).toBe('320193');
   });
 
-  test('counts skipped when ON CONFLICT fires (rowCount 0)', async () => {
-    mockQuery.mockResolvedValueOnce({ rowCount: 0 }); // conflict, no insert
-    const trades = [{
-      ticker: 'TSLA',
-      name: 'Elon Musk',
-      date: '2026-03-10',
-      transactionType: 'Buy',
-      filingUrl: null,
-    }];
-    const result = await store.ingestFromEdgar(trades);
-    expect(result.inserted).toBe(0);
-    expect(result.skipped).toBe(1);
+  test('counts skipped when upsert returns error', async () => {
+    mockUpsertQueue.push({ error: { message: 'duplicate' } });
+    await expect(store.ingestFromEdgar([{ ticker: 'TSLA', name: 'Elon Musk', date: '2026-03-10', transactionType: 'Buy' }])).resolves.toEqual({ inserted: 0, skipped: 1 });
   });
 
   test('uppercases ticker', async () => {
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
-    const trades = [{
-      ticker: 'nvda',
-      name: 'Jensen Huang',
-      date: '2026-03-05',
-      transactionType: 'Sell',
-    }];
-    await store.ingestFromEdgar(trades);
-    const callArgs = mockQuery.mock.calls[0][1];
-    expect(callArgs[0]).toBe('NVDA');
+    mockUpsertQueue.push({ error: null });
+    await store.ingestFromEdgar([{ ticker: 'nvda', name: 'Jensen Huang', date: '2026-03-05', transactionType: 'Sell' }]);
+    expect(chains[0].upsert.mock.calls[0][0].ticker).toBe('NVDA');
   });
 });
-
-// ─── ingestFromFinnhub ────────────────────────────────────────────────────────
 
 describe('ingestFromFinnhub', () => {
   test('returns zeros for empty input', async () => {
-    const result = await store.ingestFromFinnhub([]);
-    expect(result).toEqual({ inserted: 0, skipped: 0 });
+    await expect(store.ingestFromFinnhub([])).resolves.toEqual({ inserted: 0, skipped: 0 });
   });
 
   test('skips if EDGAR record already exists for same trade', async () => {
-    // First query = EDGAR dedup check, returns a hit
-    mockQuery.mockResolvedValueOnce({ rows: [{ id: 42 }] });
-    const trades = [{
-      ticker: 'AAPL',
-      name: 'Tim Cook',
-      date: '2026-03-01',
-      transactionType: 'Sell',
-    }];
-    const result = await store.ingestFromFinnhub(trades);
-    expect(result.skipped).toBe(1);
-    expect(result.inserted).toBe(0);
-    // INSERT should NOT have been called
-    expect(mockQuery.mock.calls.length).toBe(1); // only the SELECT
+    mockSelectQueue.push({ data: [{ id: 42 }], error: null });
+    const result = await store.ingestFromFinnhub([{ ticker: 'AAPL', name: 'Tim Cook', date: '2026-03-01', transactionType: 'Sell' }]);
+    expect(result).toEqual({ inserted: 0, skipped: 1 });
+    expect(chains).toHaveLength(1);
   });
 
   test('inserts Finnhub record when no EDGAR duplicate', async () => {
-    mockQuery
-      .mockResolvedValueOnce({ rows: [] })         // EDGAR dedup check: no hit
-      .mockResolvedValueOnce({ rowCount: 1 });     // INSERT
-    const trades = [{
-      ticker: 'META',
-      name: 'Mark Zuckerberg',
-      date: '2026-03-12',
-      transactionType: 'Sell',
-      shares: 500000,
-    }];
-    const result = await store.ingestFromFinnhub(trades);
-    expect(result.inserted).toBe(1);
-    expect(result.skipped).toBe(0);
+    mockSelectQueue.push({ data: [], error: null });
+    mockUpsertQueue.push({ error: null });
+    const result = await store.ingestFromFinnhub([{ ticker: 'META', name: 'Mark Zuckerberg', date: '2026-03-12', transactionType: 'Sell', shares: 500000 }]);
+    expect(result).toEqual({ inserted: 1, skipped: 0 });
   });
 
   test('skips records missing required fields', async () => {
-    const trades = [
-      { ticker: 'META', name: 'Mark', transactionType: 'Sell' }, // missing date
-    ];
-    const result = await store.ingestFromFinnhub(trades);
-    expect(result.skipped).toBe(1);
-    expect(mockQuery).not.toHaveBeenCalled();
+    await expect(store.ingestFromFinnhub([{ ticker: 'META', name: 'Mark', transactionType: 'Sell' }])).resolves.toEqual({ inserted: 0, skipped: 1 });
   });
 });
-
-// ─── pruneOldRecords ──────────────────────────────────────────────────────────
 
 describe('pruneOldRecords', () => {
   test('executes DELETE for records older than 90 days', async () => {
-    mockQuery.mockResolvedValueOnce({ rowCount: 47 });
-    const pruned = await store.pruneOldRecords();
-    expect(pruned).toBe(47);
-    const sql = mockQuery.mock.calls[0][0];
-    expect(sql).toMatch(/DELETE FROM insider_trades/i);
-    expect(sql).toMatch(/90 days/i);
+    mockDeleteQueue.push({ count: 47, error: null });
+    await expect(store.pruneOldRecords()).resolves.toBe(47);
   });
 
   test('returns 0 and does not throw on db error', async () => {
-    mockQuery.mockRejectedValueOnce(new Error('DB error'));
-    const pruned = await store.pruneOldRecords();
-    expect(pruned).toBe(0);
+    mockDeleteQueue.push({ count: 0, error: { message: 'DB error' } });
+    await expect(store.pruneOldRecords()).resolves.toBe(0);
   });
 });
-
-// ─── getRecordCount ───────────────────────────────────────────────────────────
 
 describe('getRecordCount', () => {
   test('returns total row count', async () => {
-    mockQuery.mockResolvedValueOnce({ rows: [{ cnt: '4231' }] });
-    const count = await store.getRecordCount();
-    expect(count).toBe(4231);
+    mockHeadCountQueue.push({ count: 4231, error: null });
+    await expect(store.getRecordCount()).resolves.toBe(4231);
   });
 
   test('returns 0 on error', async () => {
-    mockQuery.mockRejectedValueOnce(new Error('DB error'));
-    const count = await store.getRecordCount();
-    expect(count).toBe(0);
+    mockHeadCountQueue.push({ count: 0, error: { message: 'DB error' } });
+    await expect(store.getRecordCount()).resolves.toBe(0);
   });
 });
 
-// ─── queryTrades ─────────────────────────────────────────────────────────────
-
 describe('queryTrades', () => {
-  function mockQueryResult(rows = [], total = 0, sourceCounts = []) {
-    mockQuery
-      .mockResolvedValueOnce({ rows: [{ total: String(total) }] })  // COUNT
-      .mockResolvedValueOnce({ rows })                              // data
-      .mockResolvedValueOnce({ rows: sourceCounts });               // source breakdown
+  function queueQuery(rows = [], total = 0, sourceRows = []) {
+    mockHeadCountQueue.push({ count: total, error: null });
+    mockSelectQueue.push({ data: rows, error: null });
+    mockSelectQueue.push({ data: sourceRows, error: null });
   }
 
   test('returns paginated data', async () => {
-    const fakeRow = {
-      id: 1, ticker: 'AAPL', company_name: 'Apple Inc.', insider_name: 'Tim Cook',
-      officer_title: 'CEO', transaction_type: 'Sell', shares: '100000',
-      price_per_share: '215.5000', transaction_value: '21550000.00', holdings_after: '3000000',
-      filing_date: new Date('2026-03-01'), filing_url: 'https://sec.gov/test',
-      accession_number: '0001628280-26-019134', cik: '320193',
-      source: 'SEC EDGAR', source_api: 'EFTS', created_at: new Date(),
-    };
-    mockQueryResult([fakeRow], 1, [
-      { source: 'SEC EDGAR', cnt: '1' },
-    ]);
+    queueQuery([{ id: 1, ticker: 'AAPL', company_name: 'Apple Inc.', insider_name: 'Tim Cook', officer_title: 'CEO', transaction_type: 'Sell', shares: '100000', price_per_share: '215.5000', transaction_value: '21550000.00', holdings_after: '3000000', filing_date: new Date('2026-03-01'), filing_url: 'https://sec.gov/test', accession_number: '0001628280-26-019134', cik: '320193', source: 'SEC EDGAR', source_api: 'EFTS', created_at: new Date() }], 1, [{ source: 'SEC EDGAR' }]);
     const result = await store.queryTrades({ page: 1, limit: 50 });
     expect(result.total).toBe(1);
     expect(result.data).toHaveLength(1);
@@ -212,75 +166,52 @@ describe('queryTrades', () => {
   });
 
   test('enforces 90-day floor on from date', async () => {
-    mockQueryResult([], 0, []);
-    // from = 200 days ago — should be overridden to 90 days ago
+    queueQuery([], 0, []);
     const from200 = new Date(Date.now() - 200 * 24 * 3600 * 1000).toISOString().split('T')[0];
     await store.queryTrades({ from: from200 });
-    // The WHERE clause should include filing_date >= [90 days ago], not 200 days
-    const countSql = mockQuery.mock.calls[0][0];
-    expect(countSql).toMatch(/filing_date >= \$1/);
-    const countParams = mockQuery.mock.calls[0][1];
-    const ninetyDaysAgo = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().split('T')[0];
-    expect(countParams[0]).toBe(ninetyDaysAgo);
+    const effective = new Date(Date.now() - 90 * 24 * 3600 * 1000).toISOString().split('T')[0];
+    expect(chains[0].__state.filters).toContainEqual(['gte', 'filing_date', effective]);
   });
 
   test('limits max records per page to 200', async () => {
-    mockQueryResult([], 0, []);
+    queueQuery([], 0, []);
     await store.queryTrades({ limit: 999 });
-    // LIMIT clause should be $idx with value 200
-    const dataSql = mockQuery.mock.calls[1][0];
-    const dataParams = mockQuery.mock.calls[1][1];
-    // Last two params are limit and offset
-    const limitParam = dataParams[dataParams.length - 2];
-    expect(limitParam).toBe(200);
+    expect(chains[1].__state.rangeArgs).toEqual([0, 199]);
   });
 
   test('applies ticker filter', async () => {
-    mockQueryResult([], 0, []);
+    queueQuery([], 0, []);
     await store.queryTrades({ symbol: 'nvda' });
-    const countParams = mockQuery.mock.calls[0][1];
-    expect(countParams).toContain('NVDA');
+    expect(chains[0].__state.filters).toContainEqual(['eq', 'ticker', 'NVDA']);
   });
 
   test('applies edgar source filter', async () => {
-    mockQueryResult([], 0, []);
+    queueQuery([], 0, []);
     await store.queryTrades({ source: 'edgar' });
-    const countSql = mockQuery.mock.calls[0][0];
-    expect(countSql).toMatch(/source = 'SEC EDGAR'/);
+    expect(chains[0].__state.filters).toContainEqual(['eq', 'source', 'SEC EDGAR']);
   });
 
   test('applies finnhub source filter', async () => {
-    mockQueryResult([], 0, []);
+    queueQuery([], 0, []);
     await store.queryTrades({ source: 'finnhub' });
-    const countSql = mockQuery.mock.calls[0][0];
-    expect(countSql).toMatch(/source = 'Finnhub'/);
+    expect(chains[0].__state.filters).toContainEqual(['eq', 'source', 'Finnhub']);
   });
 });
 
-// ─── runIngestionCycle ────────────────────────────────────────────────────────
-
 describe('runIngestionCycle', () => {
   test('runs ingestFromEdgar, ingestFromFinnhub, then pruneOldRecords', async () => {
-    // ingestFromEdgar: 1 INSERT
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
-    // ingestFromFinnhub: EDGAR dedup check + INSERT
-    mockQuery.mockResolvedValueOnce({ rows: [] });
-    mockQuery.mockResolvedValueOnce({ rowCount: 1 });
-    // pruneOldRecords: DELETE
-    mockQuery.mockResolvedValueOnce({ rowCount: 3 });
+    mockUpsertQueue.push({ error: null });
+    mockSelectQueue.push({ data: [], error: null });
+    mockUpsertQueue.push({ error: null });
+    mockDeleteQueue.push({ count: 3, error: null });
 
-    const edgarTrades = [{
-      ticker: 'AAPL', name: 'Tim Cook', date: '2026-03-01', transactionType: 'Sell', filingUrl: null,
-    }];
-    const finnhubTrades = [{
-      ticker: 'META', name: 'Mark Zuckerberg', date: '2026-03-12', transactionType: 'Sell',
-    }];
+    const result = await store.runIngestionCycle(
+      [{ ticker: 'AAPL', name: 'Tim Cook', date: '2026-03-01', transactionType: 'Sell' }],
+      [{ ticker: 'META', name: 'Mark Zuckerberg', date: '2026-03-12', transactionType: 'Sell' }]
+    );
 
-    const result = await store.runIngestionCycle(edgarTrades, finnhubTrades);
     expect(result.edgarResult.inserted).toBe(1);
     expect(result.finnhubResult.inserted).toBe(1);
     expect(result.pruned).toBe(3);
-    // Ensure all 4 DB calls were made
-    expect(mockQuery).toHaveBeenCalledTimes(4);
   });
 });

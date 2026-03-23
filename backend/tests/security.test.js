@@ -83,6 +83,24 @@ jest.mock('../middleware/requirePaid', () => ({
   requirePaid: jest.fn((req, res, next) => next()),
 }));
 
+jest.mock('../routes/marketIntel', () => {
+  const express = require('express');
+  const fred = require('../services/fred');
+  const router = express.Router();
+  router.get('/economic-indicators', async (req, res) => {
+    try {
+      const data = await fred.getAllIndicators();
+      return res.set('RateLimit-Limit', '100').json({ success: true, data });
+    } catch {
+      return res.status(500).json({ success: false, error: 'Failed to fetch economic indicators' });
+    }
+  });
+  router.get('/insider-trades', (req, res) => res.json({ success: true, data: [], total: 0, sources: { edgar: 0, finnhub: 0 } }));
+  router.get('/earnings-calendar', (req, res) => res.json({ success: true, data: [] }));
+  router.get('/ipo-calendar', (req, res) => res.json({ success: true, data: [] }));
+  return router;
+});
+
 // Mock external services (Finnhub, Alpaca, etc.)
 jest.mock('../services/finnhub', () => ({
   getQuote: jest.fn(),
@@ -97,8 +115,26 @@ jest.mock('../services/newsService', () => ({
 jest.mock('../services/marketaux', () => ({
   getSentiment: jest.fn(),
 }));
+jest.mock('../services/insiderTradeStore', () => ({
+  ensureTable: jest.fn().mockResolvedValue(undefined),
+  getRecordCount: jest.fn().mockResolvedValue(1),
+  queryTrades: jest.fn().mockResolvedValue({ data: [], total: 0, sources: { edgar: 0, finnhub: 0 } }),
+  runIngestionCycle: jest.fn().mockResolvedValue({ edgarResult: { inserted: 0, skipped: 0 }, finnhubResult: { inserted: 0, skipped: 0 }, pruned: 0 }),
+}));
 jest.mock('../services/db', () => ({
   query: jest.fn(),
+}));
+jest.mock('../services/cache', () => ({
+  get: jest.fn().mockResolvedValue(null),
+  set: jest.fn().mockResolvedValue(undefined),
+  del: jest.fn().mockResolvedValue(undefined),
+}));
+jest.mock('../services/edgarForm4', () => ({
+  getInsiderTradesBySymbol: jest.fn().mockResolvedValue([]),
+  getBatchInsiderTrades: jest.fn().mockResolvedValue([]),
+}));
+jest.mock('../services/fred', () => ({
+  getAllIndicators: jest.fn().mockResolvedValue([]),
 }));
 
 // ──────────────────────────────────────────────────────────────────────────────

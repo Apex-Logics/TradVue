@@ -119,7 +119,7 @@ const COMPARE_ROWS: CompareRow[] = [
   {
     feature: 'Cloud sync',
     noAccount: { text: '—', dim: true },
-    free: { text: '—', dim: true },
+    free: { text: '3-week trial only' },
     pro: { text: '✓ All devices', positive: true },
   },
   {
@@ -210,7 +210,7 @@ export default function PricingPage() {
         </h1>
         <p style={subtitleStyle}>
           Start exploring for free — no account needed. Create a free account for a 3-week full trial of every feature.
-          Upgrade to Pro for unlimited everything.
+          Upgrade to Pro for broader access and longer history. Plan details, prices, and availability can change.
         </p>
       </div>
 
@@ -257,7 +257,7 @@ export default function PricingPage() {
             <div style={{ fontSize: 13, color: '#9ca3af', marginTop: 6 }}>3-week full trial, no credit card</div>
           </div>
           <p style={tierDescStyle}>
-            Create a free account to unlock all features for 3 weeks. After the trial, enjoy a limited free tier — your data is never deleted.
+            Create a free account to unlock all features for 3 weeks. After the trial, enjoy a limited free tier — historical data remains stored but some features and older views stay locked unless you upgrade.
           </p>
           <ul style={tierFeatureListStyle}>
             <li style={featureIncluded}>✓ Everything in No Account</li>

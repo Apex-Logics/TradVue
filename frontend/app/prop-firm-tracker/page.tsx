@@ -291,7 +291,7 @@ export default function PropFirmTrackerPage() {
       }}>
         <div style={{ maxWidth: 900, margin: '0 auto', textAlign: 'center' }}>
           <p style={{ margin: 0, fontSize: 11, color: 'rgba(180,180,200,0.55)', lineHeight: 1.6 }}>
-            Prop firm rules and parameters are based on user-entered data and publicly available information, which may change at any time. Always verify current rules directly with your prop firm. This is not financial advice.
+            Prop firm rules and parameters are based on user-entered data and publicly available information, which may change at any time. Calculations are estimates only and may not match your firm's real-time dashboard, especially for open-position, trailing-drawdown, fees, or platform-specific rule handling. Always verify current rules and account status directly with your prop firm. This is not financial advice.
           </p>
         </div>
       </section>

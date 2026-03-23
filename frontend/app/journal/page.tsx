@@ -1454,6 +1454,10 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
             <span style={{ display: 'flex', alignItems: 'center', gap: 6 }}><IconPencil size={14} />Log a New Trade</span>
           </div>
 
+          <div style={{ marginBottom: 14, padding: '10px 12px', background: 'var(--bg-1)', border: '1px solid var(--border)', borderRadius: 8, fontSize: 11, color: 'var(--text-2)', lineHeight: 1.55 }}>
+            Trade details and performance metrics here are for journaling only — not financial advice. Double-check imported or calculated values against your broker/platform before relying on them.
+          </div>
+
           {/* Row 1: Core fields */}
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))', gap: 12, marginBottom: 12 }}>
             <div>
@@ -1910,6 +1914,9 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
           {/* Auto-calc preview */}
           <Card style={{ background: 'var(--bg-1)', marginBottom: 16, borderColor: preview.pnl >= 0 ? GREEN + '44' : RED + '44' }}>
             <div style={{ fontSize: 11, fontWeight: 600, color: 'var(--text-2)', marginBottom: 8, textTransform: 'uppercase' }}>Auto-Calculated Preview</div>
+            <div style={{ fontSize: 10, color: 'var(--text-3)', marginBottom: 10 }}>
+              Estimates update from your inputs and may differ from broker-reported fills, fees, slippage, or official P&amp;L.
+            </div>
             <div style={{ display: 'flex', gap: 24, flexWrap: 'wrap' }}>
               <div>
                 <div style={{ fontSize: 10, color: 'var(--text-2)' }}>P&amp;L</div>

@@ -319,36 +319,10 @@ router.get('/', async (req, res) => {
       }
     }
 
-    // ── Fallback: mock data ───────────────────────────────────────────────────
-    let filteredNews = [...mockNews];
-
-    if (category && !isGeneral) {
-      filteredNews = filteredNews.filter(article =>
-        article.tags.some(tag => tag.includes(category.toLowerCase()))
-      );
-    }
-
-    if (min_impact > 0) {
-      filteredNews = filteredNews.filter(article =>
-        article.impact_score >= parseFloat(min_impact)
-      );
-    }
-
-    if (sort === 'impact_score') {
-      filteredNews.sort((a, b) => b.impact_score - a.impact_score);
-    } else {
-      filteredNews.sort((a, b) => new Date(b.published_at) - new Date(a.published_at));
-    }
-
-    const paginatedNews = filteredNews.slice(parsedOffset, parsedOffset + parsedLimit);
-
-    return res.json({
-      articles: paginatedNews,
-      total: filteredNews.length,
-      limit: parsedLimit,
-      offset: parsedOffset,
-      has_more: parsedOffset + parsedLimit < filteredNews.length,
-      sources: ['mock'],
+    return res.status(503).json({
+      error: 'Live news sources unavailable',
+      message: 'News data is temporarily unavailable because upstream providers returned no live articles.',
+      sources: [],
     });
 
   } catch (error) {
@@ -370,20 +344,12 @@ router.get('/search', (req, res) => {
       return res.status(400).json({ error: 'Search query is required' });
     }
 
-    const searchTerm = q.toLowerCase();
-    const searchResults = mockNews
-      .filter(article =>
-        article.title.toLowerCase().includes(searchTerm) ||
-        article.summary.toLowerCase().includes(searchTerm) ||
-        article.content.toLowerCase().includes(searchTerm) ||
-        article.tags.some(tag => tag.includes(searchTerm))
-      )
-      .slice(0, parseInt(limit, 10));
-
-    res.json({
+    return res.status(503).json({
+      error: 'News search unavailable',
+      message: 'This legacy endpoint only searched mock news data and has been disabled in production.',
       query: q,
-      results: searchResults,
-      total_found: searchResults.length,
+      results: [],
+      total_found: 0,
     });
 
   } catch (error) {
@@ -421,42 +387,10 @@ router.get('/sentiment/:symbol', async (req, res) => {
       console.warn(`[News] Marketaux sentiment failed for ${upperSymbol}:`, e.message);
     }
 
-    // Fallback: mock-based sentiment
-    const symbolLower = upperSymbol.toLowerCase();
-    const relevantArticles = mockNews.filter(article =>
-      article.title.toLowerCase().includes(symbolLower) ||
-      article.content.toLowerCase().includes(symbolLower) ||
-      article.tags.some(tag => tag.includes(symbolLower))
-    );
-
-    if (relevantArticles.length === 0) {
-      return res.json({
-        symbol: upperSymbol,
-        sentiment_score: 0,
-        sentiment_label: 'neutral',
-        confidence: 0,
-        article_count: 0,
-        articles: [],
-        source: 'mock',
-      });
-    }
-
-    const avgSentiment =
-      relevantArticles.reduce((sum, a) => sum + a.sentiment_score, 0) /
-      relevantArticles.length;
-
-    let sentimentLabel = 'neutral';
-    if (avgSentiment > 0.2) sentimentLabel = 'positive';
-    else if (avgSentiment < -0.2) sentimentLabel = 'negative';
-
-    res.json({
+    return res.status(503).json({
+      error: 'Live sentiment unavailable',
+      message: 'This endpoint no longer falls back to mock sentiment in production.',
       symbol: upperSymbol,
-      sentiment_score: parseFloat(avgSentiment.toFixed(3)),
-      sentiment_label: sentimentLabel,
-      confidence: Math.min(relevantArticles.length * 0.2, 1),
-      article_count: relevantArticles.length,
-      articles: relevantArticles.slice(0, 5),
-      source: 'mock',
     });
 
   } catch (error) {
@@ -471,24 +405,10 @@ router.get('/sentiment/:symbol', async (req, res) => {
  * GET /api/news/impact
  */
 router.get('/impact', (req, res) => {
-  try {
-    const { min_score = 7.0 } = req.query;
-
-    const highImpactNews = mockNews
-      .filter(article => article.impact_score >= parseFloat(min_score))
-      .sort((a, b) => b.impact_score - a.impact_score)
-      .slice(0, 10);
-
-    res.json({
-      alerts: highImpactNews,
-      min_impact_score: parseFloat(min_score),
-      total_found: highImpactNews.length,
-    });
-
-  } catch (error) {
-    console.error('[News] Error fetching impact news:', error);
-    res.status(500).json({ error: 'Failed to fetch impact news' });
-  }
+  return res.status(503).json({
+    error: 'News impact feed unavailable',
+    message: 'This legacy endpoint only returned mock impact alerts and has been disabled in production.',
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -497,20 +417,10 @@ router.get('/impact', (req, res) => {
  * GET /api/news/:id
  */
 router.get('/:id', (req, res) => {
-  try {
-    const { id } = req.params;
-    const article = mockNews.find(article => article.id === parseInt(id, 10));
-
-    if (!article) {
-      return res.status(404).json({ error: 'Article not found' });
-    }
-
-    res.json(article);
-
-  } catch (error) {
-    console.error('[News] Error fetching article:', error);
-    res.status(500).json({ error: 'Failed to fetch article' });
-  }
+  return res.status(503).json({
+    error: 'Article lookup unavailable',
+    message: 'This legacy endpoint only served mock articles and has been disabled in production.',
+  });
 });
 
 module.exports = router;

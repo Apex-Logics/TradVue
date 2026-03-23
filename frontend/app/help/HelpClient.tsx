@@ -174,7 +174,7 @@ const FAQ_DATA: {
       },
       {
         q: 'What data sources do you use?',
-        a: 'We pull market data from licensed sources including Alpaca, Finnhub, and others. Data may be delayed up to 15 minutes depending on the source and your plan. Sentiment comes from news aggregators and social signals.',
+        a: 'We pull market data from licensed and third-party sources including Alpaca, Finnhub, and others. Availability and latency vary by source, market, and plan, and some feeds may be delayed up to 15 minutes or unavailable at times. Sentiment comes from news aggregators and social signals and should be treated as an informational signal only.',
       },
       {
         q: 'How often is data refreshed?',
@@ -317,7 +317,7 @@ const FAQ_DATA: {
     questions: [
       {
         q: 'Where does the stock price data come from?',
-        a: 'Real-time quotes are sourced from licensed market data providers covering NYSE, NASDAQ, and AMEX. Data is updated every 1-5 seconds during trading hours (9:30 AM – 4:00 PM ET).',
+        a: 'Quotes are sourced from licensed market data providers covering NYSE, NASDAQ, and AMEX. During regular market hours, many feeds update every few seconds, but refresh rates, availability, and entitlements vary by source. Delays or brief gaps can occur, so confirm execution prices with your broker.',
       },
       {
         q: 'How often is the news feed updated?',
@@ -372,7 +372,7 @@ const FAQ_DATA: {
       },
       {
         q: 'How accurate are the dividend calculations?',
-        a: 'Dividend data is pulled from historical payment records. Projected annual income is estimated from the most recent dividend rate × share count. Always verify against your broker statements — forward dividends can change.',
+        a: 'Dividend data is pulled from historical payment records. Projected annual income is estimated from the most recent dividend rate × share count. It does not guarantee future payments and may not reflect special dividends, withholding, tax treatment, position changes, or issuer cuts. Always verify against your broker statements or issuer announcements.',
       },
       {
         q: 'How does dividend tracking work?',

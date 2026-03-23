@@ -957,10 +957,11 @@ function MarketHeatmap() {
       const d = json.data || {}
       setQuotes(d)
       setLastUpdated(new Date().toLocaleTimeString())
-      // Detect if data might be cached/mock (check if any stock's pc == c, which happens with cached data)
-      const vals = Object.values(d as Record<string, { pc?: number; c?: number }>)
-      const allSame = vals.length > 0 && vals.every(v => v?.c === v?.pc)
-      setIsMockData(allSame)
+      const vals = Object.values(d as Record<string, { source?: string; current?: number | null; changePct?: number | null; c?: number | null; pc?: number | null }>)
+      const hasFallbackSource = vals.some(v => v?.source === 'mock' || v?.source === 'unavailable' || v?.source === 'n/a')
+      const hasMissingQuotes = vals.some(v => (v?.current ?? v?.c ?? null) == null)
+      const allFlat = vals.length > 0 && vals.every(v => (v?.changePct ?? null) === 0 || (v?.c != null && v?.pc != null && v.c === v.pc))
+      setIsMockData(hasFallbackSource || hasMissingQuotes || allFlat)
     }
     setLoading(false)
   }, [])
@@ -996,7 +997,7 @@ function MarketHeatmap() {
       </div>
       {loading && Object.keys(quotes).length === 0 && <div style={{ padding: 40, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>Loading heatmap…</div>}
       {error && <div style={{ color: 'var(--text-3)', fontSize: 12, marginBottom: 8 }}>Market data temporarily unavailable.</div>}
-      {isMockData && !loading && <div style={{ padding: '5px 10px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 6, marginBottom: 8, fontSize: 11, color: '#f59e0b' }}>Sample data — live prices require market hours (9:30AM–4PM ET)</div>}
+      {isMockData && !loading && <div style={{ padding: '5px 10px', background: 'rgba(245,158,11,0.1)', border: '1px solid rgba(245,158,11,0.3)', borderRadius: 6, marginBottom: 8, fontSize: 11, color: '#f59e0b' }}>Indicative fallback data — some quotes are delayed, unavailable, or estimated. Verify prices with your broker before trading.</div>}
       {/* Legend */}
       <div style={{ display: 'flex', gap: 6, marginBottom: 12, flexWrap: 'wrap', alignItems: 'center' }}>
         <span style={{ fontSize: 10, color: 'var(--text-3)' }}>Scale:</span>
@@ -1012,8 +1013,8 @@ function MarketHeatmap() {
           <div style={{ display: 'grid', gridTemplateColumns: 'repeat(auto-fill, minmax(90px, 1fr))', gap: 4 }}>
             {group.symbols.map(sym => {
               const q = quotes[sym]
-              const change = q?.dp ?? q?.percentChange ?? 0
-              const price = q?.c ?? q?.price ?? 0
+              const change = q?.changePct ?? q?.dp ?? q?.percentChange ?? 0
+              const price = q?.current ?? q?.c ?? q?.price ?? 0
               const bg = q ? getColor(change) : 'var(--bg-3)'
               const textCol = q ? (Math.abs(change) > 1.5 ? '#fff' : '#000') : 'var(--text-3)'
               return (
@@ -1257,7 +1258,7 @@ function GasFeeTracker() {
             </table>
           </div>
           <div style={{ marginTop: 10, fontSize: 11, color: 'var(--text-3)', background: 'var(--accent-dim)', borderRadius: 6, padding: '8px 12px' }}>
-            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />1 Gwei = 0.000000001 ETH. ETH price used: ~${gasData.ethPrice.toLocaleString()}. Gas prices update every 30 seconds.</span>
+            <span style={{ display: 'inline-flex', alignItems: 'center', gap: 5 }}><IconInfo size={12} />1 Gwei = 0.000000001 ETH. Gas prices update every 30 seconds. USD costs use an ${gasData.ethPriceSource === 'estimated' ? 'estimated' : 'live'} ETH price of ~${gasData.ethPrice.toLocaleString()}, so treat dollar values as approximations.</span>
           </div>
         </>
       )}
@@ -2020,7 +2021,7 @@ export default function ToolsPage() {
 
       {/* Disclaimer */}
       <div style={{ maxWidth: 1200, margin: '0 auto', padding: '0 24px 20px' }}>
-        <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>Calculations are based on published contract specifications and user-entered data. Actual P&amp;L may differ due to commissions, fees, slippage, and market conditions. Always verify with your broker.</p>
+        <p style={{ fontSize: 12, color: 'var(--text-3)', textAlign: 'center' }}>Calculations are based on published contract specifications, third-party reference data, and user-entered inputs. Results are estimates only and may omit commissions, fees, borrow costs, taxes, slippage, liquidity constraints, exchange rule changes, and market conditions. Always verify details, margin requirements, and expected P&amp;L with your broker or clearing firm before trading.</p>
       </div>
       {/* Footer */}
       <footer style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-1)', padding: '20px 24px', marginTop: 40 }}>
@@ -2029,7 +2030,7 @@ export default function ToolsPage() {
             © 2026 TradVue · <a href="/legal/disclaimer" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Disclaimer</a> · <a href="/help" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Help</a>
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
-            All calculations for educational purposes only. Not financial advice.
+            Educational and informational use only. Not financial, legal, or tax advice.
           </p>
         </div>
       </footer>

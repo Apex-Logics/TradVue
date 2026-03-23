@@ -71,8 +71,8 @@ test.describe('Prop Firm Page', () => {
     await topstepBtn.click()
     await page.waitForTimeout(200)
 
-    // Click save/create button
-    const createBtn = page.getByRole('button', { name: /Create Account|Add|Save|Confirm/i }).first()
+    // Click save/create button inside the modal
+    const createBtn = page.getByRole('button', { name: /Create Account/i })
     await createBtn.click()
     await page.waitForTimeout(500)
 
@@ -99,7 +99,7 @@ test.describe('Prop Firm Page', () => {
     await topstepBtn.click()
     await page.waitForTimeout(200)
 
-    const createBtn = page.getByRole('button', { name: /Create Account|Add|Save|Confirm/i }).first()
+    const createBtn = page.getByRole('button', { name: /Create Account/i })
     await createBtn.click()
     await page.waitForTimeout(500)
 
@@ -108,8 +108,10 @@ test.describe('Prop Firm Page', () => {
     await accountCard.click()
     await page.waitForTimeout(300)
 
-    // In the detail view, rule fields should be editable (inputs visible)
-    const editableField = page.locator('input[type="number"], input[type="text"]').first()
+    // Enter rules edit mode, then confirm rule inputs are editable
+    const editRulesBtn = page.getByRole('button', { name: /Edit Rules/i })
+    await editRulesBtn.click()
+    const editableField = page.locator('input[type="number"], input[type="text"]:visible').first()
     await expect(editableField).toBeVisible({ timeout: 5_000 })
   })
 })

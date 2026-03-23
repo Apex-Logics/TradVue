@@ -313,7 +313,7 @@ describe('JSON-LD Structured Data Security', () => {
       if (!content.includes('application/ld+json')) continue
 
       // Extract JSON-LD content blocks
-      const jsonLdMatches = content.match(/__html:\s*JSON\.stringify\([^)]+\)/gs) || []
+      const jsonLdMatches = content.match(/__html:\s*JSON\.stringify\([^)]+\)/g) || []
       for (const match of jsonLdMatches) {
         // Check for patterns that look like API keys
         if (/['""][a-zA-Z0-9_-]{32,}['""]/.test(match)) {

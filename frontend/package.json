@@ -6,7 +6,11 @@
     "dev": "next dev -p 3000",
     "build": "next build",
     "start": "next start",
-    "lint": "next lint"
+    "lint": "next lint",
+    "typecheck": "tsc --noEmit",
+    "test": "jest --runInBand",
+    "test:e2e": "playwright test",
+    "verify": "npm run test && npm run typecheck && npm run build"
   },
   "dependencies": {
     "@types/react": "^19.2.14",

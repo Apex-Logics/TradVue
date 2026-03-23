@@ -5,10 +5,12 @@
  * Replaces the ephemeral autoCalculatedDividends approach with persistent DB records.
  */
 
+import { getStoredAuthToken } from './storageKeys'
+
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || '';
 
 async function apiFetch(path: string, options: RequestInit = {}): Promise<any> {
-  const token = typeof window !== 'undefined' ? localStorage.getItem('tv_token') : null;
+  const token = getStoredAuthToken()
   const res = await fetch(`${API_BASE}${path}`, {
     headers: {
       'Content-Type': 'application/json',

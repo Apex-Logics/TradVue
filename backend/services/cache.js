@@ -30,7 +30,9 @@ class CacheService {
     this.memoryCache = new Map();
     this.isRedisAvailable = false;
     
-    this.connect();
+    if (process.env.NODE_ENV !== 'test') {
+      this.connect();
+    }
   }
 
   /**

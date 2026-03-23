@@ -17,6 +17,7 @@
 
 import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
+import { AUTH_REFRESH_TOKEN_KEY, AUTH_TOKEN_KEY } from '../../utils/storageKeys'
 
 export default function AuthCallbackPage() {
   const router = useRouter()
@@ -55,9 +56,9 @@ export default function AuthCallbackPage() {
     try {
       // Store in localStorage under the same keys AuthContext uses
       // (cg_ prefix = legacy ChartGenius prefix kept for backwards compat)
-      localStorage.setItem('cg_token', accessToken)
+      localStorage.setItem(AUTH_TOKEN_KEY, accessToken)
       if (refreshToken) {
-        localStorage.setItem('cg_refresh_token', refreshToken)
+        localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken)
       }
 
       setStatus('success')

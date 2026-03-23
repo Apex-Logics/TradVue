@@ -38,38 +38,37 @@ jest.mock('../app/components/AuthModal', () => {
 import AuthGate from '../app/components/AuthGate'
 
 describe('AuthGate', () => {
-  it('renders the feature name in the auth prompt', () => {
+  it('shows the current sample-data signup prompt', () => {
     render(
       <AuthGate featureName="Trade Playbooks">
         <div>Protected content</div>
       </AuthGate>
     )
-    expect(screen.getByText(/Trade Playbooks/i)).toBeInTheDocument()
+    expect(screen.getByText(/You're viewing sample data\./i)).toBeInTheDocument()
+    expect(screen.getByText(/start tracking your own trades/i)).toBeInTheDocument()
   })
 
-  it('shows Create Free Account and Sign In buttons', () => {
+  it('shows Sign Up Free and Sign In buttons', () => {
     render(
       <AuthGate featureName="AI Coach">
         <div>Protected content</div>
       </AuthGate>
     )
-    expect(screen.getByText(/Create Free Account/i)).toBeInTheDocument()
-    // Sign In button exists (may have multiple elements with similar text)
-    const signInBtns = screen.getAllByText(/Sign In/i)
-    expect(signInBtns.length).toBeGreaterThan(0)
+    expect(screen.getByRole('button', { name: /sign up free/i })).toBeInTheDocument()
+    expect(screen.getByRole('button', { name: /sign in/i })).toBeInTheDocument()
   })
 
-  it('opens AuthModal when CTA is clicked', () => {
+  it('opens AuthModal when signup CTA is clicked', () => {
     render(
       <AuthGate featureName="Rule Cop">
         <div>Protected content</div>
       </AuthGate>
     )
-    fireEvent.click(screen.getByText(/Create Free Account/i))
+    fireEvent.click(screen.getByRole('button', { name: /sign up free/i }))
     expect(screen.getByTestId('auth-modal')).toBeInTheDocument()
   })
 
-  it('renders children (dimmed) behind the overlay', () => {
+  it('renders children behind the banner', () => {
     render(
       <AuthGate featureName="Prop Firm Tracker">
         <div data-testid="bg-content">Background</div>

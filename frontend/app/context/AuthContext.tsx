@@ -12,6 +12,7 @@ import {
   type AuthUser,
   type WatchlistItem,
 } from '../lib/api'
+import { AUTH_TOKEN_KEY, AUTH_USER_KEY } from '../utils/storageKeys'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -68,8 +69,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     if (didInit.current) return
     didInit.current = true
     try {
-      const storedToken = localStorage.getItem('cg_token') // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
-      const storedUser  = localStorage.getItem('cg_user')  // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
+      const storedToken = localStorage.getItem(AUTH_TOKEN_KEY) // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
+      const storedUser  = localStorage.getItem(AUTH_USER_KEY)  // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
       if (storedToken && storedUser) {
         setToken(storedToken)
         setUser(JSON.parse(storedUser))
@@ -109,15 +110,15 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Persist auth to localStorage ──────────────────────────────────────────
   function persistAuth(tok: string, usr: AuthUser) {
     try {
-      localStorage.setItem('cg_token', tok)
-      localStorage.setItem('cg_user', JSON.stringify(usr))
+      localStorage.setItem(AUTH_TOKEN_KEY, tok)
+      localStorage.setItem(AUTH_USER_KEY, JSON.stringify(usr))
     } catch {}
   }
 
   function clearAuth() {
     try {
-      localStorage.removeItem('cg_token')
-      localStorage.removeItem('cg_user')
+      localStorage.removeItem(AUTH_TOKEN_KEY)
+      localStorage.removeItem(AUTH_USER_KEY)
     } catch {}
   }
 

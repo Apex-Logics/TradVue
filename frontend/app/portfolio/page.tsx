@@ -1110,7 +1110,9 @@ export default function PortfolioPage() {
   // the user IS logged in even if useAuth() hasn't hydrated yet
   const hasStoredToken = typeof window !== 'undefined' && !!localStorage.getItem('cg_token')
   const tier = getUserTier(user)
-  const isDemo = tier === 'demo' && !hasStoredToken && !authLoading
+  // Keep portfolio fully usable in guest mode via localStorage.
+  // The locked demo variant was blocking real add/import/edit flows for logged-out users.
+  const isDemo = false
 
   // Demo holdings data — injected into real state when isDemo (prices as of Mar 17, 2026)
   // AAPL: $0.26/qtr → $1.04 annual → 0.41% yield at $254.23
@@ -1908,7 +1910,7 @@ export default function PortfolioPage() {
             © 2026 TradVue · <a href="/legal/disclaimer" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Disclaimer</a> · <a href="/legal/privacy" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Privacy</a> · <a href="/help" style={{ color: 'var(--text-3)', textDecoration: 'none' }}>Help</a>
           </p>
           <p style={{ fontSize: 12, color: 'var(--text-3)', margin: 0 }}>
-            Portfolio calculations are estimates. Not financial advice. Verify with your broker.
+            Portfolio calculations and dividend projections are estimates based on market data and user-entered holdings. Imported or broker-synced data may be incomplete, delayed, or mapped incorrectly. Not financial, tax, or legal advice. Verify balances, cost basis, realized gains, and tax lots with your broker or custodian.
           </p>
         </div>
       </footer>

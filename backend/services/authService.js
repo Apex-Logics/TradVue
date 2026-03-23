@@ -172,17 +172,16 @@ async function refreshSession(refreshToken) {
 // ── Delete User ───────────────────────────────────────────────────────────────
 /**
  * Delete a user account by user ID.
- * Requires SUPABASE_SERVICE_KEY (admin-level) — falls back gracefully if not available.
+ * Requires the Supabase service role key (admin-level).
  *
  * @param {string} userId  - UUID from auth.users
  * @returns {{ error }}
  */
 async function deleteUser(userId) {
-  const serviceKey = process.env.SUPABASE_SERVICE_KEY;
+  const serviceKey = process.env.SUPABASE_SERVICE_ROLE_KEY || process.env.SUPABASE_SERVICE_KEY;
   if (!serviceKey) {
-    // Soft-delete via metadata instead
-    console.warn('[authService] SUPABASE_SERVICE_KEY not set — cannot hard-delete user');
-    return { error: null }; // non-fatal
+    console.warn('[authService] Supabase service role key not set — cannot hard-delete user');
+    return { error: new Error('Supabase service role key not configured') };
   }
 
   const { createClient: createAdminClient } = require('@supabase/supabase-js');

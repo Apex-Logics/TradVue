@@ -1650,7 +1650,9 @@ export default function PropFirmPage() {
 
   const tier = getUserTier(user)
   const hasStoredToken = typeof window !== 'undefined' && !!localStorage.getItem('cg_token')
-  const isDemo = tier === 'demo' && !hasStoredToken && !authLoading
+  // Keep prop firm tracking available in guest mode via localStorage.
+  // The demo gate masked the actual workflow and blocked account creation/editing.
+  const isDemo = false
 
   // Load from localStorage on mount (or inject demo data)
   useEffect(() => {

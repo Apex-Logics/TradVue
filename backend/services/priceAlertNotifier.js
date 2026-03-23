@@ -60,13 +60,14 @@ exports.PREFS_DEFAULTS = PREFS_DEFAULTS;
 
 // ─── Unsubscribe token (HMAC-based, stateless) ────────────────────────────────
 
-const UNSUB_SECRET = process.env.UNSUB_TOKEN_SECRET || process.env.INTERNAL_SERVICE_SECRET || 'tradvue-unsub-dev-secret';
+const UNSUB_SECRET = process.env.UNSUB_TOKEN_SECRET || process.env.INTERNAL_SERVICE_SECRET || null;
 
 /**
  * Generate a URL-safe unsubscribe token for a userId.
  * Format: base64url(userId_hex . hmac)
  */
 function generateUnsubToken(userId) {
+  if (!UNSUB_SECRET) return null;
   const payload = Buffer.from(userId).toString('hex');
   const sig = crypto.createHmac('sha256', UNSUB_SECRET).update(payload).digest('hex');
   return Buffer.from(`${payload}.${sig}`).toString('base64url');
@@ -80,7 +81,7 @@ exports.generateUnsubToken = generateUnsubToken;
  * @returns {string|null}
  */
 function validateUnsubToken(token) {
-  if (!token) return null;
+  if (!UNSUB_SECRET || !token) return null;
   try {
     const decoded = Buffer.from(token, 'base64url').toString('utf8');
     const dotIdx = decoded.lastIndexOf('.');
@@ -488,6 +489,10 @@ async function sendEmailForUser(userId, alerts, prefs, supabase) {
 
   const appUrl = process.env.RENDER_EXTERNAL_URL || 'https://www.tradvue.com';
   const unsubToken = generateUnsubToken(userId);
+  if (!unsubToken) {
+    console.error('[PriceAlertNotifier] Missing unsubscribe token secret — skipping email send');
+    return;
+  }
   const unsubUrl = `${appUrl}/api/alerts/price/unsubscribe?token=${unsubToken}`;
 
   try {

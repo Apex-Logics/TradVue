@@ -345,7 +345,7 @@ export default function NewsPage() {
         textAlign: 'center',
         background: 'var(--bg-1)',
       }}>
-        News and calendar data is aggregated from third-party sources. TradVue does not verify the accuracy of third-party content and is not responsible for investment decisions based on this information.{' '}
+        News and calendar data is aggregated from third-party sources and may be delayed, incomplete, corrected, or unavailable without notice. TradVue does not verify the accuracy of third-party content, does not guarantee completeness or timeliness, and is not responsible for trading or investment decisions based on this information. For execution, use your broker and official issuer/exchange sources.{' '}
         <Link href="/legal/disclaimer" style={{ color: 'var(--accent)' }}>Disclaimer</Link>
       </footer>
     </div>
