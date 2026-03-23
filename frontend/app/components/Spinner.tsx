@@ -93,21 +93,4 @@ export default function Spinner({
   )
 }
 
-// ─── Inline keyframes (injected once via a style tag) ─────────────────────────
-// We use a global CSS approach so this works without a separate CSS file.
-// globals.css is the canonical place; this is a fallback for standalone use.
-
-if (typeof document !== 'undefined') {
-  const id = '__cg-spinner-style'
-  if (!document.getElementById(id)) {
-    const style = document.createElement('style')
-    style.id = id
-    style.textContent = `
-      @keyframes tradvue-spin {
-        from { transform: rotate(0deg); }
-        to   { transform: rotate(360deg); }
-      }
-    `
-    document.head.appendChild(style)
-  }
-}
+// Animation keyframes live in app/globals.css.

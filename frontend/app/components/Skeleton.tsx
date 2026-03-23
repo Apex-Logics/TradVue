@@ -17,21 +17,7 @@ const shimmer: React.CSSProperties = {
   flexShrink: 0,
 }
 
-// Inject keyframes once
-if (typeof document !== 'undefined') {
-  const id = '__cg-shimmer-style'
-  if (!document.getElementById(id)) {
-    const style = document.createElement('style')
-    style.id = id
-    style.textContent = `
-      @keyframes tradvue-shimmer {
-        0%   { background-position:  200% 0; }
-        100% { background-position: -200% 0; }
-      }
-    `
-    document.head.appendChild(style)
-  }
-}
+// Animation keyframes live in app/globals.css.
 
 // ─── Text Skeleton ────────────────────────────────────────────────────────────
 
