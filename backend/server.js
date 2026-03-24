@@ -143,6 +143,7 @@ app.use('/api/crypto',        cachePublic30s, require('./routes/crypto'));      
 app.use('/api/market-movers', cachePublic2m,  require('./routes/marketMovers'));   // High-impact news scanner
 app.use('/api/stock-info',    cachePublic30s, require('./routes/stockInfo'));       // Comprehensive stock info (Finnhub + Yahoo)
 app.use('/api/portfolio',     cachePrivate,   require('./routes/portfolio'));       // Portfolio persistence (Supabase)
+app.use('/api/integrations/broker-sync', cachePrivate, require('./routes/brokerSync')); // SnapTrade/Robinhood broker sync gating
 app.use('/api/tools',         cachePublic2m,  require('./routes/tools'));           // Trading tools (screener, fear-greed, gas, correlation)
 app.use('/api/dashboard',     cachePrivate,   require('./routes/dashboard'));       // CEO dashboard persistence
 app.use('/api/stocks',        cachePublic1h,  require('./routes/stocks'));          // Analyst ratings + stock scoring
@@ -157,6 +158,8 @@ app.use('/api/admin',         cachePrivate,   require('./routes/admin'));       
 app.use('/api/announcements', cachePublic30s, require('./routes/announcements'));   // Public announcement banner
 app.use('/api/stripe',        cachePrivate,   require('./routes/stripe'));           // Stripe payment integration
 app.use('/api/push',          cachePrivate,   require('./routes/push'));             // PWA push notification subscriptions
+app.use('/api/badges',        cachePrivate,   require('./routes/badges'));           // Verified performance badge generation + image metadata
+app.use('/api/verify',                        require('./routes/verify'));           // Public badge verification endpoint
 // Market Intelligence routes (public — no auth required)
 app.use('/api',               require('./routes/marketIntel'));         // FRED, SEC EDGAR, earnings/IPO calendars
 
