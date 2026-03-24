@@ -1,0 +1,36 @@
+name: Supabase Dump
+
+on:
+workflow_dispatch:
+
+jobs:
+dump:
+runs-on: ubuntu-latest
+timeout-minutes: 30
+steps:
+- name: Checkout repo
+uses: actions/checkout@v4
+
+- name: Install PostgreSQL client
+run: |
+sudo apt-get update
+sudo apt-get install -y postgresql-client
+
+- name: Dump schema
+env:
+DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+run: |
+mkdir -p backups
+pg_dump "$DATABASE_URL" --schema-only -f backups/supabase-schema.sql
+
+- name: Dump full database
+env:
+DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
+run: |
+pg_dump "$DATABASE_URL" -f backups/supabase-full.sql
+
+- name: Upload dump artifacts
+uses: actions/upload-artifact@v4
+with:
+name: supabase-dump
+path: backups/
