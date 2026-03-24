@@ -27,13 +27,13 @@ jobs:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         run: |
           mkdir -p backups
-          pg_dump "$DATABASE_URL" --schema-only -f backups/supabase-schema.sql
+          pg_dump-17 "$DATABASE_URL" --schema-only -f backups/supabase-schema.sql
 
       - name: Dump full database
         env:
           DATABASE_URL: ${{ secrets.SUPABASE_DATABASE_URL }}
         run: |
-          pg_dump "$DATABASE_URL" -f backups/supabase-full.sql
+          pg_dump-17 "$DATABASE_URL" -f backups/supabase-full.sql
 
       - name: Upload dump artifacts
         uses: actions/upload-artifact@v4
