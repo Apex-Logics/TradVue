@@ -16,6 +16,9 @@
  * Q1 2026-09 (pullComplete gate):
  *  No journal PUT until a pull has settled for the current token. Debounce
  *  is not a pull gate; cloudSync.ts holds a pullComplete flag. See Q1.
+ *
+ * Q1 residual: failed GET still opens the gate (local data can push) but
+ * empty wipe PUTs are skipped until a successful GET marks a cloud snapshot.
  */
 
 const TRADES_KEY = 'cg_journal_trades'
@@ -188,8 +191,9 @@ type JournalFetchCtl = {
 let q1PendingReleases: Array<() => void> = []
 
 function mockJournalFetch(opts: {
-  getPayload: unknown
+  getPayload?: unknown
   hangGet?: boolean
+  getFail?: 'http' | 'network' | 'auth'
 }): JournalFetchCtl {
   let releaseGet = () => {}
   const getGate = opts.hangGet
@@ -216,6 +220,15 @@ function mockJournalFetch(opts: {
       ctl.journalGets += 1
       await getGate
       ctl.getCompleted = true
+      if (opts.getFail === 'network') {
+        throw new Error('network down')
+      }
+      if (opts.getFail === 'http') {
+        return { ok: false, status: 500, json: async () => ({ error: 'server' }) }
+      }
+      if (opts.getFail === 'auth') {
+        return { ok: false, status: 401, json: async () => ({ error: 'unauthorized' }) }
+      }
       return { ok: true, json: async () => ({ data: opts.getPayload }) }
     }
     // settings / portfolio / watchlist for initFullSync — never journal.
@@ -486,6 +499,135 @@ describe('Q1 — journal pull must complete before any journal push', () => {
       expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 'cloud1' }])
       expect(ctl.journalPuts[0].data?.notes).toEqual([{ id: 'cloudNote' }])
     }
+    jest.useRealTimers()
+  })
+})
+
+// ── Q1 residual: failed GET must not empty-wipe cloud ─────────────────────────
+//
+// PR #9 opens the gate after a failed/empty GET so a user with real local
+// data can still push. Residual: empty localStorage + failed journal GET
+// → gate opens → debouncedSyncJournal PUTs trades:[] / notes:[] / templates:[]
+// and wipes non-empty cloud. Skip that empty wipe until a successful GET
+// marks a cloud snapshot (or the user later has real local trades/notes).
+
+describe('Q1 residual — failed GET must not empty-wipe cloud', () => {
+  afterEach(() => {
+    q1PendingReleases.forEach(fn => fn())
+    q1PendingReleases = []
+    jest.useRealTimers()
+  })
+
+  test.each(['http', 'network', 'auth'] as const)(
+    'failed %s GET + empty local: 0 journal PUTs of empty wipe',
+    async (getFail) => {
+      jest.useFakeTimers()
+      lsSetToken('tok')
+      const ctl = mockJournalFetch({ getFail })
+
+      const pull = initJournalSync('tok')
+      debouncedSyncJournal([], [])
+      await pull
+      await jest.advanceTimersByTimeAsync(1600)
+      await Promise.resolve()
+      await Promise.resolve()
+
+      const emptyWipe = ctl.journalPuts.filter(p =>
+        Array.isArray(p.data?.trades) && p.data.trades.length === 0 &&
+        Array.isArray(p.data?.notes) && p.data.notes.length === 0
+      )
+      expect(ctl.journalGets).toBe(1)
+      expect(ctl.getCompleted).toBe(true)
+      expect(ctl.journalPuts).toHaveLength(0)
+      expect(emptyWipe).toHaveLength(0)
+      jest.useRealTimers()
+    },
+  )
+
+  test('failed GET + non-empty local: push still allowed after gate settles', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    lsSetJSON(TRADES_KEY, [{ id: 'local1', symbol: 'ES' }])
+    lsSetJSON(NOTES_KEY, [{ id: 'n1', content: 'keep' }])
+    const ctl = mockJournalFetch({ getFail: 'http' })
+
+    await initJournalSync('tok')
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 'local1', symbol: 'ES' }])
+    expect(lsGetJSON(NOTES_KEY)).toEqual([{ id: 'n1', content: 'keep' }])
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    debouncedSyncJournal(lsGetJSON(TRADES_KEY), lsGetJSON(NOTES_KEY))
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.journalPuts).toHaveLength(1)
+    expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 'local1', symbol: 'ES' }])
+    expect(ctl.journalPuts[0].data?.notes).toEqual([{ id: 'n1', content: 'keep' }])
+    jest.useRealTimers()
+  })
+
+  test('failed GET + empty local, then real local trade: push is allowed', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    const ctl = mockJournalFetch({ getFail: 'network' })
+
+    await initJournalSync('tok')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    lsSetJSON(TRADES_KEY, [{ id: 't-new' }])
+    debouncedSyncJournal([{ id: 't-new' }], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.journalPuts).toHaveLength(1)
+    expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 't-new' }])
+    jest.useRealTimers()
+  })
+
+  test('successful empty GET + empty local: empty PUT still allowed (legit empty cloud)', async () => {
+    // Distinguishes failed GET (no snapshot) from a 200 with empty trades/notes.
+    // P0 overwrite guards still apply on pull; this only locks that a confident
+    // empty-cloud snapshot does not inherit the failed-GET empty-PUT skip.
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    const ctl = mockJournalFetch({ getPayload: { trades: [], notes: [], templates: [] } })
+
+    await initJournalSync('tok')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.journalGets).toBe(1)
+    expect(ctl.journalPuts).toHaveLength(1)
+    expect(ctl.journalPuts[0].data?.trades).toEqual([])
+    expect(ctl.journalPuts[0].data?.notes).toEqual([])
+    jest.useRealTimers()
+  })
+
+  test('successful empty GET + non-empty local: P0 pull guard holds, local can still push', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    lsSetJSON(TRADES_KEY, [{ id: 'local-keep' }])
+    lsSetJSON(NOTES_KEY, [{ id: 'note-keep' }])
+    const ctl = mockJournalFetch({ getPayload: { trades: [], notes: [] } })
+
+    await initJournalSync('tok')
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 'local-keep' }])
+    expect(lsGetJSON(NOTES_KEY)).toEqual([{ id: 'note-keep' }])
+
+    debouncedSyncJournal(lsGetJSON(TRADES_KEY), lsGetJSON(NOTES_KEY))
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.journalPuts).toHaveLength(1)
+    expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 'local-keep' }])
+    expect(ctl.journalPuts[0].data?.notes).toEqual([{ id: 'note-keep' }])
     jest.useRealTimers()
   })
 })

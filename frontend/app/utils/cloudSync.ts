@@ -153,6 +153,8 @@ async function cloudPut(token: string, type: string, data: unknown): Promise<boo
 // 1.5s debounce is only a burst coalescer — this flag is the actual gate.
 // Token change or a new idle pull (login remount / initFullSync / forceSync)
 // re-closes the gate so a hung GET past 1.5s cannot empty-PUT.
+// Failed GET still opens the gate (local data can push) but empty wipe PUTs
+// are skipped until a successful GET marks a cloud snapshot.
 // resetJournalPullGate is logout-only (AuthContext.logout) — never first-paint
 // / authLoading / !token on the journal page, or Auth's in-flight pull is
 // uncounted and its endJournalPull can open the gate while the page GET hangs.
@@ -162,6 +164,7 @@ type JournalPullDeferred = { promise: Promise<void>; resolve: () => void }
 let _journalPullToken: string | null = null
 let _journalPullComplete = false
 let _journalPullInFlight = 0
+let _journalPullHadCloudSnapshot = false
 let _journalPullDeferred: JournalPullDeferred | null = null
 let _journalTimer: ReturnType<typeof setTimeout> | null = null
 
@@ -176,12 +179,14 @@ function beginJournalPull(token: string): void {
     _journalPullDeferred?.resolve()
     _journalPullToken = token
     _journalPullComplete = false
+    _journalPullHadCloudSnapshot = false
     _journalPullInFlight = 0
     _journalPullDeferred = createJournalPullDeferred()
   } else if (_journalPullInFlight === 0) {
     // New pull after the previous one settled (login remount, initFullSync,
     // forceSyncFromCloud). Re-close so a remount cannot empty-PUT.
     _journalPullComplete = false
+    _journalPullHadCloudSnapshot = false
     _journalPullDeferred = createJournalPullDeferred()
   }
   _journalPullInFlight++
@@ -195,6 +200,20 @@ function endJournalPull(token: string): void {
     _journalPullDeferred?.resolve()
     _journalPullDeferred = null
   }
+}
+
+function markJournalCloudSnapshot(token: string): void {
+  if (_journalPullToken === token) _journalPullHadCloudSnapshot = true
+}
+
+function hasJournalCloudSnapshot(token: string): boolean {
+  return _journalPullToken === token && _journalPullHadCloudSnapshot
+}
+
+function isEmptyJournalWipe(trades: unknown, notes: unknown): boolean {
+  const t = Array.isArray(trades) ? trades : []
+  const n = Array.isArray(notes) ? notes : []
+  return t.length === 0 && n.length === 0
 }
 
 function isJournalPullComplete(token: string): boolean {
@@ -214,6 +233,7 @@ export function resetJournalPullGate(): void {
   _journalPullDeferred?.resolve()
   _journalPullToken = null
   _journalPullComplete = false
+  _journalPullHadCloudSnapshot = false
   _journalPullInFlight = 0
   _journalPullDeferred = null
   if (_journalTimer) {
@@ -256,6 +276,7 @@ export async function initJournalSync(token: string): Promise<void> {
   try {
     const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
     if (cloudData) {
+      markJournalCloudSnapshot(token)
       const cloudTemplates  = cloudData.templates  ?? []
       // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
       // data. A cloud record that is missing trades/notes — or has them as empty
@@ -309,6 +330,7 @@ export async function forceSyncFromCloud(): Promise<boolean> {
   try {
     const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
     if (cloudData) {
+      markJournalCloudSnapshot(token)
       const cloudTemplates  = cloudData.templates  ?? []
       // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
       // data. A cloud record that is missing trades/notes — or has them as empty
@@ -360,6 +382,8 @@ export async function forceSyncFromCloud(): Promise<boolean> {
  * initFullSync → initJournalSync) has completed for this token. A pre-pull
  * invocation waits, then re-reads localStorage so an empty mount snapshot
  * cannot wipe cloud after a hung GET.
+ * Failed GET + empty local: skip the empty wipe PUT (no confident snapshot).
+ * Failed GET + real local trades/notes: still push (gate is open).
  */
 export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templates?: unknown[]): void {
   // ── All localStorage keys synced to cloud via this function (17 keys) ──────
@@ -417,6 +441,13 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
     let nts = startedComplete ? notes : lsGet<unknown[]>(NOTES_KEY, [])
     if (nts === undefined) {
       try { nts = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]') } catch { nts = [] }
+    }
+    // Q1 residual: failed/empty-error GET opens the gate so real local data
+    // can still push, but do not PUT trades:[] / notes:[] without a successful
+    // cloud snapshot — that would wipe non-empty cloud.
+    if (!hasJournalCloudSnapshot(currentToken) && isEmptyJournalWipe(outTrades, nts)) {
+      setStatus('idle')
+      return
     }
     const propFirmAccounts    = lsGet<unknown[]>(PROP_FIRM_ACCOUNTS_KEY, [])
     const journalDefaults     = getJournalDefaults()
