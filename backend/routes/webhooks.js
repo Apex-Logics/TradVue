@@ -130,12 +130,20 @@ function parsePayload(body) {
     )).toLowerCase();
 
     // Pine Script alert_message format: {"message":"entry_long"/"exit_short"/etc}
-    // When action is absent but message contains direction cue, derive action from message
+    // When action is absent but message contains a cue, derive action from message.
+    //
+    // Exit/close semantics MUST take precedence over the direction words
+    // (long/short): "exit_long" is closing a long → SELL, and "exit_short" is
+    // closing a short → SELL. Checking `long` before `exit` previously made
+    // "exit_long" parse as a BUY, opening a phantom position instead of closing
+    // the real one (P0 2026-09 #4).
     let derivedAction = action;
     if (!derivedAction && parsed.message) {
       const msg = String(parsed.message).toLowerCase();
-      if (msg.includes('entry') || msg.includes('buy') || msg.includes('long')) derivedAction = 'buy';
-      else if (msg.includes('exit') || msg.includes('sell') || msg.includes('short')) derivedAction = 'sell';
+      if (msg.includes('exit') || msg.includes('close')) derivedAction = 'sell';
+      else if (msg.includes('entry') || msg.includes('open')) derivedAction = 'buy';
+      else if (msg.includes('sell') || msg.includes('short')) derivedAction = 'sell';
+      else if (msg.includes('buy') || msg.includes('long')) derivedAction = 'buy';
     }
     if (!ticker || !derivedAction) return null;
     // NinjaTrader sends 'entry'/'exit' as action; normalize to buy/sell for compatibility
