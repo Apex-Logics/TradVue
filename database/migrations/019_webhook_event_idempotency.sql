@@ -1,5 +1,5 @@
 -- ================================================================
--- Migration 018: Webhook Event Idempotency (P0 2026-09 #3)
+-- Migration 019: Webhook Event Idempotency (P0 2026-09 #3)
 --
 -- Webhook deliveries are retried by TradingView / NinjaTrader on timeout and
 -- may be replayed by proxies. Persisting the external order id and enforcing a
@@ -19,9 +19,16 @@
 --   * In prod, run the index build with CREATE UNIQUE INDEX CONCURRENTLY
 --     (shown below, commented) to avoid holding a write lock. The plain form
 --     here is for transactional migration runners / fresh installs.
--- Rollback: see 018_webhook_event_idempotency_rollback.sql — dropping the index
---   and column is instant and non-destructive (only the retry-dedup metadata is
---   lost; trades and events are untouched).
+--
+-- ── Deploy order (NOT flexible) ─────────────────────────────────────────────
+--   The receiver code always writes order_id on every event insert, so the
+--   column MUST exist before the new code serves traffic. Run this migration
+--   FIRST (or atomically with the code deploy), THEN deploy the code. Deploying
+--   the new code against a schema without order_id makes webhook ingest fail.
+-- Rollback: see database/rollbacks/019_webhook_event_idempotency_rollback.sql.
+--   Dropping the index + column is instant and non-destructive to data, but the
+--   running code also writes order_id — so roll the CODE back FIRST (or
+--   atomically), THEN drop the column, or ingest will fail.
 -- ================================================================
 
 ALTER TABLE webhook_events

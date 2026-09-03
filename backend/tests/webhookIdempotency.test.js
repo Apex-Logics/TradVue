@@ -8,7 +8,7 @@
  * carries a real external order id, re-processing it MUST NOT create a second
  * event or a duplicate trade. Idempotency is keyed on the persisted external
  * order_id, backed by a (user_id, order_id) uniqueness constraint at the DB
- * layer (see database/migrations/018_webhook_event_idempotency.sql).
+ * layer (see database/migrations/019_webhook_event_idempotency.sql).
  *
  * Placeholder order ids that TradingView strategy alerts emit (e.g. "Long",
  * "Short") are NOT unique per fill, so they must NOT trigger de-duplication.
