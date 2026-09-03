@@ -4114,7 +4114,7 @@ function JournalPageInner() {
     }
     if (initialSyncDone.current) return
     initialSyncDone.current = true
-    // Q1: not awaited; the trades/notes effect below can push while this GET is in flight.
+    // Pull is not awaited here; cloudSync.ts gates journal PUTs until it settles.
     initJournalSync(token).then(() => {
       // Re-load from localStorage after sync (cloud may have updated local data)
       setTrades(loadTrades())
@@ -4122,10 +4122,8 @@ function JournalPageInner() {
     })
   }, [token])
 
-  // Debounced cloud sync on every trades/notes change (skip initial empty load)
-  // Q1 2026-09: not gated on initJournalSync completing. initialLoadDone is set
-  // from localStorage before the pull returns, so this can schedule a PUT of
-  // local (including []) while GET is still in flight. Erick to decide a gate.
+  // Debounced cloud sync on every trades/notes change (skip initial empty load).
+  // Q1: debouncedSyncJournal waits for pullComplete before any journal PUT.
   const prevTradesRef = useRef<unknown[]>([])
   const prevNotesRef  = useRef<unknown[]>([])
   useEffect(() => {
