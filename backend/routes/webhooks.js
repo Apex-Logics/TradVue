@@ -201,6 +201,116 @@ function sanitize(str) {
   return xss(str).replace(/<[^>]*>/g, '').trim().slice(0, 100);
 }
 
+// ── Idempotency (P0 2026-09 #3) ───────────────────────────────────────────────
+// Webhook deliveries are retried by TradingView/NinjaTrader on timeout and can
+// be replayed by proxies. When a payload carries a genuine external order id we
+// de-duplicate on it so a retry never creates a second event or a duplicate
+// trade. TradingView strategy alerts, however, often set order_id to a
+// non-unique placeholder (the position direction "Long"/"Short", or the
+// action) rather than a per-fill id — those must NOT be treated as idempotency
+// keys, or distinct trades would be silently dropped.
+const NON_IDEMPOTENT_ORDER_IDS = new Set([
+  '', 'long', 'short', 'buy', 'sell', 'entry', 'exit', 'flat', 'close',
+  'open', 'na', 'n/a', 'null', 'undefined', 'none', '0',
+]);
+
+/** Return the external order id to de-duplicate on, or null when not eligible. */
+function idempotencyKeyFor(parsed) {
+  const oid = (parsed && parsed.orderId != null ? String(parsed.orderId) : '').trim();
+  if (!oid) return null;
+  if (NON_IDEMPOTENT_ORDER_IDS.has(oid.toLowerCase())) return null;
+  return oid;
+}
+
+/** Detect a Postgres unique-constraint violation from a Supabase error. */
+function isUniqueViolation(err) {
+  if (!err) return false;
+  return err.code === '23505' || /duplicate key|unique constraint/i.test(err.message || '');
+}
+
+/** Look up an already-ingested event for this (user_id, order_id). */
+async function findDuplicateEvent(supabase, userId, orderId) {
+  if (!orderId) return null;
+  const { data } = await supabase
+    .from('webhook_events')
+    .select('id, trade_id')
+    .eq('user_id', userId)
+    .eq('order_id', orderId)
+    .limit(1)
+    .maybeSingle();
+  return data || null;
+}
+
+/**
+ * Ingest one parsed webhook payload: enforce idempotency, persist the event
+ * (with the external order id backing the (user_id, order_id) unique index),
+ * then run trade matching. Shared by the TradingView and NinjaTrader receivers.
+ *
+ * Returns:
+ *   { duplicate: true, eventId? }     — already processed; nothing was created
+ *   { matched, eventId, matchedIds }  — processed
+ *   { error }                         — the event could not be persisted
+ */
+async function ingestAndMatch(supabase, { tokenId, userId, sourceIP, rawPayload, parsed }) {
+  const orderId = idempotencyKeyFor(parsed);
+
+  // 1. Fast-path idempotency: skip if this external order id was already seen.
+  if (orderId) {
+    const dup = await findDuplicateEvent(supabase, userId, orderId);
+    if (dup) {
+      console.log(`[Webhook] Idempotent skip — order_id=${orderId} already processed (event ${dup.id})`);
+      return { duplicate: true, matched: false, eventId: dup.id };
+    }
+  }
+
+  // 2. Persist the event. order_id is NULL for placeholders/empty so the partial
+  //    unique index only constrains genuine external ids.
+  const { data: eventRow, error: insertErr } = await supabase
+    .from('webhook_events')
+    .insert({
+      token_id:        tokenId,
+      user_id:         userId,
+      source_ip:       sourceIP,
+      raw_payload:     rawPayload,
+      parsed_ticker:   parsed.ticker,
+      parsed_action:   parsed.action,
+      parsed_price:    parsed.price,
+      parsed_quantity: parsed.quantity,
+      order_id:        orderId,
+      status:          'received',
+    })
+    .select('id')
+    .single();
+
+  if (insertErr) {
+    // A concurrent retry may have inserted first; the unique index then rejects
+    // this attempt. Treat that as an idempotent duplicate, not an error.
+    if (isUniqueViolation(insertErr)) {
+      console.log(`[Webhook] Idempotent skip — unique violation on order_id=${orderId}`);
+      return { duplicate: true, matched: false };
+    }
+    console.error('[Webhook] Event insert error:', insertErr.message);
+    return { error: insertErr.message };
+  }
+  if (!eventRow) return { error: 'Event insert returned no row' };
+
+  const eventId = eventRow.id;
+
+  // 3. Match + journal the trade.
+  const { matched, error: matchErr, matchedIds } = await matchAndJournalTrade(
+    supabase, userId, parsed, eventId
+  );
+
+  if (!matched && matchErr) {
+    await supabase
+      .from('webhook_events')
+      .update({ status: 'error', error_message: matchErr })
+      .eq('id', eventId);
+  }
+
+  return { matched, eventId, matchedIds, error: matchErr };
+}
+
 // ── Per-user+instrument lock (prevents race conditions with simultaneous exits) ─
 // Maps "userId:symbol" → Promise chain. All processing for a given user+symbol
 // is serialized through this queue, preventing two exits from grabbing the same
@@ -596,43 +706,13 @@ receiverRouter.post(
           return;
         }
 
-        // 4c. Store event (received status)
-        const { data: eventRow, error: insertErr } = await supabase
-          .from('webhook_events')
-          .insert({
-            token_id:        tokenId,
-            user_id:         userId,
-            source_ip:       sourceIP,
-            raw_payload:     typeof body === 'string' ? { raw: body } : body,
-            parsed_ticker:   parsed.ticker,
-            parsed_action:   parsed.action,
-            parsed_price:    parsed.price,
-            parsed_quantity: parsed.quantity,
-            status:          'received',
-          })
-          .select('id')
-          .single();
+        // 4c-4d. Idempotent ingest (event insert + de-dup) + trade matching
+        const rawPayload = typeof body === 'string' ? { raw: body } : body;
+        const { matched, duplicate } = await ingestAndMatch(supabase, {
+          tokenId, userId, sourceIP, rawPayload, parsed,
+        });
 
-        if (insertErr) {
-          console.error('[Webhook] Event insert error:', insertErr.message);
-          return;
-        }
-
-        const eventId = eventRow.id;
-
-        // 4d. Attempt trade matching
-        const { matched, error: matchErr } = await matchAndJournalTrade(
-          supabase, userId, parsed, eventId
-        );
-
-        if (!matched && matchErr) {
-          await supabase
-            .from('webhook_events')
-            .update({ status: 'error', error_message: matchErr })
-            .eq('id', eventId);
-        }
-
-        // 4e. Update token last_used_at and trade_count
+        // 4e. Update token last_used_at and trade_count (retries don't re-count)
         await supabase
           .from('webhook_tokens')
           .update({
@@ -644,7 +724,7 @@ receiverRouter.post(
         console.log(
           `[Webhook] Processed: token=${userToken.slice(0, 8)} ` +
           `ticker=${parsed.ticker} action=${parsed.action} ` +
-          `matched=${matched}`
+          `matched=${matched} duplicate=${!!duplicate}`
         );
       } catch (err) {
         console.error('[Webhook] Async processing error:', err.message);
@@ -736,36 +816,13 @@ receiverRouter.post(
 
     setImmediate(async () => {
       try {
-        // Store event
-        const { data: eventRow } = await supabase
-          .from('webhook_events')
-          .insert({
-            token_id:        tokenId,
-            user_id:         userId,
-            source_ip:       sourceIP,
-            raw_payload:     { raw: typeof body === 'string' ? body.slice(0, 2000) : body },
-            parsed_ticker:   parsed.ticker,
-            parsed_action:   parsed.action,
-            parsed_price:    parsed.price,
-            parsed_quantity: parsed.quantity,
-            status:          'received',
-          })
-          .select('id')
-          .single();
+        // Idempotent ingest (event insert + de-dup) + trade matching
+        const rawPayload = { raw: typeof body === 'string' ? body.slice(0, 2000) : body };
+        const { matched, duplicate } = await ingestAndMatch(supabase, {
+          tokenId, userId, sourceIP, rawPayload, parsed,
+        });
 
-        if (!eventRow) return;
-        const eventId = eventRow.id;
-
-        // Match and journal
-        const { matched, error: matchErr } = await matchAndJournalTrade(supabase, userId, parsed, eventId);
-
-        if (!matched && matchErr) {
-          await supabase.from('webhook_events')
-            .update({ status: 'error', error_message: matchErr })
-            .eq('id', eventId);
-        }
-
-        // Update token stats
+        // Update token stats (retries don't re-count)
         await supabase.from('webhook_tokens')
           .update({
             last_used_at: new Date().toISOString(),
@@ -773,7 +830,7 @@ receiverRouter.post(
           })
           .eq('id', tokenId);
 
-        console.log(`[Webhook/NT] Processed: token=${userToken.slice(0, 8)} ticker=${parsed.ticker} action=${parsed.action} matched=${matched}`);
+        console.log(`[Webhook/NT] Processed: token=${userToken.slice(0, 8)} ticker=${parsed.ticker} action=${parsed.action} matched=${matched} duplicate=${!!duplicate}`);
       } catch (err) {
         console.error('[Webhook/NT] Processing error:', err.message);
       }
@@ -1056,4 +1113,8 @@ managementRouter.post('/test', requireAuth, async (req, res) => {
 
 // ─── Exports ──────────────────────────────────────────────────────────────────
 
-module.exports = { receiverRouter, managementRouter, tradesRouter, _matchAndJournalTrade, matchAndJournalTrade, parsePayload };
+module.exports = {
+  receiverRouter, managementRouter, tradesRouter,
+  _matchAndJournalTrade, matchAndJournalTrade, parsePayload,
+  ingestAndMatch, idempotencyKeyFor, findDuplicateEvent, isUniqueViolation,
+};
