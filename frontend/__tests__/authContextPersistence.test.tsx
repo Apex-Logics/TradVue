@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 const localStorageMock = (() => {
@@ -92,13 +92,15 @@ describe('AuthContext persistence hydration', () => {
     expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
     expect(apiGetMeMock).toHaveBeenCalledWith('stored-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('stored-token')
-    resolveMe({
-      id: 'user-1',
-      email: 'stored@tradvue.com',
-      name: 'Stored User',
-      email_verified: true,
-      created_at: '2026-03-24T00:00:00.000Z',
-      tier: 'free',
+    await act(async () => {
+      resolveMe({
+        id: 'user-1',
+        email: 'stored@tradvue.com',
+        name: 'Stored User',
+        email_verified: true,
+        created_at: '2026-03-24T00:00:00.000Z',
+        tier: 'free',
+      })
     })
   })
 
