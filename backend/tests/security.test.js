@@ -693,39 +693,39 @@ describe('Market Intel Endpoint Security', () => {
     intelApp = express();
     intelApp.use(express.json());
     intelApp.disable('x-powered-by');
-    intelApp.use('/api', require('../routes/marketIntel'));
+    intelApp.use('/api/intel', require('../routes/marketIntel'));
     intelApp.use((err, req, res, next) => {
       res.status(err.status || 500).json({ error: 'Internal server error' });
     });
   });
 
-  test('GET /api/economic-indicators is accessible (no auth required)', async () => {
-    const res = await request(intelApp).get('/api/economic-indicators');
+  test('GET /api/intel/economic-indicators is accessible (no auth required)', async () => {
+    const res = await request(intelApp).get('/api/intel/economic-indicators');
     // Should respond (200 or 500 if mocked service fails, but not 401)
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
   });
 
-  test('GET /api/insider-trades is accessible (no auth required)', async () => {
-    const res = await request(intelApp).get('/api/insider-trades');
+  test('GET /api/intel/insider-trades is accessible (no auth required)', async () => {
+    const res = await request(intelApp).get('/api/intel/insider-trades');
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
   });
 
-  test('GET /api/earnings-calendar is accessible (no auth required)', async () => {
-    const res = await request(intelApp).get('/api/earnings-calendar');
+  test('GET /api/intel/earnings-calendar is accessible (no auth required)', async () => {
+    const res = await request(intelApp).get('/api/intel/earnings-calendar');
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
   });
 
-  test('GET /api/ipo-calendar is accessible (no auth required)', async () => {
-    const res = await request(intelApp).get('/api/ipo-calendar');
+  test('GET /api/intel/ipo-calendar is accessible (no auth required)', async () => {
+    const res = await request(intelApp).get('/api/intel/ipo-calendar');
     expect(res.status).not.toBe(401);
     expect(res.status).not.toBe(403);
   });
 
   test('Market intel endpoints have rate limiting headers', async () => {
-    const res = await request(intelApp).get('/api/economic-indicators');
+    const res = await request(intelApp).get('/api/intel/economic-indicators');
     // Rate limit headers should be present (express-rate-limit standard headers)
     const hasRateLimitHeader = 
       res.headers['ratelimit-limit'] !== undefined ||
@@ -751,7 +751,7 @@ describe('Market Intel Endpoint Security', () => {
     const fred = require('../services/fred');
     fred.getAllIndicators.mockRejectedValueOnce(new Error('API key fred_abc123 invalid'));
 
-    const res = await request(intelApp).get('/api/economic-indicators');
+    const res = await request(intelApp).get('/api/intel/economic-indicators');
 
     // Error should be sanitized — no raw API key in response
     expect(res.status).toBe(500);
@@ -766,7 +766,7 @@ describe('Market Intel Endpoint Security', () => {
     const fred = require('../services/fred');
     fred.getAllIndicators.mockRejectedValueOnce(new Error('ENOENT: /var/app/services/fred.js line 45'));
 
-    const res = await request(intelApp).get('/api/economic-indicators');
+    const res = await request(intelApp).get('/api/intel/economic-indicators');
 
     expect(res.status).toBe(500);
     const responseText = JSON.stringify(res.body);
@@ -782,7 +782,7 @@ describe('Market Intel Endpoint Security', () => {
       { id: 'GDP', value: 25000 }
     ]);
 
-    const res = await request(intelApp).get('/api/economic-indicators');
+    const res = await request(intelApp).get('/api/intel/economic-indicators');
 
     if (res.status === 200) {
       const responseText = JSON.stringify(res.body);

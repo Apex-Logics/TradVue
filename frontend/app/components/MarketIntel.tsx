@@ -224,7 +224,7 @@ function InsiderTradesTab({ symbol }: { symbol?: string }) {
       params.set('type', activeFilter.toLowerCase())
     }
 
-    return `${API_BASE}/api/insider-trades?${params.toString()}`
+    return `${API_BASE}/api/intel/insider-trades?${params.toString()}`
   }
 
   const load = useCallback(async () => {
@@ -525,7 +525,7 @@ function EarningsCalendarTab() {
   const load = useCallback(async () => {
     setLoading(true); setError(false)
     const res = await apiFetchSafe<{ success: boolean; data: EarningsCalendar }>(
-      `${API_BASE}/api/earnings-calendar`
+      `${API_BASE}/api/intel/earnings-calendar`
     )
     if (res?.success) setData(res.data || null)
     else setError(true)
@@ -619,7 +619,7 @@ function EconomicDataTab() {
   const load = useCallback(async () => {
     setLoading(true); setError(false)
     const res = await apiFetchSafe<{ success: boolean; data: EconomicData }>(
-      `${API_BASE}/api/economic-indicators`
+      `${API_BASE}/api/intel/economic-indicators`
     )
     if (res?.success) setData(res.data || null)
     else setError(true)
@@ -708,7 +708,7 @@ function IPOCalendarTab() {
   const load = useCallback(async () => {
     setLoading(true); setError(false)
     const res = await apiFetchSafe<{ success: boolean; data: IPOCalendar }>(
-      `${API_BASE}/api/ipo-calendar`
+      `${API_BASE}/api/intel/ipo-calendar`
     )
     if (res?.success) setData(res.data || null)
     else setError(true)
