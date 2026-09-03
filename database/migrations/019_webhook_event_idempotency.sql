@@ -16,19 +16,21 @@
 --     rewrite, no backfill; existing rows get order_id = NULL.
 --   * The unique index is PARTIAL (WHERE order_id IS NOT NULL); every existing
 --     row has order_id = NULL, so it cannot conflict with historical data.
---   * In prod, run the index build with CREATE UNIQUE INDEX CONCURRENTLY
---     (shown below, commented) to avoid holding a write lock. The plain form
---     here is for transactional migration runners / fresh installs.
 --
--- ── Deploy order (NOT flexible) ─────────────────────────────────────────────
---   The receiver code always writes order_id on every event insert, so the
---   column MUST exist before the new code serves traffic. Run this migration
---   FIRST (or atomically with the code deploy), THEN deploy the code. Deploying
---   the new code against a schema without order_id makes webhook ingest fail.
+-- ── REQUIRED production deploy order (NOT flexible) ─────────────────────────
+--   1. Migrate FIRST: add the order_id column.
+--   2. In production, build the partial unique index with
+--      CREATE UNIQUE INDEX CONCURRENTLY OUTSIDE a transaction.
+--   3. Only after both schema steps succeed, deploy the application code.
+--   The receiver always writes order_id on every event insert. Deploying the
+--   new code before migration makes webhook ingest fail.
+--
+-- For transactional migration runners / fresh installs, the plain index form
+-- below may be used. In production use the commented CONCURRENTLY form instead.
+--
 -- Rollback: see database/rollbacks/019_webhook_event_idempotency_rollback.sql.
---   Dropping the index + column is instant and non-destructive to data, but the
---   running code also writes order_id — so roll the CODE back FIRST (or
---   atomically), THEN drop the column, or ingest will fail.
+--   That rollback is outside database/migrations/ and is applied only manually.
+--   Roll the application code back before dropping the column, or ingest fails.
 -- ================================================================
 
 ALTER TABLE webhook_events
@@ -42,7 +44,7 @@ CREATE UNIQUE INDEX IF NOT EXISTS uniq_webhook_events_user_order
     ON webhook_events (user_id, order_id)
     WHERE order_id IS NOT NULL;
 
--- Zero-downtime prod form (run OUTSIDE a transaction instead of the above):
+-- REQUIRED production form (run OUTSIDE a transaction instead of the above):
 --   CREATE UNIQUE INDEX CONCURRENTLY IF NOT EXISTS uniq_webhook_events_user_order
 --       ON webhook_events (user_id, order_id)
 --       WHERE order_id IS NOT NULL;
