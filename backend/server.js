@@ -20,6 +20,7 @@ const helmet = require('helmet');
 const morgan = require('morgan');
 const compression = require('compression');
 const { generalLimiter } = require('./services/rateLimit');
+const { getHealthBuildIdentity } = require('./lib/buildIdentity');
 require('dotenv').config();
 
 // ── Startup safety checks ────────────────────────────────────────────────────
@@ -170,7 +171,9 @@ app.get('/health', (req, res) => {
     status: 'OK', 
     timestamp: new Date().toISOString(),
     service: 'TradVue API',
-    build: '2026-03-12-v4-supabase-rest'
+    // Deploy identity: RENDER_GIT_COMMIT (Render) / GIT_SHA / SOURCE_VERSION,
+    // else BUILD_ID (set this env var on non-Render hosts). See lib/buildIdentity.js.
+    build: getHealthBuildIdentity()
   });
 });
 
