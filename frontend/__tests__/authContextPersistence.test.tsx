@@ -24,6 +24,7 @@ jest.mock('../app/utils/cloudSync', () => ({
   initFullSync: (...args: unknown[]) => initFullSyncMock(...args),
   getSyncStatus: () => ({ state: 'idle' }),
   subscribeSyncStatus: () => () => {},
+  resetJournalPullGate: jest.fn(),
 }))
 
 const apiGetMeMock = jest.fn()

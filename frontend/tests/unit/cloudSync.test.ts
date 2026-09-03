@@ -13,11 +13,9 @@
  *     never a hardcoded empty array. One call site pushed `notes: []`, which
  *     wiped every note in the cloud on the next mutation.
  *
- * Q1 2026-09 audit (pull-before-push):
- *  Pull helpers never journal-PUT. Sequenced await-pull-then-push already
- *  holds. A journal-page mount sequence with empty localStorage and a slow
- *  GET still PUTs trades:[] / notes:[] before the pull completes — P0
- *  empty-cloud guards do not cover that. See the Q1 describe block.
+ * Q1 2026-09 (pullComplete gate):
+ *  No journal PUT until a pull has settled for the current token. Debounce
+ *  is not a pull gate; cloudSync.ts holds a pullComplete flag. See Q1.
  */
 
 const TRADES_KEY = 'cg_journal_trades'
@@ -43,6 +41,7 @@ import {
   forceSyncFromCloud,
   debouncedSyncJournal,
   initFullSync,
+  resetJournalPullGate,
 } from '../../app/utils/cloudSync'
 
 function mockCloudGet(payload: unknown) {
@@ -57,6 +56,10 @@ function mockCloudGet(payload: unknown) {
 function lsSetJSON(key: string, val: unknown) {
   localStorageMock.setItem(key, JSON.stringify(val))
 }
+function lsSetToken(tok: string) {
+  // Auth writes cg_token via setItem (raw), not JSON.stringify.
+  localStorageMock.setItem(TOKEN_KEY, tok)
+}
 function lsGetJSON(key: string) {
   const raw = localStorageMock.getItem(key)
   return raw ? JSON.parse(raw) : null
@@ -65,6 +68,7 @@ function lsGetJSON(key: string) {
 beforeEach(() => {
   localStorageMock.clear()
   jest.clearAllMocks()
+  resetJournalPullGate()
 })
 
 describe('P0 #1 — cloud pull must not wipe local trades/notes', () => {
@@ -81,7 +85,7 @@ describe('P0 #1 — cloud pull must not wipe local trades/notes', () => {
   })
 
   test('forceSyncFromCloud preserves local trades/notes when cloud fields are empty arrays', async () => {
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     lsSetJSON(TRADES_KEY, [{ id: 't1' }, { id: 't2' }])
     lsSetJSON(NOTES_KEY, [{ id: 'n1' }])
     mockCloudGet({ trades: [], notes: [] })
@@ -109,15 +113,16 @@ describe('P0 #2 — journal push must send current notes, never hardcoded []', (
   afterEach(() => { jest.useRealTimers() })
 
   test('debouncedSyncJournal with notes omitted sends current notes from storage (not [])', async () => {
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     lsSetJSON(NOTES_KEY, [{ id: 'n1', content: 'my note' }])
 
     let putBody: any = null
     ;(global as any).fetch = jest.fn(async (_url: string, opts?: { method?: string; body?: string }) => {
       if (opts?.method === 'PUT') { putBody = JSON.parse(opts.body || '{}') }
-      return { ok: true, json: async () => ({}) }
+      return { ok: true, json: async () => ({ data: {} }) }
     })
 
+    await initJournalSync('tok')
     // Mirrors the fixed call site: trades pushed without an explicit notes arg.
     debouncedSyncJournal([{ id: 't1' }])
     await jest.advanceTimersByTimeAsync(1600)
@@ -128,15 +133,16 @@ describe('P0 #2 — journal push must send current notes, never hardcoded []', (
   })
 
   test('debouncedSyncJournal respects an explicitly provided notes array', async () => {
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     lsSetJSON(NOTES_KEY, [{ id: 'stale' }])
 
     let putBody: any = null
     ;(global as any).fetch = jest.fn(async (_url: string, opts?: { method?: string; body?: string }) => {
       if (opts?.method === 'PUT') { putBody = JSON.parse(opts.body || '{}') }
-      return { ok: true, json: async () => ({}) }
+      return { ok: true, json: async () => ({ data: {} }) }
     })
 
+    await initJournalSync('tok')
     debouncedSyncJournal([{ id: 't1' }], [{ id: 'n2', content: 'explicit' }])
     await jest.advanceTimersByTimeAsync(1600)
 
@@ -169,9 +175,8 @@ describe('P0 #2 — journal push must send current notes, never hardcoded []', (
 //     journal/page.tsx trades/notes effect        — mount + every mutation
 //     journal/page.tsx applyExpandedEdit autosave — trade edit (notes omitted)
 //
-// Pull helpers never journal-PUT. The ungated path is the journal mount
-// effect calling debouncedSyncJournal while a pull GET is still in flight.
-// 1.5s debounce is a burst coalescer, not a pullComplete gate.
+// Pull helpers never journal-PUT. debouncedSyncJournal waits for pullComplete
+// (and re-reads localStorage if the call started before the pull settled).
 
 type JournalFetchCtl = {
   journalPuts: { data?: { trades?: unknown[]; notes?: unknown[] } }[]
@@ -220,6 +225,41 @@ function mockJournalFetch(opts: {
   return ctl
 }
 
+/** Independent hang per journal GET — Auth initFullSync vs page initJournalSync. */
+function mockIndependentJournalGets(getPayload: unknown) {
+  const releaseGet: Array<() => void> = []
+  const getCompleted: boolean[] = []
+  const journalPuts: { data?: { trades?: unknown[]; notes?: unknown[] } }[] = []
+  let getIndex = 0
+
+  ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
+    const method = init?.method || 'GET'
+    const isJournal = String(url).includes('/api/user/data/journal')
+    if (isJournal && method === 'PUT') {
+      journalPuts.push(JSON.parse(init?.body || '{}'))
+      return { ok: true, json: async () => ({}) }
+    }
+    if (isJournal && method === 'GET') {
+      const idx = getIndex++
+      getCompleted[idx] = false
+      await new Promise<void>(resolve => {
+        releaseGet[idx] = resolve
+        q1PendingReleases.push(resolve)
+      })
+      getCompleted[idx] = true
+      return { ok: true, json: async () => ({ data: getPayload }) }
+    }
+    return { ok: true, json: async () => ({ data: null }) }
+  })
+
+  return {
+    journalPuts,
+    getCompleted,
+    releaseGet: (i: number) => { releaseGet[i]?.() },
+    journalGets: () => getIndex,
+  }
+}
+
 describe('Q1 — journal pull must complete before any journal push', () => {
   afterEach(() => {
     q1PendingReleases.forEach(fn => fn())
@@ -237,7 +277,7 @@ describe('Q1 — journal pull must complete before any journal push', () => {
   })
 
   test('forceSyncFromCloud issues journal GET only (never PUT)', async () => {
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     const ctl = mockJournalFetch({
       getPayload: { trades: [{ id: 'cloud1' }], notes: [{ id: 'n1' }] },
     })
@@ -248,7 +288,7 @@ describe('Q1 — journal pull must complete before any journal push', () => {
 
   test('initFullSync does not journal-PUT even when local journal is empty and cloud is slow', async () => {
     jest.useFakeTimers()
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     const ctl = mockJournalFetch({
       getPayload: { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] },
       hangGet: true,
@@ -268,7 +308,7 @@ describe('Q1 — journal pull must complete before any journal push', () => {
 
   test('sequenced callers already hold the order: await pull, then push → GET before PUT', async () => {
     jest.useFakeTimers()
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
     const ctl = mockJournalFetch({ getPayload: cloud })
 
@@ -285,11 +325,10 @@ describe('Q1 — journal pull must complete before any journal push', () => {
   })
 
   test('fast pull + post-pull UI reload cancels the empty mount-push (debounce reset)', async () => {
-    // Lucky path today: GET returns before 1.5s, journal page reloads from
-    // localStorage and re-calls debouncedSyncJournal with cloud data, which
-    // clears the empty-local timer. Not a gate — just debounce winning.
+    // Journal page then() reloads from localStorage and re-calls
+    // debouncedSyncJournal with cloud data, clearing the empty-local timer.
     jest.useFakeTimers()
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
     const ctl = mockJournalFetch({ getPayload: cloud })
 
@@ -305,43 +344,9 @@ describe('Q1 — journal pull must complete before any journal push', () => {
     jest.useRealTimers()
   })
 
-  test('Q1 hole reproduced: empty local + slow pull PUTs empty journal while GET is in flight', async () => {
-    // Observed current behavior (not the spec). Invert / delete this when a
-    // pullComplete gate lands; the test.failing below is the intended lock.
+  test('empty local + slow pull: no journal PUT until pull GET completes (journal mount sequence)', async () => {
     jest.useFakeTimers()
-    lsSetJSON(TOKEN_KEY, 'tok')
-    const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
-    const ctl = mockJournalFetch({ getPayload: cloud, hangGet: true })
-
-    const full = initFullSync('tok')
-    const pagePull = initJournalSync('tok')
-    debouncedSyncJournal([], [])
-    await jest.advanceTimersByTimeAsync(1600)
-
-    expect(ctl.getCompleted).toBe(false)
-    expect(ctl.journalPuts).toHaveLength(1)
-    expect(ctl.journalPuts[0].data?.trades).toEqual([])
-    expect(ctl.journalPuts[0].data?.notes).toEqual([])
-
-    ctl.releaseGet()
-    await full
-    await pagePull
-    jest.useRealTimers()
-  })
-
-  // Intended invariant — FAILS on current code (Q1 hole). Jest test.failing
-  // keeps CI green until Bolt/Erick ship a pullComplete gate; remove .failing
-  // when the assertion starts passing.
-  //
-  // Repro (empty localStorage, cold start, slow cloud GET > 1.5s):
-  //   AuthContext fires initFullSync (not awaited) and the journal page
-  //   token effect fires initJournalSync (not awaited), then the trades/notes
-  //   effect calls debouncedSyncJournal(local, possibly []). After 1.5s a
-  //   journal PUT goes out while GET is still in flight. P0 empty-cloud
-  //   guards do not stop an empty-local PUT from wiping cloud.
-  test.failing('empty local + slow pull: no journal PUT until pull GET completes (journal mount sequence)', async () => {
-    jest.useFakeTimers()
-    lsSetJSON(TOKEN_KEY, 'tok')
+    lsSetToken('tok')
     // Cold start / fresh device: no local trades or notes.
     const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
     const ctl = mockJournalFetch({ getPayload: cloud, hangGet: true })
@@ -361,6 +366,126 @@ describe('Q1 — journal pull must complete before any journal push', () => {
     ctl.releaseGet()
     await full
     await pagePull
+    jest.useRealTimers()
+  })
+
+  test('pre-pull empty mount-push waits, then PUTs post-pull storage (not [])', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
+    const ctl = mockJournalFetch({ getPayload: cloud, hangGet: true })
+
+    const pull = initJournalSync('tok')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet()
+    await pull
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.journalPuts).toHaveLength(1)
+    expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 'cloud1' }])
+    expect(ctl.journalPuts[0].data?.notes).toEqual([{ id: 'cloudNote' }])
+    jest.useRealTimers()
+  })
+
+  test('token change re-closes the gate: hung GET for the new token cannot empty-PUT', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok1')
+    const first = mockJournalFetch({
+      getPayload: { trades: [{ id: 'a' }], notes: [{ id: 'n' }] },
+    })
+    await initJournalSync('tok1')
+    expect(first.journalPuts).toHaveLength(0)
+
+    lsSetToken('tok2')
+    const ctl = mockJournalFetch({
+      getPayload: { trades: [{ id: 'b' }], notes: [{ id: 'm' }] },
+      hangGet: true,
+    })
+    const remount = initJournalSync('tok2')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+
+    expect(ctl.getCompleted).toBe(false)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet()
+    await remount
+    jest.useRealTimers()
+  })
+
+  test('logout reset + same-token remount: hung GET cannot empty-PUT', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    const first = mockJournalFetch({
+      getPayload: { trades: [{ id: 'a' }], notes: [{ id: 'n' }] },
+    })
+    await initJournalSync('tok')
+    expect(first.journalPuts).toHaveLength(0)
+
+    resetJournalPullGate()
+    const ctl = mockJournalFetch({
+      getPayload: { trades: [{ id: 'b' }], notes: [{ id: 'm' }] },
+      hangGet: true,
+    })
+    const remount = initJournalSync('tok')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+
+    expect(ctl.getCompleted).toBe(false)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet()
+    await remount
+    jest.useRealTimers()
+  })
+
+  test('two independent GETs: Auth pull completing must not open the gate while page GET is in flight', async () => {
+    // Nova blocker: journal first-paint !token reset zeroed Auth's inFlight.
+    // Auth endJournalPull then opened the gate while the page GET still hung.
+    // After fix: remount sequence keeps both pulls counted — complete only
+    // the first GET, assert 0 PUTs until the second GET settles, and no empty wipe.
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
+    const ctl = mockIndependentJournalGets(cloud)
+
+    const full = initFullSync('tok')
+    const pagePull = initJournalSync('tok')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+
+    expect(ctl.journalGets()).toBe(2)
+    expect(ctl.getCompleted[0]).toBe(false)
+    expect(ctl.getCompleted[1]).toBe(false)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet(0)
+    await full
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.getCompleted[0]).toBe(true)
+    expect(ctl.getCompleted[1]).toBe(false)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet(1)
+    await pagePull
+    await Promise.resolve()
+    await Promise.resolve()
+
+    const emptyWipe = ctl.journalPuts.some(p =>
+      Array.isArray(p.data?.trades) && p.data.trades.length === 0 &&
+      Array.isArray(p.data?.notes) && p.data.notes.length === 0
+    )
+    expect(emptyWipe).toBe(false)
+    if (ctl.journalPuts.length > 0) {
+      expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 'cloud1' }])
+      expect(ctl.journalPuts[0].data?.notes).toEqual([{ id: 'cloudNote' }])
+    }
     jest.useRealTimers()
   })
 })

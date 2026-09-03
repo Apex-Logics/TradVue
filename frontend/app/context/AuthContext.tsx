@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { trackLogout } from '../utils/analytics'
-import { initFullSync, getSyncStatus, subscribeSyncStatus, type SyncStatus } from '../utils/cloudSync'
+import { initFullSync, getSyncStatus, subscribeSyncStatus, resetJournalPullGate, type SyncStatus } from '../utils/cloudSync'
 import {
   apiLogin,
   apiRegister,
@@ -84,8 +84,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setToken(storedToken)
           setUser(JSON.parse(storedUser))
           // Trigger initial cloud sync for returning logged-in users.
-          // Q1 2026-09: fire-and-forget — journal UI can mount and push
-          // before this pull finishes. Do not await without Erick.
+          // Fire-and-forget; journal PUTs wait for pullComplete in cloudSync.
           initFullSync(storedToken)
           
           // Background refresh to catch tier/admin changes
@@ -109,7 +108,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(storedToken)
         setUser(refreshedUser)
         persistStoredAuth(storedToken, refreshedUser, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
-        // Q1 2026-09: fire-and-forget — same as stored-user hydrate path.
+        // Fire-and-forget; journal PUTs wait for pullComplete in cloudSync.
         initFullSync(storedToken)
       } catch {
         clearAuth()
@@ -172,7 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(accessToken)
       setUser(res.user)
       persistAuth(accessToken, res.user, res.session?.refresh_token)
-      // Q1 2026-09: fire-and-forget pull — journal mount-push can race this.
+      // Fire-and-forget; journal PUTs wait for pullComplete in cloudSync.
       initFullSync(accessToken)
       return {}
     } catch {
@@ -198,7 +197,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(accessToken)
       setUser(res.user)
       persistAuth(accessToken, res.user, res.session?.refresh_token)
-      // Q1 2026-09: fire-and-forget pull — same race surface as login.
+      // Fire-and-forget; journal PUTs wait for pullComplete in cloudSync.
       initFullSync(accessToken)
       return {}
     } catch {
@@ -209,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     trackLogout()
+    resetJournalPullGate()
     setToken(null)
     setUser(null)
     setBackendWatchlist([])
