@@ -274,6 +274,10 @@ export async function forceSyncFromCloud(): Promise<boolean> {
 /**
  * Push full journal state to cloud after every mutation.
  * Debounced at 1.5 seconds to handle rapid changes gracefully.
+ *
+ * Q1 2026-09 audit: no pullComplete gate. A concurrent caller (journal page
+ * mount effect) can PUT before initJournalSync's GET resolves. Debounce is
+ * not a pull gate. Do not change without Erick — tests lock the invariant.
  */
 let _journalTimer: ReturnType<typeof setTimeout> | null = null
 

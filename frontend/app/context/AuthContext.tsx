@@ -83,7 +83,9 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           if (cancelled) return
           setToken(storedToken)
           setUser(JSON.parse(storedUser))
-          // Trigger initial cloud sync for returning logged-in users
+          // Trigger initial cloud sync for returning logged-in users.
+          // Q1 2026-09: fire-and-forget — journal UI can mount and push
+          // before this pull finishes. Do not await without Erick.
           initFullSync(storedToken)
           
           // Background refresh to catch tier/admin changes
@@ -107,6 +109,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
         setToken(storedToken)
         setUser(refreshedUser)
         persistStoredAuth(storedToken, refreshedUser, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
+        // Q1 2026-09: fire-and-forget — same as stored-user hydrate path.
         initFullSync(storedToken)
       } catch {
         clearAuth()
@@ -169,7 +172,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(accessToken)
       setUser(res.user)
       persistAuth(accessToken, res.user, res.session?.refresh_token)
-      // Trigger initial cloud sync after login
+      // Q1 2026-09: fire-and-forget pull — journal mount-push can race this.
       initFullSync(accessToken)
       return {}
     } catch {
@@ -195,7 +198,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
       setToken(accessToken)
       setUser(res.user)
       persistAuth(accessToken, res.user, res.session?.refresh_token)
-      // Trigger initial cloud sync after registration
+      // Q1 2026-09: fire-and-forget pull — same race surface as login.
       initFullSync(accessToken)
       return {}
     } catch {
