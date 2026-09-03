@@ -72,6 +72,10 @@ describe('AuthContext persistence hydration', () => {
       tier: 'free',
     }))
 
+    // Background /api/auth/me refresh is fire-and-forget so tier/admin
+    // changes land without blocking first paint of stored credentials.
+    apiGetMeMock.mockImplementation(() => new Promise(() => {}))
+
     render(
       <AuthProvider>
         <AuthStateProbe />
@@ -81,7 +85,7 @@ describe('AuthContext persistence hydration', () => {
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
     expect(screen.getByTestId('token')).toHaveTextContent('stored-token')
     expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
-    expect(apiGetMeMock).not.toHaveBeenCalled()
+    expect(apiGetMeMock).toHaveBeenCalledWith('stored-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('stored-token')
   })
 
