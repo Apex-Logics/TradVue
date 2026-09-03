@@ -23,6 +23,11 @@ process.env.JWT_SECRET                = 'test-jwt-secret';
 // ── In-memory Supabase mock (supports webhook_events + webhook_trades) ────────
 let db;
 let seq;
+let uniqueViolationCount = 0;
+// When set, webhook_events INSERTs wait until `n` are in-flight, then all
+// proceed so the UNIQUE(user_id, order_id) index — not findDuplicateEvent —
+// is what rejects the loser (Postgres 23505).
+let eventInsertBarrier = null; // { n, waiters: [] }
 
 function nextId() { return seq++; }
 
@@ -52,6 +57,7 @@ function makeChain(table) {
     }
     if (state.insertData) {
       if (violatesUniqueOrderId(state.table, state.insertData)) {
+        uniqueViolationCount += 1;
         return {
           data: null,
           error: { code: '23505', message: 'duplicate key value violates unique constraint "uniq_webhook_events_user_order"' },
@@ -90,7 +96,22 @@ function makeChain(table) {
     if (Array.isArray(result.data)) return Promise.resolve({ data: result.data[0] || null, error: result.error });
     return Promise.resolve(result);
   });
-  chain.single      = jest.fn(() => Promise.resolve(resolve()));
+  chain.single      = jest.fn(async () => {
+    if (
+      eventInsertBarrier &&
+      state.table === 'webhook_events' &&
+      state.insertData
+    ) {
+      await new Promise((release) => {
+        eventInsertBarrier.waiters.push(release);
+        if (eventInsertBarrier.waiters.length >= eventInsertBarrier.n) {
+          const ready = eventInsertBarrier.waiters.splice(0, eventInsertBarrier.n);
+          ready.forEach((fn) => fn());
+        }
+      });
+    }
+    return resolve();
+  });
   chain.then        = (ok, err) => Promise.resolve(resolve()).then(ok, err);
   chain.catch       = (err) => Promise.resolve(resolve()).catch(err);
   return chain;
@@ -109,6 +130,8 @@ const USER_ID = 'idem-user-1';
 beforeEach(() => {
   db = { webhook_events: [], webhook_trades: [], instruments: [] };
   seq = 1;
+  uniqueViolationCount = 0;
+  eventInsertBarrier = null;
   mockSupabase.from.mockImplementation((table) => makeChain(table));
 });
 
@@ -201,9 +224,37 @@ describe('Webhook ingestion idempotency (P0 #3)', () => {
     expect(db.webhook_trades).toHaveLength(2);
   });
 
+  test('concurrent inserts of the same (user_id, order_id) hit UNIQUE 23505; loser is a duplicate', async () => {
+    // Hold both webhook_events INSERTs until they are in-flight so the UNIQUE
+    // index rejects the loser with Postgres 23505. This is the real check-then-
+    // insert race — unlike the pre-seed test below, which is a findDuplicateEvent
+    // fast-path and never reaches INSERT.
+    eventInsertBarrier = { n: 2, waiters: [] };
+
+    const parsed = entry('RACE-CONCURRENT-1');
+    const results = await Promise.all([ingest(parsed), ingest(parsed)]);
+
+    const winners = results.filter((r) => !r.duplicate);
+    const losers  = results.filter((r) => r.duplicate === true);
+
+    expect(uniqueViolationCount).toBe(1);
+    expect(winners).toHaveLength(1);
+    expect(losers).toHaveLength(1);
+    expect(losers[0].matched).toBe(false);
+    expect(winners[0].error).toBeFalsy();
+    expect(db.webhook_events).toHaveLength(1);
+    expect(db.webhook_events[0].order_id).toBe('RACE-CONCURRENT-1');
+    expect(db.webhook_trades).toHaveLength(1);
+
+    // TV/NT receivers bump webhook_tokens.trade_count only when ingestAndMatch
+    // reports matched (webhooks.js). Loser matched:false ⇒ no second bump.
+    const tradeCount = results.reduce((n, r) => (r.matched ? n + 1 : n), 0);
+    expect(tradeCount).toBe(1);
+  });
+
   test('DB unique-violation on a racing retry is swallowed as a duplicate', async () => {
-    // Simulate the check-then-insert race: pre-seed an event row with the same
-    // (user_id, order_id) so the insert hits the unique constraint directly.
+    // Fast-path: pre-seed so findDuplicateEvent hits before INSERT. The
+    // concurrent test above is the real UNIQUE 23505 collision.
     db.webhook_events.push({ id: nextId(), user_id: USER_ID, order_id: 'RACE-1', status: 'received' });
     const r = await ingest(entry('RACE-1'));
     expect(r.duplicate).toBe(true);
