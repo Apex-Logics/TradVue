@@ -1,5 +1,5 @@
 import React from 'react'
-import { render, screen, waitFor } from '@testing-library/react'
+import { render, screen, waitFor, act } from '@testing-library/react'
 import '@testing-library/jest-dom'
 
 const localStorageMock = (() => {
@@ -72,6 +72,15 @@ describe('AuthContext persistence hydration', () => {
       tier: 'free',
     }))
 
+    // Background /api/auth/me refresh is fire-and-forget so tier/admin
+    // changes land without blocking first paint of stored credentials.
+    // Keep the promise pending until after the ready-paint assertions, then
+    // settle it so Jest is not left with an open handle.
+    let resolveMe: (value: unknown) => void = () => {}
+    apiGetMeMock.mockImplementation(
+      () => new Promise(resolve => { resolveMe = resolve })
+    )
+
     render(
       <AuthProvider>
         <AuthStateProbe />
@@ -81,8 +90,18 @@ describe('AuthContext persistence hydration', () => {
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
     expect(screen.getByTestId('token')).toHaveTextContent('stored-token')
     expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
-    expect(apiGetMeMock).not.toHaveBeenCalled()
+    expect(apiGetMeMock).toHaveBeenCalledWith('stored-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('stored-token')
+    await act(async () => {
+      resolveMe({
+        id: 'user-1',
+        email: 'stored@tradvue.com',
+        name: 'Stored User',
+        email_verified: true,
+        created_at: '2026-03-24T00:00:00.000Z',
+        tier: 'free',
+      })
+    })
   })
 
   it('rehydrates user from /api/auth/me when only token is stored', async () => {
