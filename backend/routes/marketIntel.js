@@ -2,10 +2,10 @@
  * Market Intelligence Routes
  *
  * Public endpoints (no JWT required) for:
- *   GET /api/economic-indicators  — FRED macroeconomic data
- *   GET /api/insider-trades       — Persistent DB (90-day rolling) + live fallback
- *   GET /api/earnings-calendar    — Upcoming earnings (Finnhub)
- *   GET /api/ipo-calendar         — Upcoming IPOs (Finnhub)
+ *   GET /api/intel/economic-indicators  — FRED macroeconomic data
+ *   GET /api/intel/insider-trades       — Persistent DB (90-day rolling) + live fallback
+ *   GET /api/intel/earnings-calendar    — Upcoming earnings (Finnhub)
+ *   GET /api/intel/ipo-calendar         — Upcoming IPOs (Finnhub)
  *
  * Insider trades query params:
  *   page     (default: 1)
@@ -203,7 +203,7 @@ function deduplicateTrades(items) {
   });
 }
 
-// ─── GET /api/economic-indicators ────────────────────────────────────────────
+// ─── GET /api/intel/economic-indicators ──────────────────────────────────────
 
 router.get('/economic-indicators', intelLimiter, async (req, res) => {
   try {
@@ -215,7 +215,7 @@ router.get('/economic-indicators', intelLimiter, async (req, res) => {
   }
 });
 
-// ─── GET /api/insider-trades ──────────────────────────────────────────────────
+// ─── GET /api/intel/insider-trades ────────────────────────────────────────────
 
 router.get('/insider-trades', intelLimiter, async (req, res) => {
   const symbol = req.query.symbol ? req.query.symbol.toUpperCase().trim() : null;
@@ -286,7 +286,7 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
     }
 
     // ── First run: database is empty — fetch live and ingest ────────────────
-    console.log('[Route] /insider-trades — first run, fetching live data');
+    console.log('[Route] /intel/insider-trades — first run, fetching live data');
 
     const cacheKey = `insider:${symbol || 'all'}`;
     let edgarData = [];
@@ -383,7 +383,7 @@ router.get('/insider-trades', intelLimiter, async (req, res) => {
   }
 });
 
-// ─── GET /api/earnings-calendar ──────────────────────────────────────────────
+// ─── GET /api/intel/earnings-calendar ────────────────────────────────────────
 
 router.get('/earnings-calendar', intelLimiter, async (req, res) => {
   const { from, to } = req.query;
@@ -396,7 +396,7 @@ router.get('/earnings-calendar', intelLimiter, async (req, res) => {
   }
 });
 
-// ─── GET /api/ipo-calendar ────────────────────────────────────────────────────
+// ─── GET /api/intel/ipo-calendar ──────────────────────────────────────────────
 
 router.get('/ipo-calendar', intelLimiter, async (req, res) => {
   const { from, to } = req.query;

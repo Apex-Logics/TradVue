@@ -174,7 +174,7 @@ async function searchFilings({ query = 'insider', startDate = null, endDate = nu
 
 /**
  * Get recent insider trades + significant filings combined.
- * Used by the /api/insider-trades route (SEC portion).
+ * Used by the /api/intel/insider-trades route (SEC portion).
  */
 async function getRecentActivity({ symbol = null } = {}) {
   const cacheKey = `sec:recent_activity:${symbol || 'all'}`;

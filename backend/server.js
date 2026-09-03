@@ -161,21 +161,27 @@ app.use('/api/stripe',        cachePrivate,   require('./routes/stripe'));      
 app.use('/api/push',          cachePrivate,   require('./routes/push'));             // PWA push notification subscriptions
 app.use('/api/badges',        cachePrivate,   require('./routes/badges'));           // Verified performance badge generation + image metadata
 app.use('/api/verify',                        require('./routes/verify'));           // Public badge verification endpoint
-// Market Intelligence routes (public — no auth required)
-app.use('/api',               require('./routes/marketIntel'));         // FRED, SEC EDGAR, earnings/IPO calendars
 
 // ── Health check ──────────────────────────────────────────────────────────────
-app.get('/api/health', (req, res) => res.json({ status: 'OK', service: 'TradVue API' }));
-app.get('/health', (req, res) => {
-  res.json({ 
-    status: 'OK', 
+// Registered BEFORE market intel. A generic app.use('/api', intelRouter) would
+// otherwise let an intel catch-all (or a later /health route in that router)
+// steal GET /api/health. Keep both handlers on the real health payload.
+function sendHealth(_req, res) {
+  res.json({
+    status: 'OK',
     timestamp: new Date().toISOString(),
     service: 'TradVue API',
     // Deploy identity: RENDER_GIT_COMMIT (Render) / GIT_SHA / SOURCE_VERSION,
     // else BUILD_ID (set this env var on non-Render hosts). See lib/buildIdentity.js.
     build: getHealthBuildIdentity()
   });
-});
+}
+app.get('/api/health', sendHealth);
+app.get('/health', sendHealth);
+
+// Market Intelligence — namespaced under /api/intel so it cannot shadow /api/health
+// or other core API routes. Public, no auth required (FRED, SEC EDGAR, calendars).
+app.use('/api/intel',         require('./routes/marketIntel'));
 
 // ── Error handling middleware ─────────────────────────────────────────────────
 app.use((err, req, res, next) => {
