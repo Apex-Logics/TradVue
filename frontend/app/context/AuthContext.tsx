@@ -2,7 +2,7 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { trackLogout } from '../utils/analytics'
-import { initFullSync, getSyncStatus, subscribeSyncStatus, type SyncStatus } from '../utils/cloudSync'
+import { initFullSync, getSyncStatus, subscribeSyncStatus, resetJournalPullGate, type SyncStatus } from '../utils/cloudSync'
 import {
   apiLogin,
   apiRegister,
@@ -208,6 +208,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     trackLogout()
+    resetJournalPullGate()
     setToken(null)
     setUser(null)
     setBackendWatchlist([])
