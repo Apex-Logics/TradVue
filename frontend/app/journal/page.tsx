@@ -22,7 +22,7 @@ import {
 } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import { useAuth } from '../context/AuthContext'
-import { debouncedSyncJournal, initJournalSync, forceSyncFromCloud, resetJournalPullGate } from '../utils/cloudSync'
+import { debouncedSyncJournal, initJournalSync, forceSyncFromCloud } from '../utils/cloudSync'
 import { getUserTier, isDataLocked, canAccessFeature, getLockedEntryCount, getCsvDateLimit } from '../utils/tierAccess'
 import UpgradePrompt from '../components/UpgradePrompt'
 import AuthGate from '../components/AuthGate'
@@ -4110,7 +4110,6 @@ function JournalPageInner() {
   useEffect(() => {
     if (!token) {
       initialSyncDone.current = false  // Reset on logout so next login triggers sync
-      resetJournalPullGate()
       return
     }
     if (initialSyncDone.current) return

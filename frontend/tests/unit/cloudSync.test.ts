@@ -225,6 +225,41 @@ function mockJournalFetch(opts: {
   return ctl
 }
 
+/** Independent hang per journal GET — Auth initFullSync vs page initJournalSync. */
+function mockIndependentJournalGets(getPayload: unknown) {
+  const releaseGet: Array<() => void> = []
+  const getCompleted: boolean[] = []
+  const journalPuts: { data?: { trades?: unknown[]; notes?: unknown[] } }[] = []
+  let getIndex = 0
+
+  ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
+    const method = init?.method || 'GET'
+    const isJournal = String(url).includes('/api/user/data/journal')
+    if (isJournal && method === 'PUT') {
+      journalPuts.push(JSON.parse(init?.body || '{}'))
+      return { ok: true, json: async () => ({}) }
+    }
+    if (isJournal && method === 'GET') {
+      const idx = getIndex++
+      getCompleted[idx] = false
+      await new Promise<void>(resolve => {
+        releaseGet[idx] = resolve
+        q1PendingReleases.push(resolve)
+      })
+      getCompleted[idx] = true
+      return { ok: true, json: async () => ({ data: getPayload }) }
+    }
+    return { ok: true, json: async () => ({ data: null }) }
+  })
+
+  return {
+    journalPuts,
+    getCompleted,
+    releaseGet: (i: number) => { releaseGet[i]?.() },
+    journalGets: () => getIndex,
+  }
+}
+
 describe('Q1 — journal pull must complete before any journal push', () => {
   afterEach(() => {
     q1PendingReleases.forEach(fn => fn())
@@ -405,6 +440,52 @@ describe('Q1 — journal pull must complete before any journal push', () => {
 
     ctl.releaseGet()
     await remount
+    jest.useRealTimers()
+  })
+
+  test('two independent GETs: Auth pull completing must not open the gate while page GET is in flight', async () => {
+    // Nova blocker: journal first-paint !token reset zeroed Auth's inFlight.
+    // Auth endJournalPull then opened the gate while the page GET still hung.
+    // After fix: remount sequence keeps both pulls counted — complete only
+    // the first GET, assert 0 PUTs until the second GET settles, and no empty wipe.
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    const cloud = { trades: [{ id: 'cloud1' }], notes: [{ id: 'cloudNote' }] }
+    const ctl = mockIndependentJournalGets(cloud)
+
+    const full = initFullSync('tok')
+    const pagePull = initJournalSync('tok')
+    debouncedSyncJournal([], [])
+    await jest.advanceTimersByTimeAsync(1600)
+
+    expect(ctl.journalGets()).toBe(2)
+    expect(ctl.getCompleted[0]).toBe(false)
+    expect(ctl.getCompleted[1]).toBe(false)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet(0)
+    await full
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.getCompleted[0]).toBe(true)
+    expect(ctl.getCompleted[1]).toBe(false)
+    expect(ctl.journalPuts).toHaveLength(0)
+
+    ctl.releaseGet(1)
+    await pagePull
+    await Promise.resolve()
+    await Promise.resolve()
+
+    const emptyWipe = ctl.journalPuts.some(p =>
+      Array.isArray(p.data?.trades) && p.data.trades.length === 0 &&
+      Array.isArray(p.data?.notes) && p.data.notes.length === 0
+    )
+    expect(emptyWipe).toBe(false)
+    if (ctl.journalPuts.length > 0) {
+      expect(ctl.journalPuts[0].data?.trades).toEqual([{ id: 'cloud1' }])
+      expect(ctl.journalPuts[0].data?.notes).toEqual([{ id: 'cloudNote' }])
+    }
     jest.useRealTimers()
   })
 })

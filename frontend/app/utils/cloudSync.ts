@@ -153,6 +153,9 @@ async function cloudPut(token: string, type: string, data: unknown): Promise<boo
 // 1.5s debounce is only a burst coalescer — this flag is the actual gate.
 // Token change or a new idle pull (login remount / initFullSync / forceSync)
 // re-closes the gate so a hung GET past 1.5s cannot empty-PUT.
+// resetJournalPullGate is logout-only (AuthContext.logout) — never first-paint
+// / authLoading / !token on the journal page, or Auth's in-flight pull is
+// uncounted and its endJournalPull can open the gate while the page GET hangs.
 
 type JournalPullDeferred = { promise: Promise<void>; resolve: () => void }
 
@@ -206,7 +209,7 @@ async function waitForJournalPull(token: string): Promise<boolean> {
   return _journalPullToken === token && _journalPullComplete
 }
 
-/** Test / logout helper — drop in-flight debounce and re-close the gate. */
+/** Logout / test helper. Do not call on first paint or while auth is loading. */
 export function resetJournalPullGate(): void {
   _journalPullDeferred?.resolve()
   _journalPullToken = null
@@ -380,7 +383,6 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
   // ─────────────────────────────────────────────────────────────────────────
   const token = getToken()
   if (!token) {
-    resetJournalPullGate()
     setStatus('local-only')
     return
   }
@@ -391,7 +393,6 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
     _journalTimer = null
     const currentToken = getToken()
     if (!currentToken) {
-      resetJournalPullGate()
       setStatus('local-only')
       return
     }
@@ -606,7 +607,6 @@ export function debouncedSyncWatchlist(tickers: unknown[]): void {
 
 export async function initFullSync(token: string): Promise<void> {
   if (!token) {
-    resetJournalPullGate()
     setStatus('local-only')
     return
   }
