@@ -180,11 +180,15 @@ export async function initJournalSync(token: string): Promise<void> {
   try {
     const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
     if (cloudData) {
-      const cloudTrades     = cloudData.trades     ?? []
-      const cloudNotes      = cloudData.notes      ?? []
       const cloudTemplates  = cloudData.templates  ?? []
-      lsSet(TRADES_KEY,    cloudTrades)
-      lsSet(NOTES_KEY,     cloudNotes)
+      // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
+      // data. A cloud record that is missing trades/notes — or has them as empty
+      // arrays — must NOT overwrite (wipe) the user's local journal. Guard the
+      // overwrite the same way the other keys below are already guarded.
+      if (Array.isArray(cloudData.trades) && cloudData.trades.length > 0)
+        lsSet(TRADES_KEY, cloudData.trades)
+      if (Array.isArray(cloudData.notes) && cloudData.notes.length > 0)
+        lsSet(NOTES_KEY, cloudData.notes)
       if (cloudTemplates.length > 0) lsSet(TEMPLATES_KEY, cloudTemplates)
       // Restore extra keys — only if cloud has data (backward compat)
       if (cloudData.propFirmAccounts && cloudData.propFirmAccounts.length > 0)
@@ -226,11 +230,15 @@ export async function forceSyncFromCloud(): Promise<boolean> {
   try {
     const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
     if (cloudData) {
-      const cloudTrades     = cloudData.trades     ?? []
-      const cloudNotes      = cloudData.notes      ?? []
       const cloudTemplates  = cloudData.templates  ?? []
-      lsSet(TRADES_KEY,    cloudTrades)
-      lsSet(NOTES_KEY,     cloudNotes)
+      // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
+      // data. A cloud record that is missing trades/notes — or has them as empty
+      // arrays — must NOT overwrite (wipe) the user's local journal. Guard the
+      // overwrite the same way the other keys below are already guarded.
+      if (Array.isArray(cloudData.trades) && cloudData.trades.length > 0)
+        lsSet(TRADES_KEY, cloudData.trades)
+      if (Array.isArray(cloudData.notes) && cloudData.notes.length > 0)
+        lsSet(NOTES_KEY, cloudData.notes)
       if (cloudTemplates.length > 0) lsSet(TEMPLATES_KEY, cloudTemplates)
       // Restore extra keys — only if cloud has data (backward compat)
       if (cloudData.propFirmAccounts && cloudData.propFirmAccounts.length > 0)
@@ -269,7 +277,7 @@ export async function forceSyncFromCloud(): Promise<boolean> {
  */
 let _journalTimer: ReturnType<typeof setTimeout> | null = null
 
-export function debouncedSyncJournal(trades: unknown[], notes: unknown[], templates?: unknown[]): void {
+export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templates?: unknown[]): void {
   // ── All localStorage keys synced to cloud via this function (17 keys) ──────
   // 1.  cg_journal_trades
   // 2.  cg_journal_notes
@@ -303,6 +311,13 @@ export function debouncedSyncJournal(trades: unknown[], notes: unknown[], templa
     if (tpls === undefined) {
       try { tpls = JSON.parse(localStorage.getItem(TEMPLATES_KEY) || '[]') } catch { tpls = [] }
     }
+    // P0 2026-09 #2: never push a hardcoded empty notes array. When a caller
+    // omits notes (e.g. the trade-edit auto-save path), read the user's CURRENT
+    // notes from storage so an unrelated mutation can't wipe the cloud notes.
+    let nts = notes
+    if (nts === undefined) {
+      try { nts = JSON.parse(localStorage.getItem(NOTES_KEY) || '[]') } catch { nts = [] }
+    }
     const propFirmAccounts    = lsGet<unknown[]>(PROP_FIRM_ACCOUNTS_KEY, [])
     const journalDefaults     = getJournalDefaults()
     const dismissedWebhookIds = lsGet<unknown[]>(DISMISSED_WEBHOOKS_KEY, [])
@@ -321,7 +336,7 @@ export function debouncedSyncJournal(trades: unknown[], notes: unknown[], templa
     const alertPrefs         = lsGet<unknown>(ALERT_PREFS_KEY, null)
     const ok = await cloudPut(token, 'journal', {
       trades,
-      notes,
+      notes: nts,
       templates: tpls,
       propFirmAccounts,
       journalDefaults,
