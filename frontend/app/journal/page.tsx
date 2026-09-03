@@ -1358,7 +1358,10 @@ function TabTradeLog({ trades, setTrades, customTags, onAddCustomTag, prefill, c
         )
         const updated = trades.map((t: Trade) => t.id !== tradeId ? t : applyPatch(t))
         saveTrades(updated)
-        debouncedSyncJournal(updated, [])
+        // P0 2026-09 #2: omit notes so the sync sends the user's CURRENT notes
+        // from storage — never a hardcoded [] (which previously wiped cloud notes
+        // whenever a trade was edited).
+        debouncedSyncJournal(updated)
         setSavedNoticeTradeId(tradeId)
         setTimeout(() => setSavedNoticeTradeId((prev: string | null) => prev === tradeId ? null : prev), 2000)
       }, 500)

@@ -283,6 +283,50 @@ describe('TV-1: Payload Parser — format coverage', () => {
     expect(result.quantity).toBeNull();
   });
 
+  // ── Regression (P0 2026-09 #4): Pine exit_long must parse as exit/sell ──────
+  // Bug: the message parser checked `long` (buy) before `exit`, so an
+  // `exit_long` alert was misread as a BUY/entry instead of a SELL/exit,
+  // opening a phantom position instead of closing the real one.
+  test('TV-1.11: Pine alert_message "exit_long" → action=sell (not buy)', () => {
+    const result = parsePayload(JSON.stringify({
+      message: 'exit_long', ticker: 'AAPL', price: 190.00
+    }));
+    expect(result).not.toBeNull();
+    expect(result.ticker).toBe('AAPL');
+    expect(result.action).toBe('sell');
+  });
+
+  test('TV-1.12: Pine alert_message "entry_long" still → action=buy', () => {
+    const result = parsePayload(JSON.stringify({
+      message: 'entry_long', ticker: 'AAPL', price: 185.50
+    }));
+    expect(result).not.toBeNull();
+    expect(result.action).toBe('buy');
+  });
+
+  test('TV-1.13: Pine alert_message "exit_short" still → action=sell', () => {
+    const result = parsePayload(JSON.stringify({
+      message: 'exit_short', ticker: 'TSLA', price: 360.00
+    }));
+    expect(result).not.toBeNull();
+    expect(result.action).toBe('sell');
+  });
+
+  test('TV-1.14: Pine alert_message "close_long" → action=sell', () => {
+    const result = parsePayload(JSON.stringify({
+      message: 'close_long', ticker: 'NVDA', price: 900.00
+    }));
+    expect(result).not.toBeNull();
+    expect(result.action).toBe('sell');
+  });
+
+  test('TV-1.15: bare "long"/"short" direction words unchanged (long→buy, short→sell)', () => {
+    const longResult = parsePayload(JSON.stringify({ message: 'long', ticker: 'AAPL', price: 100 }));
+    const shortResult = parsePayload(JSON.stringify({ message: 'short', ticker: 'AAPL', price: 100 }));
+    expect(longResult.action).toBe('buy');
+    expect(shortResult.action).toBe('sell');
+  });
+
 });
 
 // ═══════════════════════════════════════════════════════════════════════════════
