@@ -30,6 +30,7 @@ if (!process.env.JWT_SECRET) {
 }
 
 const { redactWebhookPath, TRUST_PROXY_HOPS } = require('./lib/webhookSecurity');
+const { createCorsOriginDelegate } = require('./lib/corsOrigins');
 
 const app = express();
 const PORT = process.env.PORT || 3001;
@@ -56,16 +57,9 @@ app.use(helmet({
   referrerPolicy: { policy: 'strict-origin-when-cross-origin' }
 }));
 
-// ── CORS — locked to known origins ───────────────────────────────────────────
-const allowedOrigins = [
-  'https://www.tradvue.com',
-  'https://tradvue.com',
-];
-if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
-}
+// ── CORS — prod origins + optional CORS_ORIGINS (never `*` / arbitrary Origin)
 app.use(cors({
-  origin: allowedOrigins,
+  origin: createCorsOriginDelegate(),
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
   allowedHeaders: ['Content-Type', 'Authorization']
