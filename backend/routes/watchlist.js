@@ -58,7 +58,7 @@ router.get('/', requireAuth, async (req, res) => {
     const supabase = getSupabase();
     const { data: rows, error } = await supabase
       .from('watchlists')
-      .select('id,alert_threshold_up,alert_threshold_down,notes,created_at,purchase_price,instruments(symbol,name,type,exchange)')
+      .select('id,alert_threshold_up,alert_threshold_down,notes,created_at,instruments(symbol,name,type,exchange)')
       .eq('user_id', req.user.id)
       .order('created_at', { ascending: false });
 
@@ -90,7 +90,7 @@ router.get('/', requireAuth, async (req, res) => {
 // ──────────────────────────────────────────
 router.post('/', requireAuth, async (req, res) => {
   try {
-    const { symbol, alert_threshold_up, alert_threshold_down, purchase_price, notes } = req.body;
+    const { symbol, alert_threshold_up, alert_threshold_down, notes } = req.body;
     if (!symbol) return res.status(400).json({ error: 'Symbol is required' });
 
     const supabase = getSupabase();
@@ -159,7 +159,6 @@ router.post('/', requireAuth, async (req, res) => {
           alert_threshold_up: watchlistRow.alert_threshold_up,
           alert_threshold_down: watchlistRow.alert_threshold_down,
           notes: watchlistRow.notes,
-          purchase_price: watchlistRow.purchase_price,
           created_at: watchlistRow.created_at,
         },
         quote
@@ -227,7 +226,7 @@ router.get('/performance', requireAuth, async (req, res) => {
   try {
     const { data: rows, error } = await getSupabase()
       .from('watchlists')
-      .select('id,alert_threshold_up,alert_threshold_down,notes,created_at,purchase_price,instruments(symbol,name,type,exchange)')
+      .select('id,alert_threshold_up,alert_threshold_down,notes,created_at,instruments(symbol,name,type,exchange)')
       .eq('user_id', req.user.id);
 
     if (error) throw new Error(error.message);

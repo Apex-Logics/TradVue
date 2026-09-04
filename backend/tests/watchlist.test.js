@@ -110,12 +110,12 @@ beforeEach(() => {
 
 afterEach(() => jest.clearAllMocks());
 
+// Live watchlists schema (staging + prod): no purchase_price column.
 const MOCK_JOINED_ROW = {
   id: 1,
   alert_threshold_up: null,
   alert_threshold_down: null,
   notes: null,
-  purchase_price: null,
   created_at: new Date().toISOString(),
   instruments: {
     symbol: 'AAPL',
@@ -124,6 +124,29 @@ const MOCK_JOINED_ROW = {
     exchange: 'NASDAQ',
   },
 };
+
+const MISSING_PURCHASE_PRICE_ERROR = {
+  message: 'column watchlists.purchase_price does not exist',
+};
+
+function rejectIfSelectingPurchasePrice(result) {
+  let rejected = false;
+  const resolved = () => (
+    rejected
+      ? { data: null, error: MISSING_PURCHASE_PRICE_ERROR }
+      : result
+  );
+  const chain = {
+    select: jest.fn((cols) => {
+      rejected = String(cols).includes('purchase_price');
+      return chain;
+    }),
+    eq: jest.fn(() => chain),
+    order: jest.fn(async () => resolved()),
+    then: (resolve, rejectFn) => Promise.resolve(resolved()).then(resolve, rejectFn),
+  };
+  return chain;
+}
 
 const MOCK_QUOTE = {
   current: 178.5,
@@ -142,6 +165,32 @@ describe('GET /api/watchlist', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ watchlist: [], total_items: 0 });
+  });
+
+  test('returns 200 with empty list when Supabase has no purchase_price column', async () => {
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: rejectIfSelectingPurchasePrice({ data: [], error: null }),
+    }));
+
+    const res = await request(app).get('/api/watchlist');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ watchlist: [], total_items: 0 });
+  });
+
+  test('returns 200 enriched list when rows omit purchase_price', async () => {
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: rejectIfSelectingPurchasePrice({ data: [MOCK_JOINED_ROW], error: null }),
+    }));
+    finnhub.getBatchQuotes.mockResolvedValueOnce({ AAPL: MOCK_QUOTE });
+
+    const res = await request(app).get('/api/watchlist');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.total_items).toBe(1);
+    expect(res.body.watchlist[0].symbol).toBe('AAPL');
+    expect(res.body.watchlist[0].current_price).toBe(178.5);
+    expect(res.body.watchlist[0].performance).toBeNull();
   });
 
   test('returns enriched watchlist items with live quotes', async () => {
@@ -187,7 +236,7 @@ describe('POST /api/watchlist', () => {
         }),
       insert: jest.fn(() => ({
         select: jest.fn(async () => ({
-          data: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, purchase_price: null, created_at: new Date().toISOString() }],
+          data: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, created_at: new Date().toISOString() }],
           error: null,
         })),
       })),
@@ -210,6 +259,8 @@ describe('POST /api/watchlist', () => {
     expect(res.body.message).toBe('Added to watchlist');
     expect(res.body.item.symbol).toBe('AAPL');
     expect(res.body.item.current_price).toBe(178.5);
+    expect(res.body.item.performance).toBeNull();
+    expect(watchlists.insert.mock.calls[0][0]).not.toHaveProperty('purchase_price');
   });
 
   test('returns 400 when symbol is missing', async () => {
@@ -343,10 +394,10 @@ describe('GET /api/watchlist/performance', () => {
     expect(res.body.items).toEqual([]);
   });
 
-  test('calculates P&L correctly for tracked items', async () => {
+  test('returns 200 with untracked items when purchase_price column is absent', async () => {
     mockCreateClient.mockReturnValueOnce(createSupabaseMock({
-      watchlists: makeSelectEq({
-        data: [{ ...MOCK_JOINED_ROW, purchase_price: '160.00' }],
+      watchlists: rejectIfSelectingPurchasePrice({
+        data: [MOCK_JOINED_ROW],
         error: null,
       }),
     }));
@@ -355,12 +406,11 @@ describe('GET /api/watchlist/performance', () => {
     const res = await request(app).get('/api/watchlist/performance');
 
     expect(res.statusCode).toBe(200);
-    const { summary } = res.body;
+    const { summary, items } = res.body;
     expect(summary.total_items).toBe(1);
-    expect(summary.tracked_items).toBe(1);
-    expect(summary.total_investment).toBe(160);
-    expect(summary.total_current_value).toBe(178.5);
-    expect(summary.total_change).toBeCloseTo(18.5, 2);
-    expect(summary.total_change_percent).toBeCloseTo(11.56, 1);
+    expect(summary.tracked_items).toBe(0);
+    expect(summary.total_investment).toBe(0);
+    expect(items[0].purchase_price).toBeNull();
+    expect(items[0].current_price).toBe(178.5);
   });
 });
