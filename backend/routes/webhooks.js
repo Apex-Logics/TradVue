@@ -8,11 +8,16 @@
  *
  * Security model:
  *   - IP allowlist enforced FIRST — only TradingView IPs + localhost accepted
+ *   - Client IP from Express `req.ip` with `trust proxy` = 1 (Render). Never
+ *     the leftmost X-Forwarded-For hop (attacker-controlled).
  *   - Max payload size: 10KB (enforced via express.text/express.raw body parser limit)
- *   - Token validated against webhook_tokens table
+ *   - Token validated against webhook_tokens table (dual-read: plaintext then SHA-256)
  *   - Per-token rate limit: 30 req/minute (in-memory, resets on restart)
  *   - All string inputs sanitized before DB write
- *   - 200 returned immediately; trade matching runs async
+ *   - Token is validated BEFORE ack; trade matching still runs async after 200.
+ *     TV keeps a 200 even on auth fail (3s timeout / retry storm). Auth-fail
+ *     events are persisted so the Events log is not empty. Trades are never
+ *     applied on a bad token.
  */
 
 'use strict';
@@ -22,6 +27,11 @@ const crypto  = require('crypto');
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('../middleware/auth');
 const xss = require('xss');
+const {
+  getSourceIP,
+  hashWebhookToken,
+  tokenLogId,
+} = require('../lib/webhookSecurity');
 
 // ── Routers ───────────────────────────────────────────────────────────────────
 
@@ -72,16 +82,53 @@ function getServiceClient() {
   });
 }
 
-// ── IP Extraction ─────────────────────────────────────────────────────────────
-function getSourceIP(req) {
-  // Check x-forwarded-for first (reverse proxy / Render / Railway)
-  const forwarded = req.headers['x-forwarded-for'];
-  if (forwarded) {
-    // x-forwarded-for can be comma-separated; take the first (client) IP
-    const firstIP = forwarded.split(',')[0].trim();
-    if (firstIP) return firstIP;
+// ── Token lookup (dual-read: legacy plaintext, then SHA-256 hex) ─────────────
+// Existing rows store the 32-char hex secret in `webhook_tokens.token` because
+// GET /api/webhooks/tokens is the copy-URL source. Hash-at-rest of NEW rows is
+// deferred until a show-once UI exists (hashing the column would make GET
+// return a digest that users would paste into TV/NT, breaking ingest).
+// Dual-read still accepts a SHA-256 digest if an operator hashes a row.
+async function findWebhookToken(supabase, userToken) {
+  const select = 'id, user_id, is_active, trade_count, token';
+  const { data: plainRow, error: plainErr } = await supabase
+    .from('webhook_tokens')
+    .select(select)
+    .eq('token', userToken)
+    .maybeSingle();
+  if (plainErr) return { tokenRow: null, error: plainErr };
+  if (plainRow) return { tokenRow: plainRow, error: null };
+
+  const hashed = hashWebhookToken(userToken);
+  if (hashed === userToken) return { tokenRow: null, error: null };
+
+  const { data: hashRow, error: hashErr } = await supabase
+    .from('webhook_tokens')
+    .select(select)
+    .eq('token', hashed)
+    .maybeSingle();
+  return { tokenRow: hashRow || null, error: hashErr || null };
+}
+
+function rawPayloadFromBody(body, maxLen = 2000) {
+  if (typeof body === 'string') return { raw: body.slice(0, maxLen) };
+  if (body && typeof body === 'object') return body;
+  return { raw: String(body || '') };
+}
+
+/** Persist an auth-fail event. Never throws — logging must not block the ack. */
+async function recordAuthFailEvent(supabase, { tokenId, userId, sourceIP, rawPayload, reason }) {
+  try {
+    await supabase.from('webhook_events').insert({
+      token_id:      tokenId || null,
+      user_id:       userId || null,
+      source_ip:     sourceIP,
+      raw_payload:   rawPayload || {},
+      status:        'auth_fail',
+      error_message: reason,
+    });
+  } catch (err) {
+    console.error('[Webhook] Failed to record auth_fail event:', err.message);
   }
-  return req.socket?.remoteAddress || req.ip || 'unknown';
 }
 
 // ── Payload Parser ────────────────────────────────────────────────────────────
@@ -645,47 +692,56 @@ receiverRouter.post(
     }
 
     const { userToken } = req.params;
+    const logId = tokenLogId(userToken);
 
     // ── 2. Token rate limit ────────────────────────────────────────────────
     if (!checkTokenRateLimit(userToken)) {
-      console.warn(`[Webhook] Rate limit exceeded for token: ${userToken.slice(0, 8)}...`);
+      console.warn(`[Webhook] Rate limit exceeded for token: ${logId}...`);
       return res.status(429).json({ error: 'Rate limit exceeded' });
     }
 
-    // ── 3. Respond 200 IMMEDIATELY — TradingView has a 3-second timeout ───
+    // ── 3. Validate token BEFORE ack. Trade matching stays async. ──────────
+    // TradingView's webhook timeout is 3s. Token lookup is a single Supabase
+    // round-trip (typically well under that), so validate-then-ack is safe.
+    // We still return 200 on auth fail so TV does not retry-storm; the event
+    // is persisted first so Events is not empty. Trades are not applied.
+    let supabase;
+    let tokenRow;
+    try {
+      supabase = getServiceClient();
+      const lookedUp = await findWebhookToken(supabase, userToken);
+      tokenRow = lookedUp.tokenRow;
+      if (lookedUp.error || !tokenRow || !tokenRow.is_active) {
+        const reason = !tokenRow || lookedUp.error
+          ? 'auth_fail: invalid token'
+          : 'auth_fail: inactive token';
+        console.warn(`[Webhook] ${reason} (${logId}...)`);
+        await recordAuthFailEvent(supabase, {
+          tokenId:    tokenRow ? tokenRow.id : null,
+          userId:     tokenRow ? tokenRow.user_id : null,
+          sourceIP,
+          rawPayload: rawPayloadFromBody(req.body, 1000),
+          reason,
+        });
+        return res.status(200).json({ ok: true });
+      }
+    } catch (err) {
+      console.error('[Webhook] Token validation error:', err.message);
+      return res.status(500).json({ error: 'Internal server error' });
+    }
+
+    const { id: tokenId, user_id: userId, trade_count } = tokenRow;
+
+    // ── 4. Ack 200 now; parse + match stay async (the slow part) ───────────
     res.status(200).json({ ok: true });
 
-    // ── 4. Everything else is async ───────────────────────────────────────
     setImmediate(async () => {
       try {
-        const supabase = getServiceClient();
-
-        // 4a. Validate token
-        const { data: tokenRow, error: tokenErr } = await supabase
-          .from('webhook_tokens')
-          .select('id, user_id, is_active, trade_count')
-          .eq('token', userToken)
-          .maybeSingle();
-
-        if (tokenErr || !tokenRow) {
-          console.warn(`[Webhook] Invalid token: ${userToken.slice(0, 8)}...`);
-          return;
-        }
-
-        if (!tokenRow.is_active) {
-          console.warn(`[Webhook] Inactive token: ${userToken.slice(0, 8)}...`);
-          return;
-        }
-
-        const { id: tokenId, user_id: userId, trade_count } = tokenRow;
-
-        // 4b. Parse payload
         const body   = req.body;
         let parsed   = null;
         let parseErr = null;
 
         try {
-          // body is a string from express.text() — try JSON then plain-text
           const bodyStr = typeof body === 'string' ? body : JSON.stringify(body);
           parsed = parsePayload(bodyStr);
         } catch (e) {
@@ -693,26 +749,23 @@ receiverRouter.post(
         }
 
         if (!parsed) {
-          // Store raw event with error status
           await supabase.from('webhook_events').insert({
             token_id:    tokenId,
             user_id:     userId,
             source_ip:   sourceIP,
-            raw_payload: { raw: typeof body === 'string' ? body.slice(0, 1000) : body },
+            raw_payload: rawPayloadFromBody(body, 1000),
             status:      'error',
             error_message: parseErr || 'Failed to parse payload',
           });
-          console.warn(`[Webhook] Parse failed for token ${userToken.slice(0, 8)}...`);
+          console.warn(`[Webhook] Parse failed for token ${logId}...`);
           return;
         }
 
-        // 4c-4d. Idempotent ingest (event insert + de-dup) + trade matching
-        const rawPayload = typeof body === 'string' ? { raw: body } : body;
+        const rawPayload = rawPayloadFromBody(body);
         const { matched, duplicate } = await ingestAndMatch(supabase, {
           tokenId, userId, sourceIP, rawPayload, parsed,
         });
 
-        // 4e. Update token last_used_at and trade_count (retries don't re-count)
         await supabase
           .from('webhook_tokens')
           .update({
@@ -722,7 +775,7 @@ receiverRouter.post(
           .eq('id', tokenId);
 
         console.log(
-          `[Webhook] Processed: token=${userToken.slice(0, 8)} ` +
+          `[Webhook] Processed: token=${logId} ` +
           `ticker=${parsed.ticker} action=${parsed.action} ` +
           `matched=${matched} duplicate=${!!duplicate}`
         );
@@ -750,9 +803,11 @@ receiverRouter.post(
     const sourceIP = getSourceIP(req);
     const { userToken } = req.params;
 
+    const logId = tokenLogId(userToken);
+
     // Rate limit per token
     if (!checkTokenRateLimit(userToken)) {
-      console.warn(`[Webhook/NT] Rate limit exceeded for token: ${userToken.slice(0, 8)}...`);
+      console.warn(`[Webhook/NT] Rate limit exceeded for token: ${logId}...`);
       return res.status(429).json({ error: 'Rate limit exceeded' });
     }
 
@@ -762,23 +817,32 @@ receiverRouter.post(
     let tokenRow;
     try {
       supabase = getServiceClient();
-      const { data, error: tokenErr } = await supabase
-        .from('webhook_tokens')
-        .select('id, user_id, is_active, trade_count')
-        .eq('token', userToken)
-        .maybeSingle();
+      const lookedUp = await findWebhookToken(supabase, userToken);
+      tokenRow = lookedUp.tokenRow;
 
-      if (tokenErr || !data) {
-        console.warn(`[Webhook/NT] Invalid token: ${userToken.slice(0, 8)}...`);
+      if (lookedUp.error || !tokenRow) {
+        console.warn(`[Webhook/NT] Invalid token: ${logId}...`);
+        await recordAuthFailEvent(supabase, {
+          tokenId: null,
+          userId: null,
+          sourceIP,
+          rawPayload: rawPayloadFromBody(req.body),
+          reason: 'auth_fail: invalid token',
+        });
         return res.status(401).json({ error: 'Invalid token' });
       }
 
-      if (!data.is_active) {
-        console.warn(`[Webhook/NT] Inactive token: ${userToken.slice(0, 8)}...`);
+      if (!tokenRow.is_active) {
+        console.warn(`[Webhook/NT] Inactive token: ${logId}...`);
+        await recordAuthFailEvent(supabase, {
+          tokenId: tokenRow.id,
+          userId: tokenRow.user_id,
+          sourceIP,
+          rawPayload: rawPayloadFromBody(req.body),
+          reason: 'auth_fail: inactive token',
+        });
         return res.status(401).json({ error: 'Token is inactive' });
       }
-
-      tokenRow = data;
     } catch (err) {
       console.error('[Webhook/NT] Token validation error:', err.message);
       return res.status(500).json({ error: 'Internal server error' });
@@ -807,7 +871,7 @@ receiverRouter.post(
           error_message: parseErr || 'Failed to parse payload',
         });
       } catch (_) {}
-      console.warn(`[Webhook/NT] Parse failed for token ${userToken.slice(0, 8)}...`);
+      console.warn(`[Webhook/NT] Parse failed for token ${logId}...`);
       return res.status(400).json({ error: 'Invalid payload format' });
     }
 
@@ -830,7 +894,7 @@ receiverRouter.post(
           })
           .eq('id', tokenId);
 
-        console.log(`[Webhook/NT] Processed: token=${userToken.slice(0, 8)} ticker=${parsed.ticker} action=${parsed.action} matched=${matched} duplicate=${!!duplicate}`);
+        console.log(`[Webhook/NT] Processed: token=${logId} ticker=${parsed.ticker} action=${parsed.action} matched=${matched} duplicate=${!!duplicate}`);
       } catch (err) {
         console.error('[Webhook/NT] Processing error:', err.message);
       }
@@ -1098,7 +1162,7 @@ managementRouter.post('/test', requireAuth, async (req, res) => {
       .update({ last_used_at: new Date().toISOString() })
       .eq('id', tokenId);
 
-    console.log(`[Webhook Test] Test event created for user=${userId} token=${tokenRow.token.slice(0, 8)}...`);
+    console.log(`[Webhook Test] Test event created for user=${userId} token=${tokenLogId(tokenRow.token)}...`);
 
     res.status(201).json({
       success: true,
@@ -1117,4 +1181,5 @@ module.exports = {
   receiverRouter, managementRouter, tradesRouter,
   _matchAndJournalTrade, matchAndJournalTrade, parsePayload,
   ingestAndMatch, idempotencyKeyFor, findDuplicateEvent, isUniqueViolation,
+  getSourceIP, findWebhookToken, recordAuthFailEvent, hashWebhookToken,
 };
