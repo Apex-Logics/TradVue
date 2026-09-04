@@ -478,7 +478,7 @@ export function resetJournalPullGate(): void {
 
 // ── Journal sync ──────────────────────────────────────────────────────────────
 
-interface CloudJournalData {
+interface CloudJournalData extends JournalBlob {
   trades?: unknown[]
   notes?: unknown[]
   templates?: unknown[]
