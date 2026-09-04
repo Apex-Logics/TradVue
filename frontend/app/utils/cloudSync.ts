@@ -223,7 +223,7 @@ function applyMergedJournalToLocal(payload: CloudJournalData): void {
 }
 
 async function cloudPutJournal(token: string, data: CloudJournalData): Promise<boolean> {
-  let payload: JournalBlob = data
+  let payload: JournalBlob = { ...data }
   for (let attempt = 0; attempt < JOURNAL_PUT_MAX_ATTEMPTS; attempt++) {
     const expected = readJournalUpdatedAt(token)
     try {

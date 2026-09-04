@@ -663,15 +663,16 @@ function mockJournalVersioned(opts: {
       putCount += 1
       const body = JSON.parse(init?.body || '{}')
       puts.push({ ...body, headers: init?.headers || {} })
-      if (opts.conflictOnFirstPut && putCount === 1) {
+      const conflict = opts.conflictOnFirstPut
+      if (conflict && putCount === 1) {
         return {
           ok: false,
           status: 409,
           json: async () => ({
             error: 'version_conflict',
             type: 'journal',
-            updated_at: opts.conflictOnFirstPut.serverUpdatedAt,
-            data: { data: opts.conflictOnFirstPut.serverPayload },
+            updated_at: conflict.serverUpdatedAt,
+            data: { data: conflict.serverPayload },
           }),
         }
       }

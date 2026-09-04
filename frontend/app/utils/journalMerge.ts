@@ -90,7 +90,7 @@ export function mergeJournalBlobs(incoming: JournalBlob, server: JournalBlob): J
     const inc = incoming[key]
     const srv = server[key]
     if (inc !== undefined || srv !== undefined) {
-      merged[key] = mergeJournalArrays(inc, srv)
+      merged[key] = mergeJournalArrays(inc, srv) as unknown[]
     }
   }
   if (incoming.dismissedWebhookIds !== undefined || server.dismissedWebhookIds !== undefined) {
@@ -118,9 +118,9 @@ export function mergeJournalBlobs(incoming: JournalBlob, server: JournalBlob): J
 export function unwrapUserDataPayload(json: unknown): unknown {
   if (!json || typeof json !== 'object' || Array.isArray(json)) return json
   const rec = json as Record<string, unknown>
-  let payload = rec.data ?? rec.journal ?? json
-  if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
-    payload = (payload as { data: unknown }).data
+  const first = rec.data ?? rec.journal ?? json
+  if (first && typeof first === 'object' && !Array.isArray(first) && 'data' in first) {
+    return (first as { data: unknown }).data
   }
-  return payload
+  return first
 }
