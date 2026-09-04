@@ -9,6 +9,9 @@
  *
  * NOTE: Migrated from db.query (direct Postgres/IPv6) to Supabase REST
  * (HTTPS/IPv4) to fix intermittent connectivity issues on Render.
+ *
+ * user_id is the Supabase Auth UUID from requireAuth (migration 021).
+ * Never parseInt / coerce it — INTEGER user_id 500s every current auth user.
  */
 
 const express = require('express');
@@ -19,6 +22,14 @@ const { requireAuth } = require('../middleware/auth');
 
 function getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
+}
+
+/**
+ * Supabase Auth UUID from requireAuth (auth.users.id).
+ * watchlists.user_id is UUID (migration 021) — never parseInt this.
+ */
+function authUserId(req) {
+  return String(req.user.id);
 }
 
 function enrichItem(dbItem, quote) {
@@ -59,7 +70,7 @@ router.get('/', requireAuth, async (req, res) => {
     const { data: rows, error } = await supabase
       .from('watchlists')
       .select('id,alert_threshold_up,alert_threshold_down,notes,created_at,instruments(symbol,name,type,exchange)')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .order('created_at', { ascending: false });
 
     if (error) throw new Error(error.message);
@@ -112,7 +123,7 @@ router.post('/', requireAuth, async (req, res) => {
     const { data: existing, error: dupErr } = await supabase
       .from('watchlists')
       .select('id')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('instrument_id', instrument.id);
 
     if (dupErr) throw new Error(dupErr.message);
@@ -125,7 +136,7 @@ router.post('/', requireAuth, async (req, res) => {
       const { count, error: cntErr } = await supabase
         .from('watchlists')
         .select('*', { count: 'exact', head: true })
-        .eq('user_id', req.user.id);
+        .eq('user_id', authUserId(req));
       if (cntErr) throw new Error(cntErr.message);
       if ((count || 0) >= 10) {
         return res.status(403).json({ error: 'Free tier limited to 10 watchlist items. Upgrade to add more.' });
@@ -135,7 +146,7 @@ router.post('/', requireAuth, async (req, res) => {
     const { data: rows, error: insertErr } = await supabase
       .from('watchlists')
       .insert({
-        user_id: req.user.id,
+        user_id: authUserId(req),
         instrument_id: instrument.id,
         alert_threshold_up: alert_threshold_up || null,
         alert_threshold_down: alert_threshold_down || null,
@@ -185,7 +196,7 @@ router.put('/:id/alerts', requireAuth, async (req, res) => {
         ...(alert_threshold_down !== undefined ? { alert_threshold_down } : {}),
       })
       .eq('id', parseInt(id))
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .select();
 
     if (error) throw new Error(error.message);
@@ -207,7 +218,7 @@ router.delete('/:id', requireAuth, async (req, res) => {
       .from('watchlists')
       .delete()
       .eq('id', parseInt(id))
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .select();
 
     if (error) throw new Error(error.message);
@@ -227,7 +238,7 @@ router.get('/performance', requireAuth, async (req, res) => {
     const { data: rows, error } = await getSupabase()
       .from('watchlists')
       .select('id,alert_threshold_up,alert_threshold_down,notes,created_at,instruments(symbol,name,type,exchange)')
-      .eq('user_id', req.user.id);
+      .eq('user_id', authUserId(req));
 
     if (error) throw new Error(error.message);
     if (!rows || rows.length === 0) return res.json({ summary: { total_items: 0 }, items: [] });
