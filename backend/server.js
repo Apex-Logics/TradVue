@@ -21,6 +21,7 @@ const morgan = require('morgan');
 const compression = require('compression');
 const { generalLimiter } = require('./services/rateLimit');
 const { getHealthBuildIdentity } = require('./lib/buildIdentity');
+const { getAllowedOrigins } = require('./lib/corsOrigins');
 require('dotenv').config();
 
 // ── Startup safety checks ────────────────────────────────────────────────────
@@ -57,13 +58,11 @@ app.use(helmet({
 }));
 
 // ── CORS — locked to known origins ───────────────────────────────────────────
-const allowedOrigins = [
-  'https://www.tradvue.com',
-  'https://tradvue.com',
-];
-if (process.env.NODE_ENV !== 'production') {
-  allowedOrigins.push('http://localhost:3000', 'http://localhost:3001');
-}
+// Defaults: https://www.tradvue.com, https://tradvue.com (+ localhost in non-prod).
+// Extra origins: optional CORS_ORIGINS (comma-separated concrete URLs). Staging
+// Render (`tradvue-api-staging`) should set the Vercel staging host(s) here.
+// Do not use a *.vercel.app wildcard — list exact origins. See lib/corsOrigins.js.
+const allowedOrigins = getAllowedOrigins();
 app.use(cors({
   origin: allowedOrigins,
   credentials: true,
