@@ -8,11 +8,28 @@
  *   - forceSyncFromCloud → manual pull (same as login).
  *
  * Journal PUTs send updated_at as a precondition (Q2). A 409 merges
- * trades/notes/related arrays by stable id and retries. Fails silently —
- * localStorage-only flow always works.
+ * trades/notes/related arrays by stable id and retries. Q3 tombstones
+ * (`_deleted` in the journal blob) propagate intentional deletes without
+ * re-enabling silent empty overwrite of non-empty local (Q9). Fails
+ * silently — localStorage-only flow always works.
  */
 
-import { mergeJournalBlobs, unwrapUserDataPayload, type JournalBlob } from './journalMerge'
+import {
+  JOURNAL_DELETED_KEY,
+  applyTombstonesToArray,
+  compactDeletedMap,
+  deletedMapIsEmpty,
+  detectNewDeletes,
+  extractDeletedMap,
+  hasDeletedStamps,
+  liveIdsFromBlob,
+  mergeDeletedMaps,
+  mergeJournalBlobs,
+  stripTombstonedRows,
+  unwrapUserDataPayload,
+  type DeletedMap,
+  type JournalBlob,
+} from './journalMerge'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://tradvue-api.onrender.com'
 
@@ -86,6 +103,12 @@ const ALERT_PREFS_KEY      = 'cg_alert_prefs'
 
 // ── Price alerts key (bundled into settings payload) ──────────────────────────
 const PRICE_ALERTS_KEY = 'cg_price_alerts'
+const WATCHLIST_KEY = 'cg_wl'
+
+// Q3: persist tombstones + last-synced live ids so a delete after reload
+// still produces a `_deleted` entry on the next PUT.
+const JOURNAL_DELETED_LS_KEY = 'cg_journal_deleted'
+const JOURNAL_SYNCED_IDS_KEY = 'cg_journal_synced_ids'
 
 /** Collect all cg_journal_defaults_* keys into { AssetClass: {...}, ... } */
 function getJournalDefaults(): Record<string, unknown> {
@@ -199,31 +222,126 @@ function clearJournalUpdatedAt(): void {
   try { localStorage.removeItem(JOURNAL_UPDATED_AT_KEY) } catch {}
 }
 
-function applyMergedJournalToLocal(payload: CloudJournalData): void {
-  // Q9: do not write empty trades/notes over non-empty local.
-  if (Array.isArray(payload.trades) && payload.trades.length > 0) lsSet(TRADES_KEY, payload.trades)
-  if (Array.isArray(payload.notes) && payload.notes.length > 0) lsSet(NOTES_KEY, payload.notes)
-  if (Array.isArray(payload.templates) && payload.templates.length > 0) lsSet(TEMPLATES_KEY, payload.templates)
-  if (Array.isArray(payload.propFirmAccounts) && payload.propFirmAccounts.length > 0) {
-    lsSet(PROP_FIRM_ACCOUNTS_KEY, payload.propFirmAccounts)
+function readDeletedMap(): DeletedMap {
+  return lsGet<DeletedMap>(JOURNAL_DELETED_LS_KEY, {})
+}
+
+function persistDeletedMap(map: DeletedMap): void {
+  const compact = compactDeletedMap(map)
+  if (deletedMapIsEmpty(compact)) {
+    try { localStorage.removeItem(JOURNAL_DELETED_LS_KEY) } catch {}
+    return
   }
-  if (payload.journalDefaults && Object.keys(payload.journalDefaults).length > 0) {
-    setJournalDefaults(payload.journalDefaults)
+  lsSet(JOURNAL_DELETED_LS_KEY, compact)
+}
+
+function readSyncedIds(): Partial<Record<string, string[]>> {
+  return lsGet<Partial<Record<string, string[]>>>(JOURNAL_SYNCED_IDS_KEY, {})
+}
+
+function persistSyncedIds(ids: Partial<Record<string, string[]>>): void {
+  lsSet(JOURNAL_SYNCED_IDS_KEY, ids)
+}
+
+function snapshotSyncedIdsFromLocal(): void {
+  persistSyncedIds({
+    trades: liveIdsFromBlob({ trades: lsGet<unknown[]>(TRADES_KEY, []) }).trades,
+    notes: liveIdsFromBlob({ notes: lsGet<unknown[]>(NOTES_KEY, []) }).notes,
+    templates: liveIdsFromBlob({ templates: lsGet<unknown[]>(TEMPLATES_KEY, []) }).templates,
+    propFirmAccounts: liveIdsFromBlob({ propFirmAccounts: lsGet<unknown[]>(PROP_FIRM_ACCOUNTS_KEY, []) }).propFirmAccounts,
+    playbooks: liveIdsFromBlob({ playbooks: lsGet<unknown[]>(PLAYBOOKS_KEY, []) }).playbooks,
+    coachSummaries: liveIdsFromBlob({ coachSummaries: lsGet<unknown[]>(COACH_SUMMARIES_KEY, []) }).coachSummaries,
+    ritualEntries: liveIdsFromBlob({ ritualEntries: lsGet<unknown[]>(RITUAL_ENTRIES_KEY, []) }).ritualEntries,
+    customTags: liveIdsFromBlob({ customTags: lsGet<unknown[]>(CUSTOM_TAGS_KEY, []) }).customTags,
+    dismissedWebhookIds: liveIdsFromBlob({ dismissedWebhookIds: lsGet<unknown[]>(DISMISSED_WEBHOOKS_KEY, []) }).dismissedWebhookIds,
+    dashboardWatchlist: liveIdsFromBlob({ dashboardWatchlist: lsGet<unknown[]>(WATCHLIST_KEY, []) }).dashboardWatchlist,
+  })
+}
+
+/** Q9: bare empty/missing cloud array does not wipe local. Q3: tombstones still drop those ids. */
+function applyGuardedCloudArray(
+  storageKey: string,
+  cloudArr: unknown,
+  stamps?: Record<string, string | true | null>,
+): void {
+  if (Array.isArray(cloudArr) && cloudArr.length > 0) {
+    lsSet(storageKey, applyTombstonesToArray(cloudArr, stamps))
+    return
   }
-  if (Array.isArray(payload.dismissedWebhookIds) && payload.dismissedWebhookIds.length > 0) {
-    lsSet(DISMISSED_WEBHOOKS_KEY, payload.dismissedWebhookIds)
-  }
-  if (payload.playbooks != null) lsSet(PLAYBOOKS_KEY, payload.playbooks)
-  if (payload.customTags != null) lsSet(CUSTOM_TAGS_KEY, payload.customTags)
-  if (payload.ritualEntries != null) lsSet(RITUAL_ENTRIES_KEY, payload.ritualEntries)
-  if (payload.coachSummaries != null) lsSet(COACH_SUMMARIES_KEY, payload.coachSummaries)
-  if (Array.isArray(payload.dashboardWatchlist) && payload.dashboardWatchlist.length > 0) {
-    lsSet(WATCHLIST_KEY, payload.dashboardWatchlist)
+  if (hasDeletedStamps(stamps)) {
+    const local = lsGet<unknown[]>(storageKey, [])
+    if (Array.isArray(local) && local.length > 0) {
+      lsSet(storageKey, applyTombstonesToArray(local, stamps))
+    }
   }
 }
 
+/** Existing non-null overwrite, but empty + tombstones filters local instead of wiping everything. */
+function applyNullableCloudArray(
+  storageKey: string,
+  cloudVal: unknown,
+  stamps?: Record<string, string | true | null>,
+): void {
+  if (cloudVal == null) return
+  if (Array.isArray(cloudVal)) {
+    if (cloudVal.length > 0) {
+      lsSet(storageKey, applyTombstonesToArray(cloudVal, stamps))
+      return
+    }
+    if (hasDeletedStamps(stamps)) {
+      const local = lsGet<unknown[]>(storageKey, [])
+      lsSet(storageKey, applyTombstonesToArray(Array.isArray(local) ? local : [], stamps))
+      return
+    }
+  }
+  lsSet(storageKey, cloudVal)
+}
+
+function applyPulledJournal(cloudData: CloudJournalData): void {
+  const deleted = mergeDeletedMaps(readDeletedMap(), extractDeletedMap(cloudData))
+  persistDeletedMap(deleted)
+
+  applyGuardedCloudArray(TRADES_KEY, cloudData.trades, deleted.trades)
+  applyGuardedCloudArray(NOTES_KEY, cloudData.notes, deleted.notes)
+  applyGuardedCloudArray(TEMPLATES_KEY, cloudData.templates, deleted.templates)
+  applyGuardedCloudArray(PROP_FIRM_ACCOUNTS_KEY, cloudData.propFirmAccounts, deleted.propFirmAccounts)
+  if (cloudData.journalDefaults && Object.keys(cloudData.journalDefaults).length > 0) {
+    setJournalDefaults(cloudData.journalDefaults)
+  }
+  applyGuardedCloudArray(DISMISSED_WEBHOOKS_KEY, cloudData.dismissedWebhookIds, deleted.dismissedWebhookIds)
+  if (cloudData.privacyMode != null && cloudData.privacyMode !== '') {
+    try { localStorage.setItem(PRIVACY_KEY, cloudData.privacyMode) } catch {}
+  }
+  if (cloudData.customTags != null) applyNullableCloudArray(CUSTOM_TAGS_KEY, cloudData.customTags, deleted.customTags)
+  if (cloudData.ritualEntries != null) applyNullableCloudArray(RITUAL_ENTRIES_KEY, cloudData.ritualEntries, deleted.ritualEntries)
+  if (cloudData.ritualStreak != null) lsSet(RITUAL_STREAK_KEY, cloudData.ritualStreak)
+  if (cloudData.ruleCop != null) lsSet(RULE_COP_KEY, cloudData.ruleCop)
+  if (cloudData.playbooks != null) applyNullableCloudArray(PLAYBOOKS_KEY, cloudData.playbooks, deleted.playbooks)
+  if (cloudData.coachSummaries != null) applyNullableCloudArray(COACH_SUMMARIES_KEY, cloudData.coachSummaries, deleted.coachSummaries)
+  applyGuardedCloudArray(WATCHLIST_KEY, cloudData.dashboardWatchlist, deleted.dashboardWatchlist)
+  if (cloudData.customTickers != null) lsSet(CUSTOM_TICKERS_KEY, cloudData.customTickers)
+  if (cloudData.tickerPrefs != null) lsSet(TICKER_PREFS_KEY, cloudData.tickerPrefs)
+  if (cloudData.alertPrefs != null) lsSet(ALERT_PREFS_KEY, cloudData.alertPrefs)
+
+  snapshotSyncedIdsFromLocal()
+}
+
+function finalizeJournalPayload(data: CloudJournalData): JournalBlob {
+  const extracted = extractDeletedMap(data)
+  const detected = detectNewDeletes(readSyncedIds(), data, new Date().toISOString())
+  const deleted = mergeDeletedMaps(mergeDeletedMaps(readDeletedMap(), extracted), detected)
+  const stripped = stripTombstonedRows({ ...data }, deleted)
+  if (!deletedMapIsEmpty(deleted)) {
+    stripped[JOURNAL_DELETED_KEY] = deleted
+  } else {
+    delete stripped[JOURNAL_DELETED_KEY]
+  }
+  persistDeletedMap(deleted)
+  return stripped
+}
+
 async function cloudPutJournal(token: string, data: CloudJournalData): Promise<boolean> {
-  let payload: JournalBlob = { ...data }
+  let payload: JournalBlob = finalizeJournalPayload(data)
   for (let attempt = 0; attempt < JOURNAL_PUT_MAX_ATTEMPTS; attempt++) {
     const expected = readJournalUpdatedAt(token)
     try {
@@ -244,13 +362,15 @@ async function cloudPutJournal(token: string, data: CloudJournalData): Promise<b
         const serverPayload = unwrapUserDataPayload(json)
         if (serverPayload && typeof serverPayload === 'object' && !Array.isArray(serverPayload)) {
           payload = mergeJournalBlobs(payload, serverPayload as JournalBlob)
-          applyMergedJournalToLocal(payload)
+          applyPulledJournal(payload)
         }
         continue
       }
       if (!res.ok) return false
       const json = await res.json().catch(() => ({}))
       rememberJournalUpdatedAt(token, typeof json.updated_at === 'string' ? json.updated_at : expected)
+      persistDeletedMap(extractDeletedMap(payload))
+      persistSyncedIds(liveIdsFromBlob(payload))
       return true
     } catch {
       return false
@@ -377,6 +497,7 @@ interface CloudJournalData {
   customTickers?: unknown
   tickerPrefs?: unknown
   alertPrefs?: unknown
+  _deleted?: DeletedMap
 }
 
 /**
@@ -395,38 +516,8 @@ export async function initJournalSync(token: string): Promise<void> {
     }
     const cloudData = result.payload
     if (cloudData) {
-      const cloudTemplates  = cloudData.templates  ?? []
-      // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
-      // data. A cloud record that is missing trades/notes — or has them as empty
-      // arrays — must NOT overwrite (wipe) the user's local journal. Guard the
-      // overwrite the same way the other keys below are already guarded.
-      if (Array.isArray(cloudData.trades) && cloudData.trades.length > 0)
-        lsSet(TRADES_KEY, cloudData.trades)
-      if (Array.isArray(cloudData.notes) && cloudData.notes.length > 0)
-        lsSet(NOTES_KEY, cloudData.notes)
-      if (cloudTemplates.length > 0) lsSet(TEMPLATES_KEY, cloudTemplates)
-      // Restore extra keys — only if cloud has data (backward compat)
-      if (cloudData.propFirmAccounts && cloudData.propFirmAccounts.length > 0)
-        lsSet(PROP_FIRM_ACCOUNTS_KEY, cloudData.propFirmAccounts)
-      if (cloudData.journalDefaults && Object.keys(cloudData.journalDefaults).length > 0)
-        setJournalDefaults(cloudData.journalDefaults)
-      if (cloudData.dismissedWebhookIds && cloudData.dismissedWebhookIds.length > 0)
-        lsSet(DISMISSED_WEBHOOKS_KEY, cloudData.dismissedWebhookIds)
-      if (cloudData.privacyMode != null && cloudData.privacyMode !== '') {
-        try { localStorage.setItem(PRIVACY_KEY, cloudData.privacyMode) } catch {}
-      }
-      // NEW: restore additional keys — only if cloud has non-null/non-empty data (backward compat)
-      if (cloudData.customTags != null) lsSet(CUSTOM_TAGS_KEY, cloudData.customTags)
-      if (cloudData.ritualEntries != null) lsSet(RITUAL_ENTRIES_KEY, cloudData.ritualEntries)
-      if (cloudData.ritualStreak != null) lsSet(RITUAL_STREAK_KEY, cloudData.ritualStreak)
-      if (cloudData.ruleCop != null) lsSet(RULE_COP_KEY, cloudData.ruleCop)
-      if (cloudData.playbooks != null) lsSet(PLAYBOOKS_KEY, cloudData.playbooks)
-      if (cloudData.coachSummaries != null) lsSet(COACH_SUMMARIES_KEY, cloudData.coachSummaries)
-      if (cloudData.dashboardWatchlist && cloudData.dashboardWatchlist.length > 0)
-        lsSet(WATCHLIST_KEY, cloudData.dashboardWatchlist)
-      if (cloudData.customTickers != null) lsSet(CUSTOM_TICKERS_KEY, cloudData.customTickers)
-      if (cloudData.tickerPrefs != null) lsSet(TICKER_PREFS_KEY, cloudData.tickerPrefs)
-      if (cloudData.alertPrefs != null) lsSet(ALERT_PREFS_KEY, cloudData.alertPrefs)
+      // P0/Q9 empty-array guards + Q3 tombstones (applyPulledJournal).
+      applyPulledJournal(cloudData)
     }
     setStatus('synced')
   } catch {
@@ -453,38 +544,8 @@ export async function forceSyncFromCloud(): Promise<boolean> {
     }
     const cloudData = result.payload
     if (cloudData) {
-      const cloudTemplates  = cloudData.templates  ?? []
-      // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
-      // data. A cloud record that is missing trades/notes — or has them as empty
-      // arrays — must NOT overwrite (wipe) the user's local journal. Guard the
-      // overwrite the same way the other keys below are already guarded.
-      if (Array.isArray(cloudData.trades) && cloudData.trades.length > 0)
-        lsSet(TRADES_KEY, cloudData.trades)
-      if (Array.isArray(cloudData.notes) && cloudData.notes.length > 0)
-        lsSet(NOTES_KEY, cloudData.notes)
-      if (cloudTemplates.length > 0) lsSet(TEMPLATES_KEY, cloudTemplates)
-      // Restore extra keys — only if cloud has data (backward compat)
-      if (cloudData.propFirmAccounts && cloudData.propFirmAccounts.length > 0)
-        lsSet(PROP_FIRM_ACCOUNTS_KEY, cloudData.propFirmAccounts)
-      if (cloudData.journalDefaults && Object.keys(cloudData.journalDefaults).length > 0)
-        setJournalDefaults(cloudData.journalDefaults)
-      if (cloudData.dismissedWebhookIds && cloudData.dismissedWebhookIds.length > 0)
-        lsSet(DISMISSED_WEBHOOKS_KEY, cloudData.dismissedWebhookIds)
-      if (cloudData.privacyMode != null && cloudData.privacyMode !== '') {
-        try { localStorage.setItem(PRIVACY_KEY, cloudData.privacyMode) } catch {}
-      }
-      // NEW: restore additional keys — only if cloud has non-null/non-empty data (backward compat)
-      if (cloudData.customTags != null) lsSet(CUSTOM_TAGS_KEY, cloudData.customTags)
-      if (cloudData.ritualEntries != null) lsSet(RITUAL_ENTRIES_KEY, cloudData.ritualEntries)
-      if (cloudData.ritualStreak != null) lsSet(RITUAL_STREAK_KEY, cloudData.ritualStreak)
-      if (cloudData.ruleCop != null) lsSet(RULE_COP_KEY, cloudData.ruleCop)
-      if (cloudData.playbooks != null) lsSet(PLAYBOOKS_KEY, cloudData.playbooks)
-      if (cloudData.coachSummaries != null) lsSet(COACH_SUMMARIES_KEY, cloudData.coachSummaries)
-      if (cloudData.dashboardWatchlist && cloudData.dashboardWatchlist.length > 0)
-        lsSet(WATCHLIST_KEY, cloudData.dashboardWatchlist)
-      if (cloudData.customTickers != null) lsSet(CUSTOM_TICKERS_KEY, cloudData.customTickers)
-      if (cloudData.tickerPrefs != null) lsSet(TICKER_PREFS_KEY, cloudData.tickerPrefs)
-      if (cloudData.alertPrefs != null) lsSet(ALERT_PREFS_KEY, cloudData.alertPrefs)
+      // P0/Q9 empty-array guards + Q3 tombstones (applyPulledJournal).
+      applyPulledJournal(cloudData)
     }
     setStatus('synced')
     return true
@@ -721,8 +782,6 @@ export function debouncedSyncPortfolio(holdings: unknown[], prevHoldings?: unkno
 }
 
 // ── Watchlist sync ────────────────────────────────────────────────────────────
-
-const WATCHLIST_KEY = 'cg_wl'
 
 /**
  * Initial sync for watchlist on login/app load.
