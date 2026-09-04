@@ -157,10 +157,15 @@ CREATE INDEX IF NOT EXISTS idx_calendar_impact ON calendar_events (impact);
 -- ────────────────────────────────────────────
 -- User Watchlists
 -- ────────────────────────────────────────────
+-- user_id is the Supabase Auth UUID (auth.users.id / user_profiles.id).
+-- It is NOT an INTEGER FK to legacy public.users(id). Auth routes never
+-- create legacy users rows; journal/cloud sync already keys user_data by
+-- UUID. See database/migrations/021_watchlists_user_id_uuid.sql.
+-- Do not re-add a users(id) FK here.
 
 CREATE TABLE IF NOT EXISTS watchlists (
     id                      SERIAL PRIMARY KEY,
-    user_id                 INTEGER REFERENCES users(id) ON DELETE CASCADE,
+    user_id                 UUID,             -- Supabase Auth UUID (not users.id)
     instrument_id           INTEGER REFERENCES instruments(id) ON DELETE CASCADE,
     alert_threshold_up      DECIMAL(10, 4),   -- Price alert above this
     alert_threshold_down    DECIMAL(10, 4),   -- Price alert below this
@@ -215,10 +220,12 @@ CREATE TRIGGER calendar_updated_at BEFORE UPDATE ON calendar_events
 --
 -- Summary of policy strategy:
 --   User-scoped tables   → user_id = public.current_user_id()
+--   watchlists           → user_id UUID = auth.uid() (migration 021)
 --   Market data tables   → public SELECT, service_role writes
 --   System/admin tables  → service_role only
 --
 -- The helper function public.current_user_id() extracts the integer
 -- `userId` claim from the custom JWT (signed by the backend).
+-- watchlists is the exception: it keys by Supabase Auth UUID.
 --
 -- See: database/migrations/010_enable_rls_all_tables.sql
