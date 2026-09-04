@@ -19,6 +19,11 @@
  *
  * Q1 residual: failed GET still opens the gate (local data can push) but
  * empty wipe PUTs are skipped until a successful GET marks a cloud snapshot.
+ *
+ * Q2 2026-09 (updated_at precondition + merge-on-409):
+ *  Journal PUT sends expectedUpdatedAt / If-Match from the last GET.
+ *  A 409 merges by stable id and retries so two-device edits do not
+ *  silently drop trades present on only one side.
  */
 
 const TRADES_KEY = 'cg_journal_trades'
@@ -631,3 +636,160 @@ describe('Q1 residual — failed GET must not empty-wipe cloud', () => {
     jest.useRealTimers()
   })
 })
+
+// ── Q2: last-write-wins journal blob ──────────────────────────────────────────
+//
+// GET already returns updated_at (portfolio already reads it; journal did not).
+// After Q2, journal PUT sends that stamp. A stale stamp → 409 + server copy;
+// client merges by id and retries. Trades present on only one device survive.
+
+type Q2Put = {
+  data?: { trades?: unknown[]; notes?: unknown[] }
+  expectedUpdatedAt?: string | null
+  headers?: Record<string, string>
+}
+
+function mockJournalVersioned(opts: {
+  getPayload: unknown
+  getUpdatedAt: string | null
+  conflictOnFirstPut?: { serverPayload: unknown; serverUpdatedAt: string; retryUpdatedAt: string }
+}) {
+  const puts: Q2Put[] = []
+  let putCount = 0
+  ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string; headers?: Record<string, string> }) => {
+    const method = init?.method || 'GET'
+    const isJournal = String(url).includes('/api/user/data/journal')
+    if (isJournal && method === 'PUT') {
+      putCount += 1
+      const body = JSON.parse(init?.body || '{}')
+      puts.push({ ...body, headers: init?.headers || {} })
+      if (opts.conflictOnFirstPut && putCount === 1) {
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: 'version_conflict',
+            type: 'journal',
+            updated_at: opts.conflictOnFirstPut.serverUpdatedAt,
+            data: { data: opts.conflictOnFirstPut.serverPayload },
+          }),
+        }
+      }
+      const updated_at = opts.conflictOnFirstPut && putCount > 1
+        ? opts.conflictOnFirstPut.retryUpdatedAt
+        : (opts.getUpdatedAt || '2026-09-04T00:00:01.000Z')
+      return { ok: true, status: 200, json: async () => ({ type: 'journal', updated_at }) }
+    }
+    if (isJournal && method === 'GET') {
+      return {
+        ok: true,
+        json: async () => ({ data: opts.getPayload, updated_at: opts.getUpdatedAt }),
+      }
+    }
+    return { ok: true, json: async () => ({ data: null }) }
+  })
+  return { puts }
+}
+
+describe('Q2 — journal PUT version precondition and 409 merge', () => {
+  beforeEach(() => { jest.useFakeTimers() })
+  afterEach(() => { jest.useRealTimers() })
+
+  test('after GET, journal PUT sends expectedUpdatedAt and If-Match from updated_at', async () => {
+    lsSetToken('tok')
+    const t0 = '2026-09-03T12:00:00.000Z'
+    const ctl = mockJournalVersioned({
+      getPayload: { trades: [{ id: 'cloud1' }], notes: [{ id: 'n1' }] },
+      getUpdatedAt: t0,
+    })
+
+    await initJournalSync('tok')
+    debouncedSyncJournal(lsGetJSON(TRADES_KEY), lsGetJSON(NOTES_KEY))
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.puts).toHaveLength(1)
+    expect(ctl.puts[0].expectedUpdatedAt).toBe(t0)
+    expect(ctl.puts[0].headers?.['X-Expected-Updated-At']).toBe(t0)
+    expect(ctl.puts[0].headers?.['If-Match']).toBe(`"${t0}"`)
+    expect(ctl.puts[0].data?.trades).toEqual([{ id: 'cloud1' }])
+  })
+
+  test('two-device 409: merge-retry keeps trades present on only one side', async () => {
+    lsSetToken('tok')
+    const t0 = '2026-09-03T12:00:00.000Z'
+    const tA = '2026-09-03T12:00:05.000Z'
+    const tRetry = '2026-09-03T12:00:09.000Z'
+    // Device B pulled shared+B's view as just `shared` at t0, then added trade-B.
+    // Device A already wrote shared+trade-A at tA.
+    lsSetJSON(TRADES_KEY, [{ id: 'shared' }, { id: 'trade-B' }])
+    lsSetJSON(NOTES_KEY, [{ id: 'note-B' }])
+    const ctl = mockJournalVersioned({
+      getPayload: { trades: [{ id: 'shared' }], notes: [] },
+      getUpdatedAt: t0,
+      conflictOnFirstPut: {
+        serverPayload: {
+          trades: [{ id: 'shared' }, { id: 'trade-A' }],
+          notes: [{ id: 'note-A' }],
+        },
+        serverUpdatedAt: tA,
+        retryUpdatedAt: tRetry,
+      },
+    })
+
+    await initJournalSync('tok')
+    // P0: non-empty cloud overwrites local with the GET payload (shared only).
+    // Restore device-B local edits that happened after the pull (the race).
+    lsSetJSON(TRADES_KEY, [{ id: 'shared' }, { id: 'trade-B' }])
+    lsSetJSON(NOTES_KEY, [{ id: 'note-B' }])
+    debouncedSyncJournal([{ id: 'shared' }, { id: 'trade-B' }], [{ id: 'note-B' }])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.puts.length).toBe(2)
+    expect(ctl.puts[0].expectedUpdatedAt).toBe(t0)
+    expect(ctl.puts[1].expectedUpdatedAt).toBe(tA)
+    const retryIds = (ctl.puts[1].data?.trades as { id: string }[]).map(t => t.id)
+    expect(retryIds).toEqual(expect.arrayContaining(['shared', 'trade-A', 'trade-B']))
+    expect(retryIds).toHaveLength(3)
+    const retryNotes = (ctl.puts[1].data?.notes as { id: string }[]).map(n => n.id)
+    expect(retryNotes).toEqual(expect.arrayContaining(['note-A', 'note-B']))
+    expect(lsGetJSON(TRADES_KEY).map((t: { id: string }) => t.id)).toEqual(
+      expect.arrayContaining(['shared', 'trade-A', 'trade-B']),
+    )
+  })
+
+  test('409 merge does not re-enable empty overwrite of non-empty local (Q9)', async () => {
+    lsSetToken('tok')
+    const t0 = '2026-09-03T12:00:00.000Z'
+    lsSetJSON(TRADES_KEY, [{ id: 'local-keep' }])
+    lsSetJSON(NOTES_KEY, [{ id: 'note-keep' }])
+    const ctl = mockJournalVersioned({
+      getPayload: { trades: [], notes: [] },
+      getUpdatedAt: t0,
+      conflictOnFirstPut: {
+        serverPayload: { trades: [], notes: [] },
+        serverUpdatedAt: '2026-09-03T12:00:06.000Z',
+        retryUpdatedAt: '2026-09-03T12:00:07.000Z',
+      },
+    })
+
+    await initJournalSync('tok')
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 'local-keep' }])
+    debouncedSyncJournal(lsGetJSON(TRADES_KEY), lsGetJSON(NOTES_KEY))
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 'local-keep' }])
+    expect(lsGetJSON(NOTES_KEY)).toEqual([{ id: 'note-keep' }])
+    const last = ctl.puts[ctl.puts.length - 1]
+    expect(last.data?.trades).toEqual([{ id: 'local-keep' }])
+  })
+})
+

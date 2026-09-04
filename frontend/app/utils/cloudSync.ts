@@ -7,9 +7,12 @@
  *   - User change        → push full local state to cloud.
  *   - forceSyncFromCloud → manual pull (same as login).
  *
- * No timestamp comparisons. No conflict resolution. Just push and pull.
- * Fails silently — localStorage-only flow always works.
+ * Journal PUTs send updated_at as a precondition (Q2). A 409 merges
+ * trades/notes/related arrays by stable id and retries. Fails silently —
+ * localStorage-only flow always works.
  */
+
+import { mergeJournalBlobs, unwrapUserDataPayload, type JournalBlob } from './journalMerge'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://tradvue-api.onrender.com'
 
@@ -124,13 +127,31 @@ async function cloudGet<T>(token: string, type: string): Promise<T | null> {
     // Backend returns { type, data: <JSONB>, updated_at }
     // The JSONB column may itself be { data: ... } if cloudPut wrapped it.
     // Unwrap both layers to get the actual payload.
-    let payload = json.data ?? json[type] ?? json
-    if (payload && typeof payload === 'object' && !Array.isArray(payload) && 'data' in payload) {
-      payload = payload.data
-    }
-    return payload as T
+    return unwrapUserDataPayload(json) as T
   } catch {
     return null
+  }
+}
+
+async function cloudGetJournal(token: string): Promise<{
+  ok: boolean
+  payload: CloudJournalData | null
+  updated_at: string | null
+}> {
+  try {
+    const res = await fetch(`${API_BASE}/api/user/data/journal`, {
+      headers: authHeaders(token),
+    })
+    if (!res.ok) return { ok: false, payload: null, updated_at: null }
+    const json = await res.json()
+    const unwrapped = unwrapUserDataPayload(json)
+    const payload = unwrapped && typeof unwrapped === 'object' && !Array.isArray(unwrapped)
+      ? unwrapped as CloudJournalData
+      : null
+    const updated_at = typeof json.updated_at === 'string' ? json.updated_at : json.updated_at ?? null
+    return { ok: true, payload, updated_at }
+  } catch {
+    return { ok: false, payload: null, updated_at: null }
   }
 }
 
@@ -145,6 +166,97 @@ async function cloudPut(token: string, type: string, data: unknown): Promise<boo
   } catch {
     return false
   }
+}
+
+const JOURNAL_UPDATED_AT_KEY = 'cg_journal_cloud_updated_at'
+const JOURNAL_PUT_MAX_ATTEMPTS = 3
+
+let _journalUpdatedAt: string | null | undefined
+
+function rememberJournalUpdatedAt(token: string, updatedAt: string | null): void {
+  _journalUpdatedAt = updatedAt
+  try {
+    localStorage.setItem(JOURNAL_UPDATED_AT_KEY, JSON.stringify({ token, updated_at: updatedAt }))
+  } catch {}
+}
+
+function readJournalUpdatedAt(token: string): string | null {
+  if (_journalUpdatedAt !== undefined && _journalPullToken === token) return _journalUpdatedAt
+  try {
+    const raw = localStorage.getItem(JOURNAL_UPDATED_AT_KEY)
+    if (!raw) return null
+    const parsed = JSON.parse(raw) as { token?: string; updated_at?: string | null }
+    if (parsed && parsed.token === token) {
+      _journalUpdatedAt = parsed.updated_at ?? null
+      return _journalUpdatedAt
+    }
+  } catch {}
+  return null
+}
+
+function clearJournalUpdatedAt(): void {
+  _journalUpdatedAt = undefined
+  try { localStorage.removeItem(JOURNAL_UPDATED_AT_KEY) } catch {}
+}
+
+function applyMergedJournalToLocal(payload: CloudJournalData): void {
+  // Q9: do not write empty trades/notes over non-empty local.
+  if (Array.isArray(payload.trades) && payload.trades.length > 0) lsSet(TRADES_KEY, payload.trades)
+  if (Array.isArray(payload.notes) && payload.notes.length > 0) lsSet(NOTES_KEY, payload.notes)
+  if (Array.isArray(payload.templates) && payload.templates.length > 0) lsSet(TEMPLATES_KEY, payload.templates)
+  if (Array.isArray(payload.propFirmAccounts) && payload.propFirmAccounts.length > 0) {
+    lsSet(PROP_FIRM_ACCOUNTS_KEY, payload.propFirmAccounts)
+  }
+  if (payload.journalDefaults && Object.keys(payload.journalDefaults).length > 0) {
+    setJournalDefaults(payload.journalDefaults)
+  }
+  if (Array.isArray(payload.dismissedWebhookIds) && payload.dismissedWebhookIds.length > 0) {
+    lsSet(DISMISSED_WEBHOOKS_KEY, payload.dismissedWebhookIds)
+  }
+  if (payload.playbooks != null) lsSet(PLAYBOOKS_KEY, payload.playbooks)
+  if (payload.customTags != null) lsSet(CUSTOM_TAGS_KEY, payload.customTags)
+  if (payload.ritualEntries != null) lsSet(RITUAL_ENTRIES_KEY, payload.ritualEntries)
+  if (payload.coachSummaries != null) lsSet(COACH_SUMMARIES_KEY, payload.coachSummaries)
+  if (Array.isArray(payload.dashboardWatchlist) && payload.dashboardWatchlist.length > 0) {
+    lsSet(WATCHLIST_KEY, payload.dashboardWatchlist)
+  }
+}
+
+async function cloudPutJournal(token: string, data: CloudJournalData): Promise<boolean> {
+  let payload: JournalBlob = data
+  for (let attempt = 0; attempt < JOURNAL_PUT_MAX_ATTEMPTS; attempt++) {
+    const expected = readJournalUpdatedAt(token)
+    try {
+      const headers: Record<string, string> = {
+        ...authHeaders(token),
+        'X-Expected-Updated-At': expected == null ? 'null' : expected,
+      }
+      if (expected != null) headers['If-Match'] = `"${expected}"`
+      const res = await fetch(`${API_BASE}/api/user/data/journal`, {
+        method: 'PUT',
+        headers,
+        body: JSON.stringify({ data: payload, expectedUpdatedAt: expected }),
+      })
+      if (res.status === 409) {
+        const json = await res.json()
+        const serverUpdated = typeof json.updated_at === 'string' ? json.updated_at : json.updated_at ?? null
+        rememberJournalUpdatedAt(token, serverUpdated)
+        const serverPayload = unwrapUserDataPayload(json)
+        if (serverPayload && typeof serverPayload === 'object' && !Array.isArray(serverPayload)) {
+          payload = mergeJournalBlobs(payload, serverPayload as JournalBlob)
+          applyMergedJournalToLocal(payload)
+        }
+        continue
+      }
+      if (!res.ok) return false
+      const json = await res.json().catch(() => ({}))
+      rememberJournalUpdatedAt(token, typeof json.updated_at === 'string' ? json.updated_at : expected)
+      return true
+    } catch {
+      return false
+    }
+  }
+  return false
 }
 
 // ── Journal pullComplete gate (Q1) ────────────────────────────────────────────
@@ -180,6 +292,7 @@ function beginJournalPull(token: string): void {
     _journalPullToken = token
     _journalPullComplete = false
     _journalPullHadCloudSnapshot = false
+    _journalUpdatedAt = undefined
     _journalPullInFlight = 0
     _journalPullDeferred = createJournalPullDeferred()
   } else if (_journalPullInFlight === 0) {
@@ -236,6 +349,7 @@ export function resetJournalPullGate(): void {
   _journalPullHadCloudSnapshot = false
   _journalPullInFlight = 0
   _journalPullDeferred = null
+  clearJournalUpdatedAt()
   if (_journalTimer) {
     clearTimeout(_journalTimer)
     _journalTimer = null
@@ -267,16 +381,20 @@ interface CloudJournalData {
 
 /**
  * Initial sync on login / app load.
- * Cloud is the source of truth — always pull and overwrite localStorage.
- * No timestamp comparisons, no "is local newer" checks.
+ * Cloud is the source of truth — always pull and overwrite localStorage
+ * (P0 empty-cloud guards still apply). Remembers updated_at for Q2 PUTs.
  */
 export async function initJournalSync(token: string): Promise<void> {
   beginJournalPull(token)
   setStatus('syncing')
   try {
-    const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
-    if (cloudData) {
+    const result = await cloudGetJournal(token)
+    if (result.ok) {
       markJournalCloudSnapshot(token)
+      rememberJournalUpdatedAt(token, result.updated_at)
+    }
+    const cloudData = result.payload
+    if (cloudData) {
       const cloudTemplates  = cloudData.templates  ?? []
       // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
       // data. A cloud record that is missing trades/notes — or has them as empty
@@ -328,9 +446,13 @@ export async function forceSyncFromCloud(): Promise<boolean> {
   beginJournalPull(token)
   setStatus('syncing')
   try {
-    const cloudData = await cloudGet<CloudJournalData>(token, 'journal')
-    if (cloudData) {
+    const result = await cloudGetJournal(token)
+    if (result.ok) {
       markJournalCloudSnapshot(token)
+      rememberJournalUpdatedAt(token, result.updated_at)
+    }
+    const cloudData = result.payload
+    if (cloudData) {
       const cloudTemplates  = cloudData.templates  ?? []
       // P0 2026-09 #1: cloud is the source of truth ONLY when it actually holds
       // data. A cloud record that is missing trades/notes — or has them as empty
@@ -465,7 +587,7 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
     const customTickers      = lsGet<unknown>(CUSTOM_TICKERS_KEY, null)
     const tickerPrefs        = lsGet<unknown>(TICKER_PREFS_KEY, null)
     const alertPrefs         = lsGet<unknown>(ALERT_PREFS_KEY, null)
-    const ok = await cloudPut(currentToken, 'journal', {
+    const ok = await cloudPutJournal(currentToken, {
       trades: outTrades,
       notes: nts,
       templates: tpls,
