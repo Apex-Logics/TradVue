@@ -8,12 +8,22 @@
  * PUT  /api/user/data              - Save all user data
  * GET  /api/user/data/:type        - Get specific data type
  * PUT  /api/user/data/:type        - Save specific data type
+ *                                      Q2: optional updated_at precondition
+ *                                      (If-Match / X-Expected-Updated-At /
+ *                                      expectedUpdatedAt). 409 + server copy
+ *                                      on mismatch. No new version column.
  */
 
 const express = require('express');
 const router = express.Router();
 const { createClient } = require('@supabase/supabase-js');
 const { requireAuth } = require('../middleware/auth');
+const {
+  parseExpectedUpdatedAt,
+  persistableBody,
+  timestampsMatch,
+  conflictPayload,
+} = require('../lib/userDataVersion');
 
 const VALID_TYPES = ['journal', 'portfolio', 'settings', 'watchlist'];
 
@@ -148,6 +158,10 @@ router.get('/data/:type', requireAuth, async (req, res) => {
 });
 
 // ── PUT /api/user/data/:type — save a specific data type ──────────────────────
+// Q2: optional updated_at precondition (If-Match / X-Expected-Updated-At /
+// body.expectedUpdatedAt). Mismatch → 409 + current server copy. Missing
+// precondition keeps last-write-wins for old clients. No new version column —
+// user_data.updated_at (migration 010) is the token.
 router.put('/data/:type', requireAuth, async (req, res) => {
   try {
     const { type } = req.params;
@@ -161,20 +175,77 @@ router.put('/data/:type', requireAuth, async (req, res) => {
     const userId = req.user.id;
     const token = getAccessToken(req);
     const supabase = createUserClient(token);
+    const expected = parseExpectedUpdatedAt(req);
+    const payload = persistableBody(req.body);
+    const now = new Date().toISOString();
 
-    console.log(`[UserData] PUT /data/${type} — userId: ${userId}, size: ${JSON.stringify(req.body).length}`);
+    console.log(`[UserData] PUT /data/${type} — userId: ${userId}, size: ${JSON.stringify(payload).length}, precondition: ${expected.provided}`);
 
-    const { error } = await supabase.from('user_data').upsert(
-      { user_id: userId, data_type: type, data: req.body, updated_at: new Date().toISOString() },
-      { onConflict: 'user_id,data_type' }
-    );
+    const { data: existing, error: fetchError } = await supabase
+      .from('user_data')
+      .select('data, updated_at')
+      .eq('user_id', userId)
+      .eq('data_type', type)
+      .maybeSingle();
+
+    if (fetchError) {
+      console.error(`[UserData] Pre-save fetch ${type} error:`, fetchError.message);
+      return res.status(500).json({ error: `Failed to save ${type}` });
+    }
+
+    if (expected.provided && !timestampsMatch(existing?.updated_at ?? null, expected.value)) {
+      return res.status(409).json(conflictPayload(type, existing));
+    }
+
+    if (existing) {
+      // Compare-and-swap on the exact stored timestamp so two matching
+      // preconditions cannot both overwrite (second UPDATE matches 0 rows).
+      const casStamp = existing.updated_at;
+      const { data: updated, error } = await supabase
+        .from('user_data')
+        .update({ data: payload, updated_at: now })
+        .eq('user_id', userId)
+        .eq('data_type', type)
+        .eq('updated_at', casStamp)
+        .select('data, updated_at')
+        .maybeSingle();
+
+      if (error) {
+        console.error(`[UserData] Save ${type} error:`, error.message);
+        return res.status(500).json({ error: `Failed to save ${type}` });
+      }
+      if (!updated) {
+        const { data: raced } = await supabase
+          .from('user_data')
+          .select('data, updated_at')
+          .eq('user_id', userId)
+          .eq('data_type', type)
+          .maybeSingle();
+        return res.status(409).json(conflictPayload(type, raced));
+      }
+      return res.json({ message: `${type} saved successfully`, type, updated_at: updated.updated_at || now });
+    }
+
+    const { data: inserted, error } = await supabase
+      .from('user_data')
+      .insert({ user_id: userId, data_type: type, data: payload, updated_at: now })
+      .select('data, updated_at')
+      .maybeSingle();
 
     if (error) {
+      // Unique (user_id, data_type) race: another writer created the row.
+      const { data: raced } = await supabase
+        .from('user_data')
+        .select('data, updated_at')
+        .eq('user_id', userId)
+        .eq('data_type', type)
+        .maybeSingle();
+      if (raced) return res.status(409).json(conflictPayload(type, raced));
       console.error(`[UserData] Save ${type} error:`, error.message);
       return res.status(500).json({ error: `Failed to save ${type}` });
     }
 
-    res.json({ message: `${type} saved successfully`, type, updated_at: new Date().toISOString() });
+    res.json({ message: `${type} saved successfully`, type, updated_at: inserted?.updated_at || now });
   } catch (err) {
     console.error(`[UserData] Save ${req.params.type} error:`, err.message);
     res.status(500).json({ error: 'Internal server error' });
