@@ -24,10 +24,16 @@
  *  Journal PUT sends expectedUpdatedAt / If-Match from the last GET.
  *  A 409 merges by stable id and retries so two-device edits do not
  *  silently drop trades present on only one side.
+ *
+ * Q3 2026-09 (tombstones / null sentinels):
+ *  Intentional deletes write `_deleted` on the journal blob so the last
+ *  template/trade/note stays deleted on the other device. Bare empty
+ *  arrays without tombstones still do not wipe non-empty local (Q9).
  */
 
 const TRADES_KEY = 'cg_journal_trades'
 const NOTES_KEY  = 'cg_journal_notes'
+const TEMPLATES_KEY = 'cg_note_templates'
 const TOKEN_KEY  = 'cg_token'
 
 const localStorageMock = (() => {
@@ -791,6 +797,187 @@ describe('Q2 — journal PUT version precondition and 409 merge', () => {
     expect(lsGetJSON(NOTES_KEY)).toEqual([{ id: 'note-keep' }])
     const last = ctl.puts[ctl.puts.length - 1]
     expect(last.data?.trades).toEqual([{ id: 'local-keep' }])
+  })
+})
+
+// ── Q3: tombstones so intentional deletes propagate ───────────────────────────
+
+type Q3Put = {
+  data?: {
+    trades?: unknown[]
+    notes?: unknown[]
+    templates?: unknown[]
+    _deleted?: { [coll: string]: Record<string, string | true | null> }
+  }
+  expectedUpdatedAt?: string | null
+  headers?: Record<string, string>
+}
+
+function mockJournalQ3(opts: {
+  getPayload: unknown
+  getUpdatedAt?: string | null
+  conflictOnFirstPut?: { serverPayload: unknown; serverUpdatedAt: string; retryUpdatedAt: string }
+}) {
+  const puts: Q3Put[] = []
+  let putCount = 0
+  ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string; headers?: Record<string, string> }) => {
+    const method = init?.method || 'GET'
+    const isJournal = String(url).includes('/api/user/data/journal')
+    if (isJournal && method === 'PUT') {
+      putCount += 1
+      const body = JSON.parse(init?.body || '{}')
+      puts.push({ ...body, headers: init?.headers || {} })
+      const conflict = opts.conflictOnFirstPut
+      if (conflict && putCount === 1) {
+        return {
+          ok: false,
+          status: 409,
+          json: async () => ({
+            error: 'version_conflict',
+            type: 'journal',
+            updated_at: conflict.serverUpdatedAt,
+            data: { data: conflict.serverPayload },
+          }),
+        }
+      }
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({ type: 'journal', updated_at: opts.getUpdatedAt || '2026-09-04T00:00:01.000Z' }),
+      }
+    }
+    if (isJournal && method === 'GET') {
+      return {
+        ok: true,
+        json: async () => ({ data: opts.getPayload, updated_at: opts.getUpdatedAt || '2026-09-04T00:00:00.000Z' }),
+      }
+    }
+    return { ok: true, json: async () => ({ data: null }) }
+  })
+  return { puts }
+}
+
+describe('Q3 — journal deletion tombstones', () => {
+  beforeEach(() => { jest.useFakeTimers() })
+  afterEach(() => { jest.useRealTimers() })
+
+  test('delete last template on A: PUT sends empty templates + _deleted tombstone', async () => {
+    lsSetToken('tok')
+    const ctl = mockJournalQ3({
+      getPayload: { templates: [{ id: 'tpl-1', name: 'Plan' }], trades: [{ id: 't1' }], notes: [] },
+      getUpdatedAt: '2026-09-04T00:00:00.000Z',
+    })
+
+    await initJournalSync('tok')
+    expect(lsGetJSON(TEMPLATES_KEY)).toEqual([{ id: 'tpl-1', name: 'Plan' }])
+
+    lsSetJSON(TEMPLATES_KEY, [])
+    debouncedSyncJournal([{ id: 't1' }], [], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.puts).toHaveLength(1)
+    expect(ctl.puts[0].data?.templates).toEqual([])
+    expect(ctl.puts[0].data?._deleted?.templates?.['tpl-1']).toBeTruthy()
+  })
+
+  test('device B pull: last-template tombstone removes that id; other local rows stay', async () => {
+    lsSetJSON(TEMPLATES_KEY, [{ id: 'tpl-1', name: 'Plan' }, { id: 'tpl-local', name: 'Mine' }])
+    lsSetJSON(TRADES_KEY, [{ id: 'local-trade' }])
+    mockJournalQ3({
+      getPayload: {
+        templates: [],
+        trades: [],
+        notes: [],
+        _deleted: { templates: { 'tpl-1': '2026-09-04T00:10:00.000Z' } },
+      },
+    })
+
+    await initJournalSync('tok-b')
+
+    const templates = lsGetJSON(TEMPLATES_KEY) as { id: string }[]
+    expect(templates.map(t => t.id)).toEqual(['tpl-local'])
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 'local-trade' }])
+  })
+
+  test('bare empty cloud array without tombstones still does not wipe non-empty local (Q9)', async () => {
+    lsSetJSON(TEMPLATES_KEY, [{ id: 'tpl-keep' }])
+    lsSetJSON(TRADES_KEY, [{ id: 't-keep' }])
+    lsSetJSON(NOTES_KEY, [{ id: 'n-keep' }])
+    mockJournalQ3({ getPayload: { templates: [], trades: [], notes: [] } })
+
+    await initJournalSync('tok')
+
+    expect(lsGetJSON(TEMPLATES_KEY)).toEqual([{ id: 'tpl-keep' }])
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 't-keep' }])
+    expect(lsGetJSON(NOTES_KEY)).toEqual([{ id: 'n-keep' }])
+  })
+
+  test('409 delete on A + add on B: merge-retry does not resurrect A’s id', async () => {
+    lsSetToken('tok')
+    const t0 = '2026-09-04T00:00:00.000Z'
+    const tA = '2026-09-04T00:00:08.000Z'
+    lsSetJSON(TRADES_KEY, [{ id: 'trade-A' }])
+    const ctl = mockJournalQ3({
+      getPayload: { trades: [{ id: 'trade-A' }], notes: [] },
+      getUpdatedAt: t0,
+      conflictOnFirstPut: {
+        serverPayload: {
+          trades: [],
+          notes: [],
+          _deleted: { trades: { 'trade-A': '2026-09-04T00:00:07.000Z' } },
+        },
+        serverUpdatedAt: tA,
+        retryUpdatedAt: '2026-09-04T00:00:09.000Z',
+      },
+    })
+
+    await initJournalSync('tok')
+    // Device B added trade-B after the pull (still has trade-A locally).
+    lsSetJSON(TRADES_KEY, [{ id: 'trade-A' }, { id: 'trade-B' }])
+    debouncedSyncJournal([{ id: 'trade-A' }, { id: 'trade-B' }], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(ctl.puts.length).toBe(2)
+    const retryIds = (ctl.puts[1].data?.trades as { id: string }[]).map(t => t.id)
+    expect(retryIds).toEqual(['trade-B'])
+    expect(retryIds).not.toContain('trade-A')
+    expect(ctl.puts[1].data?._deleted?.trades?.['trade-A']).toBeTruthy()
+    expect(lsGetJSON(TRADES_KEY).map((t: { id: string }) => t.id)).toEqual(['trade-B'])
+  })
+
+  test('delete last trade: empty trades + tombstone; B pull drops that id', async () => {
+    lsSetToken('tok-a')
+    const ctl = mockJournalQ3({
+      getPayload: { trades: [{ id: 'last-trade' }], notes: [{ id: 'n1' }] },
+      getUpdatedAt: '2026-09-04T00:00:00.000Z',
+    })
+    await initJournalSync('tok-a')
+    lsSetJSON(TRADES_KEY, [])
+    debouncedSyncJournal([], [{ id: 'n1' }])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(ctl.puts[0].data?.trades).toEqual([])
+    expect(ctl.puts[0].data?._deleted?.trades?.['last-trade']).toBeTruthy()
+
+    resetJournalPullGate()
+    localStorageMock.clear()
+    lsSetJSON(TRADES_KEY, [{ id: 'last-trade' }, { id: 'other' }])
+    mockJournalQ3({
+      getPayload: {
+        trades: [],
+        notes: [{ id: 'n1' }],
+        _deleted: { trades: { 'last-trade': '2026-09-04T00:20:00.000Z' } },
+      },
+    })
+    await initJournalSync('tok-b')
+    expect(lsGetJSON(TRADES_KEY).map((t: { id: string }) => t.id)).toEqual(['other'])
   })
 })
 

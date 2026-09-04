@@ -22,7 +22,7 @@ import {
 } from '../components/Icons'
 import PersistentNav from '../components/PersistentNav'
 import { useAuth } from '../context/AuthContext'
-import { debouncedSyncJournal, initJournalSync, forceSyncFromCloud } from '../utils/cloudSync'
+import { debouncedSyncJournal, initJournalSync, forceSyncFromCloud, subscribeSyncStatus } from '../utils/cloudSync'
 import { getUserTier, isDataLocked, canAccessFeature, getLockedEntryCount, getCsvDateLimit } from '../utils/tierAccess'
 import UpgradePrompt from '../components/UpgradePrompt'
 import AuthGate from '../components/AuthGate'
@@ -3423,6 +3423,13 @@ function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[])
   const [renamingTemplateId, setRenamingTemplateId] = useState<string | null>(null)
   const [renameValue, setRenameValue] = useState('')
 
+  // Q3: pull/push may apply tombstones to cg_note_templates; reload so B drops the id.
+  useEffect(() => {
+    return subscribeSyncStatus(s => {
+      if (s === 'synced') setCustomTemplates(loadNoteTemplates())
+    })
+  }, [])
+
   const today = new Date().toLocaleDateString('en-US', { year: 'numeric', month: 'long', day: 'numeric' })
 
   const selectNote = (note: Note) => {
@@ -3490,6 +3497,9 @@ function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[])
     const updated = [...customTemplates, tpl]
     setCustomTemplates(updated)
     saveNoteTemplates(updated)
+    // Hunch verified: trades/notes effect does not watch templates, so a
+    // last-template delete never PUTed. Push so Q3 tombstones can propagate.
+    debouncedSyncJournal(loadTrades(), notes, updated)
   }
 
   const deleteCustomTemplate = (id: string) => {
@@ -3497,6 +3507,7 @@ function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[])
     const updated = customTemplates.filter(t => t.id !== id)
     setCustomTemplates(updated)
     saveNoteTemplates(updated)
+    debouncedSyncJournal(loadTrades(), notes, updated)
   }
 
   const startRename = (tpl: NoteTemplate) => {
@@ -3511,6 +3522,7 @@ function TabNotebook({ notes, setNotes }: { notes: Note[]; setNotes: (n: Note[])
     )
     setCustomTemplates(updated)
     saveNoteTemplates(updated)
+    debouncedSyncJournal(loadTrades(), notes, updated)
     setRenamingTemplateId(null)
     setRenameValue('')
   }
