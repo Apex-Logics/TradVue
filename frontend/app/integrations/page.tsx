@@ -38,14 +38,14 @@ interface WebhookToken {
 
 interface WebhookEvent {
   id: number
-  token_id: number
+  token_id: number | null
   source_ip: string
   parsed_ticker: string | null
   parsed_action: string | null
   parsed_price: number | null
   parsed_quantity: number | null
   trade_id: number | null
-  status: 'received' | 'matched' | 'ignored' | 'error' | 'test'
+  status: 'received' | 'matched' | 'ignored' | 'error' | 'test' | 'auth_fail'
   error_message: string | null
   created_at: string
 }
@@ -1287,11 +1287,12 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
 
   function statusBadge(status: WebhookEvent['status']) {
     const map: Record<string, { icon: string; label: string; color: string }> = {
-      matched:  { icon: '✅', label: 'Matched',   color: 'green' },
-      received: { icon: '⏳', label: 'Received',  color: 'blue' },
-      ignored:  { icon: '⚠️', label: 'Unmatched', color: 'yellow' },
-      error:    { icon: '❌', label: 'Error',      color: 'red' },
-      test:     { icon: '🔌', label: 'Test',       color: 'teal' },
+      matched:   { icon: '✅', label: 'Matched',     color: 'green' },
+      received:  { icon: '⏳', label: 'Received',    color: 'blue' },
+      ignored:   { icon: '⚠️', label: 'Unmatched',   color: 'yellow' },
+      error:     { icon: '❌', label: 'Error',        color: 'red' },
+      test:      { icon: '🔌', label: 'Test',         color: 'teal' },
+      auth_fail: { icon: '🚫', label: 'Auth failed', color: 'red' },
     }
     const s = map[status] || map.ignored
     return <Badge label={`${s.icon} ${s.label}`} color={s.color} />

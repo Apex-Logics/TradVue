@@ -74,7 +74,7 @@ jest.mock('../middleware/auth', () => ({
 // ── Build test apps ───────────────────────────────────────────────────────────
 function buildApp() {
   const app = express();
-  app.set('trust proxy', true);
+  app.set('trust proxy', 1);
   app.use('/api/webhook', receiverRouter);
   app.use('/api/webhooks', managementRouter);
   return app;
@@ -193,40 +193,42 @@ describe('POST /api/webhook/tv/:token — IP Allowlist', () => {
     expect(res.status).toBe(200);
   });
 
-  test('x-forwarded-for with multiple IPs — uses first IP', async () => {
-    // First IP is a TV IP, second is something else
+  test('x-forwarded-for with TV first + other last — rejected (last untrusted hop)', async () => {
+    // Spoof: leftmost is a TV IP; the real client (last hop) is not.
     const res = await request(app)
       .post(`/api/webhook/tv/${VALID_TOKEN}`)
       .set('X-Forwarded-For', `${TV_IP}, 10.0.0.1`)
       .set('Content-Type', 'text/plain')
       .send('buy MSFT 400.00');
 
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 
-  test('x-forwarded-for with bad first IP — rejected', async () => {
+  test('x-forwarded-for with spoofed 1.2.3.4 first + TV last — allowed as TV, not as 1.2.3.4', async () => {
     const res = await request(app)
       .post(`/api/webhook/tv/${VALID_TOKEN}`)
       .set('X-Forwarded-For', `${BAD_IP}, ${TV_IP}`)
       .set('Content-Type', 'text/plain')
       .send('buy MSFT 400.00');
 
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
   });
 });
 
 // ══════════════════════════════════════════════════════════════════════════════
 // TOKEN VALIDATION TESTS
-// (IP check passes; async token validation happens after 200 response)
-// We verify async processing by checking Supabase was called with correct params
+// IP check passes; token is validated before the 200 ack. Invalid tokens still
+// return 200 (TV 3s timeout / no retry storm) but persist an auth_fail event
+// and never apply a trade. See webhooks-auth-hardening.test.js.
 // ══════════════════════════════════════════════════════════════════════════════
 
-describe('POST /api/webhook/tv/:token — Token Validation (async)', () => {
+describe('POST /api/webhook/tv/:token — Token Validation', () => {
   let app;
   beforeAll(() => { app = buildApp(); });
 
-  test('returns 200 immediately regardless of token validity (TV has 3s timeout)', async () => {
-    // Even an invalid token returns 200 immediately; validation is async
+  test('returns 200 for invalid token (TV 3s timeout; auth-fail is persisted, no trade)', async () => {
+    // Invalid tokens still 200 so TradingView does not retry-storm. Validation
+    // runs before the ack; trades are not applied. See hardening tests.
     const res = await request(app)
       .post('/api/webhook/tv/invalidtoken123')
       .set('X-Forwarded-For', TV_IP)

@@ -148,7 +148,7 @@ const { receiverRouter, managementRouter, _matchAndJournalTrade, parsePayload } 
 
 function buildApp() {
   const app = express();
-  app.set('trust proxy', true);
+  app.set('trust proxy', 1);
   app.use('/api/webhook', receiverRouter);
   app.use('/api/webhooks', managementRouter);
   return app;
@@ -374,20 +374,20 @@ describe('TV-2: IP Allowlist', () => {
     expect(res.status).toBe(200);
   });
 
-  test('TV-2.5: Forwarded list — uses first IP (TV first = allowed)', async () => {
+  test('TV-2.5: Forwarded list — last untrusted hop (TV first + other last = blocked)', async () => {
     const res = await request(app)
       .post('/api/webhook/tv/' + TOKEN)
       .set('X-Forwarded-For', TV_IP + ', 10.0.0.1')
       .send('sell AAPL 190 100');
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(403);
   });
 
-  test('TV-2.6: Forwarded list — uses first IP (bad first = blocked)', async () => {
+  test('TV-2.6: Forwarded list — spoofed 1.2.3.4 first does not win; TV last is allowed', async () => {
     const res = await request(app)
       .post('/api/webhook/tv/' + TOKEN)
       .set('X-Forwarded-For', BAD_IP + ', ' + TV_IP)
       .send('sell AAPL 190 100');
-    expect(res.status).toBe(403);
+    expect(res.status).toBe(200);
   });
 
 });

@@ -29,8 +29,15 @@ if (!process.env.JWT_SECRET) {
   process.exit(1);
 }
 
+const { redactWebhookPath, TRUST_PROXY_HOPS } = require('./lib/webhookSecurity');
+
 const app = express();
 const PORT = process.env.PORT || 3001;
+
+// Render (and most PaaS hosts) sit behind one reverse proxy. `trust proxy: 1`
+// makes `req.ip` the last untrusted hop — not the leftmost X-Forwarded-For
+// value an attacker can prepend. `true` (trust all hops) is the B3 spoof.
+app.set('trust proxy', TRUST_PROXY_HOPS);
 
 // ── Security: hide framework fingerprint ─────────────────────────────────────
 app.disable('x-powered-by');
@@ -67,8 +74,9 @@ app.use(cors({
 // ── Response compression (gzip/deflate) — cuts response sizes 60-80% ─────────
 app.use(compression());
 
-// ── Request logging ───────────────────────────────────────────────────────────
-app.use(morgan('combined'));
+// ── Request logging (token path segments redacted — B4) ──────────────────────
+morgan.token('redacted-url', (req) => redactWebhookPath(req.originalUrl || req.url || ''));
+app.use(morgan(':remote-addr - :remote-user [:date[clf]] ":method :redacted-url HTTP/:http-version" :status :res[content-length] ":referrer" ":user-agent"'));
 
 // ── Stripe webhook — MUST be registered BEFORE the JSON body parser ───────────
 // Stripe needs the raw request body to verify the webhook signature.
