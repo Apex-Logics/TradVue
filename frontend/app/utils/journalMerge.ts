@@ -24,6 +24,7 @@ export interface JournalBlob {
   ruleCop?: unknown
   playbooks?: unknown
   coachSummaries?: unknown
+  /** Legacy journal-blob field. Live UI watchlist is GET /api/watchlist (Q4/A6). */
   dashboardWatchlist?: unknown[]
   customTickers?: unknown
   tickerPrefs?: unknown
