@@ -20,13 +20,27 @@ jest.mock('../services/finnhub', () => ({
   getBatchQuotes: jest.fn(),
 }));
 
+// Same shape as requireAuth (Supabase Auth UUID). The 500 residual was
+// invalid input syntax for type integer: "<this uuid>" against INTEGER user_id.
+const AUTH_USER_UUID = 'e11316bf-5ba9-49d6-ac8d-333842a845f8';
+
 jest.mock('../middleware/auth', () => ({
   requireAuth: (req, _res, next) => {
-    req.user = { id: 'user-uuid-1', email: 'test@example.com', role: 'authenticated', subscription_tier: 'free' };
+    req.user = {
+      id: 'e11316bf-5ba9-49d6-ac8d-333842a845f8',
+      email: 'test@example.com',
+      role: 'authenticated',
+      subscription_tier: 'free',
+    };
     next();
   },
   optionalAuth: (req, _res, next) => {
-    req.user = { id: 'user-uuid-1', email: 'test@example.com', role: 'authenticated', subscription_tier: 'free' };
+    req.user = {
+      id: 'e11316bf-5ba9-49d6-ac8d-333842a845f8',
+      email: 'test@example.com',
+      role: 'authenticated',
+      subscription_tier: 'free',
+    };
     next();
   },
 }));
@@ -110,12 +124,12 @@ beforeEach(() => {
 
 afterEach(() => jest.clearAllMocks());
 
+// Live watchlists schema (staging + prod): no purchase_price column.
 const MOCK_JOINED_ROW = {
   id: 1,
   alert_threshold_up: null,
   alert_threshold_down: null,
   notes: null,
-  purchase_price: null,
   created_at: new Date().toISOString(),
   instruments: {
     symbol: 'AAPL',
@@ -124,6 +138,29 @@ const MOCK_JOINED_ROW = {
     exchange: 'NASDAQ',
   },
 };
+
+const MISSING_PURCHASE_PRICE_ERROR = {
+  message: 'column watchlists.purchase_price does not exist',
+};
+
+function rejectIfSelectingPurchasePrice(result) {
+  let rejected = false;
+  const resolved = () => (
+    rejected
+      ? { data: null, error: MISSING_PURCHASE_PRICE_ERROR }
+      : result
+  );
+  const chain = {
+    select: jest.fn((cols) => {
+      rejected = String(cols).includes('purchase_price');
+      return chain;
+    }),
+    eq: jest.fn(() => chain),
+    order: jest.fn(async () => resolved()),
+    then: (resolve, rejectFn) => Promise.resolve(resolved()).then(resolve, rejectFn),
+  };
+  return chain;
+}
 
 const MOCK_QUOTE = {
   current: 178.5,
@@ -134,14 +171,62 @@ const MOCK_QUOTE = {
 
 describe('GET /api/watchlist', () => {
   test('returns empty watchlist when user has no items', async () => {
+    const chain = makeSelectEqOrder({ data: [], error: null });
     mockCreateClient.mockReturnValueOnce(createSupabaseMock({
-      watchlists: makeSelectEqOrder({ data: [], error: null }),
+      watchlists: chain,
     }));
 
     const res = await request(app).get('/api/watchlist');
 
     expect(res.statusCode).toBe(200);
     expect(res.body).toEqual({ watchlist: [], total_items: 0 });
+    expect(chain.eq).toHaveBeenCalledWith('user_id', AUTH_USER_UUID);
+    expect(typeof chain.eq.mock.calls[0][1]).toBe('string');
+    expect(Number.isInteger(chain.eq.mock.calls[0][1])).toBe(false);
+  });
+
+  test('filters by Supabase Auth UUID user_id, not a legacy integer', async () => {
+    const chain = makeSelectEqOrder({ data: [], error: null });
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: chain,
+    }));
+
+    const res = await request(app).get('/api/watchlist');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ watchlist: [], total_items: 0 });
+    expect(chain.eq).toHaveBeenCalledTimes(1);
+    expect(chain.eq).toHaveBeenCalledWith('user_id', AUTH_USER_UUID);
+    expect(chain.eq).not.toHaveBeenCalledWith('user_id', expect.any(Number));
+    expect(chain.eq.mock.calls[0][1]).toMatch(
+      /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i
+    );
+  });
+
+  test('returns 200 with empty list when Supabase has no purchase_price column', async () => {
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: rejectIfSelectingPurchasePrice({ data: [], error: null }),
+    }));
+
+    const res = await request(app).get('/api/watchlist');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body).toEqual({ watchlist: [], total_items: 0 });
+  });
+
+  test('returns 200 enriched list when rows omit purchase_price', async () => {
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      watchlists: rejectIfSelectingPurchasePrice({ data: [MOCK_JOINED_ROW], error: null }),
+    }));
+    finnhub.getBatchQuotes.mockResolvedValueOnce({ AAPL: MOCK_QUOTE });
+
+    const res = await request(app).get('/api/watchlist');
+
+    expect(res.statusCode).toBe(200);
+    expect(res.body.total_items).toBe(1);
+    expect(res.body.watchlist[0].symbol).toBe('AAPL');
+    expect(res.body.watchlist[0].current_price).toBe(178.5);
+    expect(res.body.watchlist[0].performance).toBeNull();
   });
 
   test('returns enriched watchlist items with live quotes', async () => {
@@ -187,7 +272,7 @@ describe('POST /api/watchlist', () => {
         }),
       insert: jest.fn(() => ({
         select: jest.fn(async () => ({
-          data: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, purchase_price: null, created_at: new Date().toISOString() }],
+          data: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, created_at: new Date().toISOString() }],
           error: null,
         })),
       })),
@@ -210,6 +295,47 @@ describe('POST /api/watchlist', () => {
     expect(res.body.message).toBe('Added to watchlist');
     expect(res.body.item.symbol).toBe('AAPL');
     expect(res.body.item.current_price).toBe(178.5);
+    expect(res.body.item.performance).toBeNull();
+    expect(watchlists.insert.mock.calls[0][0]).not.toHaveProperty('purchase_price');
+    expect(watchlists.insert.mock.calls[0][0].user_id).toBe(AUTH_USER_UUID);
+    expect(typeof watchlists.insert.mock.calls[0][0].user_id).toBe('string');
+  });
+
+  test('duplicate check and insert use UUID user_id, not parseInt', async () => {
+    const dupUserEq = jest.fn(() => ({
+      eq: jest.fn(async () => ({ data: [], error: null })),
+    }));
+    const countUserEq = jest.fn(async () => ({ count: 2, error: null }));
+    const watchlists = {
+      select: jest.fn()
+        .mockReturnValueOnce({ eq: dupUserEq })
+        .mockReturnValueOnce({ eq: countUserEq }),
+      insert: jest.fn(() => ({
+        select: jest.fn(async () => ({
+          data: [{ id: 42, alert_threshold_up: null, alert_threshold_down: null, notes: null, created_at: new Date().toISOString() }],
+          error: null,
+        })),
+      })),
+    };
+
+    mockCreateClient.mockReturnValueOnce(createSupabaseMock({
+      instruments: makeSelectEqEq({
+        data: [{ id: 10, symbol: 'AAPL', name: 'Apple Inc.', type: 'stock', exchange: 'NASDAQ' }],
+        error: null,
+      }),
+      watchlists,
+    }));
+    finnhub.getQuote.mockResolvedValueOnce(MOCK_QUOTE);
+
+    const res = await request(app)
+      .post('/api/watchlist')
+      .send({ symbol: 'AAPL' });
+
+    expect(res.statusCode).toBe(201);
+    expect(dupUserEq).toHaveBeenCalledWith('user_id', AUTH_USER_UUID);
+    expect(countUserEq).toHaveBeenCalledWith('user_id', AUTH_USER_UUID);
+    expect(watchlists.insert.mock.calls[0][0].user_id).toBe(AUTH_USER_UUID);
+    expect(watchlists.insert.mock.calls[0][0].user_id).not.toEqual(expect.any(Number));
   });
 
   test('returns 400 when symbol is missing', async () => {
@@ -282,8 +408,9 @@ describe('POST /api/watchlist', () => {
 
 describe('PUT /api/watchlist/:id/alerts', () => {
   test('updates alert thresholds for owned watchlist item', async () => {
+    const chain = makeUpdateEqEqSelect({ data: [{ id: 1, alert_threshold_up: 200, alert_threshold_down: 150 }], error: null });
     mockCreateClient.mockReturnValueOnce(createSupabaseMock({
-      watchlists: makeUpdateEqEqSelect({ data: [{ id: 1, alert_threshold_up: 200, alert_threshold_down: 150 }], error: null }),
+      watchlists: chain,
     }));
 
     const res = await request(app)
@@ -292,6 +419,7 @@ describe('PUT /api/watchlist/:id/alerts', () => {
 
     expect(res.statusCode).toBe(200);
     expect(res.body.message).toMatch(/updated/i);
+    expect(chain.eq).toHaveBeenNthCalledWith(2, 'user_id', AUTH_USER_UUID);
   });
 
   test('returns 404 when item not found or not owned', async () => {
@@ -309,14 +437,16 @@ describe('PUT /api/watchlist/:id/alerts', () => {
 
 describe('DELETE /api/watchlist/:id', () => {
   test('removes watchlist item and returns removed id', async () => {
+    const chain = makeDeleteEqEqSelect({ data: [{ id: 1 }], error: null });
     mockCreateClient.mockReturnValueOnce(createSupabaseMock({
-      watchlists: makeDeleteEqEqSelect({ data: [{ id: 1 }], error: null }),
+      watchlists: chain,
     }));
 
     const res = await request(app).delete('/api/watchlist/1');
 
     expect(res.statusCode).toBe(200);
     expect(res.body.removed_id).toBe(1);
+    expect(chain.eq).toHaveBeenNthCalledWith(2, 'user_id', AUTH_USER_UUID);
   });
 
   test('returns 404 when item not found or not owned', async () => {
@@ -332,8 +462,9 @@ describe('DELETE /api/watchlist/:id', () => {
 
 describe('GET /api/watchlist/performance', () => {
   test('returns empty summary when watchlist is empty', async () => {
+    const chain = makeSelectEq({ data: [], error: null });
     mockCreateClient.mockReturnValueOnce(createSupabaseMock({
-      watchlists: makeSelectEq({ data: [], error: null }),
+      watchlists: chain,
     }));
 
     const res = await request(app).get('/api/watchlist/performance');
@@ -341,12 +472,13 @@ describe('GET /api/watchlist/performance', () => {
     expect(res.statusCode).toBe(200);
     expect(res.body.summary.total_items).toBe(0);
     expect(res.body.items).toEqual([]);
+    expect(chain.eq).toHaveBeenCalledWith('user_id', AUTH_USER_UUID);
   });
 
-  test('calculates P&L correctly for tracked items', async () => {
+  test('returns 200 with untracked items when purchase_price column is absent', async () => {
     mockCreateClient.mockReturnValueOnce(createSupabaseMock({
-      watchlists: makeSelectEq({
-        data: [{ ...MOCK_JOINED_ROW, purchase_price: '160.00' }],
+      watchlists: rejectIfSelectingPurchasePrice({
+        data: [MOCK_JOINED_ROW],
         error: null,
       }),
     }));
@@ -355,12 +487,11 @@ describe('GET /api/watchlist/performance', () => {
     const res = await request(app).get('/api/watchlist/performance');
 
     expect(res.statusCode).toBe(200);
-    const { summary } = res.body;
+    const { summary, items } = res.body;
     expect(summary.total_items).toBe(1);
-    expect(summary.tracked_items).toBe(1);
-    expect(summary.total_investment).toBe(160);
-    expect(summary.total_current_value).toBe(178.5);
-    expect(summary.total_change).toBeCloseTo(18.5, 2);
-    expect(summary.total_change_percent).toBeCloseTo(11.56, 1);
+    expect(summary.tracked_items).toBe(0);
+    expect(summary.total_investment).toBe(0);
+    expect(items[0].purchase_price).toBeNull();
+    expect(items[0].current_price).toBe(178.5);
   });
 });
