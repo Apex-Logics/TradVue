@@ -19,11 +19,11 @@ jest.mock('../app/utils/analytics', () => ({
 }))
 
 const initFullSyncMock = jest.fn()
-const hydrateWatchlistFromApiMock = jest.fn(async () => ({ symbols: [] as string[], entries: [] as { id: number; symbol: string }[] }))
+const hydrateWatchlistFromApiMock = jest.fn(async (_token: string) => ({ symbols: [] as string[], entries: [] as { id: number; symbol: string }[] }))
 
 jest.mock('../app/utils/cloudSync', () => ({
   initFullSync: (...args: unknown[]) => initFullSyncMock(...args),
-  hydrateWatchlistFromApi: (...args: unknown[]) => hydrateWatchlistFromApiMock(...args),
+  hydrateWatchlistFromApi: (token: string) => hydrateWatchlistFromApiMock(token),
   getSyncStatus: () => ({ state: 'idle' }),
   subscribeSyncStatus: () => () => {},
   resetJournalPullGate: jest.fn(),

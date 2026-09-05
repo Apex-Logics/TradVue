@@ -1019,7 +1019,7 @@ function mockQ4Fetch(opts: {
   const journalPuts: { data?: { dashboardWatchlist?: unknown[] } }[] = []
   const blobPuts: unknown[] = []
 
-  ;(global as unknown as { fetch: typeof fetch }).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
+  ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
     const method = init?.method || 'GET'
     const u = String(url)
     if (isWatchlistTableUrl(u) && method === 'GET') {
@@ -1047,7 +1047,7 @@ function mockQ4Fetch(opts: {
       return { ok: true, json: async () => ({ data: opts.blobWatchlist ?? ['AMD', 'INTC'] }) }
     }
     return { ok: true, json: async () => ({ data: null }) }
-  }) as typeof fetch
+  })
 
   return { order, journalPuts, blobPuts, releaseJournal, releaseBlob }
 }
