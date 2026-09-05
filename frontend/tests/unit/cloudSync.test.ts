@@ -35,6 +35,7 @@ const TRADES_KEY = 'cg_journal_trades'
 const NOTES_KEY  = 'cg_journal_notes'
 const TEMPLATES_KEY = 'cg_note_templates'
 const TOKEN_KEY  = 'cg_token'
+const WATCHLIST_KEY = 'cg_wl'
 
 const localStorageMock = (() => {
   let store: Record<string, string> = {}
@@ -55,6 +56,8 @@ import {
   forceSyncFromCloud,
   debouncedSyncJournal,
   initFullSync,
+  initWatchlistSync,
+  hydrateWatchlistFromApi,
   resetJournalPullGate,
 } from '../../app/utils/cloudSync'
 
@@ -978,6 +981,183 @@ describe('Q3 — journal deletion tombstones', () => {
     })
     await initJournalSync('tok-b')
     expect(lsGetJSON(TRADES_KEY).map((t: { id: string }) => t.id)).toEqual(['other'])
+  })
+})
+
+// ── Q4/A6 2026-09: single writer for live watchlist key cg_wl ─────────────────
+//
+// Authority is GET /api/watchlist (watchlist table). Journal
+// dashboardWatchlist and user_data type=watchlist must not overwrite cg_wl
+// after hydrate, even when those responses arrive last.
+
+const API_WL = [{ id: 11, symbol: 'AAPL' }, { id: 12, symbol: 'MSFT' }]
+const API_SYMBOLS = ['AAPL', 'MSFT']
+
+function isWatchlistTableUrl(url: string): boolean {
+  return /\/api\/watchlist(?:\/|\?|$)/.test(String(url)) && !String(url).includes('/api/user/data/')
+}
+
+function mockQ4Fetch(opts: {
+  apiWatchlist?: { id: number; symbol: string }[]
+  hangJournal?: boolean
+  journalPayload?: unknown
+  hangBlob?: boolean
+  blobWatchlist?: unknown[]
+  apiEmpty?: boolean
+  apiFail?: boolean
+}) {
+  let releaseJournal = () => {}
+  let releaseBlob = () => {}
+  const journalGate = opts.hangJournal
+    ? new Promise<void>(resolve => { releaseJournal = resolve })
+    : Promise.resolve()
+  const blobGate = opts.hangBlob
+    ? new Promise<void>(resolve => { releaseBlob = resolve })
+    : Promise.resolve()
+
+  const order: string[] = []
+  const journalPuts: { data?: { dashboardWatchlist?: unknown[] } }[] = []
+  const blobPuts: unknown[] = []
+
+  ;(global as unknown as { fetch: typeof fetch }).fetch = jest.fn(async (url: string, init?: { method?: string; body?: string }) => {
+    const method = init?.method || 'GET'
+    const u = String(url)
+    if (isWatchlistTableUrl(u) && method === 'GET') {
+      order.push('api')
+      if (opts.apiFail) return { ok: false, status: 500, json: async () => ({ error: 'fail' }) }
+      const watchlist = opts.apiEmpty ? [] : (opts.apiWatchlist ?? API_WL)
+      return { ok: true, json: async () => ({ watchlist, total_items: watchlist.length }) }
+    }
+    if (u.includes('/api/user/data/journal')) {
+      if (method === 'PUT') {
+        journalPuts.push(JSON.parse(init?.body || '{}'))
+        return { ok: true, json: async () => ({}) }
+      }
+      await journalGate
+      order.push('journal')
+      return { ok: true, json: async () => ({ data: opts.journalPayload ?? { dashboardWatchlist: ['TSLA', 'NVDA'] } }) }
+    }
+    if (u.includes('/api/user/data/watchlist')) {
+      if (method === 'PUT') {
+        blobPuts.push(JSON.parse(init?.body || '{}'))
+        return { ok: true, json: async () => ({}) }
+      }
+      await blobGate
+      order.push('blob')
+      return { ok: true, json: async () => ({ data: opts.blobWatchlist ?? ['AMD', 'INTC'] }) }
+    }
+    return { ok: true, json: async () => ({ data: null }) }
+  }) as typeof fetch
+
+  return { order, journalPuts, blobPuts, releaseJournal, releaseBlob }
+}
+
+describe('Q4/A6 — cg_wl is hydrated only from GET /api/watchlist', () => {
+  test('hydrateWatchlistFromApi writes cg_wl from the watchlist table', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    mockQ4Fetch({})
+    const result = await hydrateWatchlistFromApi('tok')
+    expect(result.symbols).toEqual(API_SYMBOLS)
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(API_SYMBOLS)
+  })
+
+  test('empty /api/watchlist does not wipe non-empty local cg_wl (Q9)', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    mockQ4Fetch({ apiEmpty: true })
+    const result = await hydrateWatchlistFromApi('tok')
+    expect(result.symbols).toEqual([])
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['LOCAL'])
+  })
+
+  test('initJournalSync does not write dashboardWatchlist into cg_wl', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    mockQ4Fetch({ journalPayload: { dashboardWatchlist: ['TSLA', 'NVDA'], trades: [{ id: 't1' }] } })
+    await initJournalSync('tok')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['LOCAL'])
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 't1' }])
+  })
+
+  test('initWatchlistSync is a no-op and does not overwrite cg_wl from the user_data blob', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    const ctl = mockQ4Fetch({ blobWatchlist: ['AMD', 'INTC'] })
+    await initWatchlistSync('tok')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['LOCAL'])
+    expect(ctl.order).not.toContain('blob')
+  })
+
+  test('journal PUT does not bundle live cg_wl as dashboardWatchlist', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    lsSetJSON(WATCHLIST_KEY, ['NVDA', 'AMD'])
+    const ctl = mockQ4Fetch({ journalPayload: { trades: [{ id: 't1' }] } })
+    await initJournalSync('tok')
+    debouncedSyncJournal([{ id: 't1' }], [{ id: 'n1' }])
+    await jest.advanceTimersByTimeAsync(1600)
+    expect(ctl.journalPuts).toHaveLength(1)
+    expect(ctl.journalPuts[0].data?.dashboardWatchlist).toBeUndefined()
+    jest.useRealTimers()
+  })
+
+  test('journal PUT echoes legacy dashboardWatchlist from the last pull, not live cg_wl', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    lsSetJSON(WATCHLIST_KEY, ['NVDA'])
+    const ctl = mockQ4Fetch({ journalPayload: { trades: [{ id: 't1' }], dashboardWatchlist: ['MSFT'] } })
+    await initJournalSync('tok')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['NVDA'])
+    debouncedSyncJournal([{ id: 't1' }], [{ id: 'n1' }])
+    await jest.advanceTimersByTimeAsync(1600)
+    expect(ctl.journalPuts[0].data?.dashboardWatchlist).toEqual(['MSFT'])
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['NVDA'])
+    jest.useRealTimers()
+  })
+
+  test('initFullSync: late journal blob does not overwrite /api/watchlist authority', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    const ctl = mockQ4Fetch({
+      hangJournal: true,
+      journalPayload: { dashboardWatchlist: ['TSLA', 'NVDA'], trades: [{ id: 'cloud-trade' }] },
+    })
+
+    const done = initFullSync('tok')
+    await Promise.resolve()
+    await Promise.resolve()
+    expect(ctl.order).toContain('api')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(API_SYMBOLS)
+
+    ctl.releaseJournal()
+    await done
+    expect(ctl.order[ctl.order.length - 1]).toBe('journal')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(API_SYMBOLS)
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 'cloud-trade' }])
+  })
+
+  test('after full sync, a later journal pull and blob no-op cannot replace API watchlist', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    mockQ4Fetch({
+      journalPayload: { dashboardWatchlist: ['FROM-JOURNAL'] },
+      blobWatchlist: ['FROM-BLOB'],
+    })
+
+    await initFullSync('tok')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(API_SYMBOLS)
+
+    await initJournalSync('tok')
+    await initWatchlistSync('tok')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(API_SYMBOLS)
+  })
+
+  test('failed /api/watchlist leaves local cg_wl (Q9) and blobs still cannot write it', async () => {
+    lsSetJSON(WATCHLIST_KEY, ['LOCAL'])
+    mockQ4Fetch({
+      apiFail: true,
+      journalPayload: { dashboardWatchlist: ['TSLA'] },
+      blobWatchlist: ['AMD'],
+    })
+    await initFullSync('tok')
+    await initJournalSync('tok')
+    await initWatchlistSync('tok')
+    expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['LOCAL'])
   })
 })
 

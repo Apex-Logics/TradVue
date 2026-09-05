@@ -19,23 +19,23 @@ jest.mock('../app/utils/analytics', () => ({
 }))
 
 const initFullSyncMock = jest.fn()
+const hydrateWatchlistFromApiMock = jest.fn(async () => ({ symbols: [] as string[], entries: [] as { id: number; symbol: string }[] }))
 
 jest.mock('../app/utils/cloudSync', () => ({
   initFullSync: (...args: unknown[]) => initFullSyncMock(...args),
+  hydrateWatchlistFromApi: (...args: unknown[]) => hydrateWatchlistFromApiMock(...args),
   getSyncStatus: () => ({ state: 'idle' }),
   subscribeSyncStatus: () => () => {},
   resetJournalPullGate: jest.fn(),
 }))
 
 const apiGetMeMock = jest.fn()
-const apiGetWatchlistMock = jest.fn().mockResolvedValue({ watchlist: [] })
 
 jest.mock('../app/lib/api', () => {
   const actual = jest.requireActual('../app/lib/api')
   return {
     ...actual,
     apiGetMe: (...args: unknown[]) => apiGetMeMock(...args),
-    apiGetWatchlist: (...args: unknown[]) => apiGetWatchlistMock(...args),
   }
 })
 
@@ -57,9 +57,9 @@ describe('AuthContext persistence hydration', () => {
   beforeEach(() => {
     localStorageMock.clear()
     initFullSyncMock.mockClear()
+    hydrateWatchlistFromApiMock.mockClear()
+    hydrateWatchlistFromApiMock.mockResolvedValue({ symbols: [], entries: [] })
     apiGetMeMock.mockReset()
-    apiGetWatchlistMock.mockClear()
-    apiGetWatchlistMock.mockResolvedValue({ watchlist: [] })
   })
 
   it('hydrates immediately when token and user are already stored', async () => {
@@ -93,6 +93,7 @@ describe('AuthContext persistence hydration', () => {
     expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
     expect(apiGetMeMock).toHaveBeenCalledWith('stored-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('stored-token')
+    await waitFor(() => expect(hydrateWatchlistFromApiMock).toHaveBeenCalledWith('stored-token'))
     await act(async () => {
       resolveMe({
         id: 'user-1',
@@ -130,5 +131,6 @@ describe('AuthContext persistence hydration', () => {
     expect(localStorageMock.getItem(AUTH_USER_KEY)).toContain('callback@tradvue.com')
     expect(localStorageMock.getItem(AUTH_REFRESH_TOKEN_KEY)).toBe('refresh-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('callback-token')
+    await waitFor(() => expect(hydrateWatchlistFromApiMock).toHaveBeenCalledWith('callback-token'))
   })
 })
