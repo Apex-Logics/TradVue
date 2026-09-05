@@ -12,6 +12,11 @@
  * (`_deleted` in the journal blob) propagate intentional deletes without
  * re-enabling silent empty overwrite of non-empty local (Q9). Fails
  * silently — localStorage-only flow always works.
+ *
+ * Q4/A6 watchlist: the live UI key `cg_wl` is hydrated only from the
+ * server watchlist table (`GET /api/watchlist`). Journal
+ * `dashboardWatchlist` and `user_data` type=watchlist are legacy
+ * (read-ignored, not wiped).
  */
 
 import {
@@ -195,6 +200,8 @@ const JOURNAL_UPDATED_AT_KEY = 'cg_journal_cloud_updated_at'
 const JOURNAL_PUT_MAX_ATTEMPTS = 3
 
 let _journalUpdatedAt: string | null | undefined
+/** Last journal-blob dashboardWatchlist (legacy). Echoed on PUT; never applied to cg_wl. */
+let _legacyJournalWatchlist: unknown[] | undefined
 
 function rememberJournalUpdatedAt(token: string, updatedAt: string | null): void {
   _journalUpdatedAt = updatedAt
@@ -254,7 +261,8 @@ function snapshotSyncedIdsFromLocal(): void {
     ritualEntries: liveIdsFromBlob({ ritualEntries: lsGet<unknown[]>(RITUAL_ENTRIES_KEY, []) }).ritualEntries,
     customTags: liveIdsFromBlob({ customTags: lsGet<unknown[]>(CUSTOM_TAGS_KEY, []) }).customTags,
     dismissedWebhookIds: liveIdsFromBlob({ dismissedWebhookIds: lsGet<unknown[]>(DISMISSED_WEBHOOKS_KEY, []) }).dismissedWebhookIds,
-    dashboardWatchlist: liveIdsFromBlob({ dashboardWatchlist: lsGet<unknown[]>(WATCHLIST_KEY, []) }).dashboardWatchlist,
+    // Q4/A6: dashboardWatchlist is legacy on the journal blob. Do not
+    // snapshot cg_wl here — UI mutations must not mint journal tombstones.
   })
 }
 
@@ -318,7 +326,11 @@ function applyPulledJournal(cloudData: CloudJournalData): void {
   if (cloudData.ruleCop != null) lsSet(RULE_COP_KEY, cloudData.ruleCop)
   if (cloudData.playbooks != null) applyNullableCloudArray(PLAYBOOKS_KEY, cloudData.playbooks, deleted.playbooks)
   if (cloudData.coachSummaries != null) applyNullableCloudArray(COACH_SUMMARIES_KEY, cloudData.coachSummaries, deleted.coachSummaries)
-  applyGuardedCloudArray(WATCHLIST_KEY, cloudData.dashboardWatchlist, deleted.dashboardWatchlist)
+  // Q4/A6: never write cg_wl from the journal blob. Echo the field on
+  // the next journal PUT so existing journal rows keep dashboardWatchlist.
+  if (Array.isArray(cloudData.dashboardWatchlist)) {
+    _legacyJournalWatchlist = cloudData.dashboardWatchlist
+  }
   if (cloudData.customTickers != null) lsSet(CUSTOM_TICKERS_KEY, cloudData.customTickers)
   if (cloudData.tickerPrefs != null) lsSet(TICKER_PREFS_KEY, cloudData.tickerPrefs)
   if (cloudData.alertPrefs != null) lsSet(ALERT_PREFS_KEY, cloudData.alertPrefs)
@@ -470,6 +482,7 @@ export function resetJournalPullGate(): void {
   _journalPullInFlight = 0
   _journalPullDeferred = null
   clearJournalUpdatedAt()
+  _legacyJournalWatchlist = undefined
   if (_journalTimer) {
     clearTimeout(_journalTimer)
     _journalTimer = null
@@ -583,10 +596,11 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
   // 11. cg_rule_cop
   // 12. cg_playbooks
   // 13. cg_coach_summaries
-  // 14. cg_wl              (dashboard watchlist, bundled as dashboardWatchlist)
-  // 15. cg_ticker          (custom tickers)
-  // 16. cg_ticker_prefs
-  // 17. cg_alert_prefs
+  // 14. cg_ticker          (custom tickers)
+  // 15. cg_ticker_prefs
+  // 16. cg_alert_prefs
+  // cg_wl is NOT bundled — live watchlist is GET/POST /api/watchlist (Q4/A6).
+  // Legacy journal dashboardWatchlist is echoed from the last pull only.
   // ─────────────────────────────────────────────────────────────────────────
   const token = getToken()
   if (!token) {
@@ -644,7 +658,6 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
     const ruleCop            = lsGet<unknown>(RULE_COP_KEY, null)
     const playbooks          = lsGet<unknown>(PLAYBOOKS_KEY, null)
     const coachSummaries     = lsGet<unknown>(COACH_SUMMARIES_KEY, null)
-    const dashboardWatchlist = lsGet<unknown[]>(WATCHLIST_KEY, [])
     const customTickers      = lsGet<unknown>(CUSTOM_TICKERS_KEY, null)
     const tickerPrefs        = lsGet<unknown>(TICKER_PREFS_KEY, null)
     const alertPrefs         = lsGet<unknown>(ALERT_PREFS_KEY, null)
@@ -663,7 +676,9 @@ export function debouncedSyncJournal(trades: unknown[], notes?: unknown[], templ
       ...(ruleCop != null ? { ruleCop } : {}),
       ...(playbooks != null ? { playbooks } : {}),
       ...(coachSummaries != null ? { coachSummaries } : {}),
-      ...(dashboardWatchlist.length > 0 ? { dashboardWatchlist } : {}),
+      ...(Array.isArray(_legacyJournalWatchlist) && _legacyJournalWatchlist.length > 0
+        ? { dashboardWatchlist: _legacyJournalWatchlist }
+        : {}),
       ...(customTickers != null ? { customTickers } : {}),
       ...(tickerPrefs != null ? { tickerPrefs } : {}),
       ...(alertPrefs != null ? { alertPrefs } : {}),
@@ -783,28 +798,64 @@ export function debouncedSyncPortfolio(holdings: unknown[], prevHoldings?: unkno
 
 // ── Watchlist sync ────────────────────────────────────────────────────────────
 
-/**
- * Initial sync for watchlist on login/app load.
- * Pull from cloud if available; push local if cloud is empty.
- */
-export async function initWatchlistSync(token: string): Promise<void> {
-  try {
-    const cloudWatchlist = await cloudGet<unknown[]>(token, 'watchlist')
-    const localWatchlist = lsGet<unknown[]>(WATCHLIST_KEY, [])
-    const cloud = Array.isArray(cloudWatchlist) ? cloudWatchlist : []
+export interface HydratedWatchlist {
+  symbols: string[]
+  entries: { id: number; symbol: string }[]
+}
 
-    if (cloud.length > 0) {
-      lsSet(WATCHLIST_KEY, cloud)
-    } else if (localWatchlist.length > 0) {
-      await cloudPut(token, 'watchlist', localWatchlist)
+function emptyHydratedWatchlist(): HydratedWatchlist {
+  return { symbols: [], entries: [] }
+}
+
+/**
+ * Sole post-login writer for the live UI key `cg_wl`.
+ * Authority: server watchlist table via GET /api/watchlist.
+ * Non-empty response overwrites local. Empty leaves local (Q9).
+ * Does not read `user_data` journal.dashboardWatchlist or type=watchlist.
+ */
+export async function hydrateWatchlistFromApi(token: string): Promise<HydratedWatchlist> {
+  if (!token) return emptyHydratedWatchlist()
+  try {
+    const res = await fetch(`${API_BASE}/api/watchlist`, {
+      headers: { Authorization: `Bearer ${token}` },
+    })
+    if (!res.ok) return emptyHydratedWatchlist()
+    const json = await res.json()
+    const items = Array.isArray(json?.watchlist) ? json.watchlist : []
+    const entries: { id: number; symbol: string }[] = []
+    for (const item of items) {
+      if (!item || typeof item !== 'object') continue
+      const symbol = String((item as { symbol?: unknown }).symbol || '').toUpperCase()
+      const id = Number((item as { id?: unknown }).id)
+      if (!symbol || !Number.isFinite(id)) continue
+      entries.push({ id, symbol })
     }
+    const symbols = entries.map(e => e.symbol)
+    if (symbols.length > 0) {
+      lsSet(WATCHLIST_KEY, symbols)
+    }
+    return { symbols, entries }
   } catch {
-    // Fail silently — localStorage-only flow always works
+    return emptyHydratedWatchlist()
   }
+}
+
+/**
+ * Legacy `user_data` type=watchlist pull.
+ * Q4/A6: no-op. The blob is read-ignored and is not wiped.
+ * Live UI hydration is `hydrateWatchlistFromApi` only.
+ */
+export async function initWatchlistSync(_token: string): Promise<void> {
+  return
 }
 
 let _watchlistTimer: ReturnType<typeof setTimeout> | null = null
 
+/**
+ * Legacy writer to `user_data` type=watchlist.
+ * Kept exported so existing call sites compile; new UI mutations should
+ * use POST/DELETE `/api/watchlist` (AuthContext). Does not touch `cg_wl`.
+ */
 export function debouncedSyncWatchlist(tickers: unknown[]): void {
   const token = getToken()
   if (!token) return
@@ -815,18 +866,17 @@ export function debouncedSyncWatchlist(tickers: unknown[]): void {
   }, 1500)
 }
 
-// ── Full initial sync (journal + settings + portfolio + watchlist) ─────────────
+// ── Full initial sync (journal + settings + portfolio + watchlist table) ───────
 
 export async function initFullSync(token: string): Promise<void> {
   if (!token) {
     setStatus('local-only')
     return
   }
-  // Run all 4 syncs in parallel
   await Promise.all([
     initJournalSync(token),
     initSettingsSync(token),
     initPortfolioSync(token),
-    initWatchlistSync(token),
+    hydrateWatchlistFromApi(token),
   ])
 }

@@ -2,16 +2,14 @@
 
 import React, { createContext, useContext, useState, useEffect, useCallback, useRef } from 'react'
 import { trackLogout } from '../utils/analytics'
-import { initFullSync, getSyncStatus, subscribeSyncStatus, resetJournalPullGate, type SyncStatus } from '../utils/cloudSync'
+import { initFullSync, hydrateWatchlistFromApi, getSyncStatus, subscribeSyncStatus, resetJournalPullGate, type SyncStatus } from '../utils/cloudSync'
 import {
   apiLogin,
   apiRegister,
   apiGetMe,
-  apiGetWatchlist,
   apiAddToWatchlist,
   apiRemoveFromWatchlist,
   type AuthUser,
-  type WatchlistItem,
 } from '../lib/api'
 import { AUTH_REFRESH_TOKEN_KEY, AUTH_TOKEN_KEY, AUTH_USER_KEY, clearStoredAuth, persistStoredAuth } from '../utils/storageKeys'
 
@@ -128,14 +126,10 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const loadWatchlistFromBackend = useCallback(async (): Promise<string[]> => {
     if (!token) return []
     try {
-      const res = await apiGetWatchlist(token)
-      if (res.error || !res.watchlist) return []
-      const entries = res.watchlist.map(item => ({
-        id: item.id,
-        symbol: item.symbol.toUpperCase(),
-      }))
+      // Q4/A6: sole Auth path that hydrates cg_wl from GET /api/watchlist.
+      const { symbols, entries } = await hydrateWatchlistFromApi(token)
       setBackendWatchlist(entries)
-      return entries.map(e => e.symbol)
+      return symbols
     } catch {
       return []
     }

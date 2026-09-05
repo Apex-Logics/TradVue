@@ -8,7 +8,6 @@ import { useSettings } from './context/SettingsContext'
 import { useOnboarding } from './context/OnboardingContext'
 import { useToast } from './context/ToastContext'
 import { trackWatchlistAdd, trackWatchlistRemove } from './utils/analytics'
-import { initWatchlistSync, debouncedSyncWatchlist } from './utils/cloudSync'
 
 // Lazy-load modals so they don't bloat initial bundle
 const AuthModal      = dynamic(() => import('./components/AuthModal'),      { ssr: false })
@@ -483,25 +482,16 @@ export default function HomeClient() {
     } catch {}
   }, [])
 
+  const skipFirstWatchlistPersist = useRef(true)
   useEffect(() => {
+    // Skip the DEFAULT_WATCHLIST first paint so it cannot clobber a
+    // concurrent hydrateWatchlistFromApi write to cg_wl (Q4/A6).
+    if (skipFirstWatchlistPersist.current) {
+      skipFirstWatchlistPersist.current = false
+      return
+    }
     try { localStorage.setItem('cg_wl', JSON.stringify(watchlist)) } catch {}
-    debouncedSyncWatchlist(watchlist)
   }, [watchlist])
-
-  // ── Cloud sync: watchlist ────────────────────────────────────────────────────
-  useEffect(() => {
-    if (!token) return
-    initWatchlistSync(token).then(() => {
-      try {
-        const s = localStorage.getItem('cg_wl')
-        if (s) {
-          const parsed = JSON.parse(s)
-          if (Array.isArray(parsed) && parsed.length > 0) setWatchlist(parsed)
-        }
-      } catch {}
-    })
-  // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [token])
 
   // ── Persist: custom ticker ───────────────────────────────────────────────────
   useEffect(() => {
@@ -561,7 +551,17 @@ export default function HomeClient() {
       setWatchlistSyncing(true)
       const backendSymbols = await loadWatchlistFromBackend()
       if (backendSymbols.length > 0) {
-        setWatchlist(prev => [...new Set([...backendSymbols, ...prev])])
+        // Server watchlist table is the post-login authority (Q4/A6).
+        setWatchlist(backendSymbols)
+      } else {
+        // Q9: empty/failed API does not wipe. Adopt cg_wl if hydrate already wrote.
+        try {
+          const s = localStorage.getItem('cg_wl')
+          if (s) {
+            const parsed = JSON.parse(s)
+            if (Array.isArray(parsed) && parsed.length > 0) setWatchlist(parsed)
+          }
+        } catch {}
       }
       setWatchlistSyncing(false)
     }
