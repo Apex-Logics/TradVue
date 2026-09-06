@@ -177,6 +177,126 @@ CREATE TABLE IF NOT EXISTS watchlists (
 CREATE INDEX IF NOT EXISTS idx_watchlists_user ON watchlists (user_id);
 
 -- ────────────────────────────────────────────
+-- Portfolio (holdings, lots, dividends, sold)
+-- ────────────────────────────────────────────
+-- user_id is the Supabase Auth UUID (auth.users.id / user_profiles.id).
+-- It is NOT an INTEGER FK to legacy public.users(id). Same conversion
+-- as watchlists (021). See database/migrations/022_portfolio_user_id_uuid.sql.
+-- Do not re-add a users(id) FK here. dashboard_* / alert_* stay INTEGER.
+
+CREATE TABLE IF NOT EXISTS portfolio_holdings (
+    id                   SERIAL PRIMARY KEY,
+    user_id              UUID,             -- Supabase Auth UUID (not users.id)
+    symbol               VARCHAR(20) NOT NULL,
+    company_name         VARCHAR(255),
+    sector               VARCHAR(100),
+    shares               DECIMAL(15,6) NOT NULL,
+    avg_cost             DECIMAL(15,4) NOT NULL,
+    buy_date             DATE,
+    annual_dividend      DECIMAL(15,6) DEFAULT 0,
+    div_override_annual  DECIMAL(15,6),
+    notes                TEXT,
+    drip_enabled         BOOLEAN DEFAULT FALSE,
+    created_at           TIMESTAMPTZ DEFAULT NOW(),
+    updated_at           TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, symbol)
+);
+
+CREATE INDEX IF NOT EXISTS idx_ph_user ON portfolio_holdings (user_id);
+
+CREATE TABLE IF NOT EXISTS portfolio_transactions (
+    id          SERIAL PRIMARY KEY,
+    holding_id  INTEGER REFERENCES portfolio_holdings(id) ON DELETE CASCADE,
+    user_id     UUID,             -- Supabase Auth UUID (not users.id)
+    type        VARCHAR(10) NOT NULL CHECK (type IN ('buy', 'sell')),
+    shares      DECIMAL(15,6) NOT NULL,
+    price       DECIMAL(15,4) NOT NULL,
+    date        DATE NOT NULL,
+    notes       TEXT,
+    created_at  TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_pt_holding ON portfolio_transactions (holding_id);
+CREATE INDEX IF NOT EXISTS idx_pt_user ON portfolio_transactions (user_id);
+
+CREATE TABLE IF NOT EXISTS portfolio_dividend_overrides (
+    id          SERIAL PRIMARY KEY,
+    user_id     UUID,             -- Supabase Auth UUID (not users.id)
+    symbol      VARCHAR(20) NOT NULL,
+    year        INTEGER NOT NULL,
+    month       INTEGER NOT NULL,
+    amount      DECIMAL(15,4) NOT NULL,
+    created_at  TIMESTAMPTZ DEFAULT NOW(),
+    updated_at  TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, symbol, year, month)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pdo_user ON portfolio_dividend_overrides (user_id);
+
+CREATE TABLE IF NOT EXISTS portfolio_sold (
+    id                   SERIAL PRIMARY KEY,
+    user_id              UUID,             -- Supabase Auth UUID (not users.id)
+    symbol               VARCHAR(20) NOT NULL,
+    company_name         VARCHAR(255),
+    sector               VARCHAR(100),
+    shares               DECIMAL(15,6) NOT NULL,
+    avg_cost             DECIMAL(15,4) NOT NULL,
+    sale_price           DECIMAL(15,4) NOT NULL,
+    buy_date             DATE,
+    sell_date            DATE NOT NULL,
+    dividends_received   DECIMAL(15,4) DEFAULT 0,
+    notes                TEXT,
+    created_at           TIMESTAMPTZ DEFAULT NOW()
+);
+
+CREATE INDEX IF NOT EXISTS idx_ps_user ON portfolio_sold (user_id);
+
+CREATE TABLE IF NOT EXISTS portfolio_watchlist (
+    id            SERIAL PRIMARY KEY,
+    user_id       UUID,             -- Supabase Auth UUID (not users.id)
+    symbol        VARCHAR(20) NOT NULL,
+    company_name  VARCHAR(255),
+    sector        VARCHAR(100) DEFAULT 'Other',
+    target_price  DECIMAL(15,4),
+    notes         TEXT,
+    created_at    TIMESTAMPTZ DEFAULT NOW(),
+    updated_at    TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, symbol)
+);
+
+CREATE INDEX IF NOT EXISTS idx_pwl_user ON portfolio_watchlist (user_id);
+
+CREATE TABLE IF NOT EXISTS portfolio_settings (
+    user_id     UUID PRIMARY KEY,   -- Supabase Auth UUID (not users.id)
+    settings    JSONB NOT NULL DEFAULT '{}',
+    updated_at  TIMESTAMPTZ NOT NULL DEFAULT NOW()
+);
+
+CREATE TABLE IF NOT EXISTS portfolio_dividend_log (
+    id                  SERIAL PRIMARY KEY,
+    user_id             UUID NOT NULL,  -- Supabase Auth UUID (not users.id)
+    symbol              VARCHAR(20) NOT NULL,
+    payment_date        DATE NOT NULL,
+    ex_date             DATE,
+    dividend_per_share  DECIMAL(10,6) NOT NULL,
+    shares_held         DECIMAL(15,6) NOT NULL,
+    total_received      DECIMAL(15,4) NOT NULL,
+    source              TEXT DEFAULT 'auto' CHECK (source IN ('auto', 'manual')),
+    is_confirmed        BOOLEAN DEFAULT FALSE,
+    drip_reinvested     BOOLEAN DEFAULT FALSE,
+    drip_shares_added   DECIMAL(15,6),
+    drip_price          DECIMAL(15,4),
+    notes               TEXT,
+    created_at          TIMESTAMPTZ DEFAULT NOW(),
+    updated_at          TIMESTAMPTZ DEFAULT NOW(),
+    UNIQUE (user_id, symbol, payment_date)
+);
+
+CREATE INDEX IF NOT EXISTS idx_dividend_log_user ON portfolio_dividend_log (user_id);
+CREATE INDEX IF NOT EXISTS idx_dividend_log_symbol ON portfolio_dividend_log (user_id, symbol);
+CREATE INDEX IF NOT EXISTS idx_dividend_log_date ON portfolio_dividend_log (payment_date);
+
+-- ────────────────────────────────────────────
 -- Alert Notifications Log
 -- ────────────────────────────────────────────
 
@@ -221,11 +341,12 @@ CREATE TRIGGER calendar_updated_at BEFORE UPDATE ON calendar_events
 -- Summary of policy strategy:
 --   User-scoped tables   → user_id = public.current_user_id()
 --   watchlists           → user_id UUID = auth.uid() (migration 021)
+--   portfolio_*          → user_id UUID = auth.uid() (migration 022)
 --   Market data tables   → public SELECT, service_role writes
 --   System/admin tables  → service_role only
 --
 -- The helper function public.current_user_id() extracts the integer
 -- `userId` claim from the custom JWT (signed by the backend).
--- watchlists is the exception: it keys by Supabase Auth UUID.
+-- watchlists and portfolio_* key by Supabase Auth UUID.
 --
 -- See: database/migrations/010_enable_rls_all_tables.sql

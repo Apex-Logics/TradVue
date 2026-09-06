@@ -19,7 +19,8 @@ const db = require('../services/db');
 
 // ─── Test Configuration ───────────────────────────────────────────────────────
 
-const TEST_USER_ID = 1; // Dev/test user (test@chartgenius.io)
+// Supabase Auth UUID (migration 022). Never an INTEGER legacy users.id.
+const TEST_USER_ID = 'e11316bf-5ba9-49d6-ac8d-333842a845f8';
 
 const DIVIDEND_ARISTOCRATS = [
   'JNJ', 'PG', 'KO', 'PEP', 'MMM', 'ABT', 'ABBV', 'XOM', 'CVX', 'T',

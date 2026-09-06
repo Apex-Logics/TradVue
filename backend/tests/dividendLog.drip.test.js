@@ -151,7 +151,7 @@ jest.mock('@supabase/supabase-js', () => ({
 
 const dividendLog = require('../services/dividendLog');
 
-const USER = 42;
+const USER = 'e11316bf-5ba9-49d6-ac8d-333842a845f8';
 const SYM = 'KO';
 
 function seedHolding(shares = 100) {
