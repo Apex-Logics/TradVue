@@ -33,6 +33,9 @@
  *
  * NOTE: Migrated from db.query (direct Postgres/IPv6) to Supabase REST
  * (HTTPS/IPv4) to fix intermittent connectivity issues on Render.
+ *
+ * userId is the Supabase Auth UUID string (migration 022). Never parseInt
+ * or coerce it — INTEGER portfolio_* user_id 500s every current auth user.
  */
 
 const { createClient } = require('@supabase/supabase-js');
