@@ -235,6 +235,8 @@ router.post('/sold', async (req, res) => {
       return res.status(400).json({ error: 'symbol, shares, avg_cost, sale_price, sell_date required' });
     }
 
+    // Q6/Q7: sold dividends stay symbol + date-range until lot-linked
+    // FIFO/LIFO attribution (later PR; needs Erick lot-model decision).
     let actualDividendsReceived = dividends_received || 0;
     try {
       const logTotal = await dividendLog.getTotalForSymbol(req.user.id, symbol, { fromDate: buy_date || null, toDate: sell_date });
@@ -477,9 +479,11 @@ router.delete('/dividend-log/:id', async (req, res) => {
 
 router.post('/dividend-log/backfill', async (req, res) => {
   try {
-    const { symbol, shares, buy_date, drip_enabled } = req.body;
+    const { symbol, shares, buy_date, drip_enabled, reinvest_prices } = req.body;
     if (!symbol || shares == null) return res.status(400).json({ error: 'symbol and shares required' });
-    const result = await dividendLog.backfill(req.user.id, { symbol, shares, buy_date, drip_enabled });
+    const result = await dividendLog.backfill(req.user.id, {
+      symbol, shares, buy_date, drip_enabled, reinvestPrices: reinvest_prices || null,
+    });
     res.json(result);
   } catch (e) {
     console.error('[Portfolio] POST dividend-log/backfill error:', e.message);
