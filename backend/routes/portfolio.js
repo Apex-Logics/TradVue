@@ -5,6 +5,9 @@
  *
  * NOTE: Migrated from db.query (direct Postgres/IPv6) to Supabase REST
  * (HTTPS/IPv4) to fix intermittent connectivity issues on Render.
+ *
+ * user_id is the Supabase Auth UUID from requireAuth (migration 022).
+ * Never parseInt / coerce it — INTEGER user_id 500s every current auth user.
  */
 
 const express = require('express');
@@ -17,6 +20,14 @@ function getSupabase() {
   return createClient(process.env.SUPABASE_URL, process.env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
+/**
+ * Supabase Auth UUID from requireAuth (auth.users.id).
+ * portfolio_*.user_id is UUID (migration 022) — never parseInt this.
+ */
+function authUserId(req) {
+  return String(req.user.id);
+}
+
 // All portfolio routes require auth
 router.use(requireAuth);
 
@@ -27,7 +38,7 @@ router.get('/holdings', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_holdings')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .order('buy_date', { ascending: true })
       .order('symbol', { ascending: true });
     if (error) throw error;
@@ -47,7 +58,7 @@ router.post('/holdings', async (req, res) => {
       .from('portfolio_holdings')
       .upsert(
         {
-          user_id: req.user.id,
+          user_id: authUserId(req),
           symbol: symbol.toUpperCase(),
           company_name,
           sector,
@@ -68,7 +79,7 @@ router.post('/holdings', async (req, res) => {
     if (error) throw error;
 
     if (req.query.backfill !== 'false') {
-      dividendLog.backfill(req.user.id, {
+      dividendLog.backfill(authUserId(req), {
         symbol: symbol.toUpperCase(), shares, buy_date: buy_date || null, drip_enabled: drip_enabled || false,
       }).then(r => console.info(`[Portfolio] Dividend backfill for ${symbol}: ${r.inserted} inserted, ${r.skipped} skipped`))
         .catch(err => console.warn(`[Portfolio] Dividend backfill failed for ${symbol}:`, err.message));
@@ -86,7 +97,7 @@ router.delete('/holdings/:symbol', async (req, res) => {
     const { error } = await getSupabase()
       .from('portfolio_holdings')
       .delete()
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('symbol', req.params.symbol.toUpperCase());
     if (error) throw error;
     res.json({ ok: true });
@@ -105,7 +116,7 @@ router.get('/transactions/:symbol', async (req, res) => {
     const { data: holdings, error: hErr } = await supabase
       .from('portfolio_holdings')
       .select('id')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('symbol', req.params.symbol.toUpperCase())
       .limit(1);
     if (hErr) throw hErr;
@@ -114,7 +125,7 @@ router.get('/transactions/:symbol', async (req, res) => {
     const { data, error } = await supabase
       .from('portfolio_transactions')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('holding_id', holdings[0].id)
       .order('date', { ascending: true });
     if (error) throw error;
@@ -135,7 +146,7 @@ router.post('/transactions', async (req, res) => {
     const { data: holdings, error: hErr } = await supabase
       .from('portfolio_holdings')
       .select('id')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('symbol', symbol.toUpperCase())
       .limit(1);
     if (hErr) throw hErr;
@@ -143,7 +154,7 @@ router.post('/transactions', async (req, res) => {
 
     const { data, error } = await supabase
       .from('portfolio_transactions')
-      .insert({ holding_id: holdings[0].id, user_id: req.user.id, type, shares, price, date, notes: notes || null })
+      .insert({ holding_id: holdings[0].id, user_id: authUserId(req), type, shares, price, date, notes: notes || null })
       .select()
       .single();
     if (error) throw error;
@@ -161,7 +172,7 @@ router.get('/dividends', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_dividend_overrides')
       .select('*')
-      .eq('user_id', req.user.id);
+      .eq('user_id', authUserId(req));
     if (error) throw error;
     const cell = {};
     (data || []).forEach(r => { cell[`${r.year}-${r.month}-${r.symbol}`] = parseFloat(r.amount); });
@@ -181,7 +192,7 @@ router.post('/dividends', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_dividend_overrides')
       .upsert(
-        { user_id: req.user.id, symbol: symbol.toUpperCase(), year, month, amount, updated_at: new Date().toISOString() },
+        { user_id: authUserId(req), symbol: symbol.toUpperCase(), year, month, amount, updated_at: new Date().toISOString() },
         { onConflict: 'user_id,symbol,year,month' }
       )
       .select()
@@ -199,7 +210,7 @@ router.delete('/dividends/:symbol/:year/:month', async (req, res) => {
     const { error } = await getSupabase()
       .from('portfolio_dividend_overrides')
       .delete()
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('symbol', req.params.symbol.toUpperCase())
       .eq('year', req.params.year)
       .eq('month', req.params.month);
@@ -218,7 +229,7 @@ router.get('/sold', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_sold')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .order('sell_date', { ascending: false });
     if (error) throw error;
     res.json({ sold: data || [] });
@@ -239,7 +250,7 @@ router.post('/sold', async (req, res) => {
     // FIFO/LIFO attribution (later PR; needs Erick lot-model decision).
     let actualDividendsReceived = dividends_received || 0;
     try {
-      const logTotal = await dividendLog.getTotalForSymbol(req.user.id, symbol, { fromDate: buy_date || null, toDate: sell_date });
+      const logTotal = await dividendLog.getTotalForSymbol(authUserId(req), symbol, { fromDate: buy_date || null, toDate: sell_date });
       if (logTotal > 0) actualDividendsReceived = logTotal;
     } catch (err) {
       console.warn('[Portfolio] Could not calculate dividends from log for sold position:', err.message);
@@ -248,7 +259,7 @@ router.post('/sold', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_sold')
       .insert({
-        user_id: req.user.id,
+        user_id: authUserId(req),
         symbol: symbol.toUpperCase(),
         company_name,
         sector,
@@ -276,7 +287,7 @@ router.delete('/sold/:id', async (req, res) => {
       .from('portfolio_sold')
       .delete()
       .eq('id', req.params.id)
-      .eq('user_id', req.user.id);
+      .eq('user_id', authUserId(req));
     if (error) throw error;
     res.json({ ok: true });
   } catch (e) {
@@ -292,7 +303,7 @@ router.get('/watchlist', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_watchlist')
       .select('*')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .order('symbol', { ascending: true });
     if (error) throw error;
     res.json({ watchlist: data || [] });
@@ -309,7 +320,7 @@ router.post('/watchlist', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_watchlist')
       .upsert(
-        { user_id: req.user.id, symbol: symbol.toUpperCase(), company_name, sector: sector || 'Other', target_price: target_price || null, notes: notes || null, updated_at: new Date().toISOString() },
+        { user_id: authUserId(req), symbol: symbol.toUpperCase(), company_name, sector: sector || 'Other', target_price: target_price || null, notes: notes || null, updated_at: new Date().toISOString() },
         { onConflict: 'user_id,symbol' }
       )
       .select()
@@ -327,7 +338,7 @@ router.delete('/watchlist/:symbol', async (req, res) => {
     const { error } = await getSupabase()
       .from('portfolio_watchlist')
       .delete()
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .eq('symbol', req.params.symbol.toUpperCase());
     if (error) throw error;
     res.json({ ok: true });
@@ -342,7 +353,7 @@ router.delete('/watchlist/:symbol', async (req, res) => {
 router.post('/sync', async (req, res) => {
   try {
     const { holdings = [], sold = [], watchlist = [], dividendOverrides = {} } = req.body;
-    const userId = req.user.id;
+    const userId = authUserId(req);
     const results = { holdings: 0, sold: 0, watchlist: 0, dividends: 0 };
     const supabase = getSupabase();
 
@@ -400,7 +411,7 @@ router.get('/settings', async (req, res) => {
     const { data, error } = await getSupabase()
       .from('portfolio_settings')
       .select('settings')
-      .eq('user_id', req.user.id)
+      .eq('user_id', authUserId(req))
       .maybeSingle();
     if (error) throw error;
     res.json({ settings: data?.settings || {} });
@@ -417,7 +428,7 @@ router.post('/settings', async (req, res) => {
     }
     const { error } = await getSupabase()
       .from('portfolio_settings')
-      .upsert({ user_id: req.user.id, settings, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
+      .upsert({ user_id: authUserId(req), settings, updated_at: new Date().toISOString() }, { onConflict: 'user_id' });
     if (error) throw error;
     res.json({ ok: true });
   } catch (e) {
@@ -431,7 +442,7 @@ router.post('/settings', async (req, res) => {
 router.get('/dividend-log', async (req, res) => {
   try {
     const { symbol } = req.query;
-    const entries = await dividendLog.getLog(req.user.id, { symbol: symbol || null });
+    const entries = await dividendLog.getLog(authUserId(req), { symbol: symbol || null });
     res.json({ entries });
   } catch (e) {
     console.error('[Portfolio] GET dividend-log error:', e.message);
@@ -445,7 +456,7 @@ router.post('/dividend-log', async (req, res) => {
     if (!symbol || !payment_date || dividend_per_share == null || shares_held == null) {
       return res.status(400).json({ error: 'symbol, payment_date, dividend_per_share, shares_held required' });
     }
-    const result = await dividendLog.upsertEntry(req.user.id, {
+    const result = await dividendLog.upsertEntry(authUserId(req), {
       symbol, payment_date, ex_date, dividend_per_share, shares_held,
       total_received: total_received ?? parseFloat((dividend_per_share * shares_held).toFixed(4)),
       source: source || 'manual', is_confirmed: is_confirmed ?? false, notes,
@@ -459,7 +470,7 @@ router.post('/dividend-log', async (req, res) => {
 
 router.put('/dividend-log/:id', async (req, res) => {
   try {
-    const entry = await dividendLog.updateEntry(req.user.id, req.params.id, req.body);
+    const entry = await dividendLog.updateEntry(authUserId(req), req.params.id, req.body);
     res.json({ entry });
   } catch (e) {
     console.error('[Portfolio] PUT dividend-log error:', e.message);
@@ -469,7 +480,7 @@ router.put('/dividend-log/:id', async (req, res) => {
 
 router.delete('/dividend-log/:id', async (req, res) => {
   try {
-    const result = await dividendLog.deleteEntry(req.user.id, req.params.id);
+    const result = await dividendLog.deleteEntry(authUserId(req), req.params.id);
     res.json({ ok: true, deleted: result });
   } catch (e) {
     console.error('[Portfolio] DELETE dividend-log error:', e.message);
@@ -481,7 +492,7 @@ router.post('/dividend-log/backfill', async (req, res) => {
   try {
     const { symbol, shares, buy_date, drip_enabled, reinvest_prices } = req.body;
     if (!symbol || shares == null) return res.status(400).json({ error: 'symbol and shares required' });
-    const result = await dividendLog.backfill(req.user.id, {
+    const result = await dividendLog.backfill(authUserId(req), {
       symbol, shares, buy_date, drip_enabled, reinvestPrices: reinvest_prices || null,
     });
     res.json(result);
@@ -493,7 +504,7 @@ router.post('/dividend-log/backfill', async (req, res) => {
 
 router.post('/dividend-log/backfill-all', async (req, res) => {
   try {
-    const results = await dividendLog.backfillAllHoldings(req.user.id);
+    const results = await dividendLog.backfillAllHoldings(authUserId(req));
     res.json({ results });
   } catch (e) {
     console.error('[Portfolio] POST dividend-log/backfill-all error:', e.message);
@@ -503,7 +514,7 @@ router.post('/dividend-log/backfill-all', async (req, res) => {
 
 router.post('/dividend-log/confirm/:id', async (req, res) => {
   try {
-    const entry = await dividendLog.confirmEntry(req.user.id, req.params.id);
+    const entry = await dividendLog.confirmEntry(authUserId(req), req.params.id);
     res.json({ entry });
   } catch (e) {
     console.error('[Portfolio] POST dividend-log/confirm error:', e.message);
@@ -517,7 +528,7 @@ router.post('/dividend-log/drip/:id', async (req, res) => {
     if (!price_at_payment || price_at_payment <= 0) {
       return res.status(400).json({ error: 'price_at_payment required and must be positive' });
     }
-    const result = await dividendLog.processDRIP(req.user.id, req.params.id, price_at_payment);
+    const result = await dividendLog.processDRIP(authUserId(req), req.params.id, price_at_payment);
     res.json(result);
   } catch (e) {
     console.error('[Portfolio] POST dividend-log/drip error:', e.message);
@@ -528,7 +539,7 @@ router.post('/dividend-log/drip/:id', async (req, res) => {
 router.get('/dividend-log/summary/:symbol', async (req, res) => {
   try {
     const { from_date, to_date } = req.query;
-    const total = await dividendLog.getTotalForSymbol(req.user.id, req.params.symbol, { fromDate: from_date || null, toDate: to_date || null });
+    const total = await dividendLog.getTotalForSymbol(authUserId(req), req.params.symbol, { fromDate: from_date || null, toDate: to_date || null });
     res.json({ symbol: req.params.symbol.toUpperCase(), total });
   } catch (e) {
     console.error('[Portfolio] GET dividend-log/summary error:', e.message);
