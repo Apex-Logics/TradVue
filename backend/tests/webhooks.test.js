@@ -37,6 +37,7 @@ function makeChain(overrides = {}) {
     delete:      jest.fn().mockReturnThis(),
     eq:          jest.fn().mockReturnThis(),
     order:       jest.fn().mockReturnThis(),
+    limit:       jest.fn().mockResolvedValue({ data: [], error: null }),
     range:       jest.fn().mockResolvedValue({ data: [], error: null }),
     single:      jest.fn().mockResolvedValue({ data: null, error: null }),
     maybeSingle: jest.fn().mockResolvedValue({ data: null, error: null }),
@@ -817,7 +818,7 @@ describe('GET /api/webhooks/events', () => {
   });
 
   test('returns events list with valid auth', async () => {
-    // makeChain() already resolves range to [] — no override needed
+    // makeChain() already resolves range/limit to [] — no override needed
 
     const res = await request(app)
       .get('/api/webhooks/events')
@@ -826,5 +827,30 @@ describe('GET /api/webhooks/events', () => {
     expect(res.status).toBe(200);
     expect(res.body).toHaveProperty('events');
     expect(Array.isArray(res.body.events)).toBe(true);
+  });
+
+  test('empty log is returned as events:[], not a 500', async () => {
+    const res = await request(app)
+      .get('/api/webhooks/events?limit=50')
+      .set('Authorization', AUTH_HEADER);
+
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
+  });
+
+  test('PostgREST empty-range (PGRST103) is an empty log, not Failed to list events', async () => {
+    mockSupabase.from.mockImplementation(() => makeChain({
+      limit: jest.fn().mockResolvedValue({
+        data: null,
+        error: { code: 'PGRST103', message: 'Requested range not satisfiable' },
+      }),
+    }));
+
+    const res = await request(app)
+      .get('/api/webhooks/events')
+      .set('Authorization', AUTH_HEADER);
+
+    expect(res.status).toBe(200);
+    expect(res.body.events).toEqual([]);
   });
 });
