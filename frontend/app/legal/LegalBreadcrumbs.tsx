@@ -20,7 +20,7 @@ export default function LegalBreadcrumbs() {
       maxWidth="1100px"
       items={[
         { label: 'Home',  href: '/' },
-        { label: 'Legal', href: undefined }, // intermediate — not clickable
+        { label: 'Legal', href: pathname === '/legal' ? undefined : '/legal' },
         { label: pageName },
       ]}
     />

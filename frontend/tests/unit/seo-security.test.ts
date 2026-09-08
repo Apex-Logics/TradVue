@@ -293,6 +293,20 @@ describe('Meta Robots Tags', () => {
     }
   })
 
+  test('Legal layout constrains grid children so narrow viewports can wrap', () => {
+    const content = readFile(path.join(APP_DIR, 'legal/layout.tsx'))
+    expect(content).toContain('minmax(0, 220px) minmax(0, 1fr)')
+    expect(content).toContain('min-width: 0')
+    expect(content).toContain('max-width: 100%')
+    expect(content).toContain('minmax(0, 1fr) !important')
+  })
+
+  test('Bare /legal redirects to an existing legal document', () => {
+    const content = readFile(path.join(APP_DIR, 'legal/page.tsx'))
+    expect(content).toMatch(/redirect\(['"]\/legal\/privacy['"]\)/)
+    expect(content).not.toMatch(/Page Not Found|chart ran off/)
+  })
+
   test('Root layout has robots: index=true, follow=true', () => {
     const rootLayoutPath = path.join(APP_DIR, 'layout.tsx')
     const content = readFile(rootLayoutPath)
