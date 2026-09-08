@@ -1415,6 +1415,16 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
 .news-page-search:focus { border-color: var(--accent); }
 .news-page-search::placeholder { color: var(--text-3); }
 
+/* Search lives in the shared page-header toolbar — shrink instead of overflowing */
+.page-header-actions .news-page-search {
+  flex: 1 1 12rem;
+  min-width: 0;
+  max-width: 380px;
+}
+.page-header-actions > .btn {
+  flex-shrink: 0;
+}
+
 .news-page-cats {
   display: flex;
   align-items: center;
@@ -2495,11 +2505,26 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: 8px;
   }
 
-  .news-page-search {
+  /* Legacy inner-header search (title + search + count) stacks full-width */
+  .news-page-header-inner .news-page-search {
     min-width: 100%;
     max-width: 100%;
     order: 3;
     flex: 0 0 100%;
+  }
+
+  /* Shared page-header toolbar: search fills leftover space next to Refresh */
+  .page-header-actions .news-page-search {
+    flex: 1 1 auto;
+    min-width: 0;
+    max-width: none;
+    order: 0;
+    width: auto;
+  }
+
+  /* Keep last articles / Load More clear of support + feedback FABs */
+  .news-page {
+    padding-bottom: 80px;
   }
 
   /* ── News card image: proportional height ────────────────────────────────── */
