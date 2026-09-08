@@ -17,9 +17,18 @@ describe('webhookEvents classifiers', () => {
 
   it('maps auth and missing-route failures without inventing events', () => {
     expect(classifyWebhookEventsResponse(401, { error: 'Unauthorized' }).ok).toBe(false)
-    expect(classifyWebhookEventsResponse(401, {}).message).toBe('Sign in to load events')
-    expect(classifyWebhookEventsResponse(404, {}).message).toBe('Events endpoint not found')
-    expect(classifyWebhookEventsResponse(500, { error: 'Failed to list events' }).message).toBe('Failed to list events')
+    expect(classifyWebhookEventsResponse(401, {})).toEqual({
+      ok: false,
+      message: 'Sign in to load events',
+    })
+    expect(classifyWebhookEventsResponse(404, {})).toEqual({
+      ok: false,
+      message: 'Events endpoint not found',
+    })
+    expect(classifyWebhookEventsResponse(500, { error: 'Failed to list events' })).toEqual({
+      ok: false,
+      message: 'Failed to list events',
+    })
   })
 
   it('maps CORS/network TypeError to a retryable connection message', () => {
