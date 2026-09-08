@@ -15,7 +15,12 @@ import { useAuth } from '../context/AuthContext'
 import { initPortfolioSync, debouncedSyncPortfolio } from '../utils/cloudSync'
 import { getUserTier, canAccessFeature } from '../utils/tierAccess'
 import AuthGate from '../components/AuthGate'
-import { sanitizeCSVField } from '../utils/brokerParsers'
+import {
+  parsePortfolioCSV,
+  aggregateHoldingsByTicker,
+  type ImportedHolding,
+  type InFileDuplicateGroup,
+} from '../utils/portfolioCsv'
 import {
   getDividendLog,
   backfillAllDividends,
@@ -633,143 +638,6 @@ function exportPDF(title: string, tableHtml: string) {
 
 // ─── Portfolio CSV Import ─────────────────────────────────────────────────────
 
-interface ImportedHolding {
-  ticker: string
-  shares: number
-  costBasis: number
-  dateAcquired: string
-  sector: string
-  notes: string
-}
-
-/** Parse a simple CSV line respecting quoted fields */
-function parseImportCSVLine(line: string): string[] {
-  const result: string[] = []
-  let current = ''
-  let inQuotes = false
-  for (let i = 0; i < line.length; i++) {
-    const ch = line[i]
-    if (inQuotes) {
-      if (ch === '"' && line[i + 1] === '"') { current += '"'; i++ }
-      else if (ch === '"') { inQuotes = false }
-      else { current += ch }
-    } else {
-      if (ch === '"') { inQuotes = true }
-      else if (ch === ',') { result.push(current); current = '' }
-      else { current += ch }
-    }
-  }
-  result.push(current)
-  return result
-}
-
-/** Normalise a column header for flexible matching */
-function normHeader(h: string): string {
-  return h.toLowerCase().replace(/[^a-z0-9]/g, '')
-}
-
-/** Parse portfolio holdings CSV — supports Generic and Schwab/Fidelity position export formats */
-function parsePortfolioCSV(text: string): { holdings: ImportedHolding[]; errors: string[]; format: string } {
-  const errors: string[] = []
-  const holdings: ImportedHolding[] = []
-
-  const lines = text.split(/\r?\n/).filter(l => l.trim())
-  if (lines.length < 2) return { holdings, errors: ['CSV has no data rows'], format: 'unknown' }
-
-  const rawHeaders = parseImportCSVLine(lines[0]).map(h => sanitizeCSVField(h.trim()))
-  const headers = rawHeaders.map(normHeader)
-
-  // Detect format
-  // Schwab positions: "Symbol","Description","Quantity","Price","Price Change %","Price Change $","Market Value","Day Change %","Day Change $","Cost Basis","Gain/Loss %","Gain/Loss $","Ratings","Reinvest Dividends?","Capital Gains?","% Of Account","Security Type"
-  // Fidelity positions: "Symbol","Description","Quantity","Last Price","Last Price Change","Current Value","Today's Gain/Loss Dollar","Today's Gain/Loss Percent","Total Gain/Loss Dollar","Total Gain/Loss Percent","Percent Of Account","Cost Basis Total","Average Cost Basis","Type"
-  const isSchwab = headers.includes('costbasis') && headers.includes('securitytype')
-  const isFidelity = headers.includes('averagecostbasis') && headers.includes('costbasistotal')
-  let format = 'generic'
-  if (isSchwab) format = 'schwab'
-  else if (isFidelity) format = 'fidelity'
-
-  // Column resolvers per format
-  const colIdx = (candidates: string[]): number => {
-    for (const c of candidates) {
-      const idx = headers.indexOf(c)
-      if (idx !== -1) return idx
-    }
-    return -1
-  }
-
-  let symbolIdx: number, sharesIdx: number, costIdx: number, dateIdx: number, sectorIdx: number, notesIdx: number
-
-  if (format === 'schwab') {
-    symbolIdx  = colIdx(['symbol'])
-    sharesIdx  = colIdx(['quantity'])
-    costIdx    = colIdx(['costbasis'])
-    dateIdx    = -1
-    sectorIdx  = colIdx(['securitytype'])
-    notesIdx   = colIdx(['description'])
-  } else if (format === 'fidelity') {
-    symbolIdx  = colIdx(['symbol'])
-    sharesIdx  = colIdx(['quantity'])
-    costIdx    = colIdx(['averagecostbasis'])
-    dateIdx    = -1
-    sectorIdx  = colIdx(['type'])
-    notesIdx   = colIdx(['description'])
-  } else {
-    // Generic: Symbol, Shares/Quantity, CostBasis/AvgPrice/AverageCost, DateAcquired, Sector, Notes
-    symbolIdx  = colIdx(['symbol', 'ticker'])
-    sharesIdx  = colIdx(['shares', 'quantity', 'qty'])
-    costIdx    = colIdx(['costbasis', 'avgprice', 'averagecost', 'avgcost', 'cost'])
-    dateIdx    = colIdx(['dateacquired', 'buydate', 'purchasedate', 'date'])
-    sectorIdx  = colIdx(['sector', 'industry', 'category'])
-    notesIdx   = colIdx(['notes', 'memo', 'description'])
-  }
-
-  if (symbolIdx === -1 || sharesIdx === -1 || costIdx === -1) {
-    return {
-      holdings,
-      errors: ['Could not find required columns (Symbol, Shares, CostBasis). Check your CSV format.'],
-      format,
-    }
-  }
-
-  for (let i = 1; i < lines.length; i++) {
-    const raw = parseImportCSVLine(lines[i])
-    if (raw.every(v => !v.trim())) continue
-    const get = (idx: number) => sanitizeCSVField((raw[idx] ?? '').trim())
-
-    const ticker = get(symbolIdx).toUpperCase()
-    if (!ticker || ticker === 'TOTAL' || ticker === 'ACCOUNT TOTAL') continue
-
-    // Parse shares — remove commas/dollar signs
-    const sharesStr = get(sharesIdx).replace(/[,$\s]/g, '').replace(/^\(([^)]+)\)$/, '-$1')
-    const shares = parseFloat(sharesStr)
-    if (isNaN(shares) || shares <= 0) {
-      errors.push(`Row ${i + 1}: Invalid shares for ${ticker || 'unknown'} (${get(sharesIdx)})`)
-      continue
-    }
-
-    // Parse cost basis — could be total cost basis (Schwab) or avg cost (generic)
-    const costStr = get(costIdx).replace(/[,$\s]/g, '').replace(/^\(([^)]+)\)$/, '-$1')
-    let costBasis = parseFloat(costStr)
-    if (isNaN(costBasis) || costBasis <= 0) {
-      errors.push(`Row ${i + 1}: Invalid cost basis for ${ticker} (${get(costIdx)})`)
-      continue
-    }
-
-    // Schwab exports total cost basis — convert to per-share
-    if (format === 'schwab') {
-      costBasis = costBasis / shares
-    }
-
-    const dateAcquired = dateIdx !== -1 ? get(dateIdx) : ''
-    const sector = sectorIdx !== -1 ? get(sectorIdx) : 'Other'
-    const notes = notesIdx !== -1 ? get(notesIdx) : ''
-
-    holdings.push({ ticker, shares, costBasis, dateAcquired, sector, notes })
-  }
-
-  return { holdings, errors, format }
-}
-
 interface PortfolioImportModalProps {
   existingTickers: string[]
   onClose: () => void
@@ -781,12 +649,16 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
   const [file, setFile] = useState<File | null>(null)
   const [error, setError] = useState('')
   const [parsed, setParsed] = useState<ImportedHolding[]>([])
+  const [inFileDuplicates, setInFileDuplicates] = useState<InFileDuplicateGroup[]>([])
   const [parseErrors, setParseErrors] = useState<string[]>([])
   const [detectedFormat, setDetectedFormat] = useState('')
   const [mergeMode, setMergeMode] = useState<'replace' | 'skip'>('skip')
   const fileRef = useRef<HTMLInputElement>(null)
 
-  const conflicts = parsed.filter(h => existingTickers.includes(h.ticker))
+  // Always import one holding per ticker (weighted-average lots) so replace cannot double-count.
+  const importReady = useMemo(() => aggregateHoldingsByTicker(parsed), [parsed])
+  const duplicateTickers = useMemo(() => new Set(inFileDuplicates.map(d => d.ticker)), [inFileDuplicates])
+  const conflicts = importReady.filter(h => existingTickers.includes(h.ticker))
   const hasConflicts = conflicts.length > 0
 
   const handleFile = (e: React.ChangeEvent<HTMLInputElement>) => {
@@ -809,6 +681,7 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
           return
         }
         setParsed(result.holdings)
+        setInFileDuplicates(result.duplicates)
         setParseErrors(result.errors)
         setDetectedFormat(result.format)
         setStep('preview')
@@ -823,12 +696,12 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
     if (hasConflicts) {
       setStep('merge')
     } else {
-      onImport(parsed, 'skip')
+      onImport(importReady, 'skip')
     }
   }
 
   const handleMergeConfirm = () => {
-    onImport(parsed, mergeMode)
+    onImport(importReady, mergeMode)
   }
 
   return (
@@ -915,7 +788,20 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
               <div style={{ fontSize: 13, fontWeight: 700, color: 'var(--text-0)' }}>
                 Found <strong style={{ color: 'var(--accent)' }}>{parsed.length} holding{parsed.length !== 1 ? 's' : ''}</strong>
                 {' '}({detectedFormat === 'schwab' ? 'Schwab format' : detectedFormat === 'fidelity' ? 'Fidelity format' : 'Generic CSV'})
+                {inFileDuplicates.length > 0 && (
+                  <> → <strong style={{ color: 'var(--accent)' }}>{importReady.length} position{importReady.length !== 1 ? 's' : ''}</strong> after combining duplicates</>
+                )}
               </div>
+              {inFileDuplicates.length > 0 && (
+                <div data-testid="in-file-duplicate-banner" style={{ fontSize: 11, color: 'var(--yellow)', marginTop: 6, lineHeight: 1.5 }}>
+                  Same ticker appears more than once in this file. Rows are listed below — they will be combined with weighted-average cost (total cost ÷ total shares), not imported as separate positions.
+                  {inFileDuplicates.map(g => (
+                    <div key={g.ticker} style={{ fontFamily: 'var(--mono)', marginTop: 3, color: 'var(--text-1)' }}>
+                      {g.ticker} rows {g.rows.join(', ')} → {g.combined.shares} sh @ ${g.combined.costBasis.toFixed(4)}
+                    </div>
+                  ))}
+                </div>
+              )}
               {hasConflicts && (
                 <div style={{ fontSize: 11, color: 'var(--yellow)', marginTop: 4 }}>
                   <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>{conflicts.length} ticker{conflicts.length > 1 ? 's' : ''} already exist in your portfolio ({conflicts.map(c => c.ticker).join(', ')})
@@ -943,15 +829,21 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
                 <tbody>
                   {parsed.map((h, i) => {
                     const isConflict = existingTickers.includes(h.ticker)
+                    const isInFileDup = duplicateTickers.has(h.ticker)
+                    const rowBg = isInFileDup
+                      ? 'rgba(245,158,11,0.10)'
+                      : isConflict ? 'rgba(245,158,11,0.06)' : i % 2 === 0 ? 'var(--bg-1)' : 'var(--bg-2)'
                     return (
-                      <tr key={i} style={{ background: isConflict ? 'rgba(245,158,11,0.06)' : i % 2 === 0 ? 'var(--bg-1)' : 'var(--bg-2)', borderBottom: '1px solid var(--border-b)' }}>
+                      <tr key={i} style={{ background: rowBg, borderBottom: '1px solid var(--border-b)' }}>
                         <td style={{ padding: '7px 10px', fontWeight: 700, color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>{h.ticker}</td>
                         <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)', textAlign: 'right' }}>{h.shares}</td>
                         <td style={{ padding: '7px 10px', fontFamily: 'var(--mono)', textAlign: 'right' }}>${h.costBasis.toFixed(4)}</td>
                         <td style={{ padding: '7px 10px', color: 'var(--text-2)', fontSize: 10 }}>{h.dateAcquired || '—'}</td>
                         <td style={{ padding: '7px 10px', color: 'var(--text-2)', fontSize: 10 }}>{h.sector || '—'}</td>
                         <td style={{ padding: '7px 10px' }}>
-                          {isConflict
+                          {isInFileDup
+                            ? <span style={{ fontSize: 9, color: 'var(--yellow)', background: 'rgba(245,158,11,0.15)', padding: '2px 6px', borderRadius: 10 }}>Duplicate in file{h.sourceRow ? ` (row ${h.sourceRow})` : ''}</span>
+                            : isConflict
                             ? <span style={{ fontSize: 9, color: 'var(--yellow)', background: 'rgba(245,158,11,0.15)', padding: '2px 6px', borderRadius: 10 }}><svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'inline', verticalAlign: 'middle', marginRight: 3 }}><path d="M10.29 3.86L1.82 18a2 2 0 0 0 1.71 3h16.94a2 2 0 0 0 1.71-3L13.71 3.86a2 2 0 0 0-3.42 0z"/><line x1="12" y1="9" x2="12" y2="13"/><line x1="12" y1="17" x2="12.01" y2="17"/></svg>Conflict</span>
                             : <span style={{ fontSize: 9, color: 'var(--green)', background: 'rgba(0,192,106,0.12)', padding: '2px 6px', borderRadius: 10 }}>✓ New</span>}
                         </td>
@@ -963,13 +855,13 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
             </div>
 
             <div style={{ display: 'flex', gap: 8, justifyContent: 'flex-end' }}>
-              <button onClick={() => { setStep('upload'); setParsed([]) }} style={{ fontSize: 12, padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg-3)', color: 'var(--text-1)', cursor: 'pointer' }}>← Back</button>
+              <button onClick={() => { setStep('upload'); setParsed([]); setInFileDuplicates([]) }} style={{ fontSize: 12, padding: '8px 16px', border: '1px solid var(--border)', borderRadius: 5, background: 'var(--bg-3)', color: 'var(--text-1)', cursor: 'pointer' }}>← Back</button>
               <button
                 onClick={handleConfirmImport}
                 data-testid="confirm-import-button"
                 style={{ fontSize: 12, padding: '8px 18px', border: 'none', borderRadius: 5, background: 'var(--green)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
               >
-                {hasConflicts ? 'Next: Resolve Conflicts →' : `✓ Import ${parsed.length} Holdings`}
+                {hasConflicts ? 'Next: Resolve Conflicts →' : `✓ Import ${importReady.length} Holdings`}
               </button>
             </div>
           </>
@@ -989,7 +881,7 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
                   <input type="radio" name="mergeMode" value="skip" checked={mergeMode === 'skip'} onChange={() => setMergeMode('skip')} style={{ marginTop: 1 }} />
                   <div>
                     <div style={{ fontSize: 12, fontWeight: 700, color: 'var(--text-0)' }}>Skip conflicts</div>
-                    <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Keep your existing positions. Only import the {parsed.length - conflicts.length} new tickers.</div>
+                    <div style={{ fontSize: 11, color: 'var(--text-2)' }}>Keep your existing positions. Only import the {importReady.length - conflicts.length} new tickers.</div>
                   </div>
                 </label>
                 <label style={{ display: 'flex', alignItems: 'flex-start', gap: 10, cursor: 'pointer', background: mergeMode === 'replace' ? 'rgba(239,68,68,0.08)' : 'transparent', border: `1px solid ${mergeMode === 'replace' ? 'var(--red)' : 'var(--border)'}`, borderRadius: 6, padding: '10px 12px' }}>
@@ -1009,7 +901,7 @@ function PortfolioImportModal({ existingTickers, onClose, onImport }: PortfolioI
                 data-testid="merge-confirm-button"
                 style={{ fontSize: 12, padding: '8px 18px', border: 'none', borderRadius: 5, background: mergeMode === 'replace' ? 'var(--red)' : 'var(--green)', color: '#fff', fontWeight: 700, cursor: 'pointer' }}
               >
-                ✓ Import {mergeMode === 'skip' ? parsed.length - conflicts.length : parsed.length} Holdings
+                ✓ Import {mergeMode === 'skip' ? importReady.length - conflicts.length : importReady.length} Holdings
               </button>
             </div>
           </>
@@ -2329,7 +2221,9 @@ function HoldingsTab({
   }
 
   const handlePortfolioImport = (imported: ImportedHolding[], mergeMode: 'replace' | 'skip') => {
-    const newHoldings: Holding[] = imported
+    // Defense in depth: never write two holdings for the same ticker from one CSV.
+    const collapsed = aggregateHoldingsByTicker(imported)
+    const newHoldings: Holding[] = collapsed
       .filter(h => mergeMode === 'replace' || !holdings.find(ex => ex.ticker === h.ticker))
       .map(h => ({
         id: uid(),
