@@ -28,12 +28,24 @@ const { requireAuth } = require('../middleware/auth');
 
 // ── Stripe client (lazy-init so missing key only breaks stripe routes) ─────────
 let _stripe = null;
+function isStripeConfigured() {
+  return Boolean(process.env.STRIPE_SECRET_KEY);
+}
 function getStripe() {
   if (_stripe) return _stripe;
   const key = process.env.STRIPE_SECRET_KEY;
   if (!key) throw new Error('STRIPE_SECRET_KEY is not set');
   _stripe = require('stripe')(key);
   return _stripe;
+}
+
+/** Public 503 body when Stripe is not configured (staging often has no secret). */
+function sendStripeUnavailable(res) {
+  return res.status(503).json({
+    available: false,
+    code: 'STRIPE_NOT_CONFIGURED',
+    error: 'Checkout is unavailable',
+  });
 }
 
 // ── Supabase service-role client (bypasses RLS triggers) ──────────────────────
@@ -226,19 +238,19 @@ function pick(obj, keys) {
 // FIX 6: validate priceId format and strip unexpected body fields
 router.post('/create-checkout-session', requireAuth, async (req, res) => {
   try {
-    const stripe = getStripe();
-    const prices = await getOrCreatePrices();
-
-    // Only accept known fields from body
+    // Validate the body first so a missing Stripe key cannot mask a 400.
     const { priceId } = pick(req.body, ['priceId']);
 
-    // Validate priceId format
     if (!priceId) {
       return res.status(400).json({ error: 'priceId is required' });
     }
     if (!isValidPriceId(priceId)) {
       return res.status(400).json({ error: 'Invalid priceId format' });
     }
+
+    if (!isStripeConfigured()) return sendStripeUnavailable(res);
+    const stripe = getStripe();
+    const prices = await getOrCreatePrices();
 
     // Validate priceId is one of our known prices
     if (priceId !== prices.monthly && priceId !== prices.annual) {
@@ -284,6 +296,9 @@ router.post('/create-checkout-session', requireAuth, async (req, res) => {
     res.json({ url: session.url, sessionId: session.id });
   } catch (err) {
     console.error('[Stripe] create-checkout-session error:', err.message);
+    if (!isStripeConfigured() || /STRIPE_SECRET_KEY is not set/.test(err.message || '')) {
+      return sendStripeUnavailable(res);
+    }
     res.status(500).json({ error: 'Failed to create checkout session', details: err.message });
   }
 });
@@ -503,8 +518,10 @@ router.get('/subscription-status', requireAuth, async (req, res) => {
 // Returns the priceIds so the frontend can pass them to create-checkout-session
 router.get('/prices', async (req, res) => {
   try {
+    if (!isStripeConfigured()) return sendStripeUnavailable(res);
     const prices = await getOrCreatePrices();
     res.json({
+      available: true,
       monthly: {
         priceId: prices.monthly,
         amount: 24,
@@ -524,7 +541,10 @@ router.get('/prices', async (req, res) => {
     });
   } catch (err) {
     console.error('[Stripe] /prices error:', err.message);
-    res.status(500).json({ error: 'Failed to fetch prices', details: err.message });
+    if (!isStripeConfigured() || /STRIPE_SECRET_KEY is not set/.test(err.message || '')) {
+      return sendStripeUnavailable(res);
+    }
+    res.status(500).json({ error: 'Failed to fetch prices' });
   }
 });
 

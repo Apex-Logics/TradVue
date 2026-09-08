@@ -68,6 +68,19 @@
   --fs-lg: 15px;
   --fs-xl: 18px;
   --fs-2xl: 22px;
+
+  /* ── Floating support / feedback chrome (shared, not per-page) ── */
+  --tv-fab-safe-bottom: env(safe-area-inset-bottom, 0px);
+  --tv-fab-safe-right: env(safe-area-inset-right, 0px);
+  --tv-fab-edge: 20px;
+  --tv-fab-feedback-size: 48px;
+  --tv-fab-support-size: 56px;
+  --tv-fab-stack-gap: 12px;
+  /* Space above the stacked FABs so last controls can scroll clear */
+  --tv-fab-clearance: calc(
+    var(--tv-fab-safe-bottom) + var(--tv-fab-edge) + var(--tv-fab-feedback-size)
+    + var(--tv-fab-stack-gap) + var(--tv-fab-support-size) + 16px
+  );
 }
 
 html, body { height: 100%; }
@@ -424,15 +437,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   pointer-events: all;
 }
 
-@media (max-width: 1024px) {
-  .tv-fab--support {
-    bottom: 68px !important;
-    right: 12px !important;
-  }
-  .tv-fab--feedback {
-    bottom: 16px !important;
-    right: 12px !important;
-  }
+/* Shared FAB insets — SupportChat / FeedbackWidget. Safe-area + stacked gap. */
+.tv-fab--feedback {
+  bottom: calc(var(--tv-fab-edge) + var(--tv-fab-safe-bottom)) !important;
+  right: calc(var(--tv-fab-edge) + var(--tv-fab-safe-right)) !important;
+}
+.tv-fab--support {
+  bottom: calc(
+    var(--tv-fab-edge) + var(--tv-fab-feedback-size) + var(--tv-fab-stack-gap)
+    + var(--tv-fab-safe-bottom)
+  ) !important;
+  right: calc(var(--tv-fab-edge) + var(--tv-fab-safe-right)) !important;
 }
 
 /* Section heading */
@@ -2126,6 +2141,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     right: 16px;
   }
 
+  :root {
+    --tv-fab-edge: 12px;
+  }
+
   /* Apn logo image size */
   .apn-logo-img {
     height: 30px;
@@ -2522,9 +2541,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     width: auto;
   }
 
-  /* Keep last articles / Load More clear of support + feedback FABs */
-  .news-page {
-    padding-bottom: 80px;
+  /* Shared FAB clearance: extra page height so last controls can scroll above the stack.
+     height:auto is required — height:100% + overflow-x:hidden makes overflow-y auto and
+     a ::after spacer cannot grow document scrollHeight. */
+  :root {
+    --tv-fab-edge: 10px;
+  }
+  html, body {
+    height: auto;
+    min-height: 100%;
+  }
+  html {
+    scroll-padding-bottom: var(--tv-fab-clearance);
+  }
+  body {
+    padding-bottom: var(--tv-fab-clearance);
   }
 
   /* ── News card image: proportional height ────────────────────────────────── */
@@ -2618,6 +2649,9 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   .cal-main-grid,
   .cal-main-grid.no-detail {
     grid-template-columns: 1fr;
+    /* Don't stretch the month grid into the FAB stack */
+    min-height: 0;
+    padding-bottom: var(--tv-fab-clearance);
   }
 
   /* Calendar month cells: smaller min-height */
@@ -2703,17 +2737,18 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     min-width: 0;
   }
 
-  .tv-fab--support {
-    bottom: 56px !important;
-    right: 8px !important;
+  :root {
+    --tv-fab-edge: 8px;
+    --tv-fab-feedback-size: 40px;
+    --tv-fab-support-size: 40px;
+    --tv-fab-stack-gap: 8px;
   }
+
   .tv-fab--support > button {
     width: 40px !important;
     height: 40px !important;
   }
   .tv-fab--feedback {
-    bottom: 10px !important;
-    right: 8px !important;
     width: 40px !important;
     height: 40px !important;
   }

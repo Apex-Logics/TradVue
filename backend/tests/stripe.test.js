@@ -359,6 +359,22 @@ describe('POST /api/stripe/create-checkout-session', () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/priceId is required/);
   });
+
+  test('returns 503 when Stripe is not configured', async () => {
+    const original = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+
+    const res = await request(app)
+      .post('/api/stripe/create-checkout-session')
+      .set('Authorization', 'Bearer valid-test-token')
+      .send({ priceId: 'price_monthlyABC123' });
+
+    process.env.STRIPE_SECRET_KEY = original;
+
+    expect(res.status).toBe(503);
+    expect(res.body.code).toBe('STRIPE_NOT_CONFIGURED');
+    expect(res.body.available).toBe(false);
+  });
 });
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -476,6 +492,23 @@ describe('GET /api/stripe/prices', () => {
     expect(res.body.monthly.interval).toBe('month');
     expect(res.body.annual.interval).toBe('year');
     expect(res.body.annual.savingsPercent).toBe(30);
+    expect(res.body.available).toBe(true);
+  });
+
+  test('returns 503 with STRIPE_NOT_CONFIGURED when secret key is missing', async () => {
+    const original = process.env.STRIPE_SECRET_KEY;
+    delete process.env.STRIPE_SECRET_KEY;
+
+    const res = await request(app).get('/api/stripe/prices');
+
+    process.env.STRIPE_SECRET_KEY = original;
+
+    expect(res.status).toBe(503);
+    expect(res.body.available).toBe(false);
+    expect(res.body.code).toBe('STRIPE_NOT_CONFIGURED');
+    expect(res.body.error).toBe('Checkout is unavailable');
+    expect(res.body.monthly).toBeUndefined();
+    expect(res.body.details).toBeUndefined();
   });
 });
 

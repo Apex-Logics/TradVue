@@ -317,7 +317,7 @@ function StockScoreCard({ score, loading }: { score: StockScore | null; loading:
       <div className="ds-card" style={{ minHeight: 120 }}>
         <div style={{ fontSize: 14, fontWeight: 700, marginBottom: 12 }}>TradVue Score</div>
         <div style={{ padding: 20, textAlign: 'center', color: 'var(--text-3)', fontSize: 12 }}>
-          {score?.error || 'Unable to calculate score for this stock.'}
+          Unable to calculate score for this stock.
         </div>
       </div>
     )
