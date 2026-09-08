@@ -35,8 +35,12 @@ import {
   type DeletedMap,
   type JournalBlob,
 } from './journalMerge'
+import { API_BASE } from '../lib/api'
+import { fetchWithSessionRetry, isAuthFailureStatus, subscribeAuthSession } from '../lib/authSession'
+import { getStoredAuthToken } from './storageKeys'
 
-const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'https://tradvue-api.onrender.com'
+// API_BASE is imported from lib/api so staging never silently falls back to
+// the live API when NEXT_PUBLIC_API_URL is missing (localhost, not the live host).
 
 // ── Sync status (module-level, subscribable) ──────────────────────────────────
 
@@ -62,7 +66,7 @@ export function subscribeSyncStatus(fn: (s: SyncStatus) => void): () => void {
 // ── Helpers ───────────────────────────────────────────────────────────────────
 
 function getToken(): string | null {
-  try { return localStorage.getItem('cg_token') } catch { return null }
+  return getStoredAuthToken()
 }
 
 function authHeaders(token: string): Record<string, string> {
@@ -165,11 +169,15 @@ async function cloudGetJournal(token: string): Promise<{
   ok: boolean
   payload: CloudJournalData | null
   updated_at: string | null
+  authFailure?: boolean
 }> {
   try {
-    const res = await fetch(`${API_BASE}/api/user/data/journal`, {
+    const res = await fetchWithSessionRetry(`${API_BASE}/api/user/data/journal`, {
       headers: authHeaders(token),
     })
+    if (isAuthFailureStatus(res.status)) {
+      return { ok: false, payload: null, updated_at: null, authFailure: true }
+    }
     if (!res.ok) return { ok: false, payload: null, updated_at: null }
     const json = await res.json()
     const unwrapped = unwrapUserDataPayload(json)
@@ -354,23 +362,26 @@ function finalizeJournalPayload(data: CloudJournalData): JournalBlob {
 
 async function cloudPutJournal(token: string, data: CloudJournalData): Promise<boolean> {
   let payload: JournalBlob = finalizeJournalPayload(data)
+  let activeToken = token
   for (let attempt = 0; attempt < JOURNAL_PUT_MAX_ATTEMPTS; attempt++) {
-    const expected = readJournalUpdatedAt(token)
+    const expected = readJournalUpdatedAt(activeToken)
     try {
       const headers: Record<string, string> = {
-        ...authHeaders(token),
+        ...authHeaders(activeToken),
         'X-Expected-Updated-At': expected == null ? 'null' : expected,
       }
       if (expected != null) headers['If-Match'] = `"${expected}"`
-      const res = await fetch(`${API_BASE}/api/user/data/journal`, {
+      const res = await fetchWithSessionRetry(`${API_BASE}/api/user/data/journal`, {
         method: 'PUT',
         headers,
         body: JSON.stringify({ data: payload, expectedUpdatedAt: expected }),
       })
+      const latest = getStoredAuthToken()
+      if (latest) activeToken = latest
       if (res.status === 409) {
         const json = await res.json()
         const serverUpdated = typeof json.updated_at === 'string' ? json.updated_at : json.updated_at ?? null
-        rememberJournalUpdatedAt(token, serverUpdated)
+        rememberJournalUpdatedAt(activeToken, serverUpdated)
         const serverPayload = unwrapUserDataPayload(json)
         if (serverPayload && typeof serverPayload === 'object' && !Array.isArray(serverPayload)) {
           payload = mergeJournalBlobs(payload, serverPayload as JournalBlob)
@@ -378,9 +389,10 @@ async function cloudPutJournal(token: string, data: CloudJournalData): Promise<b
         }
         continue
       }
+      if (isAuthFailureStatus(res.status)) return false
       if (!res.ok) return false
       const json = await res.json().catch(() => ({}))
-      rememberJournalUpdatedAt(token, typeof json.updated_at === 'string' ? json.updated_at : expected)
+      rememberJournalUpdatedAt(activeToken, typeof json.updated_at === 'string' ? json.updated_at : expected)
       persistDeletedMap(extractDeletedMap(payload))
       persistSyncedIds(liveIdsFromBlob(payload))
       return true
@@ -487,7 +499,20 @@ export function resetJournalPullGate(): void {
     clearTimeout(_journalTimer)
     _journalTimer = null
   }
+  setStatus('idle')
 }
+
+/** Same user, new access token — keep the pull gate and version stamp. */
+function adoptRefreshedAuthToken(nextToken: string): void {
+  if (!nextToken || !_journalPullToken || _journalPullToken === nextToken) return
+  const stamp = _journalUpdatedAt !== undefined ? _journalUpdatedAt : readJournalUpdatedAt(_journalPullToken)
+  _journalPullToken = nextToken
+  rememberJournalUpdatedAt(nextToken, stamp)
+}
+
+subscribeAuthSession(event => {
+  if (event.type === 'refreshed') adoptRefreshedAuthToken(event.token)
+})
 
 // ── Journal sync ──────────────────────────────────────────────────────────────
 
@@ -523,20 +548,21 @@ export async function initJournalSync(token: string): Promise<void> {
   setStatus('syncing')
   try {
     const result = await cloudGetJournal(token)
+    const activeToken = getStoredAuthToken() || _journalPullToken || token
     if (result.ok) {
-      markJournalCloudSnapshot(token)
-      rememberJournalUpdatedAt(token, result.updated_at)
+      markJournalCloudSnapshot(activeToken)
+      rememberJournalUpdatedAt(activeToken, result.updated_at)
     }
     const cloudData = result.payload
     if (cloudData) {
       // P0/Q9 empty-array guards + Q3 tombstones (applyPulledJournal).
       applyPulledJournal(cloudData)
     }
-    setStatus('synced')
+    setStatus(result.ok ? 'synced' : 'error')
   } catch {
     setStatus('error')
   } finally {
-    endJournalPull(token)
+    endJournalPull(_journalPullToken || token)
   }
 }
 
@@ -551,22 +577,23 @@ export async function forceSyncFromCloud(): Promise<boolean> {
   setStatus('syncing')
   try {
     const result = await cloudGetJournal(token)
+    const activeToken = getStoredAuthToken() || _journalPullToken || token
     if (result.ok) {
-      markJournalCloudSnapshot(token)
-      rememberJournalUpdatedAt(token, result.updated_at)
+      markJournalCloudSnapshot(activeToken)
+      rememberJournalUpdatedAt(activeToken, result.updated_at)
     }
     const cloudData = result.payload
     if (cloudData) {
       // P0/Q9 empty-array guards + Q3 tombstones (applyPulledJournal).
       applyPulledJournal(cloudData)
     }
-    setStatus('synced')
-    return true
+    setStatus(result.ok ? 'synced' : 'error')
+    return result.ok
   } catch {
     setStatus('error')
     return false
   } finally {
-    endJournalPull(token)
+    endJournalPull(_journalPullToken || token)
   }
 }
 

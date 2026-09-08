@@ -2,6 +2,8 @@
  * API utilities for TradVue
  */
 
+import { getStoredRefreshToken, persistStoredAuth } from '../utils/storageKeys'
+
 export const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 export interface AuthUser {
@@ -87,16 +89,64 @@ export async function apiRegister(email: string, password: string): Promise<Auth
   }
 }
 
-export async function apiGetMe(token: string): Promise<AuthUser | null> {
+export type MeResult =
+  | { ok: true; user: AuthUser }
+  | { ok: false; reason: 'auth' | 'error' }
+
+export async function apiGetMeResult(token: string): Promise<MeResult> {
   try {
     const res = await fetch(`${API_BASE}/api/auth/me`, {
       headers: { Authorization: `Bearer ${token}` },
     })
-    if (!res.ok) return null
+    if (res.status === 401 || res.status === 403) {
+      return { ok: false, reason: 'auth' }
+    }
+    if (!res.ok) return { ok: false, reason: 'error' }
     const data = await res.json()
-    return data.user || null
+    const user = data.user as AuthUser | null | undefined
+    if (!user) return { ok: false, reason: 'error' }
+    return { ok: true, user }
   } catch {
-    return null
+    return { ok: false, reason: 'error' }
+  }
+}
+
+export async function apiGetMe(token: string): Promise<AuthUser | null> {
+  const result = await apiGetMeResult(token)
+  return result.ok ? result.user : null
+}
+
+/**
+ * Exchange a refresh token for a new session and persist it.
+ * Does not clear storage on failure — callers decide whether to log out.
+ */
+export async function apiRefresh(refreshToken: string): Promise<AuthResponse> {
+  try {
+    const res = await fetch(`${API_BASE}/api/auth/refresh`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ refreshToken }),
+    })
+    const data = await res.json().catch(() => ({})) as AuthResponse & { error?: string }
+    if (!res.ok) {
+      return {
+        session: null,
+        user: null,
+        error: data.error || 'Invalid or expired refresh token',
+      }
+    }
+    const accessToken = data.session?.access_token
+    if (!accessToken || !data.user) {
+      return { session: null, user: null, error: 'Invalid response from server — please try again' }
+    }
+    persistStoredAuth(
+      accessToken,
+      data.user,
+      data.session?.refresh_token || getStoredRefreshToken(),
+    )
+    return data
+  } catch {
+    return { session: null, user: null, error: 'Network error — could not reach server.' }
   }
 }
 

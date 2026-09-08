@@ -30,12 +30,16 @@ jest.mock('../app/utils/cloudSync', () => ({
 }))
 
 const apiGetMeMock = jest.fn()
+const apiGetMeResultMock = jest.fn()
+const apiRefreshMock = jest.fn()
 
 jest.mock('../app/lib/api', () => {
   const actual = jest.requireActual('../app/lib/api')
   return {
     ...actual,
     apiGetMe: (...args: unknown[]) => apiGetMeMock(...args),
+    apiGetMeResult: (...args: unknown[]) => apiGetMeResultMock(...args),
+    apiRefresh: (...args: unknown[]) => apiRefreshMock(...args),
   }
 })
 
@@ -60,6 +64,9 @@ describe('AuthContext persistence hydration', () => {
     hydrateWatchlistFromApiMock.mockClear()
     hydrateWatchlistFromApiMock.mockResolvedValue({ symbols: [], entries: [] })
     apiGetMeMock.mockReset()
+    apiGetMeResultMock.mockReset()
+    apiRefreshMock.mockReset()
+    apiRefreshMock.mockResolvedValue({ session: null, user: null, error: 'Invalid or expired refresh token' })
   })
 
   it('hydrates immediately when token and user are already stored', async () => {
@@ -78,7 +85,7 @@ describe('AuthContext persistence hydration', () => {
     // Keep the promise pending until after the ready-paint assertions, then
     // settle it so Jest is not left with an open handle.
     let resolveMe: (value: unknown) => void = () => {}
-    apiGetMeMock.mockImplementation(
+    apiGetMeResultMock.mockImplementation(
       () => new Promise(resolve => { resolveMe = resolve })
     )
 
@@ -91,17 +98,20 @@ describe('AuthContext persistence hydration', () => {
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
     expect(screen.getByTestId('token')).toHaveTextContent('stored-token')
     expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
-    expect(apiGetMeMock).toHaveBeenCalledWith('stored-token')
+    expect(apiGetMeResultMock).toHaveBeenCalledWith('stored-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('stored-token')
     await waitFor(() => expect(hydrateWatchlistFromApiMock).toHaveBeenCalledWith('stored-token'))
     await act(async () => {
       resolveMe({
-        id: 'user-1',
-        email: 'stored@tradvue.com',
-        name: 'Stored User',
-        email_verified: true,
-        created_at: '2026-03-24T00:00:00.000Z',
-        tier: 'free',
+        ok: true,
+        user: {
+          id: 'user-1',
+          email: 'stored@tradvue.com',
+          name: 'Stored User',
+          email_verified: true,
+          created_at: '2026-03-24T00:00:00.000Z',
+          tier: 'free',
+        },
       })
     })
   })
@@ -109,13 +119,16 @@ describe('AuthContext persistence hydration', () => {
   it('rehydrates user from /api/auth/me when only token is stored', async () => {
     localStorageMock.setItem(AUTH_TOKEN_KEY, 'callback-token')
     localStorageMock.setItem(AUTH_REFRESH_TOKEN_KEY, 'refresh-token')
-    apiGetMeMock.mockResolvedValue({
-      id: 'user-2',
-      email: 'callback@tradvue.com',
-      name: 'Callback User',
-      email_verified: true,
-      created_at: '2026-03-24T00:00:00.000Z',
-      tier: 'free',
+    apiGetMeResultMock.mockResolvedValue({
+      ok: true,
+      user: {
+        id: 'user-2',
+        email: 'callback@tradvue.com',
+        name: 'Callback User',
+        email_verified: true,
+        created_at: '2026-03-24T00:00:00.000Z',
+        tier: 'free',
+      },
     })
 
     render(
@@ -125,12 +138,108 @@ describe('AuthContext persistence hydration', () => {
     )
 
     await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
-    expect(apiGetMeMock).toHaveBeenCalledWith('callback-token')
+    expect(apiGetMeResultMock).toHaveBeenCalledWith('callback-token')
     expect(screen.getByTestId('token')).toHaveTextContent('callback-token')
     expect(screen.getByTestId('email')).toHaveTextContent('callback@tradvue.com')
     expect(localStorageMock.getItem(AUTH_USER_KEY)).toContain('callback@tradvue.com')
     expect(localStorageMock.getItem(AUTH_REFRESH_TOKEN_KEY)).toBe('refresh-token')
     expect(initFullSyncMock).toHaveBeenCalledWith('callback-token')
     await waitFor(() => expect(hydrateWatchlistFromApiMock).toHaveBeenCalledWith('callback-token'))
+  })
+
+  const storedUser = {
+    id: 'user-1',
+    email: 'stored@tradvue.com',
+    name: 'Stored User',
+    email_verified: true,
+    created_at: '2026-03-24T00:00:00.000Z',
+    tier: 'free' as const,
+  }
+
+  function seedStoredSession() {
+    localStorageMock.setItem(AUTH_TOKEN_KEY, 'stale-token')
+    localStorageMock.setItem(AUTH_REFRESH_TOKEN_KEY, 'refresh-token')
+    localStorageMock.setItem(AUTH_USER_KEY, JSON.stringify(storedUser))
+  }
+
+  it('refreshes a stale access token on hydrate and re-runs full sync', async () => {
+    seedStoredSession()
+    apiGetMeResultMock.mockResolvedValue({ ok: false, reason: 'auth' })
+    apiRefreshMock.mockResolvedValue({
+      session: {
+        access_token: 'fresh-token',
+        refresh_token: 'fresh-refresh',
+        expires_in: 3600,
+        token_type: 'bearer',
+      },
+      user: { ...storedUser, email: 'stored@tradvue.com' },
+    })
+
+    render(
+      <AuthProvider>
+        <AuthStateProbe />
+      </AuthProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
+    await waitFor(() => expect(screen.getByTestId('token')).toHaveTextContent('fresh-token'))
+    expect(apiRefreshMock).toHaveBeenCalledWith('refresh-token')
+    expect(initFullSyncMock).toHaveBeenCalledWith('stale-token')
+    expect(initFullSyncMock).toHaveBeenCalledWith('fresh-token')
+    expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
+  })
+
+  it('clears a zombie signed-in session when /me is unauthorized and refresh fails', async () => {
+    seedStoredSession()
+    apiGetMeResultMock.mockResolvedValue({ ok: false, reason: 'auth' })
+    apiRefreshMock.mockResolvedValue({ session: null, user: null, error: 'Invalid or expired refresh token' })
+
+    render(
+      <AuthProvider>
+        <AuthStateProbe />
+      </AuthProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
+    await waitFor(() => expect(screen.getByTestId('token')).toHaveTextContent('none'))
+    expect(screen.getByTestId('email')).toHaveTextContent('none')
+    expect(localStorageMock.getItem(AUTH_TOKEN_KEY)).toBeNull()
+    expect(localStorageMock.getItem(AUTH_USER_KEY)).toBeNull()
+    expect(localStorageMock.getItem(AUTH_REFRESH_TOKEN_KEY)).toBeNull()
+  })
+
+  it('clears hydrate when only a stale token is stored and refresh is impossible', async () => {
+    localStorageMock.setItem(AUTH_TOKEN_KEY, 'stale-token')
+    apiGetMeResultMock.mockResolvedValue({ ok: false, reason: 'auth' })
+
+    render(
+      <AuthProvider>
+        <AuthStateProbe />
+      </AuthProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
+    expect(screen.getByTestId('token')).toHaveTextContent('none')
+    expect(screen.getByTestId('email')).toHaveTextContent('none')
+    expect(apiRefreshMock).not.toHaveBeenCalled()
+    expect(initFullSyncMock).not.toHaveBeenCalled()
+    expect(localStorageMock.getItem(AUTH_TOKEN_KEY)).toBeNull()
+  })
+
+  it('keeps a stored session when /me fails for a non-auth reason and refresh is unavailable', async () => {
+    seedStoredSession()
+    apiGetMeResultMock.mockResolvedValue({ ok: false, reason: 'error' })
+
+    render(
+      <AuthProvider>
+        <AuthStateProbe />
+      </AuthProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('loading')).toHaveTextContent('ready'))
+    await waitFor(() => expect(apiGetMeResultMock).toHaveBeenCalled())
+    expect(screen.getByTestId('token')).toHaveTextContent('stale-token')
+    expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
+    expect(localStorageMock.getItem(AUTH_TOKEN_KEY)).toBe('stale-token')
   })
 })

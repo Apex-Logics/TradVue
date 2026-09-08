@@ -23,6 +23,7 @@ import { API_BASE } from '../lib/api'
 import PersistentNav from '../components/PersistentNav'
 import { getBrokerSyncCta, normalizeBrokerSyncState, type BrokerSyncState } from '../utils/brokerSync'
 import { classifyWebhookEventsNetworkError, classifyWebhookEventsResponse } from '../utils/webhookEvents'
+import { fetchWithSessionRetry } from '../lib/authSession'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1260,7 +1261,7 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
 
   const fetchEvents = useCallback(async () => {
     try {
-      const res = await fetch(`${API_BASE}/api/webhooks/events?limit=50`, {
+      const res = await fetchWithSessionRetry(`${API_BASE}/api/webhooks/events?limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       let payload: { events?: WebhookEvent[]; error?: string } | null = null
@@ -1269,7 +1270,7 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
       } catch {
         payload = null
       }
-      const result = classifyWebhookEventsResponse(res.status, payload)
+      const result = classifyWebhookEventsResponse(res.status, payload, { hadToken: Boolean(token) })
       if (result.ok) {
         setEvents(result.events as WebhookEvent[])
         setError(null)

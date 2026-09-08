@@ -59,7 +59,9 @@ import {
   initWatchlistSync,
   hydrateWatchlistFromApi,
   resetJournalPullGate,
+  getSyncStatus,
 } from '../../app/utils/cloudSync'
+import { API_BASE } from '../../app/lib/api'
 
 function mockCloudGet(payload: unknown) {
   ;(global as any).fetch = jest.fn(async (_url: string, opts?: { method?: string }) => {
@@ -1158,6 +1160,118 @@ describe('Q4/A6 — cg_wl is hydrated only from GET /api/watchlist', () => {
     await initJournalSync('tok')
     await initWatchlistSync('tok')
     expect(lsGetJSON(WATCHLIST_KEY)).toEqual(['LOCAL'])
+  })
+})
+
+const SAMPLE_USER = {
+  id: 'u1',
+  email: 'qa@tradvue.com',
+  name: null,
+  email_verified: true,
+  created_at: '2026-01-01T00:00:00.000Z',
+  tier: 'free',
+}
+
+function authHeader(init?: { headers?: HeadersInit }): string | null {
+  const h = init?.headers
+  if (!h) return null
+  if (h instanceof Headers) return h.get('Authorization')
+  if (Array.isArray(h)) {
+    const row = h.find(([k]) => k.toLowerCase() === 'authorization')
+    return row ? row[1] : null
+  }
+  return (h as Record<string, string>).Authorization ?? (h as Record<string, string>).authorization ?? null
+}
+
+describe('stale session — journal auth failure must not paint synced', () => {
+  test('journal GET uses lib/api API_BASE, not the live API fallback', async () => {
+    const urls: string[] = []
+    ;(global as any).fetch = jest.fn(async (url: string) => {
+      urls.push(String(url))
+      return { ok: true, json: async () => ({ data: {} }) }
+    })
+    await initJournalSync('tok')
+    expect(urls[0]).toBe(`${API_BASE}/api/user/data/journal`)
+    expect(urls[0]).not.toContain('tradvue-api.onrender.com')
+  })
+
+  test('403 journal GET without refresh token sets error (not synced) and clears the session', async () => {
+    lsSetToken('stale')
+    ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string }) => {
+      const method = init?.method || 'GET'
+      if (String(url).includes('/api/user/data/journal') && method === 'GET') {
+        return { ok: false, status: 403, json: async () => ({ error: 'Invalid or expired token' }) }
+      }
+      return { ok: true, json: async () => ({ data: null }) }
+    })
+
+    await initJournalSync('stale')
+
+    expect(getSyncStatus()).toBe('error')
+    expect(localStorageMock.getItem(TOKEN_KEY)).toBeNull()
+  })
+
+  test('403 journal GET with a refresh token retries once and then syncs', async () => {
+    lsSetToken('stale')
+    localStorageMock.setItem('cg_refresh_token', 'rt')
+    let journalGets = 0
+    ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string; headers?: HeadersInit }) => {
+      const u = String(url)
+      const method = init?.method || 'GET'
+      if (u.includes('/api/auth/refresh')) {
+        return {
+          ok: true,
+          json: async () => ({
+            session: { access_token: 'fresh', refresh_token: 'rt2', expires_in: 3600, token_type: 'bearer' },
+            user: SAMPLE_USER,
+          }),
+        }
+      }
+      if (u.includes('/api/user/data/journal') && method === 'GET') {
+        journalGets += 1
+        if (authHeader(init) === 'Bearer stale') {
+          return { ok: false, status: 403, json: async () => ({ error: 'Invalid or expired token' }) }
+        }
+        return {
+          ok: true,
+          json: async () => ({ data: { trades: [{ id: 't1' }] }, updated_at: '2026-09-08T00:00:00.000Z' }),
+        }
+      }
+      return { ok: true, json: async () => ({ data: null }) }
+    })
+
+    await initJournalSync('stale')
+
+    expect(journalGets).toBe(2)
+    expect(getSyncStatus()).toBe('synced')
+    expect(localStorageMock.getItem(TOKEN_KEY)).toBe('fresh')
+    expect(lsGetJSON(TRADES_KEY)).toEqual([{ id: 't1' }])
+  })
+
+  test('403 journal PUT sets status error', async () => {
+    jest.useFakeTimers()
+    lsSetToken('tok')
+    ;(global as any).fetch = jest.fn(async (url: string, init?: { method?: string }) => {
+      const method = init?.method || 'GET'
+      if (String(url).includes('/api/user/data/journal') && method === 'PUT') {
+        return { ok: false, status: 403, json: async () => ({ error: 'Invalid or expired token' }) }
+      }
+      if (String(url).includes('/api/user/data/journal') && method === 'GET') {
+        return { ok: true, json: async () => ({ data: { trades: [{ id: 't1' }] }, updated_at: '2026-09-08T00:00:00.000Z' }) }
+      }
+      return { ok: true, json: async () => ({ data: null }) }
+    })
+
+    await initJournalSync('tok')
+    expect(getSyncStatus()).toBe('synced')
+
+    debouncedSyncJournal([{ id: 't1' }], [])
+    await jest.advanceTimersByTimeAsync(1600)
+    await Promise.resolve()
+    await Promise.resolve()
+
+    expect(getSyncStatus()).toBe('error')
+    jest.useRealTimers()
   })
 })
 

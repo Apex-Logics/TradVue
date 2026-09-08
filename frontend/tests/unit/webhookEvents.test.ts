@@ -21,6 +21,18 @@ describe('webhookEvents classifiers', () => {
       ok: false,
       message: 'Sign in to load events',
     })
+    expect(classifyWebhookEventsResponse(403, { error: 'Invalid or expired token' })).toEqual({
+      ok: false,
+      message: 'Sign in to load events',
+    })
+    expect(classifyWebhookEventsResponse(403, { error: 'Invalid or expired token' }, { hadToken: true })).toEqual({
+      ok: false,
+      message: 'Session expired — sign in again',
+    })
+    expect(classifyWebhookEventsResponse(401, {}, { hadToken: true })).toEqual({
+      ok: false,
+      message: 'Session expired — sign in again',
+    })
     expect(classifyWebhookEventsResponse(404, {})).toEqual({
       ok: false,
       message: 'Events endpoint not found',
