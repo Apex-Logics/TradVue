@@ -232,7 +232,15 @@ interface TaxLot {
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
 import { TextSkeleton, CardSkeleton } from '../components/Skeleton'
-import { livePrice, shouldShowFinancialsSkeleton } from '../utils/portfolioDisplay'
+import {
+  EM_DASH,
+  arePricesSettled,
+  computeDayGain,
+  formatDayGainPair,
+  holdingsHaveLivePrices,
+  livePrice,
+  shouldShowFinancialsSkeleton,
+} from '../utils/portfolioDisplay'
 
 function fmt(n: number, d = 2) {
   return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -542,7 +550,7 @@ function KpiCard({ label, value, sub, color, tooltip, icon }: { label: string; v
         {tooltip && <Tooltip text={tooltip} position="bottom" />}
       </div>
       <div style={{ fontSize: 18, fontWeight: 700, fontFamily: 'var(--mono)', color: color || 'var(--text-0)' }}>{value}</div>
-      {sub && <div style={{ fontSize: 10, color: 'var(--text-2)', marginTop: 4 }}>{sub}</div>}
+      {sub && <div style={{ fontSize: 10, color: color || 'var(--text-2)', marginTop: 4 }}>{sub}</div>}
     </div>
   )
 }
@@ -1057,7 +1065,7 @@ export default function PortfolioPage() {
   const [stockInfos, setStockInfos] = useState<Record<string, StockInfo>>({})
   const [loadingPrices, setLoadingPrices] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
-  const [pricesSettled, setPricesSettled] = useState(false)
+  const [quoteAttempts, setQuoteAttempts] = useState<Record<string, boolean>>({})
 
   // Sell from holdings
   const [sellFromHolding, setSellFromHolding] = useState<{ holding: Holding & { currentPrice: number; totalDividendsReceived: number } } | null>(null)
@@ -1394,12 +1402,8 @@ export default function PortfolioPage() {
   ], [holdings, watchlist, priceAlerts])
 
   const fetchStockInfos = useCallback(async () => {
-    if (allTickers.length === 0) {
-      if (dataLoaded) setPricesSettled(true)
-      return
-    }
+    if (allTickers.length === 0) return
     setLoadingPrices(true)
-    setPricesSettled(false)
     try {
       const results: Record<string, StockInfo> = {}
       for (let i = 0; i < allTickers.length; i++) {
@@ -1410,10 +1414,16 @@ export default function PortfolioPage() {
       }
       setStockInfos(prev => ({ ...prev, ...results }))
     } finally {
+      // Mark every requested ticker as attempted — live or explicit miss.
+      // Do not treat this `finally` as "prices ready"; KPIs derive that from quotes.
+      setQuoteAttempts(prev => {
+        const next = { ...prev }
+        for (const t of allTickers) next[t] = true
+        return next
+      })
       setLoadingPrices(false)
-      setPricesSettled(true)
     }
-  }, [allTickers, dataLoaded])
+  }, [allTickers])
 
   useEffect(() => { fetchStockInfos() }, [fetchStockInfos])
   useEffect(() => { const t = setInterval(fetchStockInfos, 60_000); return () => clearInterval(t) }, [fetchStockInfos])
@@ -1520,7 +1530,7 @@ export default function PortfolioPage() {
     const marketReturnPct = hasLivePrice && costBasis > 0 ? (marketReturn / costBasis) * 100 : 0
     const totalReturn = hasLivePrice ? marketReturn + totalDividendsReceived : 0
     const totalReturnPct = hasLivePrice && costBasis > 0 ? (totalReturn / costBasis) * 100 : 0
-    const dayGain = (info?.dayChange ?? 0) * h.shares
+    const dayGain = hasLivePrice && info?.dayChange != null ? info.dayChange * h.shares : 0
     const annualDivIncome = annualDividend * h.shares
     const divYield = currentPrice > 0 ? (annualDividend / currentPrice) * 100 : 0
     const yieldOnCost = h.avgCost > 0 ? (annualDividend / h.avgCost) * 100 : 0
@@ -1537,11 +1547,22 @@ export default function PortfolioPage() {
   const totalDividendsReceived = holdingsEnriched.reduce((s, h) => s + h.totalDividendsReceived, 0)
   const totalReturn = totalMarketReturn + totalDividendsReceived
   const totalReturnPct = totalCostBasis > 0 ? (totalReturn / totalCostBasis) * 100 : 0
-  const totalDayGain = holdingsEnriched.reduce((s, h) => s + h.dayGain, 0)
-  const totalDayGainPct = totalMarketValue > 0 ? (totalDayGain / (totalMarketValue - totalDayGain)) * 100 : 0
+  const dayGainResult = computeDayGain(holdingsEnriched.map(h => ({
+    shares: h.shares,
+    currentPrice: h.hasLivePrice ? h.currentPrice : null,
+    dayChange: stockInfos[h.ticker]?.dayChange ?? null,
+    dayChangePct: stockInfos[h.ticker]?.dayChangePct ?? null,
+  })))
   const projAnnualIncome = holdingsEnriched.reduce((s, h) => s + h.annualDivIncome, 0)
   const divYieldPortfolio = totalMarketValue > 0 ? (projAnnualIncome / totalMarketValue) * 100 : 0
   const yieldOnCostPortfolio = totalCostBasis > 0 ? (projAnnualIncome / totalCostBasis) * 100 : 0
+  const pricesSettled = arePricesSettled({
+    dataLoaded,
+    holdings,
+    quotes: stockInfos,
+    attemptedTickers: quoteAttempts,
+  })
+  const quotesComplete = holdingsHaveLivePrices(holdings, stockInfos)
   const financialsLoading = shouldShowFinancialsSkeleton({
     dataLoaded,
     holdingsCount: holdings.length,
@@ -1573,14 +1594,6 @@ export default function PortfolioPage() {
     })
   })
   const barChartData = YEARS.filter(yr => yr >= 2022).map(yr => ({ label: String(yr), value: annualDivByYear[yr] }))
-
-  const holdingTickersKey = holdings.map(h => h.ticker).sort().join(',')
-  const prevHoldingTickersRef = useRef('')
-  useEffect(() => {
-    if (holdingTickersKey === prevHoldingTickersRef.current) return
-    prevHoldingTickersRef.current = holdingTickersKey
-    if (holdings.length > 0) setPricesSettled(false)
-  }, [holdingTickersKey, holdings.length])
 
   useEffect(() => {
     if (holdings.length === 0 || financialsLoading) return
@@ -1626,7 +1639,7 @@ export default function PortfolioPage() {
         </div>
         {isLoggedIn && <PortfolioSyncBadge />}
         {!isLoggedIn && <span style={{ fontSize: 10, color: 'var(--text-3)', background: 'var(--bg-3)', padding: '2px 8px', borderRadius: 10 }}>Guest mode · <button onClick={() => setAuthModalOpen(true)} style={{ color: 'var(--accent)', background: 'none', border: 'none', cursor: 'pointer', padding: 0, fontSize: 10 }}>Sign in to save</button></span>}
-        <div style={{ flex: 1 }} />
+        <div className="page-header-actions">
         {loadingPrices && <span style={{ fontSize: 10, color: 'var(--text-3)' }}>↻ Updating prices…</span>}
         {/* Privacy toggle */}
         <button
@@ -1649,7 +1662,7 @@ export default function PortfolioPage() {
         <PortfolioExportButton />
         {financialsLoading ? (
           <TextSkeleton width={120} height={12} />
-        ) : totalMarketValue > 0 && (
+        ) : quotesComplete && totalMarketValue > 0 && (
           <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
             <span style={{ color: 'var(--text-2)' }}>Value: <strong style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>
               {privacyMode ? '•••••' : fmtDollar(totalMarketValue)}
@@ -1659,6 +1672,7 @@ export default function PortfolioPage() {
             </span>
           </div>
         )}
+        </div>
       </header>
 
       {/* Welcome banner for new users */}
@@ -1705,7 +1719,8 @@ export default function PortfolioPage() {
             totalCostBasis={totalCostBasis} totalMarketValue={totalMarketValue}
             totalMarketReturn={totalMarketReturn} totalMarketReturnPct={totalMarketReturnPct}
             totalReturn={totalReturn} totalReturnPct={totalReturnPct}
-            totalDayGain={totalDayGain} totalDayGainPct={totalDayGainPct}
+            dayGainResult={dayGainResult}
+            quotesComplete={quotesComplete}
             divYieldPortfolio={divYieldPortfolio} yieldOnCostPortfolio={yieldOnCostPortfolio}
             projAnnualIncome={projAnnualIncome} sectorData={sectorData}
             barChartData={barChartData} snapshots={snapshots} holdings={holdings}
@@ -1808,7 +1823,7 @@ export default function PortfolioPage() {
 
       {/* Price alert triggered notifications */}
       {alertNotifications.length > 0 && (
-        <div style={{ position: 'fixed', bottom: 20, right: 20, zIndex: 2000, display: 'flex', flexDirection: 'column', gap: 8 }}>
+        <div className="page-floating-alerts">
           {alertNotifications.map(a => (
             <div key={a.id} style={{ background: 'var(--bg-2)', border: '2px solid var(--yellow)', borderRadius: 8, padding: '12px 16px', minWidth: 260, boxShadow: '0 4px 20px rgba(0,0,0,0.4)' }}>
               <div style={{ display: 'flex', justifyContent: 'space-between', marginBottom: 4 }}>
@@ -1852,7 +1867,7 @@ export default function PortfolioPage() {
 
 function DashboardTab({
   totalCostBasis, totalMarketValue, totalMarketReturn, totalMarketReturnPct,
-  totalReturn, totalReturnPct, totalDayGain, totalDayGainPct,
+  totalReturn, totalReturnPct, dayGainResult, quotesComplete = true,
   divYieldPortfolio, yieldOnCostPortfolio, projAnnualIncome,
   sectorData, barChartData, snapshots, holdings, holdingsEnriched,
   stockInfos, portfolioSettings, savePortfolioSettings, exchangeRates, privacyMode = false,
@@ -1860,7 +1875,9 @@ function DashboardTab({
   setActiveTab,
 }: {
   totalCostBasis: number; totalMarketValue: number; totalMarketReturn: number; totalMarketReturnPct: number;
-  totalReturn: number; totalReturnPct: number; totalDayGain: number; totalDayGainPct: number;
+  totalReturn: number; totalReturnPct: number;
+  dayGainResult: ReturnType<typeof computeDayGain>;
+  quotesComplete?: boolean;
   divYieldPortfolio: number; yieldOnCostPortfolio: number; projAnnualIncome: number;
   sectorData: { label: string; value: number; color: string }[];
   barChartData: { label: string; value: number }[];
@@ -1984,13 +2001,23 @@ function DashboardTab({
   const returnHome = mvHome - costHome
   const incomeHome = convertToHome(projAnnualIncome)
 
+  const kpisReady = quotesComplete
+  const dayGainConverted = dayGainResult.dollar == null ? dayGainResult : {
+    ...dayGainResult,
+    dollar: convertToHome(dayGainResult.dollar),
+  }
+  const dayGainPair = kpisReady
+    ? formatDayGainPair(dayGainConverted, currencySymbol)
+    : { dollar: EM_DASH, percent: EM_DASH, color: undefined }
+  const kpiOrDash = (value: string) => (kpisReady ? value : EM_DASH)
+
   const kpis = [
     { label: 'COST BASIS', value: privacyMode ? '•••••' : fmtHome(costHome), tooltip: 'The total amount you originally paid for all your holdings (purchase price × shares). This is your "money in" baseline.' },
-    { label: 'MARKET VALUE', value: privacyMode ? '•••••' : fmtHome(mvHome), tooltip: 'Current market value of all your holdings (current price × shares). This is what your portfolio is worth right now.' },
-    { label: 'MARKET RETURN', value: privacyMode ? '•••••' : fmtHome(convertToHome(totalMarketReturn)), sub: fmtPct(totalMarketReturnPct), color: totalMarketReturn >= 0 ? 'var(--green)' : 'var(--red)', tooltip: 'Profit or loss from price appreciation only — does not include dividends. Market Value minus Cost Basis.' },
-    { label: 'TOTAL RETURN', value: privacyMode ? '•••••' : fmtHome(convertToHome(totalReturn)), sub: fmtPct(totalReturnPct), color: totalReturn >= 0 ? 'var(--green)' : 'var(--red)', tooltip: 'Your complete gain/loss including both price appreciation AND dividends received. This is the true performance of your portfolio.' },
-    { label: 'DAY GAIN', value: privacyMode ? '•••••' : fmtHome(convertToHome(totalDayGain)), sub: fmtPct(totalDayGainPct), color: totalDayGain >= 0 ? 'var(--green)' : 'var(--red)', tooltip: "How much your portfolio's value has changed today compared to yesterday's close." },
-    { label: 'DIVIDEND YIELD', value: `${divYieldPortfolio.toFixed(2)}%`, color: 'var(--yellow)', tooltip: 'Annual dividend income divided by current market value. Shows what % return you earn from dividends at current prices. Higher = more income per dollar invested.' },
+    { label: 'MARKET VALUE', value: privacyMode ? '•••••' : kpiOrDash(fmtHome(mvHome)), tooltip: 'Current market value of all your holdings (current price × shares). This is what your portfolio is worth right now.' },
+    { label: 'MARKET RETURN', value: privacyMode ? '•••••' : kpiOrDash(fmtHome(convertToHome(totalMarketReturn))), sub: kpisReady ? fmtPct(totalMarketReturnPct) : EM_DASH, color: !kpisReady ? undefined : (totalMarketReturn >= 0 ? 'var(--green)' : 'var(--red)'), tooltip: 'Profit or loss from price appreciation only — does not include dividends. Market Value minus Cost Basis.' },
+    { label: 'TOTAL RETURN', value: privacyMode ? '•••••' : kpiOrDash(fmtHome(convertToHome(totalReturn))), sub: kpisReady ? fmtPct(totalReturnPct) : EM_DASH, color: !kpisReady ? undefined : (totalReturn >= 0 ? 'var(--green)' : 'var(--red)'), tooltip: 'Your complete gain/loss including both price appreciation AND dividends received. This is the true performance of your portfolio.' },
+    { label: 'DAY GAIN', value: privacyMode ? '•••••' : dayGainPair.dollar, sub: privacyMode ? undefined : dayGainPair.percent, color: dayGainPair.color, tooltip: "How much your portfolio's value has changed today compared to yesterday's close." },
+    { label: 'DIVIDEND YIELD', value: kpisReady ? `${divYieldPortfolio.toFixed(2)}%` : EM_DASH, color: kpisReady ? 'var(--yellow)' : undefined, tooltip: 'Annual dividend income divided by current market value. Shows what % return you earn from dividends at current prices. Higher = more income per dollar invested.' },
     { label: 'YIELD ON COST', value: `${yieldOnCostPortfolio.toFixed(2)}%`, color: 'var(--yellow)', tooltip: 'Annual dividend income divided by your original cost basis. Shows your dividend return on what you actually paid. Great for long-term holders who bought at lower prices.' },
     { label: 'PROJ. ANNUAL INCOME', value: privacyMode ? '•••••' : fmtHome(incomeHome), sub: privacyMode ? '• /mo · • /wk' : `${fmtHome(incomeHome / 12)}/mo · ${fmtHome(incomeHome / 52)}/wk · ${fmtHome(incomeHome / 365)}/day`, color: 'var(--green)', tooltip: 'Estimated total dividend income you will receive over the next 12 months, based on current dividend rates and your share count.' },
   ]
@@ -2376,6 +2403,12 @@ function HoldingsTab({
                 const alloc = totalMarketValue > 0 ? (h.marketValue / totalMarketValue) * 100 : 0
                 const info = stockInfos[h.ticker]
                 const hasOverride = h.divOverrideAnnual != null
+                const rowGain = computeDayGain([{
+                  shares: h.shares,
+                  currentPrice: h.hasLivePrice ? h.currentPrice : null,
+                  dayChange: info?.dayChange ?? null,
+                }])
+                const rowGainPair = formatDayGainPair(rowGain)
                 return (
                   <tr key={h.id} style={{ background: 'var(--bg-1)' }}>
                     <td style={cellLeft}>
@@ -2394,8 +2427,14 @@ function HoldingsTab({
                     <td style={cell}>{h.shares}</td>
                     <td style={cell}>${fmt(h.avgCost)}</td>
                     <td style={cell}>{h.hasLivePrice ? `$${fmt(h.currentPrice)}` : '—'}</td>
-                    <td style={{ ...cell, color: (info?.dayChange ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {info?.dayChange != null ? (<>{privacyMode ? '•••' : fmtDollar(h.dayGain)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(info.dayChangePct ?? 0)}</span></>) : '—'}
+                    <td style={{ ...cell, color: rowGainPair.color || 'var(--text-2)' }}>
+                      {rowGain.tone === 'none' ? EM_DASH : (
+                        <>
+                          {privacyMode ? '•••' : rowGainPair.dollar}
+                          <br />
+                          <span style={{ fontSize: 9.5 }}>{rowGainPair.percent}</span>
+                        </>
+                      )}
                     </td>
                     <td style={{ ...cell, color: h.hasLivePrice && h.marketReturn >= 0 ? 'var(--green)' : h.hasLivePrice ? 'var(--red)' : 'var(--text-3)' }}>
                       {h.hasLivePrice ? (<>{privacyMode ? '•••' : fmtDollar(h.marketReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.marketReturnPct)}</span></>) : '—'}

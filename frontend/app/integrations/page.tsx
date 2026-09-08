@@ -1508,7 +1508,7 @@ export default function IntegrationsPage() {
     if (!token) return
     setTokensLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/webhooks/tokens`, {
+      const res = await fetchWithSessionRetry(`${API_BASE}/api/webhooks/tokens`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Failed to load tokens')
@@ -1530,7 +1530,7 @@ export default function IntegrationsPage() {
     if (!token) return
     setBrokerSyncLoading(true)
     try {
-      const res = await fetch(`${API_BASE}/api/integrations/broker-sync`, {
+      const res = await fetchWithSessionRetry(`${API_BASE}/api/integrations/broker-sync`, {
         headers: { Authorization: `Bearer ${token}` },
       })
       if (!res.ok) throw new Error('Failed to load broker sync status')

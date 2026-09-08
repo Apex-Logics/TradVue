@@ -1,9 +1,9 @@
 /**
  * Shared access-token refresh + one-shot 401/403 retry.
  *
- * Used by AuthContext hydrate, journal user-data sync, and webhook events
- * so expired JWTs either recover via POST /api/auth/refresh or clear the
- * zombie signed-in session.
+ * Used by AuthContext hydrate, journal user-data sync, webhook events,
+ * integrations token list, and broker-sync status so expired JWTs either
+ * recover via POST /api/auth/refresh or clear the zombie signed-in session.
  */
 
 import { apiRefresh, type AuthUser } from './api'

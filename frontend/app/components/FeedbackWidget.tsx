@@ -87,6 +87,7 @@ export default function FeedbackWidget() {
             opacity: 0.4,
             transition: 'opacity 0.2s',
           }}
+          className="tv-fab--feedback"
           onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
         >
@@ -113,6 +114,7 @@ export default function FeedbackWidget() {
           boxShadow: '0 4px 20px rgba(99,102,241,0.45)',
           transition: 'transform 0.2s, box-shadow 0.2s',
         }}
+        className="tv-fab--feedback"
         onMouseEnter={e => {
           (e.currentTarget as HTMLButtonElement).style.transform = 'scale(1.1)';
           (e.currentTarget as HTMLButtonElement).style.boxShadow = '0 6px 24px rgba(99,102,241,0.6)';
