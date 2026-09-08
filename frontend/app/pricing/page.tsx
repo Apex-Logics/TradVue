@@ -183,12 +183,14 @@ export default function PricingPage() {
     setLoadingCheckout(true)
 
     try {
-      const loaded = stripePrices ?? (await fetchStripePrices().then(r => {
-        if (!r.available) throw new Error(r.message)
-        setStripePrices(r.prices)
+      let loaded = stripePrices
+      if (!loaded) {
+        const result = await fetchStripePrices()
+        if (!result.available) throw new Error(result.message)
+        loaded = result.prices
+        setStripePrices(result.prices)
         setStripeStatus('ready')
-        return r.prices
-      }))
+      }
       const priceId = plan === 'monthly' ? loaded.monthly.priceId : loaded.annual.priceId
       const { url } = await createCheckoutSession({ token, priceId })
       window.location.href = url

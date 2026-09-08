@@ -238,20 +238,19 @@ function pick(obj, keys) {
 // FIX 6: validate priceId format and strip unexpected body fields
 router.post('/create-checkout-session', requireAuth, async (req, res) => {
   try {
-    if (!isStripeConfigured()) return sendStripeUnavailable(res);
-    const stripe = getStripe();
-    const prices = await getOrCreatePrices();
-
-    // Only accept known fields from body
+    // Validate the body first so a missing Stripe key cannot mask a 400.
     const { priceId } = pick(req.body, ['priceId']);
 
-    // Validate priceId format
     if (!priceId) {
       return res.status(400).json({ error: 'priceId is required' });
     }
     if (!isValidPriceId(priceId)) {
       return res.status(400).json({ error: 'Invalid priceId format' });
     }
+
+    if (!isStripeConfigured()) return sendStripeUnavailable(res);
+    const stripe = getStripe();
+    const prices = await getOrCreatePrices();
 
     // Validate priceId is one of our known prices
     if (priceId !== prices.monthly && priceId !== prices.annual) {
