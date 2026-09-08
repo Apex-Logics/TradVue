@@ -424,6 +424,17 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   pointer-events: all;
 }
 
+@media (max-width: 1024px) {
+  .tv-fab--support {
+    bottom: 68px !important;
+    right: 12px !important;
+  }
+  .tv-fab--feedback {
+    bottom: 16px !important;
+    right: 12px !important;
+  }
+}
+
 /* Section heading */
 .section-title {
   display: flex;
@@ -2665,6 +2676,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   .toast {
     max-width: none;
     min-width: 0;
+  }
+
+  .tv-fab--support {
+    bottom: 56px !important;
+    right: 8px !important;
+  }
+  .tv-fab--support > button {
+    width: 40px !important;
+    height: 40px !important;
+  }
+  .tv-fab--feedback {
+    bottom: 10px !important;
+    right: 8px !important;
+    width: 40px !important;
+    height: 40px !important;
   }
 
   .section-title {
