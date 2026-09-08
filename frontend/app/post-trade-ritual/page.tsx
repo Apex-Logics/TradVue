@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export const metadata: Metadata = {
   title: 'Post-Trade Ritual — Build a Daily Trading Journal Habit in 60 Seconds',
@@ -298,22 +299,14 @@ export default function PostTradeRitualPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               { q: 'What is the post-trade ritual for traders?', a: 'The post-trade ritual is a 60-second routine to journal every trade immediately after closing it: entry/exit details, emotion tag, and a quick note. Designed to build a consistent journaling habit through streak tracking.' },
               { q: 'Why does journaling after every trade help traders improve?', a: 'Journaling captures the data and emotions behind every trade. Over time, patterns emerge — you see which setups work, which emotions lead to bad decisions, and exactly where your edge is. Traders who journal consistently build a richer dataset to analyze their own patterns and tendencies.' },
               { q: 'How does streak tracking help build a journaling habit?', a: 'TradVue tracks your consecutive days of journaling. Seeing your streak grow creates motivation to keep going. Missing a day feels significant — which prevents the common pattern of slowly stopping.' },
               { q: 'What emotion tags does TradVue use in the post-trade ritual?', a: 'TradVue includes emotion tags like: Confident, Fearful, Greedy, Bored, FOMO, Overextended, Regretful, and Lucky. Over time you\'ll see correlations between emotions and your P&L.' },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 

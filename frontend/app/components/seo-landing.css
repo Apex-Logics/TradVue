@@ -520,7 +520,12 @@
   justify-content: space-between;
   align-items: center;
   gap: 16px;
-  cursor: default;
+  cursor: pointer;
+  width: 100%;
+  background: none;
+  border: none;
+  font-family: inherit;
+  text-align: left;
 }
 
 .seo-faq-q-icon {
@@ -776,4 +781,8 @@
   .seo-stat { border-right: 1px solid var(--border, #252530); }
   .seo-stat:nth-child(even) { border-right: none; }
   .seo-stat:nth-child(n+3) { border-top: 1px solid var(--border, #252530); }
+  .seo-faq-list {
+    padding-bottom: var(--tv-fab-clearance);
+    padding-right: calc(var(--tv-fab-edge, 10px) + var(--tv-fab-support-size, 40px) + 12px);
+  }
 }

@@ -538,6 +538,7 @@ function AddAccountModal({ onClose, onAdd }: {
 
   return (
     <div
+      className="tv-fab-clear-modal"
       style={{
         position: 'fixed', inset: 0, zIndex: 1000,
         background: 'rgba(0,0,0,0.7)',
@@ -547,6 +548,7 @@ function AddAccountModal({ onClose, onAdd }: {
       onClick={onClose}
     >
       <div
+        className="tv-modal-sheet"
         style={{
           background: 'var(--bg-2)',
           border: '1px solid var(--border)',
@@ -791,7 +793,7 @@ function AddAccountModal({ onClose, onAdd }: {
         )}
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <div className="tv-modal-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button
             onClick={onClose}
             style={{
