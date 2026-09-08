@@ -2631,6 +2631,10 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   .tv-fab-clear-modal .tv-modal-sheet {
     max-height: calc(100dvh - var(--tv-fab-clearance) - 24px) !important;
     margin-bottom: var(--tv-fab-clearance);
+    margin-right: calc(var(--tv-fab-edge) + var(--tv-fab-support-size) + 8px);
+  }
+  .tv-fab-clear-modal .tv-modal-actions {
+    flex-wrap: wrap;
   }
 
   /* ── Import modal: full-screen on mobile ─────────────────────────────────── */
@@ -4110,6 +4114,21 @@ a.alert-row-title:hover {
   box-shadow: 0 8px 32px rgba(0, 0, 0, 0.4);
   animation: slide-in-right 0.4s cubic-bezier(0.16, 1, 0.3, 1);
   overflow: hidden;
+}
+
+/* Must follow the base rule — earlier mobile blocks lose to this later `bottom: 20px`. */
+@media (max-width: 1024px) {
+  .onboarding-checklist {
+    bottom: var(--tv-fab-clearance);
+  }
+}
+@media (max-width: 768px) {
+  .onboarding-checklist {
+    left: 12px;
+    right: 12px;
+    width: auto;
+    max-width: calc(100vw - 24px - var(--tv-fab-edge) - var(--tv-fab-support-size));
+  }
 }
 
 @keyframes slide-in-right {

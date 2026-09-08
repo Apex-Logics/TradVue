@@ -793,7 +793,7 @@ function AddAccountModal({ onClose, onAdd }: {
         )}
 
         {/* Actions */}
-        <div style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
+        <div className="tv-modal-actions" style={{ display: 'flex', gap: 10, justifyContent: 'flex-end', marginTop: 4 }}>
           <button
             onClick={onClose}
             style={{
