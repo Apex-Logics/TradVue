@@ -401,6 +401,7 @@ export default function SupportChat() {
           transition: 'opacity 0.2s',
           zIndex: 9001,
         }}
+        className="tv-fab--support"
         onMouseEnter={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.8' }}
         onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '0.4' }}
       >
@@ -640,7 +641,7 @@ export default function SupportChat() {
       )}
 
       {/* ── Floating Chat Bubble ── */}
-      <div style={{ position: 'fixed', bottom: 84, right: 20, zIndex: 9001 }}>
+      <div className="tv-fab--support" style={{ position: 'fixed', bottom: 84, right: 20, zIndex: 9001 }}>
         <button
           onClick={isOpen ? handleClose : handleOpen}
           aria-label={isOpen ? 'Close support' : 'Open support'}

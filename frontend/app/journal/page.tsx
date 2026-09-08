@@ -4391,7 +4391,7 @@ function JournalPageInner() {
           Trading Journal
         </div>
         <div className="page-header-desc">Track and analyze your trading patterns</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', gap: 8, alignItems: 'center' }}>
+        <div className="page-header-actions">
           <span style={{ fontSize: 11, color: 'var(--text-3)' }}>{trades.length} trades</span>
           <button
             onClick={() => {
