@@ -6,17 +6,26 @@ import { ToolIcon, IconArrowLeft, IconTool, IconInfo, IconCheck, IconAlert, Icon
 import PersistentNav from '../components/PersistentNav'
 import FuturesCalculator from './FuturesCalculator'
 import dynamic from 'next/dynamic'
+import { CardSkeleton } from '../components/Skeleton'
 
-const OptionsCalculator = dynamic(() => import('./OptionsCalculator'), { ssr: false })
-const CompoundCalculator = dynamic(() => import('./CompoundCalculator'), { ssr: false })
-const RiskOfRuinCalculator = dynamic(() => import('./RiskOfRuinCalculator'), { ssr: false })
-const ForexCalculator = dynamic(() => import('./ForexCalculator'), { ssr: false })
-const PositionSizer = dynamic(() => import('./PositionSizer'), { ssr: false })
-const DividendPlanner = dynamic(() => import('./DividendPlanner'), { ssr: false })
-const EconHeatmap = dynamic(() => import('./EconHeatmap'), { ssr: false })
-const CorrelationMatrixEnhanced = dynamic(() => import('./CorrelationMatrix'), { ssr: false })
-const ExpectancyCalculator = dynamic(() => import('./ExpectancyCalculator'), { ssr: false })
-const SessionClock = dynamic(() => import('./SessionClock'), { ssr: false })
+function CalcHydrationShell() {
+  return (
+    <div role="status" aria-label="Loading calculator" style={{ minHeight: 280 }}>
+      <CardSkeleton header lines={6} height={280} />
+    </div>
+  )
+}
+
+const OptionsCalculator = dynamic(() => import('./OptionsCalculator'), { ssr: false, loading: CalcHydrationShell })
+const CompoundCalculator = dynamic(() => import('./CompoundCalculator'), { ssr: false, loading: CalcHydrationShell })
+const RiskOfRuinCalculator = dynamic(() => import('./RiskOfRuinCalculator'), { ssr: false, loading: CalcHydrationShell })
+const ForexCalculator = dynamic(() => import('./ForexCalculator'), { ssr: false, loading: CalcHydrationShell })
+const PositionSizer = dynamic(() => import('./PositionSizer'), { ssr: false, loading: CalcHydrationShell })
+const DividendPlanner = dynamic(() => import('./DividendPlanner'), { ssr: false, loading: CalcHydrationShell })
+const EconHeatmap = dynamic(() => import('./EconHeatmap'), { ssr: false, loading: CalcHydrationShell })
+const CorrelationMatrixEnhanced = dynamic(() => import('./CorrelationMatrix'), { ssr: false, loading: CalcHydrationShell })
+const ExpectancyCalculator = dynamic(() => import('./ExpectancyCalculator'), { ssr: false, loading: CalcHydrationShell })
+const SessionClock = dynamic(() => import('./SessionClock'), { ssr: false, loading: CalcHydrationShell })
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
