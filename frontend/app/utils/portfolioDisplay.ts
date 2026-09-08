@@ -38,9 +38,8 @@ export function holdingsHaveLivePrices(
 
 export function tickerWasAttempted(
   ticker: string,
-  attempted: Record<string, boolean> | ReadonlySet<string>,
+  attempted: Record<string, boolean>,
 ): boolean {
-  if (attempted instanceof Set) return attempted.has(ticker)
   return Boolean(attempted[ticker])
 }
 
@@ -54,7 +53,7 @@ export function arePricesSettled(opts: {
   dataLoaded: boolean
   holdings: { ticker: string }[]
   quotes: Record<string, PriceQuote | undefined>
-  attemptedTickers: Record<string, boolean> | ReadonlySet<string>
+  attemptedTickers: Record<string, boolean>
 }): boolean {
   if (!opts.dataLoaded) return false
   if (opts.holdings.length === 0) return true
