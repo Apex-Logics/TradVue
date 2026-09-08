@@ -293,6 +293,26 @@ describe('Meta Robots Tags', () => {
     }
   })
 
+  test('Legal layout constrains grid children so narrow viewports can wrap', () => {
+    const layout = readFile(path.join(APP_DIR, 'legal/layout.tsx'))
+    const components = readFile(path.join(APP_DIR, 'legal/components.tsx'))
+    expect(layout).toContain('minmax(0, 220px) minmax(0, 1fr)')
+    expect(layout).toContain('min-width: 0')
+    expect(layout).toContain('max-width: 100%')
+    expect(layout).toContain('minmax(0, 1fr) !important')
+    expect(components).toContain('minWidth: 520')
+    expect(components).toContain("overflowX: 'auto'")
+  })
+
+  test('Bare /legal redirects to an existing legal document', () => {
+    const page = readFile(path.join(APP_DIR, 'legal/page.tsx'))
+    const nextConfig = readFile(path.join(__dirname, '../../next.config.js'))
+    expect(page).toMatch(/redirect\(['"]\/legal\/privacy['"]\)/)
+    expect(page).not.toMatch(/Page Not Found|chart ran off/)
+    expect(nextConfig).toMatch(/source:\s*['"]\/legal['"]/)
+    expect(nextConfig).toMatch(/destination:\s*['"]\/legal\/privacy['"]/)
+  })
+
   test('Root layout has robots: index=true, follow=true', () => {
     const rootLayoutPath = path.join(APP_DIR, 'layout.tsx')
     const content = readFile(rootLayoutPath)
