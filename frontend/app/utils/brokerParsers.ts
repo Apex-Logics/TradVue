@@ -19,6 +19,9 @@ export interface ParsedTrade {
   type: 'stock' | 'option' | 'crypto' | 'other'
   notes?: string      // Description/memo if available
   rawAction?: string  // Original action text from CSV
+  time?: string       // HH:MM or HH:MM:SS when the broker export includes it
+  orderId?: string    // Broker order id (one order may have multiple fills)
+  executionId?: string // Broker execution / fill / trade id (fill-unique)
 }
 
 export interface ParseResult {
@@ -127,6 +130,54 @@ function getField(row: Record<string, string>, candidates: string[]): string {
     if (key !== undefined && row[key]?.trim()) return row[key].trim()
   }
   return ''
+}
+
+/**
+ * Pull a clock time out of a datetime cell or a dedicated Time column.
+ * Returns HH:MM or HH:MM:SS, or '' if none.
+ */
+export function extractTime(raw: string): string {
+  if (!raw) return ''
+  const s = raw.trim()
+  const hms = s.match(/(?:^|[\s,T])(\d{1,2}:\d{2}:\d{2})/)
+  if (hms) {
+    const [h, m, sec] = hms[1].split(':')
+    return `${h.padStart(2, '0')}:${m}:${sec}`
+  }
+  const hm = s.match(/(?:^|[\s,T])(\d{1,2}:\d{2})(?!\d)/)
+  if (hm) {
+    const [h, m] = hm[1].split(':')
+    return `${h.padStart(2, '0')}:${m}`
+  }
+  // IBKR compact: 20240115;143000
+  const compact = s.match(/;(\d{4,6})\s*$/)
+  if (compact) {
+    const t = compact[1].padEnd(6, '0')
+    return `${t.slice(0, 2)}:${t.slice(2, 4)}:${t.slice(4, 6)}`
+  }
+  return ''
+}
+
+function brokerIdentity(
+  row: Record<string, string>,
+  dateRaw?: string,
+): Pick<ParsedTrade, 'time' | 'orderId' | 'executionId'> {
+  const timeFromCol = getField(row, ['time', 'exec time', 'trade time', 'execution time'])
+  const time = extractTime(timeFromCol)
+    || extractTime(dateRaw || getField(row, ['date/time', 'date', 'run date', 'activity date']))
+  const orderId = getField(row, [
+    'order id', 'order_id', 'orderid', 'iborderid', 'order number', 'ordernumber',
+    'transaction #', 'transaction id', 'transactionid',
+  ])
+  const executionId = getField(row, [
+    'execution id', 'exec id', 'execid', 'ibexecid', 'fill id', 'fillid',
+    'trade id', 'tradeid', 'trade number', 'exec id',
+  ])
+  return {
+    ...(time ? { time } : {}),
+    ...(orderId ? { orderId } : {}),
+    ...(executionId ? { executionId } : {}),
+  }
 }
 
 export function normalizeDate(raw: string): string {
@@ -262,6 +313,7 @@ export function parseRobinhood(rows: Record<string, string>[], errors: string[])
         broker: 'Robinhood',
         type: detectTradeType(symbol),
         rawAction: sideRaw,
+        ...brokerIdentity(row, getField(row, ['date'])),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -304,6 +356,7 @@ export function parseFidelity(rows: Record<string, string>[], errors: string[]):
         type: detectTradeType(symbol, assetType),
         notes: getField(row, ['description']),
         rawAction: action,
+        ...brokerIdentity(row, getField(row, ['run date'])),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -344,6 +397,7 @@ export function parseSchwab(rows: Record<string, string>[], errors: string[]): P
         type: detectTradeType(symbol),
         notes: getField(row, ['description']),
         rawAction: action,
+        ...brokerIdentity(row, getField(row, ['date'])),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -378,6 +432,7 @@ export function parseWebull(rows: Record<string, string>[], errors: string[]): P
         broker: 'Webull',
         type: detectTradeType(symbol),
         rawAction: sideRaw,
+        ...brokerIdentity(row, getField(row, ['date'])),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -421,6 +476,7 @@ export function parseTastytrade(rows: Record<string, string>[], errors: string[]
         type: isOption ? 'option' : detectTradeType(symbol),
         notes: description || undefined,
         rawAction: openClose ? `${buySell} ${openClose}` : buySell,
+        ...brokerIdentity(row, dateRaw),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -461,6 +517,7 @@ export function parseEtrade(rows: Record<string, string>[], errors: string[]): P
         type: detectTradeType(symbol),
         notes: getField(row, ['description']),
         rawAction: action,
+        ...brokerIdentity(row, getField(row, ['date'])),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -512,6 +569,7 @@ export function parseIBKR(rows: Record<string, string>[], errors: string[]): Par
         broker: 'IBKR',
         type: detectTradeType(symbol, assetClass),
         rawAction: actionRaw || (side === 'buy' ? 'BUY' : 'SELL'),
+        ...brokerIdentity(row, dateRaw),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -556,6 +614,7 @@ export function parseTradeStation(rows: Record<string, string>[], errors: string
         type: isOption ? 'option' : detectTradeType(symbol, assetType),
         notes: getField(row, ['description']),
         rawAction: transaction,
+        ...brokerIdentity(row, dateRaw),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -646,6 +705,7 @@ export function parseRobinhoodActivity(rows: Record<string, string>[], errors: s
         type,
         notes: description || undefined,
         rawAction: transCode,
+        ...brokerIdentity(row, activityDate),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -680,6 +740,7 @@ function parseGenericBroker(rows: Record<string, string>[], errors: string[]): P
         broker: 'Unknown',
         type: detectTradeType(symbol),
         rawAction: sideRaw,
+        ...brokerIdentity(row, getField(row, ['date', 'trade date', 'activity date'])),
       })
     } catch (e) {
       errors.push(`Row ${i + 2}: ${e instanceof Error ? e.message : 'Parse error'}`)
@@ -752,45 +813,109 @@ export function parseBrokerCSV(csvText: string): ParseResult {
 
 // ── Deduplication ─────────────────────────────────────────────────────────────
 
+export type FingerprintConfidence = 'high' | 'low'
+
+export interface DedupResult {
+  unique: ParsedTrade[]
+  duplicateCount: number
+  possibleDuplicates: ParsedTrade[]
+}
+
+/** True when the trade has a fill-level distinguisher (id or clock time). */
+export function isHighConfidenceIdentity(trade: ParsedTrade): boolean {
+  return !!(
+    (trade.executionId && trade.executionId.trim())
+    || (trade.orderId && trade.orderId.trim())
+    || (trade.time && trade.time.trim())
+  )
+}
+
 /**
- * Generate a deterministic fingerprint for a parsed trade.
- * Two trades with the same fingerprint are considered duplicates.
- * Fingerprint is based on: date + symbol + side + quantity + price (rounded to 2dp).
- * This is intentionally loose — same stock/day/quantity/price is a dupe.
+ * Weak key used only to *flag* possible duplicates for review.
+ * Same date|symbol|side|qty|price can still be two legitimate fills.
  */
-export function tradeFingerprint(trade: ParsedTrade): string {
+export function coarseTradeFingerprint(trade: ParsedTrade): string {
   const price = trade.price.toFixed(2)
   const qty = trade.quantity.toFixed(6)
   return `${trade.date}|${trade.symbol}|${trade.side}|${qty}|${price}`
 }
 
 /**
- * Deduplicate a list of parsed trades against an existing set of fingerprints.
- * Returns only the trades that are NOT already in existingFingerprints.
+ * Strong identity for a parsed fill.
+ *
+ * Preference (Q8):
+ *   1. Broker execution/fill id (fill-unique)
+ *   2. Order id + time/qty/price (one order may have multiple fills)
+ *   3. date + time + symbol + side + qty + price + fees + broker
+ *
+ * Never use date|symbol|side|qty|price alone as a silent-drop key.
+ */
+export function tradeFingerprint(trade: ParsedTrade): string {
+  const exec = (trade.executionId || '').trim()
+  const order = (trade.orderId || '').trim()
+  const time = (trade.time || '').trim()
+  const broker = trade.broker || ''
+  const price = trade.price.toFixed(2)
+  const qty = trade.quantity.toFixed(6)
+  const fees = (trade.fees ?? 0).toFixed(2)
+
+  if (exec) return `exec|${broker}|${exec}`
+  if (order) return `order|${broker}|${order}|${time}|${qty}|${price}`
+  return `${trade.date}|${time}|${trade.symbol}|${trade.side}|${qty}|${price}|${fees}|${broker}`
+}
+
+/**
+ * Deduplicate incoming fills against existing fingerprints.
+ *
+ * High-confidence identity match (same execution id, or same order+time, or
+ * same date+time+qty+price) → counted as a duplicate and omitted from `unique`.
+ *
+ * Low-confidence coarse match (date|symbol|side|qty|price only, no id/time)
+ * → returned in `possibleDuplicates` so the UI can review instead of silently
+ * dropping money data. Possible duplicates are NOT in `unique`.
  *
  * Usage:
  *   const existing = new Set(currentTrades.map(t => tradeFingerprint(t)))
- *   const newTrades = deduplicateTrades(parsedTrades, existing)
+ *   const coarse = new Set(currentTrades.map(t => coarseTradeFingerprint(t)))
+ *   const { unique, possibleDuplicates } = deduplicateTrades(parsed, existing, coarse)
  */
 export function deduplicateTrades(
   incoming: ParsedTrade[],
   existingFingerprints: Set<string>,
-): { unique: ParsedTrade[]; duplicateCount: number } {
-  const seen = new Set(existingFingerprints)
+  existingCoarseFingerprints: Set<string> = new Set(),
+): DedupResult {
+  const seenStrong = new Set(existingFingerprints)
+  const seenCoarse = new Set(existingCoarseFingerprints)
   const unique: ParsedTrade[] = []
+  const possibleDuplicates: ParsedTrade[] = []
   let duplicateCount = 0
 
   for (const trade of incoming) {
-    const fp = tradeFingerprint(trade)
-    if (seen.has(fp)) {
-      duplicateCount++
-    } else {
-      seen.add(fp)
-      unique.push(trade)
+    const strong = tradeFingerprint(trade)
+    const coarse = coarseTradeFingerprint(trade)
+    const high = isHighConfidenceIdentity(trade)
+
+    if (seenStrong.has(strong)) {
+      if (high) {
+        duplicateCount++
+      } else {
+        possibleDuplicates.push(trade)
+      }
+      continue
     }
+
+    if (!high && seenCoarse.has(coarse)) {
+      possibleDuplicates.push(trade)
+      seenStrong.add(strong)
+      continue
+    }
+
+    seenStrong.add(strong)
+    seenCoarse.add(coarse)
+    unique.push(trade)
   }
 
-  return { unique, duplicateCount }
+  return { unique, duplicateCount, possibleDuplicates }
 }
 
 // ── Batch Processing ──────────────────────────────────────────────────────────

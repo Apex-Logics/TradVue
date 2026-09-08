@@ -34,7 +34,7 @@ import WeeklySummary from './WeeklySummary'
 import { loadPlaybooks, initPlaybooks, type Playbook, CATEGORY_COLORS, CATEGORY_LABELS } from '../utils/playbookData'
 import { DEFAULT_PLAYBOOKS } from '../utils/playbookDefaults'
 import dynamic from 'next/dynamic'
-import { tradeFingerprint, batchInsertTrades, type ParsedTrade } from '../utils/brokerParsers'
+import { tradeFingerprint, coarseTradeFingerprint, isHighConfidenceIdentity, batchInsertTrades, type ParsedTrade } from '../utils/brokerParsers'
 const AuthModal = dynamic(() => import('../components/AuthModal'), { ssr: false })
 const NinjaTraderConnect = dynamic(() => import('../components/NinjaTraderConnect'), { ssr: false })
 
@@ -95,6 +95,8 @@ interface Trade {
   rating: number   // 1-5
   notes: string
   screenshot: string  // base64
+  orderId?: string
+  executionId?: string
   optionData?: OptionData
   forexData?: ForexData
   // Multi-tag support (Phase 1 upgrade)
@@ -4259,27 +4261,31 @@ function JournalPageInner() {
       console.info(`[TierAccess] Free tier: filtered ${skipped} trade(s) older than 30 days from CSV import.`)
     }
 
-    // ── Deduplication: build fingerprint set from existing journal trades ──
-    // We compare on date+symbol+side+qty+price so the same trade can't be imported twice.
-    const existingFingerprints = new Set<string>(
-      trades.map(t => tradeFingerprint({
-        date: t.date,
-        symbol: t.symbol,
-        side: (t.direction === 'Long' ? 'buy' : 'sell') as 'buy' | 'sell',
-        quantity: t.positionSize,
-        price: t.entryPrice,
-        total: t.entryPrice * t.positionSize,
-        fees: t.commissions,
-        broker: '',
-        type: t.assetClass === 'Option' ? 'option' : t.assetClass === 'Crypto' ? 'crypto' : 'stock',
-      } as ParsedTrade))
-    )
+    // ── Deduplication: strong fingerprint (order/exec id or date+time+qty+price)
+    // Low-confidence coarse matches are NOT silently dropped — the import modal
+    // already left them unchecked for review. Safety net here only skips
+    // high-confidence duplicates of trades already in the journal.
+    const existingParsed: ParsedTrade[] = trades.map(t => ({
+      date: t.date,
+      symbol: t.symbol,
+      side: (t.direction === 'Long' ? 'buy' : 'sell') as 'buy' | 'sell',
+      quantity: t.positionSize,
+      price: t.entryPrice,
+      total: t.entryPrice * t.positionSize,
+      fees: t.commissions,
+      broker: '',
+      type: t.assetClass === 'Option' ? 'option' : t.assetClass === 'Crypto' ? 'crypto' : 'stock',
+      time: t.time || undefined,
+      orderId: t.orderId,
+      executionId: t.executionId,
+    }))
+    const existingFingerprints = new Set(existingParsed.map(tradeFingerprint))
 
-    const seen = new Set<string>(existingFingerprints)
+    const seenStrong = new Set(existingFingerprints)
     const uniqueImports: typeof filteredImports = []
     let dupCount = 0
     for (const t of filteredImports) {
-      const fp = tradeFingerprint({
+      const p: ParsedTrade = {
         date: String(t.date || ''),
         symbol: String(t.symbol || ''),
         side: (String(t.direction || 'Long') === 'Long' ? 'buy' : 'sell') as 'buy' | 'sell',
@@ -4289,14 +4295,21 @@ function JournalPageInner() {
         fees: Number(t.commissions) || 0,
         broker: '',
         type: 'stock',
-      } as ParsedTrade)
-      if (seen.has(fp)) { dupCount++; continue }
-      seen.add(fp)
+        time: String(t.time || '') || undefined,
+        orderId: typeof t.orderId === 'string' ? t.orderId : undefined,
+        executionId: typeof t.executionId === 'string' ? t.executionId : undefined,
+      }
+      const strong = tradeFingerprint(p)
+      if (seenStrong.has(strong) && isHighConfidenceIdentity(p)) {
+        dupCount++
+        continue
+      }
+      seenStrong.add(strong)
       uniqueImports.push(t)
     }
 
     if (dupCount > 0) {
-      console.info(`[CSV Import] Deduplication: skipped ${dupCount} duplicate trade(s).`)
+      console.info(`[CSV Import] Deduplication: skipped ${dupCount} high-confidence duplicate trade(s).`)
     }
 
     if (uniqueImports.length === 0) {
@@ -4331,6 +4344,8 @@ function JournalPageInner() {
           rating: Number(t.rating) || 3,
           notes: String(t.notes || 'Imported from CSV'),
           screenshot: '',
+          orderId: typeof t.orderId === 'string' ? t.orderId : undefined,
+          executionId: typeof t.executionId === 'string' ? t.executionId : undefined,
           id: uid(),
           tags_setup_types: (t.tags_setup_types as string[]) || [],
           tags_mistakes: (t.tags_mistakes as string[]) || [],
@@ -4523,7 +4538,35 @@ function JournalPageInner() {
 
       {/* Modals */}
       {showImportModal && (
-        <ImportModal onClose={() => setShowImportModal(false)} onImport={handleImportTrades} />
+        <ImportModal
+          onClose={() => setShowImportModal(false)}
+          onImport={handleImportTrades}
+          existingFingerprints={new Set(trades.map(t => tradeFingerprint({
+            date: t.date,
+            symbol: t.symbol,
+            side: t.direction === 'Long' ? 'buy' : 'sell',
+            quantity: t.positionSize,
+            price: t.entryPrice,
+            total: t.entryPrice * t.positionSize,
+            fees: t.commissions,
+            broker: '',
+            type: t.assetClass === 'Option' ? 'option' : t.assetClass === 'Crypto' ? 'crypto' : 'stock',
+            time: t.time || undefined,
+            orderId: t.orderId,
+            executionId: t.executionId,
+          })))}
+          existingCoarseFingerprints={new Set(trades.map(t => coarseTradeFingerprint({
+            date: t.date,
+            symbol: t.symbol,
+            side: t.direction === 'Long' ? 'buy' : 'sell',
+            quantity: t.positionSize,
+            price: t.entryPrice,
+            total: t.entryPrice * t.positionSize,
+            fees: t.commissions,
+            broker: '',
+            type: 'stock',
+          })))}
+        />
       )}
       {showBackupImport && (
         <ImportBackupModal onClose={() => setShowBackupImport(false)} onRestore={handleBackupRestore} />

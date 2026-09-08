@@ -11,6 +11,7 @@ import {
   parseBrokerCSV,
   normalizeDate,
   parseNumber,
+  extractTime,
   parseRobinhood,
   parseFidelity,
   parseSchwab,
@@ -19,6 +20,7 @@ import {
   parseEtrade,
   parseIBKR,
   parseTradeStation,
+  deduplicateTrades,
 } from '../brokerParsers'
 
 // ── Date Normalization ────────────────────────────────────────────────────────
@@ -525,5 +527,68 @@ describe('Auto-detect all 8 brokers', () => {
       expect(result.broker).toBe(expected)
       expect(result.trades.length).toBeGreaterThan(0)
     })
+  })
+})
+
+// ── Time / order-id extraction (Q8 fingerprints) ──────────────────────────────
+
+describe('extractTime', () => {
+  it('parses isolated HH:MM:SS', () => {
+    expect(extractTime('14:30:00')).toBe('14:30:00')
+  })
+
+  it('parses MM/DD/YYYY HH:MM:SS', () => {
+    expect(extractTime('01/15/2024 14:30:00')).toBe('14:30:00')
+  })
+
+  it('parses IBKR compact 20240115;143000', () => {
+    expect(extractTime('20240115;143000')).toBe('14:30:00')
+  })
+
+  it('returns empty when no clock time', () => {
+    expect(extractTime('2024-01-15')).toBe('')
+    expect(extractTime('')).toBe('')
+  })
+})
+
+describe('parser identity fields', () => {
+  it('TradeStation captures Order ID and Time so same-day fills stay distinct', () => {
+    const result = parseBrokerCSV(TRADESTATION_CSV)
+    const buys = result.trades.filter(t => t.side === 'buy' && t.symbol === 'AAPL')
+    expect(buys[0].orderId).toBe('ORD001')
+    expect(buys[0].time).toBe('14:30:00')
+  })
+
+  it('E*TRADE captures Transaction # as orderId', () => {
+    const result = parseBrokerCSV(ETRADE_CSV)
+    const buy = result.trades.find(t => t.symbol === 'AAPL' && t.side === 'buy')
+    expect(buy?.orderId).toBe('TXN001')
+  })
+
+  it('IBKR captures time from Date/Time so two equal fills at different times differ', () => {
+    const result = parseBrokerCSV(IBKR_CSV)
+    const aaplBuy = result.trades.find(t => t.symbol === 'AAPL' && t.side === 'buy')
+    expect(aaplBuy?.time).toBe('14:30:00')
+  })
+
+  it('Tastytrade captures time from Date/Time', () => {
+    const result = parseBrokerCSV(TASTYTRADE_CSV)
+    const buy = result.trades.find(t => t.symbol === 'AAPL' && t.side === 'buy')
+    expect(buy?.time).toBe('14:30:00')
+  })
+
+  it('two same-day IBKR fills at different times do not collapse', () => {
+    const csv = `Symbol,Date/Time,Quantity,T. Price,Proceeds,Comm/Fee
+AAPL,2024-01-15 09:30:01,10,150.25,1502.50,-1.00
+AAPL,2024-01-15 09:30:02,10,150.25,1502.50,-1.00
+`
+    const { trades } = parseBrokerCSV(csv)
+    expect(trades).toHaveLength(2)
+    expect(trades[0].time).toBe('09:30:01')
+    expect(trades[1].time).toBe('09:30:02')
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades(trades, new Set())
+    expect(unique).toHaveLength(2)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(0)
   })
 })

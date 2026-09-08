@@ -13,6 +13,8 @@ import {
   parseRobinhoodActivity,
   detectBroker,
   tradeFingerprint,
+  coarseTradeFingerprint,
+  isHighConfidenceIdentity,
   deduplicateTrades,
   batchInsertTrades,
   type ParsedTrade,
@@ -248,11 +250,6 @@ describe('tradeFingerprint', () => {
     expect(tradeFingerprint(trade)).toBe(tradeFingerprint({ ...trade }))
   })
 
-  it('same trade from different brokers has same fingerprint', () => {
-    const ibkrTrade = { ...trade, broker: 'IBKR' }
-    expect(tradeFingerprint(trade)).toBe(tradeFingerprint(ibkrTrade))
-  })
-
   it('different date = different fingerprint', () => {
     expect(tradeFingerprint(trade)).not.toBe(tradeFingerprint({ ...trade, date: '2024-01-20' }))
   })
@@ -271,6 +268,44 @@ describe('tradeFingerprint', () => {
 
   it('different price = different fingerprint', () => {
     expect(tradeFingerprint(trade)).not.toBe(tradeFingerprint({ ...trade, price: 155 }))
+  })
+
+  it('same-day fills with different order ids do not collapse', () => {
+    const a = { ...trade, orderId: 'ORD-1' }
+    const b = { ...trade, orderId: 'ORD-2' }
+    expect(tradeFingerprint(a)).not.toBe(tradeFingerprint(b))
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([a, b], new Set())
+    expect(unique).toHaveLength(2)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(0)
+  })
+
+  it('same-day fills with different execution ids do not collapse', () => {
+    const a = { ...trade, executionId: 'EX-1' }
+    const b = { ...trade, executionId: 'EX-2' }
+    expect(tradeFingerprint(a)).not.toBe(tradeFingerprint(b))
+    const { unique } = deduplicateTrades([a, b], new Set())
+    expect(unique).toHaveLength(2)
+  })
+
+  it('same-day fills with different times do not collapse', () => {
+    const a = { ...trade, time: '09:30:01' }
+    const b = { ...trade, time: '09:30:02' }
+    expect(tradeFingerprint(a)).not.toBe(tradeFingerprint(b))
+    expect(coarseTradeFingerprint(a)).toBe(coarseTradeFingerprint(b))
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([a, b], new Set())
+    expect(unique).toHaveLength(2)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(0)
+  })
+
+  it('identical execution id is a high-confidence duplicate', () => {
+    const a = { ...trade, executionId: 'EX-9' }
+    const b = { ...trade, executionId: 'EX-9' }
+    expect(isHighConfidenceIdentity(a)).toBe(true)
+    const { unique, duplicateCount } = deduplicateTrades([a, b], new Set())
+    expect(unique).toHaveLength(1)
+    expect(duplicateCount).toBe(1)
   })
 })
 
@@ -296,37 +331,44 @@ describe('deduplicateTrades', () => {
     expect(duplicateCount).toBe(0)
   })
 
-  it('filters out trades already in fingerprint set', () => {
+  it('filters out trades already in fingerprint set as possible when confidence is low', () => {
     const trade = makeTrade()
     const fp = new Set([tradeFingerprint(trade)])
-    const { unique, duplicateCount } = deduplicateTrades([trade], fp)
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([trade], fp)
     expect(unique).toHaveLength(0)
-    expect(duplicateCount).toBe(1)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(1)
   })
 
-  it('keeps new while filtering known trades', () => {
+  it('keeps new while flagging known low-confidence trades for review', () => {
     const existing = makeTrade()
     const newTrade = makeTrade({ symbol: 'TSLA' })
     const fp = new Set([tradeFingerprint(existing)])
-    const { unique, duplicateCount } = deduplicateTrades([existing, newTrade], fp)
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([existing, newTrade], fp)
     expect(unique).toHaveLength(1)
     expect(unique[0].symbol).toBe('TSLA')
-    expect(duplicateCount).toBe(1)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(1)
   })
 
-  it('deduplicates within incoming list (same trade repeated)', () => {
+  it('low-confidence identical rows are possible duplicates, not silent drops', () => {
     const trade = makeTrade()
-    const { unique, duplicateCount } = deduplicateTrades([trade, { ...trade }], new Set())
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([trade, { ...trade }], new Set())
     expect(unique).toHaveLength(1)
-    expect(duplicateCount).toBe(1)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(1)
   })
 
-  it('returns empty array when all are duplicates', () => {
-    const trades = [makeTrade(), makeTrade({ symbol: 'MSFT', price: 380 })]
+  it('returns empty unique when all are high-confidence duplicates of existing', () => {
+    const trades = [
+      makeTrade({ time: '09:30:00' }),
+      makeTrade({ symbol: 'MSFT', price: 380, time: '10:00:00' }),
+    ]
     const fp = new Set(trades.map(tradeFingerprint))
-    const { unique, duplicateCount } = deduplicateTrades(trades, fp)
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades(trades, fp)
     expect(unique).toHaveLength(0)
     expect(duplicateCount).toBe(2)
+    expect(possibleDuplicates).toHaveLength(0)
   })
 
   it('handles empty incoming list', () => {
@@ -388,15 +430,27 @@ describe('batchInsertTrades', () => {
 // ── Integration: full pipeline ────────────────────────────────────────────────
 
 describe('Full pipeline: parse -> dedup -> batch insert', () => {
-  it('second import of same CSV yields 0 new trades', async () => {
+  it('second import of same CSV with no fill ids is reviewable, not silently unique', () => {
     const r1 = parseBrokerCSV(ROBINHOOD_ACTIVITY_CSV)
     const { unique: first } = deduplicateTrades(r1.trades, new Set())
     const existing = new Set(first.map(tradeFingerprint))
+    const existingCoarse = new Set(first.map(coarseTradeFingerprint))
 
     const r2 = parseBrokerCSV(ROBINHOOD_ACTIVITY_CSV)
-    const { unique: second, duplicateCount } = deduplicateTrades(r2.trades, existing)
+    const { unique: second, duplicateCount, possibleDuplicates } = deduplicateTrades(
+      r2.trades,
+      existing,
+      existingCoarse,
+    )
     expect(second).toHaveLength(0)
-    expect(duplicateCount).toBe(r1.trades.length)
+    // Activity CSV has no order/exec ids or times → low confidence → possible, not silent drop count
+    const highConf = r1.trades.filter(isHighConfidenceIdentity)
+    if (highConf.length === 0) {
+      expect(duplicateCount).toBe(0)
+      expect(possibleDuplicates.length).toBe(r1.trades.length)
+    } else {
+      expect(duplicateCount + possibleDuplicates.length).toBe(r1.trades.length)
+    }
   })
 
   it('batch inserts all trades without loss', async () => {
