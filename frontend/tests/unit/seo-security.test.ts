@@ -294,11 +294,14 @@ describe('Meta Robots Tags', () => {
   })
 
   test('Legal layout constrains grid children so narrow viewports can wrap', () => {
-    const content = readFile(path.join(APP_DIR, 'legal/layout.tsx'))
-    expect(content).toContain('minmax(0, 220px) minmax(0, 1fr)')
-    expect(content).toContain('min-width: 0')
-    expect(content).toContain('max-width: 100%')
-    expect(content).toContain('minmax(0, 1fr) !important')
+    const layout = readFile(path.join(APP_DIR, 'legal/layout.tsx'))
+    const components = readFile(path.join(APP_DIR, 'legal/components.tsx'))
+    expect(layout).toContain('minmax(0, 220px) minmax(0, 1fr)')
+    expect(layout).toContain('min-width: 0')
+    expect(layout).toContain('max-width: 100%')
+    expect(layout).toContain('minmax(0, 1fr) !important')
+    expect(components).toContain('minWidth: 520')
+    expect(components).toContain("overflowX: 'auto'")
   })
 
   test('Bare /legal redirects to an existing legal document', () => {

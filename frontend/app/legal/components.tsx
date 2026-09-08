@@ -258,6 +258,7 @@ export function CookieTable({ rows }: CookieTableProps) {
     <div style={{ overflowX: 'auto', margin: '8px 0', minWidth: 0, maxWidth: '100%' }}>
       <table style={{
         width: '100%',
+        minWidth: 520,
         borderCollapse: 'collapse',
         fontSize: '13px',
         color: 'var(--text-1)',
@@ -316,6 +317,7 @@ export function ImpactTable({ rows }: ImpactTableProps) {
     <div style={{ overflowX: 'auto', margin: '8px 0', minWidth: 0, maxWidth: '100%' }}>
       <table style={{
         width: '100%',
+        minWidth: 360,
         borderCollapse: 'collapse',
         fontSize: '13px',
         color: 'var(--text-1)',
