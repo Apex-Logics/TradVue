@@ -7,19 +7,13 @@
  *   - Momentum (25%): 50-day vs 200-day MA, RSI
  *   - Profitability (25%): Profit margin, ROE
  * 
- * Data sourced from Yahoo Finance quoteSummary modules.
- * Cached for 24 hours.
+ * Data sourced from Yahoo Finance quoteSummary (cookie + crumb; chart quotes
+ * do not need a crumb, which is why price can load while score previously 401'd).
+ * Cached for 24 hours. Failed lookups are not cached.
  */
 
-const axios = require('axios');
 const cache = require('./cache');
-
-const YAHOO_BASE = 'https://query2.finance.yahoo.com';
-
-const YAHOO_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-  'Accept': 'application/json',
-};
+const { fetchQuoteSummary } = require('./yahooQuoteSummary');
 
 // Sector average P/E ratios (approximate 2024-2025 benchmarks)
 const SECTOR_PE = {
@@ -201,81 +195,71 @@ function scoreProfitability(profitMargin, roe, grossMargin) {
  */
 async function getStockScore(ticker) {
   const upper = ticker.toUpperCase();
-  const cacheKey = `stock:score:v1:${upper}`;
+  const cacheKey = `stock:score:v2:${upper}`;
 
-  return cache.cacheAPICall(cacheKey, async () => {
-    // Fetch multiple Yahoo Finance modules in one call
-    const modules = [
-      'financialData',
-      'defaultKeyStatistics', 
-      'summaryDetail',
-      'assetProfile',
-    ].join(',');
+  const cached = await cache.get(cacheKey);
+  if (cached && cached.totalScore != null) return cached;
 
-    let data = {};
+  const modules = [
+    'financialData',
+    'defaultKeyStatistics',
+    'summaryDetail',
+    'assetProfile',
+  ].join(',');
 
-    try {
-      const res = await axios.get(`${YAHOO_BASE}/v10/finance/quoteSummary/${upper}`, {
-        params: { modules },
-        headers: YAHOO_HEADERS,
-        timeout: 12000,
-      });
-
-      const result = res.data?.quoteSummary?.result?.[0];
-      if (!result) {
-        return { symbol: upper, error: 'No data available', totalScore: null };
-      }
-
-      const fd = result.financialData || {};
-      const ks = result.defaultKeyStatistics || {};
-      const sd = result.summaryDetail || {};
-      const ap = result.assetProfile || {};
-
-      // Extract raw values
-      const currentPrice = fd.currentPrice?.raw ?? null;
-      const pe = sd.trailingPE?.raw ?? sd.forwardPE?.raw ?? null;
-      const sector = ap.sector || null;
-      const revenueGrowth = fd.revenueGrowth?.raw ?? null;
-      const earningsGrowth = fd.earningsGrowth?.raw ?? ks.earningsQuarterlyGrowth?.raw ?? null;
-      const fiftyDayAvg = sd.fiftyDayAverage?.raw ?? null;
-      const twoHundredDayAvg = sd.twoHundredDayAverage?.raw ?? null;
-      const profitMargin = fd.profitMargins?.raw ?? null;
-      const roe = fd.returnOnEquity?.raw ?? null;
-      const grossMargin = fd.grossMargins?.raw ?? null;
-
-      // Score each dimension
-      const value = scoreValue(pe, sector);
-      const growth = scoreGrowth(revenueGrowth, earningsGrowth);
-      const momentum = scoreMomentum(currentPrice, fiftyDayAvg, twoHundredDayAvg);
-      const profitability = scoreProfitability(profitMargin, roe, grossMargin);
-
-      // Weighted composite (equal weights)
-      const totalScore = clamp(
-        value.score * 0.25 +
-        growth.score * 0.25 +
-        momentum.score * 0.25 +
-        profitability.score * 0.25
-      );
-
-      // Grade label
-      let grade;
-      if (totalScore >= 80) grade = 'A';
-      else if (totalScore >= 65) grade = 'B';
-      else if (totalScore >= 50) grade = 'C';
-      else if (totalScore >= 35) grade = 'D';
-      else grade = 'F';
-
-      return {
-        symbol: upper,
-        totalScore,
-        grade,
-        fetchedAt: new Date().toISOString(),
-      };
-    } catch (error) {
-      console.error(`[StockScore] Error for ${upper}:`, error.message);
-      return { symbol: upper, error: error.message, totalScore: null };
+  try {
+    const result = await fetchQuoteSummary(upper, modules);
+    if (!result) {
+      return { symbol: upper, error: 'Score unavailable', totalScore: null };
     }
-  }, 24 * 60 * 60); // 24 hour cache
+
+    const fd = result.financialData || {};
+    const ks = result.defaultKeyStatistics || {};
+    const sd = result.summaryDetail || {};
+    const ap = result.assetProfile || {};
+
+    const currentPrice = fd.currentPrice?.raw ?? null;
+    const pe = sd.trailingPE?.raw ?? sd.forwardPE?.raw ?? null;
+    const sector = ap.sector || null;
+    const revenueGrowth = fd.revenueGrowth?.raw ?? null;
+    const earningsGrowth = fd.earningsGrowth?.raw ?? ks.earningsQuarterlyGrowth?.raw ?? null;
+    const fiftyDayAvg = sd.fiftyDayAverage?.raw ?? null;
+    const twoHundredDayAvg = sd.twoHundredDayAverage?.raw ?? null;
+    const profitMargin = fd.profitMargins?.raw ?? null;
+    const roe = fd.returnOnEquity?.raw ?? null;
+    const grossMargin = fd.grossMargins?.raw ?? null;
+
+    const value = scoreValue(pe, sector);
+    const growth = scoreGrowth(revenueGrowth, earningsGrowth);
+    const momentum = scoreMomentum(currentPrice, fiftyDayAvg, twoHundredDayAvg);
+    const profitability = scoreProfitability(profitMargin, roe, grossMargin);
+
+    const totalScore = clamp(
+      value.score * 0.25 +
+      growth.score * 0.25 +
+      momentum.score * 0.25 +
+      profitability.score * 0.25
+    );
+
+    let grade;
+    if (totalScore >= 80) grade = 'A';
+    else if (totalScore >= 65) grade = 'B';
+    else if (totalScore >= 50) grade = 'C';
+    else if (totalScore >= 35) grade = 'D';
+    else grade = 'F';
+
+    const payload = {
+      symbol: upper,
+      totalScore,
+      grade,
+      fetchedAt: new Date().toISOString(),
+    };
+    await cache.set(cacheKey, payload, 24 * 60 * 60);
+    return payload;
+  } catch (error) {
+    console.error(`[StockScore] Error for ${upper}:`, error.message);
+    return { symbol: upper, error: 'Score unavailable', totalScore: null };
+  }
 }
 
 module.exports = { getStockScore };

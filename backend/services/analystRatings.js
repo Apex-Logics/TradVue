@@ -8,14 +8,9 @@
 
 const axios = require('axios');
 const cache = require('./cache');
+const { fetchQuoteSummary } = require('./yahooQuoteSummary');
 
-const YAHOO_BASE = 'https://query2.finance.yahoo.com';
 const FINNHUB_BASE = 'https://finnhub.io/api/v1';
-
-const YAHOO_HEADERS = {
-  'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36',
-  'Accept': 'application/json',
-};
 
 /**
  * Map recommendationMean (1-5 scale) to a label.
@@ -51,27 +46,20 @@ function getConsensusColor(label) {
  */
 async function getAnalystRatings(ticker) {
   const upper = ticker.toUpperCase();
-  const cacheKey = `analyst:ratings:${upper}`;
+  const cacheKey = `analyst:ratings:v2:${upper}`;
 
   return cache.cacheAPICall(cacheKey, async () => {
     const apiKey = process.env.FINNHUB_API_KEY;
 
     // Fire Yahoo + Finnhub in parallel (3 requests total)
     const [yahooRes, finnhubRes, finnhubTargetRes] = await Promise.allSettled([
-      // Yahoo Finance quote summary — includes analyst data in the quote
-      axios.get(`${YAHOO_BASE}/v10/finance/quoteSummary/${upper}`, {
-        params: { modules: 'financialData' },
-        headers: YAHOO_HEADERS,
-        timeout: 10000,
-      }),
-      // Finnhub recommendation trends
+      fetchQuoteSummary(upper, 'financialData'),
       apiKey
         ? axios.get(`${FINNHUB_BASE}/stock/recommendation`, {
             params: { symbol: upper, token: apiKey },
             timeout: 8000,
           })
         : Promise.reject(new Error('No FINNHUB_API_KEY')),
-      // Finnhub price targets (free tier supports this)
       apiKey
         ? axios.get(`${FINNHUB_BASE}/stock/price-target`, {
             params: { symbol: upper, token: apiKey },
@@ -94,7 +82,7 @@ async function getAnalystRatings(ticker) {
 
     if (yahooRes.status === 'fulfilled') {
       try {
-        const fd = yahooRes.value.data?.quoteSummary?.result?.[0]?.financialData;
+        const fd = yahooRes.value?.financialData;
         if (fd) {
           yahoo.recommendationMean = fd.recommendationMean?.raw ?? null;
           yahoo.recommendationKey = fd.recommendationKey ?? null;
