@@ -8,19 +8,11 @@
  */
 
 import { useState, useEffect } from 'react'
-import { API_BASE } from '../lib/api'
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-interface PriceOption {
-  priceId: string
-  amount: number
-  amountPerMonth?: number
-  currency: string
-  interval: string
-  label: string
-  savingsPercent?: number
-}
+import {
+  createCheckoutSession,
+  fetchStripePrices,
+  type StripePrices,
+} from '../lib/stripeCheckout'
 
 interface PricingCardProps {
   userId: string
@@ -39,26 +31,33 @@ function fmt(n: number) {
 
 // ── Component ──────────────────────────────────────────────────────────────────
 
-export default function PricingCard({ userId, email, token, onCheckoutStart }: PricingCardProps) {
-  const [prices, setPrices] = useState<{ monthly: PriceOption; annual: PriceOption } | null>(null)
+export default function PricingCard({ token, onCheckoutStart }: PricingCardProps) {
+  const [prices, setPrices] = useState<StripePrices | null>(null)
   const [loadingPlan, setLoadingPlan] = useState<'monthly' | 'annual' | null>(null)
   const [error, setError] = useState<string | null>(null)
 
   // Fetch live price IDs from backend on mount
   useEffect(() => {
-    fetch(`${API_BASE}/api/stripe/prices`)
-      .then(r => r.json())
-      .then(data => {
-        if (data.monthly && data.annual) setPrices(data)
-      })
-      .catch(() => {
-        // Fallback: prices still shown, subscribe button will re-try
-        setError('Could not load pricing. Please refresh.')
-      })
+    let cancelled = false
+    fetchStripePrices().then(result => {
+      if (cancelled) return
+      if (result.available) {
+        setPrices(result.prices)
+        setError(null)
+      } else {
+        setPrices(null)
+        setError(result.message)
+      }
+    })
+    return () => { cancelled = true }
   }, [])
 
   async function handleSubscribe(plan: 'monthly' | 'annual') {
     if (!prices) return
+    if (!token) {
+      setError('Please sign in again to upgrade.')
+      return
+    }
     if (loadingPlan) return
 
     setError(null)
@@ -67,20 +66,8 @@ export default function PricingCard({ userId, email, token, onCheckoutStart }: P
 
     try {
       const priceId = plan === 'monthly' ? prices.monthly.priceId : prices.annual.priceId
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ priceId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Checkout failed')
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        throw new Error('No checkout URL returned')
-      }
+      const { url } = await createCheckoutSession({ token, priceId })
+      window.location.href = url
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       setError(msg)
@@ -111,7 +98,7 @@ export default function PricingCard({ userId, email, token, onCheckoutStart }: P
           onMouseEnter={e => { if (!loadingPlan) (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
         >
-          {loadingPlan === 'monthly' ? 'Redirecting…' : 'Subscribe Monthly'}
+          {loadingPlan === 'monthly' ? 'Redirecting…' : prices ? 'Subscribe Monthly' : 'Checkout unavailable'}
         </button>
       </div>
 
@@ -143,7 +130,7 @@ export default function PricingCard({ userId, email, token, onCheckoutStart }: P
           onMouseEnter={e => { if (!loadingPlan) (e.currentTarget as HTMLButtonElement).style.opacity = '0.88' }}
           onMouseLeave={e => { (e.currentTarget as HTMLButtonElement).style.opacity = '1' }}
         >
-          {loadingPlan === 'annual' ? 'Redirecting…' : 'Subscribe Annual'}
+          {loadingPlan === 'annual' ? 'Redirecting…' : prices ? 'Subscribe Annual' : 'Checkout unavailable'}
         </button>
       </div>
 
@@ -152,7 +139,7 @@ export default function PricingCard({ userId, email, token, onCheckoutStart }: P
         <div style={{
           width: '100%',
           textAlign: 'center',
-          color: '#f87171',
+          color: prices ? '#f87171' : '#9ca3af',
           fontSize: 13,
           marginTop: 8,
         }}>

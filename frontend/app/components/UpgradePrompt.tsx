@@ -10,7 +10,11 @@
 
 import { useEffect, useCallback, useState } from 'react'
 import { MONTHLY_PRICE, ANNUAL_PRICE } from '../utils/tierAccess'
-import { API_BASE } from '../lib/api'
+import {
+  CHECKOUT_UNAVAILABLE_MESSAGE,
+  createCheckoutSession,
+  fetchStripePrices,
+} from '../lib/stripeCheckout'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -79,11 +83,35 @@ export default function UpgradePrompt({
 }: UpgradePromptProps) {
   const [checkoutPlan, setCheckoutPlan] = useState<'monthly' | 'annual' | null>(null)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [stripeReady, setStripeReady] = useState(true)
+
+  useEffect(() => {
+    if (!open) return
+    let cancelled = false
+    fetchStripePrices().then(result => {
+      if (cancelled) return
+      if (!result.available) {
+        setStripeReady(false)
+        setCheckoutError(result.message)
+      } else {
+        setStripeReady(true)
+      }
+    })
+    return () => { cancelled = true }
+  }, [open])
 
   // ── Stripe checkout handler ─────────────────────────────────────────────
   async function handleUpgrade(plan: 'monthly' | 'annual') {
     if (!userId || !email) {
       setCheckoutError('Please sign in to upgrade.')
+      return
+    }
+    if (!token) {
+      setCheckoutError('Please sign in again to upgrade.')
+      return
+    }
+    if (!stripeReady) {
+      setCheckoutError(CHECKOUT_UNAVAILABLE_MESSAGE)
       return
     }
     if (checkoutPlan) return // already in flight
@@ -92,27 +120,13 @@ export default function UpgradePrompt({
     setCheckoutPlan(plan)
 
     try {
-      // First, fetch live price IDs
-      const pricesRes = await fetch(`${API_BASE}/api/stripe/prices`)
-      const prices = await pricesRes.json()
-      if (!pricesRes.ok || !prices.monthly || !prices.annual) throw new Error('Failed to load pricing')
-
-      const priceId = plan === 'monthly' ? prices.monthly.priceId : prices.annual.priceId
-
-      const headers: Record<string, string> = { 'Content-Type': 'application/json' }
-      if (token) headers['Authorization'] = `Bearer ${token}`
-      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-        method: 'POST',
-        headers,
-        body: JSON.stringify({ priceId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Checkout failed')
-      if (data.url) {
-        window.location.href = data.url
-      } else {
-        throw new Error('No checkout URL returned')
+      const pricesResult = await fetchStripePrices()
+      if (!pricesResult.available) {
+        throw new Error(pricesResult.message)
       }
+      const priceId = plan === 'monthly' ? pricesResult.prices.monthly.priceId : pricesResult.prices.annual.priceId
+      const { url } = await createCheckoutSession({ token, priceId })
+      window.location.href = url
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       setCheckoutError(msg)
@@ -146,6 +160,7 @@ export default function UpgradePrompt({
     if (!open) {
       setCheckoutPlan(null)
       setCheckoutError(null)
+      setStripeReady(true)
     }
   }, [open])
 
@@ -357,7 +372,7 @@ export default function UpgradePrompt({
         <div style={{ display: 'flex', flexDirection: 'column', gap: 10 }}>
           {/* Primary: Annual (most popular) */}
           <button
-            disabled={!!checkoutPlan}
+            disabled={!!checkoutPlan || !stripeReady}
             onClick={() => handleUpgrade('annual')}
             style={{
               background: 'linear-gradient(135deg, #6366f1, #8b5cf6)',
@@ -367,20 +382,24 @@ export default function UpgradePrompt({
               color: '#fff',
               fontSize: 15,
               fontWeight: 700,
-              cursor: checkoutPlan ? 'wait' : 'pointer',
+              cursor: checkoutPlan || !stripeReady ? 'not-allowed' : 'pointer',
               letterSpacing: '-0.01em',
               transition: 'opacity 0.15s',
-              opacity: checkoutPlan === 'annual' ? 0.7 : 1,
+              opacity: checkoutPlan === 'annual' || !stripeReady ? 0.7 : 1,
             }}
-            onMouseEnter={e => { if (!checkoutPlan) e.currentTarget.style.opacity = '0.9' }}
-            onMouseLeave={e => { e.currentTarget.style.opacity = checkoutPlan === 'annual' ? '0.7' : '1' }}
+            onMouseEnter={e => { if (!checkoutPlan && stripeReady) e.currentTarget.style.opacity = '0.9' }}
+            onMouseLeave={e => { e.currentTarget.style.opacity = checkoutPlan === 'annual' || !stripeReady ? '0.7' : '1' }}
           >
-            {checkoutPlan === 'annual' ? 'Redirecting to checkout…' : `${ctaPrimary} — Annual ($16.80/mo) →`}
+            {checkoutPlan === 'annual'
+              ? 'Redirecting to checkout…'
+              : !stripeReady
+                ? 'Checkout unavailable'
+                : `${ctaPrimary} — Annual ($16.80/mo) →`}
           </button>
 
           {/* Secondary: Monthly */}
           <button
-            disabled={!!checkoutPlan}
+            disabled={!!checkoutPlan || !stripeReady}
             onClick={() => handleUpgrade('monthly')}
             style={{
               background: 'transparent',
@@ -389,11 +408,11 @@ export default function UpgradePrompt({
               padding: '12px 24px',
               color: 'var(--text-1)',
               fontSize: 13,
-              cursor: checkoutPlan ? 'wait' : 'pointer',
+              cursor: checkoutPlan || !stripeReady ? 'not-allowed' : 'pointer',
               transition: 'border-color 0.15s',
-              opacity: checkoutPlan === 'monthly' ? 0.7 : 1,
+              opacity: checkoutPlan === 'monthly' || !stripeReady ? 0.7 : 1,
             }}
-            onMouseEnter={e => { if (!checkoutPlan) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' }}
+            onMouseEnter={e => { if (!checkoutPlan && stripeReady) e.currentTarget.style.borderColor = 'rgba(255,255,255,0.35)' }}
             onMouseLeave={e => { e.currentTarget.style.borderColor = 'rgba(255,255,255,0.18)' }}
           >
             {checkoutPlan === 'monthly' ? 'Redirecting…' : 'Monthly plan — $24/mo'}
@@ -419,7 +438,12 @@ export default function UpgradePrompt({
 
           {/* Checkout error */}
           {checkoutError && (
-            <div style={{ fontSize: 12, color: '#f87171', textAlign: 'center', marginTop: 4 }}>
+            <div style={{
+              fontSize: 12,
+              color: stripeReady ? '#f87171' : 'var(--text-2)',
+              textAlign: 'center',
+              marginTop: 4,
+            }}>
               {checkoutError}
             </div>
           )}
