@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export const metadata: Metadata = {
   title: 'Best Trading Journal for Day Traders 2026 | TradVue',
@@ -321,23 +322,15 @@ export default function BestTradingJournalPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               { q: 'What makes TradVue the best trading journal for day traders?', a: 'TradVue combines journaling, portfolio tracking, 30+ calculators, prop firm monitoring, ritual, and market intel in one trader workflow. You get drawdown gauges, emotion tracking, and pattern analysis with a free account.' },
               { q: 'Is TradVue really free to use?', a: 'Yes. Create a free account (no credit card required) and get a 3-week full trial of all features. The free tier includes manual trade logging, basic analytics (30-day view window), and access to all 30+ calculators. Dashboard, news, and calendar are available without any account.' },
               { q: 'Can I track prop firm drawdowns in TradVue?', a: 'Yes. TradVue has built-in prop firm tracking that syncs your journal with prop firm rules, showing real-time drawdown gauges, daily loss limits, and trailing loss status.' },
               { q: 'Can I import my existing trades into TradVue?', a: 'Yes. TradVue supports CSV import from most major brokers and platforms. You can import your full trade history to analyze historical performance.' },
               { q: 'Does TradVue work for options and futures traders?', a: 'Yes. TradVue supports multi-asset journaling including stocks, options (with Greeks tracking), futures (with built-in contract specs for 20 contracts), forex, and crypto.' },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 

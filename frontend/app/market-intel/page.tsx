@@ -1,6 +1,7 @@
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export default function MarketIntelPage() {
   return (
@@ -355,8 +356,8 @@ export default function MarketIntelPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               {
                 q: 'Is this data accurate?',
                 a: 'Yes. Data is sourced directly from SEC EDGAR via Finnhub. All Form 4 filings are official disclosures submitted by corporate insiders — the same data institutional investors use.',
@@ -377,16 +378,8 @@ export default function MarketIntelPage() {
                 q: 'What do the transaction types mean?',
                 a: 'Buy = open market purchase by the insider. Sell = disposition of shares (open market sale). Award = stock grant from the company (compensation). Gift = gifted shares (to charity or family). F = shares withheld to cover tax obligations on a vesting event.',
               },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 

@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export const metadata: Metadata = {
   title: 'Futures Trading Journal — Track NQ, ES, CL with Tick-Based P&L',
@@ -271,22 +272,14 @@ export default function FuturesTradingJournalPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               { q: 'How does TradVue auto-detect futures contract specs?', a: 'Type your contract symbol (NQ, ES, CL, etc.) and TradVue automatically loads the tick value, point value, multiplier, and margin requirement. All 20 built-in contracts are pre-configured.' },
               { q: 'Does TradVue calculate tick-based P&L for futures?', a: 'Yes. TradVue uses each contract\'s tick value and multiplier to calculate tick-based P&L. For NQ: (exit - entry) × $20 per point ($5.00/tick). For ES: (exit - entry) × $50 per point ($12.50/tick). Calculations are based on published contract specifications and do not account for commissions, fees, or slippage.' },
               { q: 'Does TradVue support micro futures contracts?', a: 'Yes. TradVue has built-in specs for MES (Micro E-mini S&P), MNQ (Micro Nasdaq), MCL (Micro Crude Oil), and MGC (Micro Gold), with correct micro multipliers.' },
               { q: 'Can I track prop firm rules while futures trading?', a: 'Yes. TradVue\'s prop firm tracker integrates directly with your futures journal. Set your daily loss, max drawdown, and trailing loss limits. See live compliance gauges as you trade.' },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 

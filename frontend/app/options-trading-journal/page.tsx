@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export const metadata: Metadata = {
   title: 'Options Trading Journal — Track Greeks, Spreads & Multi-Leg P&L',
@@ -264,22 +265,14 @@ export default function OptionsTradingJournalPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               { q: 'Can TradVue track multi-leg options strategies?', a: 'Yes. TradVue supports spreads, straddles, Iron Condors, butterflies, and any multi-leg strategy. Log all legs at once and tag trades by strategy type for deep performance analytics.' },
               { q: 'Does TradVue calculate options Greeks?', a: 'Yes. TradVue tracks delta, gamma, theta, and vega for individual positions and your overall portfolio, helping you understand your total risk exposure.' },
               { q: 'Which options strategies does TradVue support?', a: 'TradVue supports covered calls, cash-secured puts, vertical spreads, calendar spreads, straddles, strangles, Iron Condors, butterfly spreads, ratio spreads, and any custom multi-leg position.' },
               { q: 'Can I analyze my P&L by options strategy type?', a: 'Yes. TradVue\'s analytics break down your P&L by strategy type. See whether your Iron Condors are outperforming your spreads, or which strategies perform best in different market conditions.' },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 
