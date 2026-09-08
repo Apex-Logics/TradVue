@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { IconUpload, IconClose, IconFile } from '../components/Icons'
-import { parseBrokerCSV, type ParsedTrade } from '../utils/brokerParsers'
+import { parseBrokerCSV, type ParsedTrade, tradeFingerprint, coarseTradeFingerprint, isHighConfidenceIdentity } from '../utils/brokerParsers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -26,12 +26,17 @@ interface ImportedTrade {
   mistakeTag: string
   rating: number
   notes: string
+  orderId?: string
+  executionId?: string
   _unmatched?: boolean
+  _dupStatus?: 'new' | 'duplicate' | 'possible'
 }
 
 interface ImportModalProps {
   onClose: () => void
   onImport: (trades: Record<string, unknown>[]) => void
+  existingFingerprints?: Set<string>
+  existingCoarseFingerprints?: Set<string>
 }
 
 type BrokerOverride = 'auto' | 'Robinhood' | 'Fidelity' | 'Schwab' | 'Webull' | 'Tastytrade' | 'E*TRADE' | 'IBKR' | 'TradeStation'
@@ -73,7 +78,7 @@ function pairTrades(rawTrades: ParsedTrade[]): ImportedTrade[] {
       const pct = buy.price ? ((sell.price - buy.price) / buy.price) * 100 : 0
 
       paired.push({
-        date: buy.date, time: '',
+        date: buy.date, time: buy.time || '',
         symbol,
         assetClass: buy.type === 'option' ? 'Option' : buy.type === 'crypto' ? 'Crypto' : 'Stock',
         direction: 'Long',
@@ -85,13 +90,15 @@ function pairTrades(rawTrades: ParsedTrade[]): ImportedTrade[] {
         holdMinutes: 0,
         setupTag: '', mistakeTag: 'None', rating: 3,
         notes: buy.notes || `Imported from ${buy.broker}`,
+        orderId: buy.orderId,
+        executionId: buy.executionId,
       })
     }
 
     // Unmatched trades (open positions or missing counterpart)
     ;[...buys.slice(minPairs), ...sells.slice(minPairs)].forEach(t => {
       paired.push({
-        date: t.date, time: '', symbol,
+        date: t.date, time: t.time || '', symbol,
         assetClass: t.type === 'option' ? 'Option' : t.type === 'crypto' ? 'Crypto' : 'Stock',
         direction: t.side === 'buy' ? 'Long' : 'Short',
         entryPrice: t.price, exitPrice: 0, positionSize: t.quantity,
@@ -99,6 +106,8 @@ function pairTrades(rawTrades: ParsedTrade[]): ImportedTrade[] {
         pnl: 0, rMultiple: 0, pctGainLoss: 0, holdMinutes: 0,
         setupTag: '', mistakeTag: 'None', rating: 3,
         notes: t.notes || `Imported from ${t.broker} (unmatched ${t.side})`,
+        orderId: t.orderId,
+        executionId: t.executionId,
         _unmatched: true,
       })
     })
@@ -107,9 +116,55 @@ function pairTrades(rawTrades: ParsedTrade[]): ImportedTrade[] {
   return paired
 }
 
+function importedToParsed(t: ImportedTrade): ParsedTrade {
+  return {
+    date: t.date,
+    symbol: t.symbol,
+    side: t.direction === 'Long' ? 'buy' : 'sell',
+    quantity: t.positionSize,
+    price: t.entryPrice,
+    total: t.entryPrice * t.positionSize,
+    fees: t.commissions,
+    broker: '',
+    type: t.assetClass === 'Option' ? 'option' : t.assetClass === 'Crypto' ? 'crypto' : 'stock',
+    time: t.time || undefined,
+    orderId: t.orderId,
+    executionId: t.executionId,
+  }
+}
+
+function annotateDupStatus(
+  paired: ImportedTrade[],
+  existingFingerprints: Set<string>,
+  existingCoarse: Set<string>,
+): ImportedTrade[] {
+  const seenStrong = new Set(existingFingerprints)
+  const seenCoarse = new Set(existingCoarse)
+  return paired.map(t => {
+    const p = importedToParsed(t)
+    const strong = tradeFingerprint(p)
+    const coarse = coarseTradeFingerprint(p)
+    const high = isHighConfidenceIdentity(p)
+    let status: ImportedTrade['_dupStatus'] = 'new'
+    if (seenStrong.has(strong)) {
+      status = high ? 'duplicate' : 'possible'
+    } else if (!high && seenCoarse.has(coarse)) {
+      status = 'possible'
+    }
+    seenStrong.add(strong)
+    seenCoarse.add(coarse)
+    return { ...t, _dupStatus: status }
+  })
+}
+
 // ─── Modal Component ──────────────────────────────────────────────────────────
 
-export default function ImportModal({ onClose, onImport }: ImportModalProps) {
+export default function ImportModal({
+  onClose,
+  onImport,
+  existingFingerprints = new Set(),
+  existingCoarseFingerprints = new Set(),
+}: ImportModalProps) {
   const [brokerOverride, setBrokerOverride] = useState<BrokerOverride>('auto')
   const [file, setFile] = useState<File | null>(null)
   const [step, setStep] = useState<'upload' | 'preview' | 'done'>('upload')
@@ -160,9 +215,13 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
         }
 
         // Pair the raw events into journal entries
-        const paired = pairTrades(result.trades)
+        const paired = annotateDupStatus(
+          pairTrades(result.trades),
+          existingFingerprints,
+          existingCoarseFingerprints,
+        )
         setPairedTrades(paired)
-        setSelectedRows(new Set(paired.map((_, i) => i)))
+        setSelectedRows(new Set(paired.map((t, i) => t._dupStatus === 'new' ? i : -1).filter(i => i >= 0)))
         setStep('preview')
       } catch (err) {
         setError(`Parse error: ${err instanceof Error ? err.message : 'Unknown error'}`)
@@ -354,6 +413,22 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
               </div>
             )}
 
+            {pairedTrades.some(t => t._dupStatus === 'possible' || t._dupStatus === 'duplicate') && (
+              <div data-testid="possible-duplicate-banner" style={{
+                background: 'rgba(245,158,11,0.08)', border: '1px solid rgba(245,158,11,0.25)',
+                borderRadius: 8, padding: '10px 14px', marginBottom: 16, fontSize: 12, color: 'var(--text-1)', lineHeight: 1.5,
+              }}>
+                {pairedTrades.filter(t => t._dupStatus === 'duplicate').length > 0 && (
+                  <div>High-confidence duplicates (same order/execution id or same date+time+qty+price) are unchecked and will not import unless you select them.</div>
+                )}
+                {pairedTrades.filter(t => t._dupStatus === 'possible').length > 0 && (
+                  <div>
+                    Possible duplicates (same date/symbol/side/qty/price, but no order id or time to be sure) are listed for review — they are <strong>not</strong> dropped. Check a row to import it.
+                  </div>
+                )}
+              </div>
+            )}
+
             {/* Raw trade preview (first 5) */}
             {previewRaw.length > 0 && (
               <div style={{ marginBottom: 16 }}>
@@ -424,7 +499,7 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
                       <th style={{ padding: '8px', textAlign: 'center', borderBottom: '1px solid var(--border)' }}>
                         <input type="checkbox" checked={selectedRows.size === pairedTrades.length} onChange={toggleAll} />
                       </th>
-                      {['Date', 'Symbol', 'Dir', 'Entry', 'Exit', 'Size', 'Fees', 'P&L'].map(h => (
+                      {['Date', 'Symbol', 'Dir', 'Entry', 'Exit', 'Size', 'Fees', 'P&L', 'Status'].map(h => (
                         <th key={h} style={{
                           padding: '8px 10px', textAlign: 'left', fontSize: 10, fontWeight: 600,
                           color: 'var(--text-2)', textTransform: 'uppercase', letterSpacing: '0.06em',
@@ -436,7 +511,9 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
                   <tbody>
                     {pairedTrades.map((t, i) => (
                       <tr key={i} style={{
-                        background: t._unmatched ? 'rgba(245,158,11,0.06)' : selectedRows.has(i) ? 'rgba(99,102,241,0.04)' : 'transparent',
+                        background: t._dupStatus === 'possible' || t._dupStatus === 'duplicate'
+                          ? 'rgba(245,158,11,0.08)'
+                          : t._unmatched ? 'rgba(245,158,11,0.06)' : selectedRows.has(i) ? 'rgba(99,102,241,0.04)' : 'transparent',
                         borderBottom: '1px solid var(--border)',
                       }}>
                         <td style={{ padding: '6px 8px', textAlign: 'center' }}>
@@ -451,6 +528,13 @@ export default function ImportModal({ onClose, onImport }: ImportModalProps) {
                         <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)' }}>${t.commissions.toFixed(2)}</td>
                         <td style={{ padding: '6px 10px', fontFamily: 'var(--mono)', fontWeight: 700, color: t.pnl >= 0 ? 'var(--green)' : 'var(--red)' }}>
                           {t._unmatched ? '? Open' : fmtDollar(t.pnl)}
+                        </td>
+                        <td style={{ padding: '6px 10px', fontSize: 10, whiteSpace: 'nowrap' }}>
+                          {t._dupStatus === 'duplicate'
+                            ? <span style={{ color: 'var(--yellow)' }}>Duplicate</span>
+                            : t._dupStatus === 'possible'
+                            ? <span style={{ color: 'var(--yellow)' }}>Possible duplicate</span>
+                            : <span style={{ color: 'var(--green)' }}>New</span>}
                         </td>
                       </tr>
                     ))}
