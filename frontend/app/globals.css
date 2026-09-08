@@ -2541,18 +2541,21 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     width: auto;
   }
 
-  /* Shared FAB clearance: spacer after page + footer so last controls aren't covered */
+  /* Shared FAB clearance: extra page height so last controls can scroll above the stack.
+     height:auto is required — height:100% + overflow-x:hidden makes overflow-y auto and
+     a ::after spacer cannot grow document scrollHeight. */
   :root {
     --tv-fab-edge: 10px;
+  }
+  html, body {
+    height: auto;
+    min-height: 100%;
   }
   html {
     scroll-padding-bottom: var(--tv-fab-clearance);
   }
-  body::after {
-    content: '';
-    display: block;
-    height: var(--tv-fab-clearance);
-    pointer-events: none;
+  body {
+    padding-bottom: var(--tv-fab-clearance);
   }
 
   /* ── News card image: proportional height ────────────────────────────────── */
@@ -2648,6 +2651,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     grid-template-columns: 1fr;
     /* Don't stretch the month grid into the FAB stack */
     min-height: 0;
+    padding-bottom: var(--tv-fab-clearance);
   }
 
   /* Calendar month cells: smaller min-height */
