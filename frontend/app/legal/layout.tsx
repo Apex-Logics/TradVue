@@ -87,27 +87,35 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       <LegalBreadcrumbs />
 
       {/* ── Main layout ── */}
-      <div style={{
-        maxWidth: '1100px',
-        margin: '0 auto',
-        padding: '40px 24px 80px',
-        display: 'grid',
-        gridTemplateColumns: '220px 1fr',
-        gap: '48px',
-        alignItems: 'start',
-      }}
+      <div
         className="legal-grid"
+        style={{
+          maxWidth: '1100px',
+          width: '100%',
+          margin: '0 auto',
+          padding: '40px 24px 80px',
+          display: 'grid',
+          gridTemplateColumns: 'minmax(0, 220px) minmax(0, 1fr)',
+          gap: '48px',
+          alignItems: 'start',
+          boxSizing: 'border-box',
+        }}
       >
         {/* ── Sidebar ── */}
-        <aside style={{
+        <aside className="legal-sidebar" style={{
           position: 'sticky',
           top: '72px',
+          minWidth: 0,
+          maxWidth: '100%',
         }}>
           <div style={{
             background: 'var(--bg-1)',
             border: '1px solid var(--border)',
             borderRadius: '12px',
             padding: '20px',
+            minWidth: 0,
+            maxWidth: '100%',
+            boxSizing: 'border-box',
           }}>
             <div style={{
               fontSize: '10px',
@@ -158,7 +166,7 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
         </aside>
 
         {/* ── Page content ── */}
-        <main>
+        <main className="legal-main" style={{ minWidth: 0, maxWidth: '100%' }}>
           {children}
         </main>
       </div>
@@ -197,9 +205,22 @@ export default function LegalLayout({ children }: { children: React.ReactNode })
       </div>
 
       <style>{`
+        .legal-grid,
+        .legal-sidebar,
+        .legal-main {
+          min-width: 0;
+          max-width: 100%;
+        }
+        .legal-main {
+          overflow-wrap: break-word;
+          word-break: break-word;
+        }
         @media (max-width: 720px) {
           .legal-grid {
-            grid-template-columns: 1fr !important;
+            grid-template-columns: minmax(0, 1fr) !important;
+            gap: 24px !important;
+            padding-left: 16px !important;
+            padding-right: 16px !important;
           }
         }
       `}</style>

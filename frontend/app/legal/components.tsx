@@ -12,7 +12,7 @@ interface LegalPageProps {
 
 export function LegalPage({ title, lastUpdated, children }: LegalPageProps) {
   return (
-    <article>
+    <article style={{ minWidth: 0, maxWidth: '100%', overflowWrap: 'break-word' }}>
       {/* Page header */}
       <header style={{ marginBottom: '40px', paddingBottom: '32px', borderBottom: '1px solid var(--border)' }}>
         <div style={{
@@ -86,6 +86,9 @@ export function Section({ id, title, children }: SectionProps) {
         display: 'flex',
         flexDirection: 'column',
         gap: '12px',
+        minWidth: 0,
+        maxWidth: '100%',
+        overflowWrap: 'break-word',
       }}>
         {children}
       </div>
@@ -194,6 +197,10 @@ export function WarningBox({ children }: { children: React.ReactNode }) {
       fontSize: '14.5px',
       color: 'var(--text-1)',
       lineHeight: 1.7,
+      minWidth: 0,
+      maxWidth: '100%',
+      overflowWrap: 'break-word',
+      boxSizing: 'border-box',
     }}>
       {children}
     </div>
@@ -212,6 +219,10 @@ export function InfoBox({ children }: { children: React.ReactNode }) {
       fontSize: '14.5px',
       color: 'var(--text-1)',
       lineHeight: 1.7,
+      minWidth: 0,
+      maxWidth: '100%',
+      overflowWrap: 'break-word',
+      boxSizing: 'border-box',
     }}>
       {children}
     </div>
@@ -244,7 +255,7 @@ interface CookieTableProps {
 
 export function CookieTable({ rows }: CookieTableProps) {
   return (
-    <div style={{ overflowX: 'auto', margin: '8px 0' }}>
+    <div style={{ overflowX: 'auto', margin: '8px 0', minWidth: 0, maxWidth: '100%' }}>
       <table style={{
         width: '100%',
         borderCollapse: 'collapse',
@@ -302,7 +313,7 @@ interface ImpactTableProps {
 
 export function ImpactTable({ rows }: ImpactTableProps) {
   return (
-    <div style={{ overflowX: 'auto', margin: '8px 0' }}>
+    <div style={{ overflowX: 'auto', margin: '8px 0', minWidth: 0, maxWidth: '100%' }}>
       <table style={{
         width: '100%',
         borderCollapse: 'collapse',

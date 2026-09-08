@@ -172,9 +172,13 @@ export default function CookiesPage() {
                 padding: '12px 16px',
                 fontSize: '13.5px',
                 lineHeight: 1.6,
+                minWidth: 0,
+                maxWidth: '100%',
+                overflowWrap: 'anywhere',
+                boxSizing: 'border-box',
               }}>
                 <strong style={{ color: 'var(--text-0)' }}>{b.browser}:</strong>{' '}
-                <a href={b.url} style={{ color: '#4a9eff' }} target="_blank" rel="noopener noreferrer">{b.url}</a>
+                <a href={b.url} style={{ color: '#4a9eff', overflowWrap: 'anywhere' }} target="_blank" rel="noopener noreferrer">{b.url}</a>
               </div>
             ))}
           </div>
