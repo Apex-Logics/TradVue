@@ -67,7 +67,8 @@ app.use(cors({
   origin: allowedOrigins,
   credentials: true,
   methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-  allowedHeaders: ['Content-Type', 'Authorization']
+  // Journal PUT (Q2) sends X-Expected-Updated-At and If-Match; browsers preflight them.
+  allowedHeaders: ['Content-Type', 'Authorization', 'X-Expected-Updated-At', 'If-Match']
 }));
 
 // ── Response compression (gzip/deflate) — cuts response sizes 60-80% ─────────

@@ -26,16 +26,33 @@ const STAGING_FE = 'https://tradvue-git-staging-tradvue.vercel.app';
 const OTHER_VERCEL = 'https://some-other-app.vercel.app';
 const PROD_WWW = 'https://www.tradvue.com';
 
+// Must match backend/server.js cors({ allowedHeaders }). Journal PUT (Q2) sends
+// X-Expected-Updated-At and If-Match; browsers preflight those as non-simple headers.
+const CORS_ALLOWED_HEADERS = [
+  'Content-Type',
+  'Authorization',
+  'X-Expected-Updated-At',
+  'If-Match',
+];
+
+function parseAllowHeaders(header) {
+  return String(header || '')
+    .split(',')
+    .map((h) => h.trim().toLowerCase())
+    .filter(Boolean);
+}
+
 function corsApp(env) {
   const app = express();
   app.use(cors({
     origin: getAllowedOrigins(env),
     credentials: true,
     methods: ['GET', 'POST', 'PUT', 'DELETE', 'PATCH'],
-    allowedHeaders: ['Content-Type', 'Authorization'],
+    allowedHeaders: CORS_ALLOWED_HEADERS,
   }));
   app.get('/health', (_req, res) => res.json({ status: 'ok' }));
   app.post('/api/auth/login', (_req, res) => res.json({ ok: true }));
+  app.put('/api/user/data/journal', (_req, res) => res.json({ ok: true }));
   return app;
 }
 
@@ -147,6 +164,29 @@ describe('CORS middleware (OPTIONS/POST)', () => {
       .set('Origin', OTHER_VERCEL);
     expect(otherVercel.headers['access-control-allow-origin']).toBeUndefined();
   });
+
+  test('journal PUT preflight ACAH includes X-Expected-Updated-At and If-Match', async () => {
+    const app = corsApp(stagingEnv);
+
+    const preflight = await request(app)
+      .options('/api/user/data/journal')
+      .set('Origin', STAGING_FE)
+      .set('Access-Control-Request-Method', 'PUT')
+      .set(
+        'Access-Control-Request-Headers',
+        'content-type,authorization,x-expected-updated-at,if-match'
+      );
+
+    expect([200, 204]).toContain(preflight.status);
+    expect(preflight.headers['access-control-allow-origin']).toBe(STAGING_FE);
+    expect(parseAllowHeaders(preflight.headers['access-control-allow-headers']))
+      .toEqual(expect.arrayContaining([
+        'content-type',
+        'authorization',
+        'x-expected-updated-at',
+        'if-match',
+      ]));
+  });
 });
 
 describe('server.js CORS wiring', () => {
@@ -155,5 +195,13 @@ describe('server.js CORS wiring', () => {
     expect(src).toMatch(/require\(\s*['"]\.\/lib\/corsOrigins['"]\s*\)/);
     expect(src).toMatch(/getAllowedOrigins\s*\(/);
     expect(src).toMatch(/CORS_ORIGINS/);
+  });
+
+  test('allowedHeaders includes journal PUT precondition headers', () => {
+    const src = fs.readFileSync(SERVER_JS, 'utf8');
+    const match = src.match(/allowedHeaders:\s*\[([^\]]+)\]/);
+    expect(match).not.toBeNull();
+    const listed = [...match[1].matchAll(/['"]([^'"]+)['"]/g)].map((m) => m[1]);
+    expect(listed).toEqual(CORS_ALLOWED_HEADERS);
   });
 });
