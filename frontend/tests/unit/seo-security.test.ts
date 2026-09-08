@@ -302,9 +302,12 @@ describe('Meta Robots Tags', () => {
   })
 
   test('Bare /legal redirects to an existing legal document', () => {
-    const content = readFile(path.join(APP_DIR, 'legal/page.tsx'))
-    expect(content).toMatch(/redirect\(['"]\/legal\/privacy['"]\)/)
-    expect(content).not.toMatch(/Page Not Found|chart ran off/)
+    const page = readFile(path.join(APP_DIR, 'legal/page.tsx'))
+    const nextConfig = readFile(path.join(__dirname, '../../next.config.js'))
+    expect(page).toMatch(/redirect\(['"]\/legal\/privacy['"]\)/)
+    expect(page).not.toMatch(/Page Not Found|chart ran off/)
+    expect(nextConfig).toMatch(/source:\s*['"]\/legal['"]/)
+    expect(nextConfig).toMatch(/destination:\s*['"]\/legal\/privacy['"]/)
   })
 
   test('Root layout has robots: index=true, follow=true', () => {

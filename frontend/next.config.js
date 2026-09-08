@@ -37,6 +37,11 @@ const nextConfig = {
         destination: '/prop-firm-tracker',
         permanent: true,
       },
+      {
+        source: '/legal',
+        destination: '/legal/privacy',
+        permanent: false,
+      },
     ]
   },
 }
