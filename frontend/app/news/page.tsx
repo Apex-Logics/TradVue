@@ -215,7 +215,7 @@ export default function NewsPage() {
     : articles
 
   return (
-    <div style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
+    <div className="news-page" style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
       {/* Persistent Navigation */}
       <PersistentNav />
 
@@ -230,14 +230,14 @@ export default function NewsPage() {
           News Feed
         </div>
         <div className="page-header-desc">{filtered.length} articles</div>
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="page-header-actions">
           <input
-            type="text"
+            type="search"
             className="news-page-search"
             placeholder="Search headline, source, ticker…"
             value={search}
             onChange={e => handleSearchChange(e.target.value)}
-            style={{ minWidth: 220 }}
+            aria-label="Search news"
           />
           <button
             className="btn btn-secondary btn-sm"
