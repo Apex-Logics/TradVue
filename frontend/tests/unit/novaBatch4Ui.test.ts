@@ -29,7 +29,9 @@ describe('Nova Batch 4 — help attribution', () => {
 describe('Nova Batch 4 — dashboard shell', () => {
   test('Market Intel live tool is placed in the center col-news column', () => {
     const src = read('HomeClient.tsx')
-    const intelBlock = src.slice(src.indexOf("activeNav === 'Market Intel'"), src.indexOf('NewsFeed'))
+    const start = src.indexOf("activeNav === 'Market Intel'")
+    expect(start).toBeGreaterThan(-1)
+    const intelBlock = src.slice(start, start + 500)
     expect(intelBlock).toContain('className="col-news"')
     expect(intelBlock).toContain('<MarketIntel')
   })
