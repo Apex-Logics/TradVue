@@ -9,22 +9,15 @@
  *   3. Pro — everything unlimited ($24/mo or $16.80/mo annual)
  */
 
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { useRouter } from 'next/navigation'
 import { useAuth } from '../context/AuthContext'
-import { API_BASE } from '../lib/api'
-
-// ── Types ──────────────────────────────────────────────────────────────────────
-
-interface PriceOption {
-  priceId: string
-  amount: number
-  amountPerMonth?: number
-  currency: string
-  interval: string
-  label: string
-  savingsPercent?: number
-}
+import {
+  CHECKOUT_UNAVAILABLE_MESSAGE,
+  createCheckoutSession,
+  fetchStripePrices,
+  type StripePrices,
+} from '../lib/stripeCheckout'
 
 // ── Comparison data (4-column: feature | no-account | free | pro) ─────────────
 
@@ -156,6 +149,24 @@ export default function PricingPage() {
   const [billingPeriod, setBillingPeriod] = useState<'monthly' | 'annual'>('annual')
   const [loadingCheckout, setLoadingCheckout] = useState(false)
   const [checkoutError, setCheckoutError] = useState<string | null>(null)
+  const [stripePrices, setStripePrices] = useState<StripePrices | null>(null)
+  const [stripeStatus, setStripeStatus] = useState<'loading' | 'ready' | 'unavailable'>('loading')
+
+  useEffect(() => {
+    let cancelled = false
+    fetchStripePrices().then(result => {
+      if (cancelled) return
+      if (result.available) {
+        setStripePrices(result.prices)
+        setStripeStatus('ready')
+      } else {
+        setStripePrices(null)
+        setStripeStatus('unavailable')
+        setCheckoutError(result.message)
+      }
+    })
+    return () => { cancelled = true }
+  }, [])
 
   async function handleSubscribe(plan: 'monthly' | 'annual') {
     if (!user || !token) {
@@ -163,29 +174,26 @@ export default function PricingPage() {
       return
     }
 
+    if (stripeStatus === 'unavailable') {
+      setCheckoutError(CHECKOUT_UNAVAILABLE_MESSAGE)
+      return
+    }
+
     setCheckoutError(null)
     setLoadingCheckout(true)
 
     try {
-      const pricesRes = await fetch(`${API_BASE}/api/stripe/prices`)
-      const prices: { monthly: PriceOption; annual: PriceOption } = await pricesRes.json()
-      if (!pricesRes.ok || !prices.monthly || !prices.annual) {
-        throw new Error('Failed to load pricing')
+      let loaded = stripePrices
+      if (!loaded) {
+        const result = await fetchStripePrices()
+        if (!result.available) throw new Error(result.message)
+        loaded = result.prices
+        setStripePrices(result.prices)
+        setStripeStatus('ready')
       }
-
-      const priceId = plan === 'monthly' ? prices.monthly.priceId : prices.annual.priceId
-
-      const res = await fetch(`${API_BASE}/api/stripe/create-checkout-session`, {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json',
-          Authorization: `Bearer ${token}`,
-        },
-        body: JSON.stringify({ priceId }),
-      })
-      const data = await res.json()
-      if (!res.ok) throw new Error(data.error || 'Checkout failed')
-      if (data.url) window.location.href = data.url
+      const priceId = plan === 'monthly' ? loaded.monthly.priceId : loaded.annual.priceId
+      const { url } = await createCheckoutSession({ token, priceId })
+      window.location.href = url
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : 'Something went wrong'
       setCheckoutError(msg)
@@ -195,6 +203,7 @@ export default function PricingPage() {
   }
 
   const isAnnual = billingPeriod === 'annual'
+  const upgradeDisabled = loadingCheckout || (!!user && stripeStatus !== 'ready')
 
   return (
     <div style={pageStyle}>
@@ -350,21 +359,21 @@ export default function PricingPage() {
 
           <div style={{ marginTop: 'auto', paddingTop: 20 }}>
             {checkoutError && (
-              <div style={{ color: '#f87171', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
+              <div style={{ color: stripeStatus === 'unavailable' ? '#9ca3af' : '#f87171', fontSize: 12, textAlign: 'center', marginBottom: 10 }}>
                 {checkoutError}
               </div>
             )}
             <button
-              disabled={loadingCheckout}
+              disabled={upgradeDisabled}
               onClick={() => handleSubscribe(billingPeriod)}
-              style={ctaBtnStyle(loadingCheckout)}
-              onMouseEnter={e => { if (!loadingCheckout) e.currentTarget.style.opacity = '0.88' }}
+              style={ctaBtnStyle(upgradeDisabled)}
+              onMouseEnter={e => { if (!upgradeDisabled) e.currentTarget.style.opacity = '0.88' }}
               onMouseLeave={e => { e.currentTarget.style.opacity = '1' }}
             >
               {loadingCheckout
                 ? 'Redirecting…'
-                : user
-                  ? `Upgrade to Pro →`
+                : stripeStatus === 'unavailable' && user
+                  ? 'Checkout unavailable'
                   : 'Upgrade to Pro →'}
             </button>
             <p style={{ fontSize: 11, color: '#6b7280', textAlign: 'center', marginTop: 10 }}>
