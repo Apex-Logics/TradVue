@@ -3,6 +3,8 @@
 import { useState, useEffect } from 'react'
 import { fmt } from '../utils/formatting'
 import { apiFetchSafe } from '../lib/apiFetch'
+import { TextSkeleton } from './Skeleton'
+import { livePrice } from '../utils/portfolioDisplay'
 import type { Quote } from '../types'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
@@ -68,15 +70,20 @@ export default function PortfolioPanel({ quotes, onOpenStock }: Props) {
   }, [holdings])
 
   const getPrice = (ticker: string): number | null =>
-    liveQuotes[ticker]?.current ?? quotes[ticker]?.current ?? null
+    livePrice(liveQuotes[ticker] ? { current: liveQuotes[ticker].current } : undefined)
+    ?? livePrice(quotes[ticker] ? { current: quotes[ticker].current } : undefined)
 
   const getDayChange = (ticker: string): number | null =>
     liveQuotes[ticker]?.changePct ?? quotes[ticker]?.changePct ?? null
 
+  const pricesReady = holdings.length === 0 || holdings.every(h => getPrice(h.ticker) != null)
   const totalCost  = holdings.reduce((s, h) => s + h.shares * h.avgCost, 0)
-  const totalValue = holdings.reduce((s, h) => s + h.shares * (getPrice(h.ticker) ?? h.avgCost), 0)
-  const totalPnl    = totalValue - totalCost
-  const totalPnlPct = totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
+  const totalValue = holdings.reduce((s, h) => {
+    const price = getPrice(h.ticker)
+    return price == null ? s : s + h.shares * price
+  }, 0)
+  const totalPnl    = pricesReady ? totalValue - totalCost : 0
+  const totalPnlPct = pricesReady && totalCost > 0 ? (totalPnl / totalCost) * 100 : 0
   const totalDayGain = holdings.reduce((s, h) => {
     const cur = getPrice(h.ticker)
     const dayChange = getDayChange(h.ticker)
@@ -116,13 +123,14 @@ export default function PortfolioPanel({ quotes, onOpenStock }: Props) {
               <div>
                 <span style={{ color: 'var(--text-2)' }}>VALUE</span>
                 <div style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)', fontWeight: 600 }}>
-                  {maskValue(`$${fmt(totalValue)}`)}
+                  {!pricesReady ? <TextSkeleton width={72} height={14} /> : maskValue(`$${fmt(totalValue)}`)}
                 </div>
               </div>
               <div>
                 <span style={{ color: 'var(--text-2)' }}>P&amp;L</span>
-                <div style={{ color: totalPnl >= 0 ? 'var(--green)' : 'var(--red)', fontFamily: 'var(--mono)', fontWeight: 600 }}>
-                  {maskValue(`$${fmt(Math.abs(totalPnl))}`)} ({totalPnlPct >= 0 ? '+' : ''}{totalPnlPct.toFixed(2)}%)
+                <div style={{ color: !pricesReady ? 'var(--text-2)' : (totalPnl >= 0 ? 'var(--green)' : 'var(--red)'), fontFamily: 'var(--mono)', fontWeight: 600 }}>
+                  {!pricesReady ? <TextSkeleton width={88} height={14} /> : maskValue(`$${fmt(Math.abs(totalPnl))}`)}
+                  {pricesReady ? ` (${totalPnlPct >= 0 ? '+' : ''}${totalPnlPct.toFixed(2)}%)` : null}
                 </div>
               </div>
             </div>
