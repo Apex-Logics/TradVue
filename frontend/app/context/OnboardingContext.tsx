@@ -1,6 +1,11 @@
 'use client'
 
 import React, { createContext, useContext, useState, useEffect, useCallback, ReactNode } from 'react'
+import {
+  applyOnboardingSignals,
+  collectOnboardingSignals,
+  overlayDecisionFromSignals,
+} from '../utils/onboardingSignals'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -43,6 +48,7 @@ interface OnboardingContextValue {
   hasSeenTooltip: (id: string) => boolean
   shouldShowTooltips: boolean
   markCelebrationShown: () => void
+  reconcileFromSignals: () => void
 }
 
 // ─── Default State ────────────────────────────────────────────────────────────
@@ -66,15 +72,42 @@ const DEFAULT_STATE: OnboardingState = {
 
 const STORAGE_KEY = 'cg_onboarding' // cg_ = legacy prefix from ChartGenius era (now TradVue); kept to avoid breaking existing user data
 
+function mergeLoadedState(raw: Partial<OnboardingState> | null | undefined): OnboardingState {
+  if (!raw) return DEFAULT_STATE
+  return {
+    ...DEFAULT_STATE,
+    ...raw,
+    checklist: { ...DEFAULT_STATE.checklist, ...(raw.checklist || {}) },
+    tooltipsSeen: Array.isArray(raw.tooltipsSeen) ? raw.tooltipsSeen : DEFAULT_STATE.tooltipsSeen,
+  }
+}
+
 function loadState(): OnboardingState {
   if (typeof window === 'undefined') return DEFAULT_STATE
   try {
     const raw = localStorage.getItem(STORAGE_KEY)
     if (!raw) return DEFAULT_STATE
-    return { ...DEFAULT_STATE, ...JSON.parse(raw) }
+    return mergeLoadedState(JSON.parse(raw))
   } catch {
     return DEFAULT_STATE
   }
+}
+
+function reconcileWithRealData(base: OnboardingState): OnboardingState {
+  if (typeof window === 'undefined') return base
+  const signals = collectOnboardingSignals(window.localStorage)
+  const checklist = applyOnboardingSignals(base.checklist, signals)
+  const overlay = overlayDecisionFromSignals(
+    {
+      welcomeShown: base.welcomeShown,
+      checklistDismissed: base.checklistDismissed,
+      checklistCollapsed: base.checklistCollapsed,
+      celebrationShown: base.celebrationShown,
+    },
+    signals,
+    checklist,
+  )
+  return { ...base, checklist, ...overlay }
 }
 
 function saveState(state: OnboardingState) {
@@ -101,17 +134,37 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
   const [state, setState] = useState<OnboardingState>(DEFAULT_STATE)
   const [hydrated, setHydrated] = useState(false)
 
-  // Hydrate from localStorage on mount
+  // Hydrate from localStorage, then overlay real holdings/watchlist/auth signals.
+  // Cloud sync may write holdings after first paint — re-check a few times.
   useEffect(() => {
-    const loaded = loadState()
-    const updated = {
-      ...loaded,
-      visitCount: loaded.visitCount + 1,
-      firstVisitDate: loaded.firstVisitDate || new Date().toISOString(),
+    const hydrate = (incrementVisit: boolean) => {
+      const loaded = loadState()
+      const reconciled = reconcileWithRealData(loaded)
+      const next = incrementVisit
+        ? {
+            ...reconciled,
+            visitCount: loaded.visitCount + 1,
+            firstVisitDate: loaded.firstVisitDate || new Date().toISOString(),
+          }
+        : reconcileWithRealData(loadState())
+      setState(next)
+      saveState(next)
+      return next
     }
-    setState(updated)
-    saveState(updated)
+
+    hydrate(true)
     setHydrated(true)
+
+    const delays = [1000, 3000]
+    const timers = delays.map(ms => window.setTimeout(() => hydrate(false), ms))
+    const onStorage = (e: StorageEvent) => {
+      if (!e.key || e.key === STORAGE_KEY || e.key.startsWith('cg_')) hydrate(false)
+    }
+    window.addEventListener('storage', onStorage)
+    return () => {
+      timers.forEach(id => window.clearTimeout(id))
+      window.removeEventListener('storage', onStorage)
+    }
   }, [])
 
   const update = useCallback((patch: Partial<OnboardingState>) => {
@@ -166,6 +219,27 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
     update({ celebrationShown: true })
   }, [update])
 
+  const reconcileFromSignals = useCallback(() => {
+    setState(prev => {
+      const next = reconcileWithRealData(prev)
+      if (
+        next.welcomeShown === prev.welcomeShown
+        && next.checklistDismissed === prev.checklistDismissed
+        && next.checklistCollapsed === prev.checklistCollapsed
+        && next.celebrationShown === prev.celebrationShown
+        && next.checklist.addSymbol === prev.checklist.addSymbol
+        && next.checklist.setAlert === prev.checklist.setAlert
+        && next.checklist.customizeTicker === prev.checklist.customizeTicker
+        && next.checklist.enableNotifications === prev.checklist.enableNotifications
+        && next.checklist.completeProfile === prev.checklist.completeProfile
+      ) {
+        return prev
+      }
+      saveState(next)
+      return next
+    })
+  }, [])
+
   // Derived
   const completedCount = Object.values(state.checklist).filter(Boolean).length
   const isChecklistComplete = completedCount === 5
@@ -198,6 +272,7 @@ export function OnboardingProvider({ children }: { children: ReactNode }) {
       hasSeenTooltip,
       shouldShowTooltips,
       markCelebrationShown,
+      reconcileFromSignals,
     }}>
       {children}
     </OnboardingContext.Provider>

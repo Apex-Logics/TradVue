@@ -1068,20 +1068,33 @@ managementRouter.get('/events', requireAuth, async (req, res) => {
   try {
     const supabase = getServiceClient();
     const page     = Math.max(1, parseInt(req.query.page || '1', 10));
-    const limit    = 100;
+    const requestedLimit = parseInt(req.query.limit || '50', 10);
+    const limit    = Math.min(100, Math.max(1, Number.isFinite(requestedLimit) ? requestedLimit : 50));
     const offset   = (page - 1) * limit;
 
-    const { data, error } = await supabase
+    const query = supabase
       .from('webhook_events')
       .select(
         'id, token_id, source_ip, parsed_ticker, parsed_action, parsed_price, ' +
         'parsed_quantity, trade_id, status, error_message, created_at'
       )
       .eq('user_id', req.user.id)
-      .order('created_at', { ascending: false })
-      .range(offset, offset + limit - 1);
+      .order('created_at', { ascending: false });
+
+    // Page 1 uses limit() so an empty log does not trip PostgREST 416 / PGRST103
+    // (range() on an empty table is reported as an error, which the UI then
+    // shows as "Failed to load events" instead of the empty state).
+    const { data, error } = offset === 0
+      ? await query.limit(limit)
+      : await query.range(offset, offset + limit - 1);
 
     if (error) {
+      const emptyRange = error.code === 'PGRST103'
+        || error.status === 416
+        || /requested range not satisfiable/i.test(error.message || '');
+      if (emptyRange) {
+        return res.json({ events: [], page, limit });
+      }
       console.error('[Webhook] List events error:', error.message);
       return res.status(500).json({ error: 'Failed to list events' });
     }
