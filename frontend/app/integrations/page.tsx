@@ -22,6 +22,7 @@ import { useToast } from '../context/ToastContext'
 import { API_BASE } from '../lib/api'
 import PersistentNav from '../components/PersistentNav'
 import { getBrokerSyncCta, normalizeBrokerSyncState, type BrokerSyncState } from '../utils/brokerSync'
+import { classifyWebhookEventsNetworkError, classifyWebhookEventsResponse } from '../utils/webhookEvents'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -1262,12 +1263,21 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
       const res = await fetch(`${API_BASE}/api/webhooks/events?limit=50`, {
         headers: { Authorization: `Bearer ${token}` },
       })
-      if (!res.ok) throw new Error('Failed to load events')
-      const data = await res.json()
-      setEvents(data.events || [])
-      setError(null)
+      let payload: { events?: WebhookEvent[]; error?: string } | null = null
+      try {
+        payload = await res.json()
+      } catch {
+        payload = null
+      }
+      const result = classifyWebhookEventsResponse(res.status, payload)
+      if (result.ok) {
+        setEvents(result.events as WebhookEvent[])
+        setError(null)
+      } else {
+        setError(result.message)
+      }
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : 'Failed to load events')
+      setError(classifyWebhookEventsNetworkError(err))
     } finally {
       setLoading(false)
     }
@@ -1303,7 +1313,12 @@ function EventsSection({ token, refreshKey }: { token: string; refreshKey: numbe
       {loading ? (
         <div style={{ color: 'var(--text-2)', fontSize: 14 }}>Loading events…</div>
       ) : error ? (
-        <div style={{ color: '#f87171', fontSize: 13 }}>{error}</div>
+        <div style={{ display: 'flex', flexDirection: 'column', gap: 12, alignItems: 'flex-start' }}>
+          <div style={{ color: '#f87171', fontSize: 13 }}>{error}</div>
+          <InlineButton onClick={() => { setLoading(true); fetchEvents() }} variant="ghost">
+            Retry
+          </InlineButton>
+        </div>
       ) : events.length === 0 ? (
         <div style={{ textAlign: 'center', padding: '32px 0', color: 'var(--text-2)', fontSize: 14 }}>
           <div style={{ fontSize: 32, marginBottom: 12 }}>📭</div>

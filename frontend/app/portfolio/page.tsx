@@ -231,6 +231,8 @@ interface TaxLot {
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 import { apiFetchSafe } from '../lib/apiFetch'
+import { TextSkeleton, CardSkeleton } from '../components/Skeleton'
+import { livePrice, shouldShowFinancialsSkeleton } from '../utils/portfolioDisplay'
 
 function fmt(n: number, d = 2) {
   return n.toLocaleString('en-US', { minimumFractionDigits: d, maximumFractionDigits: d })
@@ -1055,6 +1057,7 @@ export default function PortfolioPage() {
   const [stockInfos, setStockInfos] = useState<Record<string, StockInfo>>({})
   const [loadingPrices, setLoadingPrices] = useState(false)
   const [dataLoaded, setDataLoaded] = useState(false)
+  const [pricesSettled, setPricesSettled] = useState(false)
 
   // Sell from holdings
   const [sellFromHolding, setSellFromHolding] = useState<{ holding: Holding & { currentPrice: number; totalDividendsReceived: number } } | null>(null)
@@ -1391,8 +1394,12 @@ export default function PortfolioPage() {
   ], [holdings, watchlist, priceAlerts])
 
   const fetchStockInfos = useCallback(async () => {
-    if (allTickers.length === 0) return
+    if (allTickers.length === 0) {
+      if (dataLoaded) setPricesSettled(true)
+      return
+    }
     setLoadingPrices(true)
+    setPricesSettled(false)
     try {
       const results: Record<string, StockInfo> = {}
       for (let i = 0; i < allTickers.length; i++) {
@@ -1404,8 +1411,9 @@ export default function PortfolioPage() {
       setStockInfos(prev => ({ ...prev, ...results }))
     } finally {
       setLoadingPrices(false)
+      setPricesSettled(true)
     }
-  }, [allTickers])
+  }, [allTickers, dataLoaded])
 
   useEffect(() => { fetchStockInfos() }, [fetchStockInfos])
   useEffect(() => { const t = setInterval(fetchStockInfos, 60_000); return () => clearInterval(t) }, [fetchStockInfos])
@@ -1501,22 +1509,24 @@ export default function PortfolioPage() {
 
   const holdingsEnriched = useMemo(() => holdings.map(h => {
     const info = stockInfos[h.ticker]
-    const currentPrice = info?.currentPrice ?? h.avgCost
+    const quoted = livePrice(info)
+    const hasLivePrice = quoted != null
+    const currentPrice = quoted ?? 0
     const annualDividend = getEffectiveAnnualDiv(h)
     const totalDividendsReceived = getAutoTotalDividends(h)
     const costBasis = h.shares * h.avgCost
-    const marketValue = h.shares * currentPrice
-    const marketReturn = marketValue - costBasis
-    const marketReturnPct = costBasis > 0 ? (marketReturn / costBasis) * 100 : 0
-    const totalReturn = marketReturn + totalDividendsReceived
-    const totalReturnPct = costBasis > 0 ? (totalReturn / costBasis) * 100 : 0
+    const marketValue = hasLivePrice ? h.shares * currentPrice : 0
+    const marketReturn = hasLivePrice ? marketValue - costBasis : 0
+    const marketReturnPct = hasLivePrice && costBasis > 0 ? (marketReturn / costBasis) * 100 : 0
+    const totalReturn = hasLivePrice ? marketReturn + totalDividendsReceived : 0
+    const totalReturnPct = hasLivePrice && costBasis > 0 ? (totalReturn / costBasis) * 100 : 0
     const dayGain = (info?.dayChange ?? 0) * h.shares
     const annualDivIncome = annualDividend * h.shares
     const divYield = currentPrice > 0 ? (annualDividend / currentPrice) * 100 : 0
     const yieldOnCost = h.avgCost > 0 ? (annualDividend / h.avgCost) * 100 : 0
     const sector = info?.sector || h.sector || 'Other'
     const company = info?.companyName || h.company || h.ticker
-    return { ...h, company, sector, annualDividend, totalDividendsReceived, currentPrice, costBasis, marketValue, marketReturn, marketReturnPct, totalReturn, totalReturnPct, dayGain, annualDivIncome, divYield, yieldOnCost }
+    return { ...h, company, sector, annualDividend, totalDividendsReceived, currentPrice, hasLivePrice, costBasis, marketValue, marketReturn, marketReturnPct, totalReturn, totalReturnPct, dayGain, annualDivIncome, divYield, yieldOnCost }
   }), [holdings, stockInfos, getAutoTotalDividends, getEffectiveAnnualDiv])
 
   // Portfolio stats
@@ -1532,6 +1542,11 @@ export default function PortfolioPage() {
   const projAnnualIncome = holdingsEnriched.reduce((s, h) => s + h.annualDivIncome, 0)
   const divYieldPortfolio = totalMarketValue > 0 ? (projAnnualIncome / totalMarketValue) * 100 : 0
   const yieldOnCostPortfolio = totalCostBasis > 0 ? (projAnnualIncome / totalCostBasis) * 100 : 0
+  const financialsLoading = shouldShowFinancialsSkeleton({
+    dataLoaded,
+    holdingsCount: holdings.length,
+    pricesSettled,
+  })
 
   const sectorData = useMemo(() => {
     const m: Record<string, number> = {}
@@ -1559,8 +1574,16 @@ export default function PortfolioPage() {
   })
   const barChartData = YEARS.filter(yr => yr >= 2022).map(yr => ({ label: String(yr), value: annualDivByYear[yr] }))
 
+  const holdingTickersKey = holdings.map(h => h.ticker).sort().join(',')
+  const prevHoldingTickersRef = useRef('')
   useEffect(() => {
-    if (holdings.length === 0) return
+    if (holdingTickersKey === prevHoldingTickersRef.current) return
+    prevHoldingTickersRef.current = holdingTickersKey
+    if (holdings.length > 0) setPricesSettled(false)
+  }, [holdingTickersKey, holdings.length])
+
+  useEffect(() => {
+    if (holdings.length === 0 || financialsLoading) return
     const totalMV = holdingsEnriched.reduce((s, h) => s + h.marketValue, 0)
     if (totalMV === 0) return
     const now = new Date()
@@ -1624,7 +1647,9 @@ export default function PortfolioPage() {
           ↻ Refresh
         </button>
         <PortfolioExportButton />
-        {totalMarketValue > 0 && (
+        {financialsLoading ? (
+          <TextSkeleton width={120} height={12} />
+        ) : totalMarketValue > 0 && (
           <div style={{ display: 'flex', gap: 16, fontSize: 11 }}>
             <span style={{ color: 'var(--text-2)' }}>Value: <strong style={{ color: 'var(--text-0)', fontFamily: 'var(--mono)' }}>
               {privacyMode ? '•••••' : fmtDollar(totalMarketValue)}
@@ -1690,6 +1715,7 @@ export default function PortfolioPage() {
             savePortfolioSettings={savePortfolioSettings}
             exchangeRates={exchangeRates}
             privacyMode={privacyMode}
+            financialsLoading={financialsLoading}
             setActiveTab={setActiveTab}
           />
         )}
@@ -1830,6 +1856,7 @@ function DashboardTab({
   divYieldPortfolio, yieldOnCostPortfolio, projAnnualIncome,
   sectorData, barChartData, snapshots, holdings, holdingsEnriched,
   stockInfos, portfolioSettings, savePortfolioSettings, exchangeRates, privacyMode = false,
+  financialsLoading = false,
   setActiveTab,
 }: {
   totalCostBasis: number; totalMarketValue: number; totalMarketReturn: number; totalMarketReturnPct: number;
@@ -1844,11 +1871,27 @@ function DashboardTab({
   savePortfolioSettings: (s: PortfolioSettings) => Promise<void>;
   exchangeRates: ExchangeRates | null;
   privacyMode?: boolean;
+  financialsLoading?: boolean;
   setActiveTab: (tab: 'dashboard' | 'holdings' | 'dividends' | 'drip' | 'sold' | 'alerts' | 'tax') => void;
 })
 {
   const [dashAuthOpen, setDashAuthOpen] = useState(false)
   const pv = (n: number) => privacyMode ? '•••••' : fmtDollar(n)
+  if (financialsLoading) {
+    return (
+      <div style={{ display: 'flex', flexDirection: 'column', gap: 24 }} aria-busy="true" aria-label="Loading portfolio values">
+        <div className="kpi-grid">
+          {Array.from({ length: 8 }).map((_, i) => (
+            <CardSkeleton key={i} header lines={2} />
+          ))}
+        </div>
+        <div style={{ display: 'grid', gridTemplateColumns: '1fr 1fr', gap: 20 }}>
+          <CardSkeleton header lines={6} height={220} />
+          <CardSkeleton header lines={6} height={220} />
+        </div>
+      </div>
+    )
+  }
   if (holdings.length === 0) {
     return (
       <div style={{ maxWidth: 680, margin: '0 auto', padding: '48px 20px' }}>
@@ -2017,6 +2060,7 @@ type HoldingEnriched = Holding & {
   currentPrice: number; costBasis: number; marketValue: number;
   marketReturn: number; marketReturnPct: number; totalReturn: number; totalReturnPct: number;
   dayGain: number; annualDivIncome: number; divYield: number; yieldOnCost: number;
+  hasLivePrice?: boolean;
 }
 
 function HoldingsTab({
@@ -2349,15 +2393,15 @@ function HoldingsTab({
                     <td style={{ ...cell, fontSize: 10, color: 'var(--text-2)' }}>{h.buyDate || '—'}</td>
                     <td style={cell}>{h.shares}</td>
                     <td style={cell}>${fmt(h.avgCost)}</td>
-                    <td style={cell}>${fmt(h.currentPrice)}</td>
+                    <td style={cell}>{h.hasLivePrice ? `$${fmt(h.currentPrice)}` : '—'}</td>
                     <td style={{ ...cell, color: (info?.dayChange ?? 0) >= 0 ? 'var(--green)' : 'var(--red)' }}>
                       {info?.dayChange != null ? (<>{privacyMode ? '•••' : fmtDollar(h.dayGain)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(info.dayChangePct ?? 0)}</span></>) : '—'}
                     </td>
-                    <td style={{ ...cell, color: h.marketReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {privacyMode ? '•••' : fmtDollar(h.marketReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.marketReturnPct)}</span>
+                    <td style={{ ...cell, color: h.hasLivePrice && h.marketReturn >= 0 ? 'var(--green)' : h.hasLivePrice ? 'var(--red)' : 'var(--text-3)' }}>
+                      {h.hasLivePrice ? (<>{privacyMode ? '•••' : fmtDollar(h.marketReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.marketReturnPct)}</span></>) : '—'}
                     </td>
-                    <td style={{ ...cell, color: h.totalReturn >= 0 ? 'var(--green)' : 'var(--red)' }}>
-                      {privacyMode ? '•••' : fmtDollar(h.totalReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.totalReturnPct)}</span>
+                    <td style={{ ...cell, color: h.hasLivePrice && h.totalReturn >= 0 ? 'var(--green)' : h.hasLivePrice ? 'var(--red)' : 'var(--text-3)' }}>
+                      {h.hasLivePrice ? (<>{privacyMode ? '•••' : fmtDollar(h.totalReturn)}<br /><span style={{ fontSize: 9.5 }}>{fmtPct(h.totalReturnPct)}</span></>) : '—'}
                     </td>
                     <td style={{ ...cellLeft, fontSize: 10 }}>{h.sector}</td>
                     <td style={cell}>{alloc.toFixed(1)}%</td>
@@ -2371,7 +2415,7 @@ function HoldingsTab({
                     <td style={{ ...cell, color: 'var(--yellow)' }}>{h.divYield.toFixed(2)}%</td>
                     <td style={{ ...cell, color: 'var(--yellow)' }}>{h.yieldOnCost.toFixed(2)}%</td>
                     <td style={cell}>{privacyMode ? '•••••' : fmtDollar(h.costBasis)}</td>
-                    <td style={cell}>{privacyMode ? '•••••' : fmtDollar(h.marketValue)}</td>
+                    <td style={cell}>{h.hasLivePrice ? (privacyMode ? '•••••' : fmtDollar(h.marketValue)) : '—'}</td>
                     <td style={{ ...cell, color: 'var(--green)' }}>{privacyMode ? '•••' : fmtDollar(h.annualDivIncome)}</td>
                     <td style={cell}>{privacyMode ? '•••' : fmtDollar(h.totalDividendsReceived)}</td>
                     <td style={{ ...cell, textAlign: 'center' }}>

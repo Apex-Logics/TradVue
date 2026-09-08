@@ -203,4 +203,17 @@ describe('OnboardingContext', () => {
     expect(screen.getByTestId('completed-count').textContent).toBe('2')
     expect(screen.getByTestId('tooltip-seen').textContent).toBe('true')
   })
+
+  it('marks add-symbol complete and dismisses overlay when holdings already exist', () => {
+    localStorageMock.setItem('cg_portfolio_holdings', JSON.stringify([
+      { ticker: 'AAPL', shares: 10, avgCost: 180 },
+      { ticker: 'MSFT', shares: 4, avgCost: 400 },
+    ]))
+    localStorageMock.setItem('cg_token', 'jwt-from-qa-user')
+
+    renderWithProvider()
+    expect(screen.getByTestId('completed-count').textContent).not.toBe('0')
+    expect(screen.getByTestId('checklist-dismissed').textContent).toBe('true')
+    expect(screen.getByTestId('welcome-shown').textContent).toBe('true')
+  })
 })
