@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export const metadata: Metadata = {
   title: 'Free Prop Firm Tracker — Monitor Drawdown & Daily Limits in Real-Time',
@@ -263,22 +264,14 @@ export default function PropFirmTrackerPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               { q: 'How does the prop firm tracker work?', a: 'Link your TradVue journal to your prop firm. The tracker auto-calculates your real-time drawdown, daily loss, and trailing loss against your firm\'s rules.' },
               { q: 'Which prop firms does TradVue support?', a: 'TradVue supports manual rule entry for any prop firm. You set your daily loss, max drawdown, and trailing loss limits, and TradVue tracks them in real-time.' },
               { q: 'Do I need to connect my broker to use prop firm tracking?', a: 'No broker connection required. Just log your trades in TradVue as usual — the tracker automatically calculates your metrics from your journal entries.' },
               { q: 'What happens when I\'m close to hitting a limit?', a: 'TradVue\'s dashboard shows color-coded gauges that turn yellow when you\'re within 20% of a limit and red when you\'re within 5%. You\'ll always know your standing before taking another trade.' },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 

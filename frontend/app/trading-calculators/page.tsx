@@ -2,6 +2,7 @@ import { Metadata } from 'next'
 import Link from 'next/link'
 import '../components/seo-landing.css'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import SeoFaqAccordion from '../components/SeoFaqAccordion'
 
 export const metadata: Metadata = {
   title: '30+ Free Trading Calculators — Position Size, Risk, Options Greeks',
@@ -258,23 +259,15 @@ export default function TradingCalculatorsPage() {
             <h2>Frequently Asked Questions</h2>
             <div className="seo-divider" />
           </div>
-          <div className="seo-faq-list">
-            {[
+          <SeoFaqAccordion
+            items={[
               { q: 'Are TradVue\'s trading calculators really free?', a: 'Yes. All 30+ calculators are free to use. No sign-up, no credit card, no hidden costs. Just open the tools and calculate.' },
               { q: 'What trading calculators does TradVue offer?', a: 'TradVue includes: Position Size Calculator, Risk/Reward Ratio, Options Greeks (Black-Scholes), Futures Tick Value, Sharpe Ratio, Kelly Criterion, Trade Expectancy, Compound Growth, Correlation Matrix, Risk of Ruin, Pip Value (Forex), Dividend Planner, and more.' },
               { q: 'How do I calculate the right position size for a trade?', a: 'Use TradVue\'s position size calculator. Enter your account size, risk percentage (typically 1-2%), and stop loss distance. The calculator tells you exactly how many shares, contracts, or lots to trade.' },
               { q: 'Does TradVue have a futures calculator for NQ and ES?', a: 'Yes. The futures calculator includes built-in specs for NQ, ES, CL, GC, and 16 other contracts. Enter your entry, exit, and contract count to get tick-based P&L based on published contract specifications.' },
               { q: 'What is the Kelly Criterion and how do I use it?', a: 'The Kelly Criterion calculates the optimal position size percentage based on your historical win rate and average win/loss ratio. TradVue\'s Kelly calculator shows both full and half-Kelly (recommended for trading).' },
-            ].map(item => (
-              <div key={item.q} className="seo-faq-item">
-                <div className="seo-faq-q">
-                  <span>{item.q}</span>
-                  <span className="seo-faq-q-icon">+</span>
-                </div>
-                <div className="seo-faq-a">{item.a}</div>
-              </div>
-            ))}
-          </div>
+            ]}
+          />
         </div>
       </section>
 

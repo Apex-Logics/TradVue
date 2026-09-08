@@ -1070,7 +1070,7 @@ export default function HomeClient() {
           {/* ── Col 2 (CENTER): News / Analysis / Market Intel ──────────────── */}
           {activeNav === 'Analysis' ? (
             <ErrorBoundary label="Analysis Panel">
-              <div style={{ overflowY: 'auto', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
+              <div className="col-news" style={{ overflowY: 'auto', height: '100%', display: 'flex', flexDirection: 'column', minHeight: 0 }}>
               <AnalysisPanel
                 wlQuotes={quotes}
                 tickerQuotes={tickerQuotes}
@@ -1081,7 +1081,7 @@ export default function HomeClient() {
             </ErrorBoundary>
           ) : activeNav === 'Market Intel' ? (
             <ErrorBoundary label="Market Intel">
-              <div style={{ padding: '12px 12px 24px', overflowY: 'auto', height: '100%' }}>
+              <div className="col-news" role="main" aria-label="Market intelligence" style={{ padding: '12px 12px 24px', overflowY: 'auto', height: '100%' }}>
                 <MarketIntel />
               </div>
             </ErrorBoundary>
@@ -1177,12 +1177,14 @@ export default function HomeClient() {
 
         {/* Column resize drag handles */}
         <div
+          className="col-resize-handle"
           style={{ position: 'absolute', left: `calc(${colWidths[0].toFixed(1)}% - 3px)`, top: 0, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 50 }}
           onMouseDown={e => handleColDragStart(0, e)}
           title="Drag to resize"
           aria-hidden="true"
         />
         <div
+          className="col-resize-handle"
           style={{ position: 'absolute', left: `calc(${(colWidths[0] + colWidths[1]).toFixed(1)}% - 3px)`, top: 0, bottom: 0, width: 6, cursor: 'col-resize', zIndex: 50 }}
           onMouseDown={e => handleColDragStart(1, e)}
           title="Drag to resize"

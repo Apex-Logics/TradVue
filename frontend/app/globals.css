@@ -2131,7 +2131,7 @@ html, body { overflow-x: hidden; max-width: 100vw; }
   /* Soften floating widgets so they overlap less of the page at tablet width */
   .onboarding-checklist {
     width: 240px;
-    bottom: 16px;
+    bottom: var(--tv-fab-clearance);
     right: 16px;
   }
 
@@ -2607,12 +2607,30 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: 10px;
   }
 
-  /* ── Onboarding checklist: stretch on mobile ────────────────────────────── */
+  /* ── Onboarding checklist: stretch on mobile, sit above the FAB stack ── */
   .onboarding-checklist {
-    bottom: 12px;
+    bottom: var(--tv-fab-clearance);
     right: 12px;
     left: 12px;
     width: auto;
+  }
+
+  /* In-flow help / CTA blocks: keep last copy and actions clear of FABs */
+  .tv-fab-clear-block {
+    padding-bottom: var(--tv-fab-clearance);
+    padding-right: calc(var(--tv-fab-edge) + var(--tv-fab-support-size) + 12px);
+  }
+
+  /* Centered sheets (prop firm add-account, etc.): keep footer above FABs */
+  .tv-fab-clear-modal {
+    align-items: flex-start !important;
+    padding-bottom: var(--tv-fab-clearance) !important;
+    overflow-y: auto !important;
+    -webkit-overflow-scrolling: touch;
+  }
+  .tv-fab-clear-modal .tv-modal-sheet {
+    max-height: calc(100dvh - var(--tv-fab-clearance) - 24px) !important;
+    margin-bottom: var(--tv-fab-clearance);
   }
 
   /* ── Import modal: full-screen on mobile ─────────────────────────────────── */
@@ -5297,6 +5315,9 @@ a.alert-row-title:hover {
   .mobile-sidebar-close {
     display: block;
   }
+  .col-resize-handle {
+    display: none !important;
+  }
   .col-news {
     border-right: none;
     border-bottom: 1px solid var(--border);
@@ -5474,10 +5495,13 @@ a.alert-row-title:hover {
   .layout-3col {
     display: grid !important;
     grid-template-columns: 1fr 1fr !important;
-    grid-template-rows: auto 1fr !important;
+    grid-template-rows: auto auto !important;
     grid-template-areas:
       "watchlist calendar"
       "news      news" !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
   }
 
   /* Watchlist: show as normal grid cell, NOT a fixed overlay */
@@ -5764,6 +5788,64 @@ a.alert-row-title:hover {
 
   /* Sidebar close button not needed — watchlist is in the grid, not an overlay */
   .mobile-sidebar-close {
+    display: none !important;
+  }
+}
+
+/* ─────────────────────────────────────────────────────────────────────────────
+   PHONE (≤480px) — single-column dashboard shell
+   Market Intel / news is primary. Sidebars stack below instead of splitting
+   the viewport (the 768px portrait 2-col is unusable at ~390px).
+───────────────────────────────────────────────────────────────────────────── */
+
+@media (max-width: 480px) {
+  .layout-3col {
+    display: flex !important;
+    flex-direction: column !important;
+    height: auto !important;
+    min-height: 0 !important;
+    overflow: visible !important;
+    grid-template-columns: none !important;
+    grid-template-rows: none !important;
+    grid-template-areas: none !important;
+  }
+
+  .col-news {
+    order: 1;
+    height: auto !important;
+    min-height: 55vh;
+    overflow: visible;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    padding-bottom: var(--tv-fab-clearance);
+  }
+
+  .col-watchlist {
+    order: 2;
+    display: flex !important;
+    flex-direction: column;
+    position: static !important;
+    width: 100% !important;
+    max-height: none !important;
+    height: auto !important;
+    box-shadow: none !important;
+    z-index: auto !important;
+    border-right: none;
+    border-bottom: 1px solid var(--border);
+    overflow: visible;
+  }
+
+  .col-calendar {
+    order: 3;
+    position: static !important;
+    max-height: none !important;
+    height: auto !important;
+    overflow: visible;
+    border-right: none;
+    padding-bottom: var(--tv-fab-clearance);
+  }
+
+  .col-resize-handle {
     display: none !important;
   }
 }

@@ -6,6 +6,7 @@ import Script from 'next/script'
 import Breadcrumbs from '../components/Breadcrumbs'
 import PersistentNav from '../components/PersistentNav'
 import { serializeJsonLd } from '../lib/serializeJsonLd'
+import { isAttributionHref } from './attribution'
 import {
   IconArrowLeft, IconHouse, IconEye, IconBook, IconChart, IconWrench,
   IconSettings, IconRocket, IconZap, IconCreditCard, IconShield, IconLifeBuoy,
@@ -514,7 +515,7 @@ const DATA_SOURCES: {
   },
   {
     name: 'RSS Feeds',
-    url: '#',
+    url: '',
     Icon: IconGlobe,
     desc: 'Direct RSS feeds from major financial publishers including Reuters, Bloomberg, and MarketWatch.',
   },
@@ -702,7 +703,7 @@ export default function HelpClient() {
         {serializeJsonLd(faqSchemaData)}
       </Script>
 
-      <div style={{ fontFamily: 'var(--font)', background: 'var(--bg-0)', color: 'var(--text-0)', minHeight: '100vh' }}>
+      <div className="tv-fab-clear-page" style={{ fontFamily: 'var(--font)', background: 'var(--bg-0)', color: 'var(--text-0)', minHeight: '100vh' }}>
         {/* ── Persistent Navigation ── */}
         <PersistentNav />
 
@@ -873,7 +874,7 @@ export default function HelpClient() {
 
         {/* ── Getting Started Guide ── */}
         {!isSearching && (
-          <div id="getting-started-guide" style={{ background: 'var(--bg-1)', borderBottom: '1px solid var(--border)' }}>
+          <div id="getting-started-guide" className="tv-fab-clear-block" style={{ background: 'var(--bg-1)', borderBottom: '1px solid var(--border)' }}>
             <div style={{ maxWidth: '1100px', margin: '0 auto', padding: 'clamp(40px, 5vw, 60px) 24px' }}>
               <SectionHeader
                 Icon={IconMap}
@@ -1170,7 +1171,7 @@ export default function HelpClient() {
         </div>
 
         {/* ── Data Sources & Attribution ── */}
-        <div id="data-sources" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-0)' }}>
+        <div id="data-sources" className="tv-fab-clear-block" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-0)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: 'clamp(40px, 5vw, 60px) 24px' }}>
             <SectionHeader
               Icon={IconSatellite}
@@ -1187,9 +1188,15 @@ export default function HelpClient() {
                       <div className="tv-card-icon" style={{ width: 32, height: 32, borderRadius: 8, flexShrink: 0 }}>
                         <SourceIcon size={16} />
                       </div>
-                      <a href={source.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: 15, color: 'var(--accent)', textDecoration: 'none' }}>
-                        {source.name}
-                      </a>
+                      {isAttributionHref(source.url) ? (
+                        <a href={source.url} target="_blank" rel="noopener noreferrer" style={{ fontWeight: 700, fontSize: 15, color: 'var(--accent)', textDecoration: 'none' }}>
+                          {source.name}
+                        </a>
+                      ) : (
+                        <span style={{ fontWeight: 700, fontSize: 15, color: 'var(--accent)' }}>
+                          {source.name}
+                        </span>
+                      )}
                     </div>
                     <p style={{ fontSize: 13, color: 'var(--text-2)', lineHeight: 1.6, margin: 0 }}>{source.desc}</p>
                   </div>
@@ -1204,7 +1211,7 @@ export default function HelpClient() {
         </div>
 
         {/* ── Still need help? ── */}
-        <div style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-1)' }}>
+        <div className="tv-fab-clear-block" style={{ borderTop: '1px solid var(--border)', background: 'var(--bg-1)' }}>
           <div style={{ maxWidth: '1100px', margin: '0 auto', padding: 'clamp(48px, 6vw, 72px) 24px', textAlign: 'center' }}>
             <div style={{
               display: 'inline-flex',
