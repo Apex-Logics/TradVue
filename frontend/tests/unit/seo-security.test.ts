@@ -407,6 +407,9 @@ describe('JSON-LD Structured Data Security', () => {
       expect(content).not.toContain('Most Popular')
       expect(content).not.toContain('Alex M.')
       expect(content).not.toContain('Sarah K.')
+      expect(content).not.toContain('Failed to load pricing')
+      expect(content).toContain('$16.80')
+      expect(content).toContain('$24')
     }
   })
 })
