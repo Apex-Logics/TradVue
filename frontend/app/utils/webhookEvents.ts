@@ -21,6 +21,7 @@ function eventsArray(payload: WebhookEventsPayload | null | undefined): unknown[
 export function classifyWebhookEventsResponse(
   status: number,
   payload: WebhookEventsPayload | null | undefined,
+  opts?: { hadToken?: boolean },
 ): EventsLoadResult {
   if (status >= 200 && status < 300) {
     const events = eventsArray(payload)
@@ -28,6 +29,9 @@ export function classifyWebhookEventsResponse(
     return { ok: false, message: 'Failed to load events' }
   }
   if (status === 401 || status === 403) {
+    if (opts?.hadToken) {
+      return { ok: false, message: 'Session expired — sign in again' }
+    }
     return { ok: false, message: 'Sign in to load events' }
   }
   if (status === 404) {

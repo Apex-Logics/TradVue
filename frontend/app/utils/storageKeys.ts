@@ -11,6 +11,15 @@ export function getStoredAuthToken(): string | null {
   }
 }
 
+export function getStoredRefreshToken(): string | null {
+  if (typeof window === 'undefined') return null
+  try {
+    return localStorage.getItem(AUTH_REFRESH_TOKEN_KEY)
+  } catch {
+    return null
+  }
+}
+
 export function persistStoredAuth(token: string, user?: unknown, refreshToken?: string | null) {
   if (typeof window === 'undefined') return
   try {
@@ -18,9 +27,11 @@ export function persistStoredAuth(token: string, user?: unknown, refreshToken?: 
     if (user !== undefined) {
       localStorage.setItem(AUTH_USER_KEY, JSON.stringify(user))
     }
+    // undefined = leave the existing refresh token (access-token-only persist).
+    // null/empty = caller wants it cleared.
     if (refreshToken) {
       localStorage.setItem(AUTH_REFRESH_TOKEN_KEY, refreshToken)
-    } else {
+    } else if (refreshToken === null || refreshToken === '') {
       localStorage.removeItem(AUTH_REFRESH_TOKEN_KEY)
     }
   } catch {}

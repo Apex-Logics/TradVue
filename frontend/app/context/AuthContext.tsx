@@ -6,11 +6,12 @@ import { initFullSync, hydrateWatchlistFromApi, getSyncStatus, subscribeSyncStat
 import {
   apiLogin,
   apiRegister,
-  apiGetMe,
+  apiGetMeResult,
   apiAddToWatchlist,
   apiRemoveFromWatchlist,
   type AuthUser,
 } from '../lib/api'
+import { refreshStoredSession, subscribeAuthSession } from '../lib/authSession'
 import { AUTH_REFRESH_TOKEN_KEY, AUTH_TOKEN_KEY, AUTH_USER_KEY, clearStoredAuth, persistStoredAuth } from '../utils/storageKeys'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
@@ -58,10 +59,53 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   const [syncStatus, setSyncStatus] = useState<SyncStatus>(() => getSyncStatus())
   const didInit = useRef(false)
 
+  const clearSessionState = useCallback(() => {
+    resetJournalPullGate()
+    setToken(null)
+    setUser(null)
+    setBackendWatchlist([])
+    clearStoredAuth()
+  }, [])
+
   // Subscribe to cloud sync status changes
   useEffect(() => {
     return subscribeSyncStatus(setSyncStatus)
   }, [])
+
+  // Journal / events 401/403 retry may refresh or clear the session out of band.
+  useEffect(() => {
+    return subscribeAuthSession(event => {
+      if (event.type === 'refreshed') {
+        setToken(event.token)
+        setUser(event.user)
+        return
+      }
+      resetJournalPullGate()
+      setToken(null)
+      setUser(null)
+      setBackendWatchlist([])
+    })
+  }, [])
+
+  async function applyFreshSession(tok: string, usr: AuthUser, refreshToken?: string | null) {
+    setToken(tok)
+    setUser(usr)
+    persistStoredAuth(tok, usr, refreshToken)
+    initFullSync(tok)
+  }
+
+  async function recoverOrClearSession(): Promise<boolean> {
+    const refreshed = await refreshStoredSession()
+    if (refreshed) {
+      // apiRefresh already persisted; still kick a full sync with the new token.
+      setToken(refreshed.token)
+      setUser(refreshed.user)
+      initFullSync(refreshed.token)
+      return true
+    }
+    clearSessionState()
+    return false
+  }
 
   // ── Hydrate from localStorage ─────────────────────────────────────────────
   useEffect(() => {
@@ -83,33 +127,40 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           setUser(JSON.parse(storedUser))
           // Trigger initial cloud sync for returning logged-in users.
           // Fire-and-forget; journal PUTs wait for pullComplete in cloudSync.
+          // 401/403 on journal GET retries refresh once (fetchWithSessionRetry).
           initFullSync(storedToken)
-          
-          // Background refresh to catch tier/admin changes
-          apiGetMe(storedToken).then(refreshedUser => {
-            if (refreshedUser && !cancelled) {
-              setUser(refreshedUser)
-              persistStoredAuth(storedToken, refreshedUser, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
+
+          // Background /me: pick up tier/admin changes, or refresh/clear a stale JWT.
+          apiGetMeResult(storedToken).then(async result => {
+            if (cancelled) return
+            if (result.ok) {
+              setUser(result.user)
+              persistStoredAuth(storedToken, result.user, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
+              return
             }
+            const recovered = await refreshStoredSession()
+            if (cancelled) return
+            if (recovered) {
+              setToken(recovered.token)
+              setUser(recovered.user)
+              initFullSync(recovered.token)
+              return
+            }
+            if (result.reason === 'auth') clearSessionState()
           }).catch(() => {})
-          
+
           return
         }
 
-        const refreshedUser = await apiGetMe(storedToken)
-        if (!refreshedUser) {
-          clearAuth()
-          return
-        }
-
+        const me = await apiGetMeResult(storedToken)
         if (cancelled) return
-        setToken(storedToken)
-        setUser(refreshedUser)
-        persistStoredAuth(storedToken, refreshedUser, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
-        // Fire-and-forget; journal PUTs wait for pullComplete in cloudSync.
-        initFullSync(storedToken)
+        if (me.ok) {
+          await applyFreshSession(storedToken, me.user, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
+          return
+        }
+        await recoverOrClearSession()
       } catch {
-        clearAuth()
+        clearSessionState()
       }
     }
 
@@ -120,6 +171,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
     return () => {
       cancelled = true
     }
+    // eslint-disable-next-line react-hooks/exhaustive-deps -- hydrate once on mount
   }, [])
 
   // ── Load watchlist from backend after login ───────────────────────────────
@@ -147,10 +199,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Persist auth to localStorage ──────────────────────────────────────────
   function persistAuth(tok: string, usr: AuthUser, refreshToken?: string | null) {
     persistStoredAuth(tok, usr, refreshToken)
-  }
-
-  function clearAuth() {
-    clearStoredAuth()
   }
 
   // ── Login ─────────────────────────────────────────────────────────────────
@@ -202,12 +250,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
   // ── Logout ────────────────────────────────────────────────────────────────
   const logout = useCallback(() => {
     trackLogout()
-    resetJournalPullGate()
-    setToken(null)
-    setUser(null)
-    setBackendWatchlist([])
-    clearAuth()
-  }, [])
+    clearSessionState()
+  }, [clearSessionState])
 
   // ── Watchlist Sync: Add ───────────────────────────────────────────────────
   const syncAddToWatchlist = useCallback(async (symbol: string) => {
