@@ -343,7 +343,7 @@ export default function HomeClient() {
   const searchParams = useSearchParams()
   const { user, token, loadWatchlistFromBackend, syncAddToWatchlist, syncRemoveFromWatchlist } = useAuth()
   const { settings, openSettings, settingsOpen, closeSettings } = useSettings()
-  const { markChecklistItem } = useOnboarding()
+  const { markChecklistItem, reconcileFromSignals } = useOnboarding()
   const { showToast } = useToast()
 
   // Real-time alert system
@@ -567,6 +567,10 @@ export default function HomeClient() {
     }
     doSync()
   }, [token, loadWatchlistFromBackend])
+
+  useEffect(() => {
+    reconcileFromSignals()
+  }, [watchlist, token, reconcileFromSignals])
 
   useEffect(() => {
     if (!token) didSyncWatchlist.current = false
