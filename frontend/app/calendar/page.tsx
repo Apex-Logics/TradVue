@@ -162,14 +162,9 @@ function MarketStatusBanner({ status }: { status: MarketStatus | null }) {
     : status.nextOpen
 
   return (
-    <div style={{
-      padding: '7px 16px',
+    <div className="cal-market-banner" style={{
       background: cfg.bg,
       borderBottom: `1px solid ${cfg.border}`,
-      display: 'flex',
-      alignItems: 'center',
-      gap: 10,
-      fontSize: 11,
     }}>
       <span style={{ fontSize: 14 }}>{cfg.icon}</span>
       <span style={{ fontWeight: 700, color: cfg.color }}>{label}</span>
@@ -227,18 +222,17 @@ function MonthGrid({
   for (let i = 1; i <= daysInMonth; i++) cells.push(i)
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 1, background: 'var(--border)', borderRadius: 6 }}>
+    <div className="cal-month-grid">
       {['Mon', 'Tue', 'Wed', 'Thu', 'Fri', 'Sat', 'Sun'].map(d => (
-        <div key={d} style={{
-          padding: '7px 4px', textAlign: 'center', fontSize: 10, fontWeight: 700,
-          letterSpacing: '0.08em', color: 'var(--text-2)', background: 'var(--bg-2)',
-          borderRadius: 4,
-        }}>{d}</div>
+        <div key={d} className="cal-day-name">
+          <span className="cal-day-name-full">{d}</span>
+          <span className="cal-day-name-abbr">{d.slice(0, 2)}</span>
+        </div>
       ))}
 
       {cells.map((day, idx) => {
         if (!day) return (
-          <div key={`e-${idx}`} style={{ minHeight: 90, background: 'var(--bg-1)', borderRadius: 4, opacity: 0.25 }} />
+          <div key={`e-${idx}`} className="cal-month-cell cal-month-cell--empty" />
         )
 
         const key = `${year}-${String(month + 1).padStart(2, '0')}-${String(day).padStart(2, '0')}`
@@ -267,10 +261,9 @@ function MonthGrid({
         return (
           <div
             key={key}
+            className="cal-month-cell"
             onClick={() => onSelectDay(key)}
             style={{
-              minHeight: 90,
-              padding: '5px 6px 5px',
               background: isToday
                 ? 'rgba(74,158,255,0.1)'
                 : isSelected
@@ -279,12 +272,7 @@ function MonthGrid({
                     ? 'rgba(255,69,96,0.04)'
                     : 'var(--bg-2)',
               border: `1px solid ${borderColor}`,
-              borderRadius: 4,
               cursor: dayEvents.length > 0 ? 'pointer' : 'default',
-              display: 'flex',
-              flexDirection: 'column',
-              gap: 2,
-              transition: 'background 0.1s, border-color 0.1s',
             }}
             onMouseEnter={e => { if (dayEvents.length > 0) (e.currentTarget as HTMLDivElement).style.background = 'rgba(74,158,255,0.08)' }}
             onMouseLeave={e => {
@@ -317,7 +305,7 @@ function MonthGrid({
 
             {/* Impact pill row */}
             {dayEvents.length > 0 && (
-              <div style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
+              <div className="cal-month-pills" style={{ display: 'flex', flexWrap: 'wrap', gap: 2, marginTop: 2 }}>
                 {highCount > 0 && (
                   <span style={{ display: 'flex', alignItems: 'center', gap: 2, fontSize: 8, fontWeight: 700,
                     background: 'rgba(255,69,96,0.18)', color: '#ff4560',
@@ -350,13 +338,9 @@ function MonthGrid({
               </div>
             )}
 
-            {/* Top event preview (high-impact only) */}
+            {/* Top event preview (high-impact only) — hidden on phone-width cells */}
             {highCount > 0 && (
-              <div style={{
-                fontSize: 8, color: '#ff4560', lineHeight: 1.2,
-                overflow: 'hidden', textOverflow: 'ellipsis', whiteSpace: 'nowrap',
-                marginTop: 1,
-              }}>
+              <div className="cal-month-event-preview">
                 {dayEvents.find(e => e.impact === 'High')?.title}
               </div>
             )}
@@ -387,7 +371,7 @@ function WeekGrid({
   const today = toDateKey(new Date())
 
   return (
-    <div style={{ display: 'grid', gridTemplateColumns: 'repeat(7, 1fr)', gap: 8, marginBottom: 16 }}>
+    <div className="cal-week-grid">
       {days.map(day => {
         const key = toDateKey(day)
         const dayEvents = eventsByDay.get(key) || []
@@ -396,11 +380,12 @@ function WeekGrid({
         return (
           <div
             key={key}
+            className="cal-week-cell"
             onClick={() => onSelectDay(key)}
             style={{
               background: isToday ? 'rgba(74,158,255,0.12)' : 'var(--bg-2)',
               border: isToday ? '1.5px solid var(--accent)' : '1px solid var(--border)',
-              borderRadius: 6, padding: 8, cursor: 'pointer', minHeight: 120,
+              cursor: 'pointer',
             }}
           >
             <div style={{ fontSize: 11, fontWeight: 700, color: isToday ? 'var(--accent)' : 'var(--text-1)', marginBottom: 6 }}>
@@ -452,9 +437,7 @@ function EventRow({ event, showDate, watchlistSymbols }: { event: CalendarEvent;
       onClick={() => setExpanded(e => !e)}
     >
       {/* Main row */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '56px 1fr 80px 70px 70px 70px',
+      <div className="cal-agenda-row" style={{
         alignItems: 'center',
         gap: 8,
         padding: '8px 12px',
@@ -618,9 +601,7 @@ function AgendaView({ events }: { events: CalendarEvent[] }) {
   return (
     <div>
       {/* Column headers */}
-      <div style={{
-        display: 'grid',
-        gridTemplateColumns: '56px 1fr 80px 70px 70px 70px',
+      <div className="cal-agenda-row" style={{
         gap: 8,
         padding: '6px 12px',
         background: 'var(--bg-3)',
@@ -906,19 +887,14 @@ export default function CalendarPage() {
           Economic Calendar
         </div>
 
-        <div style={{ marginLeft: 'auto', display: 'flex', alignItems: 'center', gap: 8 }}>
+        <div className="page-header-actions">
           {/* Timezone badge */}
-          <span style={{
-            display: 'flex', alignItems: 'center', gap: 4,
-            fontSize: 10, color: 'var(--text-3)',
-            background: 'var(--bg-3)', border: '1px solid var(--border)',
-            padding: '2px 8px', borderRadius: 4,
-          }}>
+          <span className="cal-tz-badge">
             <IconClock size={11} />
             {getTimezoneAbbr(getUserTimezone())}
           </span>
           {lastRefresh && (
-            <span style={{ fontSize: 10, color: 'var(--text-3)' }}>
+            <span className="cal-header-updated">
               Updated {lastRefresh.toLocaleTimeString('en-US', { hour: '2-digit', minute: '2-digit' })}
             </span>
           )}
@@ -935,27 +911,21 @@ export default function CalendarPage() {
       <MarketStatusBanner status={marketStatus} />
 
       {/* ── Calendar Data Disclaimer ── */}
-      <div style={{
-        padding: '8px 16px', background: 'var(--accent-dim)', borderBottom: '1px solid rgba(74,158,255,0.2)',
-        fontSize: '10px', color: 'var(--text-3)', display: 'flex', alignItems: 'center', gap: 6,
-      }}>
+      <div className="cal-disclaimer">
         <span>Event data from third-party sources. May be delayed or incomplete. Always verify critical events with official sources. Times shown in {getTimezoneAbbr(getUserTimezone())}.</span>
       </div>
 
       {/* ── Controls Bar ── */}
-      <div style={{
-        padding: '10px 16px', background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
-        display: 'flex', flexWrap: 'wrap', gap: 12, alignItems: 'center',
-      }}>
+      <div className="cal-controls">
         {/* Navigation */}
-        <div style={{ display: 'flex', alignItems: 'center', gap: 8 }}>
-          <button onClick={() => goTo(-1)} style={navBtnStyle}>‹</button>
-          <span style={{ fontSize: 13, fontWeight: 700, minWidth: 200, textAlign: 'center' }}>{periodLabel()}</span>
-          <button onClick={() => goTo(1)} style={navBtnStyle}>›</button>
+        <div className="cal-period-nav">
+          <button onClick={() => goTo(-1)} style={navBtnStyle} aria-label="Previous period">‹</button>
+          <span className="cal-period-label">{periodLabel()}</span>
+          <button onClick={() => goTo(1)} style={navBtnStyle} aria-label="Next period">›</button>
         </div>
 
         {/* View toggle */}
-        <div style={{ display: 'flex', gap: 2, background: 'var(--bg-2)', padding: 2, borderRadius: 6 }}>
+        <div className="cal-view-toggle">
           {VIEWS.map(v => (
             <button key={v} onClick={() => setView(v)} style={{
               fontSize: 11, fontWeight: 600, padding: '4px 10px', borderRadius: 4,
@@ -968,10 +938,11 @@ export default function CalendarPage() {
         </div>
 
         {/* Separator */}
-        <div style={{ width: 1, height: 24, background: 'var(--border)' }} />
+        <div className="cal-controls-sep" />
 
+        <div className="cal-filter-scroll">
         {/* Type filters — multi-select */}
-        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <div className="cal-filter-row">
           {/* All button: resets to all types selected */}
           <button onClick={() => setTypeFilters(new Set(['economic', 'earnings', 'speech', 'holiday']))} style={{
             fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
@@ -1018,7 +989,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Impact filters */}
-        <div style={{ display: 'flex', gap: 3 }}>
+        <div className="cal-filter-row">
           {IMPACTS.map(imp => (
             <button key={imp} onClick={() => setImpactFilter(imp)} style={{
               fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
@@ -1033,7 +1004,7 @@ export default function CalendarPage() {
         </div>
 
         {/* Country filters */}
-        <div style={{ display: 'flex', gap: 3, flexWrap: 'wrap' }}>
+        <div className="cal-filter-row">
           {COUNTRIES.map(c => (
             <button key={c} onClick={() => setCountryFilter(c)} style={{
               fontSize: 10, fontWeight: 600, padding: '3px 8px', borderRadius: 4,
@@ -1047,25 +1018,20 @@ export default function CalendarPage() {
           ))}
         </div>
 
+        </div>
+
         {/* Search */}
         <input
+          className="cal-search"
           placeholder="Search events…"
           value={search}
           onChange={e => setSearch(e.target.value)}
-          style={{
-            fontSize: 11, padding: '4px 10px', borderRadius: 4,
-            background: 'var(--bg-2)', border: '1px solid var(--border)',
-            color: 'var(--text-0)', outline: 'none', width: 160,
-          }}
+          aria-label="Search events"
         />
       </div>
 
       {/* ── Stats bar ── */}
-      <div style={{
-        display: 'flex', gap: 16, padding: '6px 16px',
-        background: 'var(--bg-1)', borderBottom: '1px solid var(--border)',
-        fontSize: 11, color: 'var(--text-2)',
-      }}>
+      <div className="cal-stats-bar">
         <span><span style={{ color: 'var(--red)', fontWeight: 700 }}>{stats.high}</span> High</span>
         <span><span style={{ color: 'var(--yellow)', fontWeight: 700 }}>{stats.medium}</span> Medium</span>
         <span><span style={{ color: 'var(--green)', fontWeight: 700 }}>{stats.low}</span> Low</span>
@@ -1092,7 +1058,7 @@ export default function CalendarPage() {
       ) : (
         <div className="cal-main-grid">
           {/* Left / Main area */}
-          <div style={{ padding: 16, overflow: 'hidden' }}>
+          <div className="cal-main-area">
 
             {view === 'month' && (
               <MonthGrid
@@ -1114,8 +1080,8 @@ export default function CalendarPage() {
 
             {/* Agenda / list view — always show below calendar, full list in agenda mode */}
             {view === 'agenda' && (
-              <div style={{
-                background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6, overflow: 'hidden',
+              <div className="cal-agenda-scroll" style={{
+                background: 'var(--bg-2)', border: '1px solid var(--border)', borderRadius: 6,
               }}>
                 <AgendaView events={filteredEvents} />
               </div>
@@ -1145,13 +1111,13 @@ export default function CalendarPage() {
                       {selectedDay === todayKey && <span style={{ marginLeft: 6, color: 'var(--accent)' }}>· Today</span>}
                     </span>
                   </span>
-                  <span style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 400 }}>Click a day on the calendar to update</span>
+                  <span className="cal-desktop-hint" style={{ fontSize: 9, color: 'var(--text-3)', fontWeight: 400 }}>Click a day on the calendar to update</span>
                 </div>
 
                 {/* Forex Factory-style detailed table */}
-                <div style={{
+                <div className="cal-detail-scroll" style={{
                   background: 'var(--bg-2)', border: '1px solid var(--border)', borderTop: 'none',
-                  borderRadius: '0 0 6px 6px', overflow: 'hidden',
+                  borderRadius: '0 0 6px 6px',
                   transition: 'opacity 0.2s',
                 }}>
                   {selectedDayEvents.length === 0 ? (
@@ -1161,9 +1127,7 @@ export default function CalendarPage() {
                   ) : (
                     <>
                       {/* Column headers */}
-                      <div style={{
-                        display: 'grid',
-                        gridTemplateColumns: '60px 24px 1fr 90px 80px 80px 80px',
+                      <div className="cal-detail-row" style={{
                         gap: 8, padding: '5px 12px',
                         background: 'var(--bg-3)', borderBottom: '1px solid var(--border)',
                         fontSize: 9, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)',
@@ -1239,9 +1203,7 @@ export default function CalendarPage() {
                                 )
                               }
                               return (
-                                <div key={event.id} style={{
-                                  display: 'grid',
-                                  gridTemplateColumns: '60px 24px 1fr 90px 80px 80px 80px',
+                                <div key={event.id} className="cal-detail-row" style={{
                                   gap: 8, padding: '8px 12px',
                                   borderBottom: '1px solid var(--border)',
                                   alignItems: 'center',
@@ -1324,11 +1286,7 @@ export default function CalendarPage() {
           </div>
 
           {/* Right: Day summary panel — always visible */}
-          <div style={{
-            background: 'var(--bg-2)', borderLeft: '1px solid var(--border)',
-            display: 'flex', flexDirection: 'column',
-            position: 'sticky', top: 0, maxHeight: '100vh', overflow: 'hidden',
-          }}>
+          <div className="cal-summary-panel">
             {/* Panel header */}
             <div style={{
               padding: '10px 14px', background: 'var(--bg-3)', borderBottom: '1px solid var(--border)',
@@ -1362,8 +1320,7 @@ export default function CalendarPage() {
               ) : (
                 <>
                   {/* Column headers */}
-                  <div style={{
-                    display: 'grid', gridTemplateColumns: '42px 18px 1fr 52px 52px 52px',
+                  <div className="cal-summary-row" style={{
                     gap: 4, padding: '4px 10px',
                     background: 'var(--bg-3)', borderBottom: '1px solid var(--border)',
                     fontSize: 8, fontWeight: 700, letterSpacing: '0.08em', color: 'var(--text-3)',
@@ -1404,8 +1361,7 @@ export default function CalendarPage() {
                       )
                     }
                     return (
-                      <div key={event.id} style={{
-                        display: 'grid', gridTemplateColumns: '42px 18px 1fr 52px 52px 52px',
+                      <div key={event.id} className="cal-summary-row" style={{
                         gap: 4, padding: '7px 10px',
                         borderBottom: '1px solid var(--border)',
                         alignItems: 'start',
