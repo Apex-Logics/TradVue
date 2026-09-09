@@ -15,6 +15,7 @@ import {
   tradeFingerprint,
   coarseTradeFingerprint,
   isHighConfidenceIdentity,
+  isCoarseReviewCandidate,
   deduplicateTrades,
   batchInsertTrades,
   type ParsedTrade,
@@ -274,6 +275,7 @@ describe('tradeFingerprint', () => {
     const a = { ...trade, orderId: 'ORD-1' }
     const b = { ...trade, orderId: 'ORD-2' }
     expect(tradeFingerprint(a)).not.toBe(tradeFingerprint(b))
+    expect(isHighConfidenceIdentity(a)).toBe(false)
     const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([a, b], new Set())
     expect(unique).toHaveLength(2)
     expect(duplicateCount).toBe(0)
@@ -306,6 +308,55 @@ describe('tradeFingerprint', () => {
     const { unique, duplicateCount } = deduplicateTrades([a, b], new Set())
     expect(unique).toHaveLength(1)
     expect(duplicateCount).toBe(1)
+  })
+
+  it('orderId + time is high-confidence identity', () => {
+    const a = { ...trade, orderId: 'ORD-1', time: '09:30:01' }
+    expect(isHighConfidenceIdentity(a)).toBe(true)
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades(
+      [a, { ...a }],
+      new Set(),
+    )
+    expect(unique).toHaveLength(1)
+    expect(duplicateCount).toBe(1)
+    expect(possibleDuplicates).toHaveLength(0)
+  })
+
+  it('orderId + time with different times do not collapse', () => {
+    const a = { ...trade, orderId: 'ORD-1', time: '09:30:01' }
+    const b = { ...trade, orderId: 'ORD-1', time: '09:30:02' }
+    expect(isHighConfidenceIdentity(a)).toBe(true)
+    expect(isHighConfidenceIdentity(b)).toBe(true)
+    expect(tradeFingerprint(a)).not.toBe(tradeFingerprint(b))
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([a, b], new Set())
+    expect(unique).toHaveLength(2)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(0)
+  })
+
+  it('orderId-alone without time is low-confidence', () => {
+    const a = { ...trade, orderId: 'ORD-1' }
+    expect(isHighConfidenceIdentity(a)).toBe(false)
+    expect(isCoarseReviewCandidate(a)).toBe(false)
+  })
+
+  it('same-order multi-fills without time are possible duplicates, not silent drops', () => {
+    const a = { ...trade, orderId: 'ORD-1' }
+    const b = { ...trade, orderId: 'ORD-1' }
+    expect(tradeFingerprint(a)).toBe(tradeFingerprint(b))
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([a, b], new Set())
+    expect(unique).toHaveLength(1)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(1)
+  })
+
+  it('re-import of orderId-alone fill is possible-duplicate, not high-confidence skip', () => {
+    const fill = { ...trade, orderId: 'ORD-1' }
+    const existing = new Set([tradeFingerprint(fill)])
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades([fill], existing)
+    expect(unique).toHaveLength(0)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(1)
   })
 })
 
