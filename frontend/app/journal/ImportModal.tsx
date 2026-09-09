@@ -2,7 +2,7 @@
 
 import { useState, useRef, useMemo } from 'react'
 import { IconUpload, IconClose, IconFile } from '../components/Icons'
-import { parseBrokerCSV, type ParsedTrade, tradeFingerprint, coarseTradeFingerprint, isHighConfidenceIdentity } from '../utils/brokerParsers'
+import { parseBrokerCSV, type ParsedTrade, tradeFingerprint, coarseTradeFingerprint, isHighConfidenceIdentity, isCoarseReviewCandidate } from '../utils/brokerParsers'
 
 // ─── Types ────────────────────────────────────────────────────────────────────
 
@@ -148,7 +148,10 @@ function annotateDupStatus(
     let status: ImportedTrade['_dupStatus'] = 'new'
     if (seenStrong.has(strong)) {
       status = high ? 'duplicate' : 'possible'
-    } else if (!high && seenCoarse.has(coarse)) {
+    } else if (isCoarseReviewCandidate(p) && seenCoarse.has(coarse)) {
+      // Distinct order/exec ids skip the coarse path so different orders
+      // with matching size/price stay New. Same-order / no-time collisions
+      // already hit the strong-key branch above as possible duplicates.
       status = 'possible'
     }
     seenStrong.add(strong)

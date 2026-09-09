@@ -821,13 +821,33 @@ export interface DedupResult {
   possibleDuplicates: ParsedTrade[]
 }
 
-/** True when the trade has a fill-level distinguisher (id or clock time). */
+function trimmed(value: string | undefined): string {
+  return (value || '').trim()
+}
+
+/**
+ * True when the trade has a fill-level distinguisher: execution/fill id, or a
+ * clock time (so date+time+qty+price can identify a fill).
+ *
+ * orderId alone is NOT enough — one order may have multiple fills with the
+ * same qty/price and no exec time. Those must stay low-confidence so they
+ * surface as possible duplicates instead of silently collapsing.
+ */
 export function isHighConfidenceIdentity(trade: ParsedTrade): boolean {
-  return !!(
-    (trade.executionId && trade.executionId.trim())
-    || (trade.orderId && trade.orderId.trim())
-    || (trade.time && trade.time.trim())
-  )
+  return !!(trimmed(trade.executionId) || trimmed(trade.time))
+}
+
+/** Broker order/exec id distinguishes this fill from a *different* order. */
+function hasBrokerOrderOrExecId(trade: ParsedTrade): boolean {
+  return !!(trimmed(trade.orderId) || trimmed(trade.executionId))
+}
+
+/**
+ * Coarse date|symbol|side|qty|price collisions are reviewable only when the
+ * fill has no order/exec id and no time. Distinct order ids stay unique.
+ */
+export function isCoarseReviewCandidate(trade: ParsedTrade): boolean {
+  return !isHighConfidenceIdentity(trade) && !hasBrokerOrderOrExecId(trade)
 }
 
 /**
@@ -851,9 +871,9 @@ export function coarseTradeFingerprint(trade: ParsedTrade): string {
  * Never use date|symbol|side|qty|price alone as a silent-drop key.
  */
 export function tradeFingerprint(trade: ParsedTrade): string {
-  const exec = (trade.executionId || '').trim()
-  const order = (trade.orderId || '').trim()
-  const time = (trade.time || '').trim()
+  const exec = trimmed(trade.executionId)
+  const order = trimmed(trade.orderId)
+  const time = trimmed(trade.time)
   const broker = trade.broker || ''
   const price = trade.price.toFixed(2)
   const qty = trade.quantity.toFixed(6)
@@ -870,9 +890,12 @@ export function tradeFingerprint(trade: ParsedTrade): string {
  * High-confidence identity match (same execution id, or same order+time, or
  * same date+time+qty+price) → counted as a duplicate and omitted from `unique`.
  *
- * Low-confidence coarse match (date|symbol|side|qty|price only, no id/time)
+ * Low-confidence match:
+ *   - same strong key but no fill discriminator (orderId-only, or no id/time)
+ *   - coarse date|symbol|side|qty|price with no order/exec id and no time
  * → returned in `possibleDuplicates` so the UI can review instead of silently
  * dropping money data. Possible duplicates are NOT in `unique`.
+ * Distinct order ids without time stay unique (they already distinguish orders).
  *
  * Usage:
  *   const existing = new Set(currentTrades.map(t => tradeFingerprint(t)))
@@ -904,7 +927,9 @@ export function deduplicateTrades(
       continue
     }
 
-    if (!high && seenCoarse.has(coarse)) {
+    // Coarse review only when there is no order/exec id to tell fills apart.
+    // Distinct order ids must not collapse via date|symbol|side|qty|price.
+    if (isCoarseReviewCandidate(trade) && seenCoarse.has(coarse)) {
       possibleDuplicates.push(trade)
       seenStrong.add(strong)
       continue
