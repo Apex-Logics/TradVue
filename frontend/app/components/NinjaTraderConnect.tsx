@@ -3,6 +3,7 @@
 import { useState, useEffect, useCallback, useRef } from 'react'
 import { useAuth } from '../context/AuthContext'
 import { API_BASE } from '../lib/api'
+import { fetchWithSessionRetry } from '../lib/authSession'
 
 // ── Types ──────────────────────────────────────────────────────────────────────
 
@@ -240,7 +241,7 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
     setLoading(true)
     setError(null)
     try {
-      const res = await fetch(API_BASE + '/api/webhooks/tokens', {
+      const res = await fetchWithSessionRetry(API_BASE + '/api/webhooks/tokens', {
         headers: { Authorization: 'Bearer ' + token },
       })
       if (!res.ok) throw new Error('Failed to load tokens (' + res.status + ')')
@@ -251,7 +252,7 @@ export default function NinjaTraderConnect({ onClose }: NinjaTraderConnectProps)
       if (active) {
         setWebhookToken(active)
       } else {
-        const create = await fetch(API_BASE + '/api/webhooks/tokens', {
+        const create = await fetchWithSessionRetry(API_BASE + '/api/webhooks/tokens', {
           method: 'POST',
           headers: { Authorization: 'Bearer ' + token, 'Content-Type': 'application/json' },
           body: JSON.stringify({ label: 'NinjaTrader' }),
