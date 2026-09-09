@@ -3,9 +3,10 @@
  *
  * Tests:
  * 1. AuthGate shows sign-in prompt for unauthenticated users
- * 2. AI Coach toggle persists to localStorage
- * 3. Account page renders all required sections
- * 4. Export and delete buttons are present
+ * 2. Bottom promo bars hide when the user has a session
+ * 3. AI Coach toggle persists to localStorage
+ * 4. Account page renders all required sections
+ * 5. Export and delete buttons are present
  */
 
 import React from 'react'
@@ -27,7 +28,20 @@ const localStorageMock = (() => {
 
 Object.defineProperty(window, 'localStorage', { value: localStorageMock })
 
-// ─── Auth Gate ────────────────────────────────────────────────────────────────
+const signedOutAuth = { user: null, token: null, loading: false }
+const signedInAuth = {
+  user: { id: 'user-1', email: 'test@tradvue.com' },
+  token: 'access-123',
+  loading: false,
+}
+
+jest.mock('../app/context/AuthContext', () => ({
+  useAuth: jest.fn(() => signedOutAuth),
+}))
+
+jest.mock('next/navigation', () => ({
+  usePathname: jest.fn(() => '/'),
+}))
 
 // Minimal mock AuthModal (not testing the modal itself)
 jest.mock('../app/components/AuthModal', () => {
@@ -36,9 +50,20 @@ jest.mock('../app/components/AuthModal', () => {
   }
 })
 
+import { useAuth } from '../app/context/AuthContext'
+import { usePathname } from 'next/navigation'
 import AuthGate from '../app/components/AuthGate'
+import AppFooter from '../app/components/AppFooter'
+import FeaturesShowcase from '../app/components/FeaturesShowcase'
+
+const mockUseAuth = useAuth as jest.Mock
+const mockUsePathname = usePathname as jest.Mock
 
 describe('AuthGate', () => {
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue(signedOutAuth)
+  })
+
   it('shows the current sample-data signup prompt', () => {
     render(
       <AuthGate featureName="Trade Playbooks">
@@ -76,6 +101,49 @@ describe('AuthGate', () => {
       </AuthGate>
     )
     expect(screen.getByTestId('bg-content')).toBeInTheDocument()
+  })
+
+  it('hides the sticky signup bar when the user is signed in', () => {
+    mockUseAuth.mockReturnValue(signedInAuth)
+    render(
+      <AuthGate featureName="Trading Journal">
+        <div data-testid="bg-content">Background</div>
+      </AuthGate>
+    )
+    expect(screen.getByTestId('bg-content')).toBeInTheDocument()
+    expect(screen.queryByText(/You're viewing sample data\./i)).not.toBeInTheDocument()
+    expect(screen.queryByRole('button', { name: /sign up free/i })).not.toBeInTheDocument()
+  })
+})
+
+describe('guest promo bars', () => {
+  beforeEach(() => {
+    mockUseAuth.mockReturnValue(signedOutAuth)
+    mockUsePathname.mockReturnValue('/')
+  })
+
+  it('shows the footer promo bar for signed-out visitors', () => {
+    render(<AppFooter />)
+    expect(screen.getByText(/Best Trading Journal/i)).toBeInTheDocument()
+    expect(screen.getByText(/Help & Support/i)).toBeInTheDocument()
+  })
+
+  it('hides the footer promo bar when the user is signed in', () => {
+    mockUseAuth.mockReturnValue(signedInAuth)
+    render(<AppFooter />)
+    expect(screen.queryByText(/Best Trading Journal/i)).not.toBeInTheDocument()
+    expect(screen.queryByText(/Help & Support/i)).not.toBeInTheDocument()
+  })
+
+  it('shows the dashboard feature promo for signed-out visitors', () => {
+    render(<FeaturesShowcase />)
+    expect(screen.getByRole('heading', { name: /Everything You Need to Trade Smarter/i })).toBeInTheDocument()
+  })
+
+  it('hides the dashboard feature promo when the user is signed in', () => {
+    mockUseAuth.mockReturnValue(signedInAuth)
+    render(<FeaturesShowcase />)
+    expect(screen.queryByRole('heading', { name: /Everything You Need to Trade Smarter/i })).not.toBeInTheDocument()
   })
 })
 
