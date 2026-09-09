@@ -12,7 +12,7 @@ import {
   type AuthUser,
 } from '../lib/api'
 import { refreshStoredSession, subscribeAuthSession } from '../lib/authSession'
-import { AUTH_REFRESH_TOKEN_KEY, AUTH_TOKEN_KEY, AUTH_USER_KEY, clearStoredAuth, persistStoredAuth } from '../utils/storageKeys'
+import { AUTH_REFRESH_TOKEN_KEY, AUTH_TOKEN_KEY, AUTH_USER_KEY, clearStoredAuth, persistStoredAuth, getStoredAuthToken } from '../utils/storageKeys'
 
 // ── Types ─────────────────────────────────────────────────────────────────────
 
@@ -133,6 +133,8 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
           // Background /me: pick up tier/admin changes, or refresh/clear a stale JWT.
           apiGetMeResult(storedToken).then(async result => {
             if (cancelled) return
+            // A successful login while this /me was in flight must not be wiped.
+            if (getStoredAuthToken() !== storedToken) return
             if (result.ok) {
               setUser(result.user)
               persistStoredAuth(storedToken, result.user, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
@@ -140,13 +142,14 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
             }
             const recovered = await refreshStoredSession()
             if (cancelled) return
+            if (getStoredAuthToken() && getStoredAuthToken() !== storedToken) return
             if (recovered) {
               setToken(recovered.token)
               setUser(recovered.user)
               initFullSync(recovered.token)
               return
             }
-            if (result.reason === 'auth') clearSessionState()
+            if (result.reason === 'auth' && getStoredAuthToken() === storedToken) clearSessionState()
           }).catch(() => {})
 
           return
@@ -154,6 +157,7 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
 
         const me = await apiGetMeResult(storedToken)
         if (cancelled) return
+        if (getStoredAuthToken() !== storedToken) return
         if (me.ok) {
           await applyFreshSession(storedToken, me.user, localStorage.getItem(AUTH_REFRESH_TOKEN_KEY))
           return

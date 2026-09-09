@@ -3,6 +3,7 @@
 import { fmt, fmtPct } from '../utils/formatting'
 import { TICKER_SYMBOLS, TICKER_DISPLAY, TICKER_FALLBACK } from '../constants'
 import type { Quote } from '../types'
+import { isPricedQuote } from '../utils/quotes'
 
 interface Props {
   tickerQuotes: Record<string, Quote>
@@ -25,12 +26,12 @@ export default function TickerBar({
   onOpenSettings,
   size = 'compact',
 }: Props) {
-  const hasLiveOrCachedQuotes = Object.keys(tickerQuotes).length > 0
+  const hasLiveOrCachedQuotes = Object.values(tickerQuotes).some(isPricedQuote)
   const usingFallbackData = !hasLiveOrCachedQuotes && !isLoading
 
   const defaultItems = hasLiveOrCachedQuotes
     ? TICKER_SYMBOLS
-        .filter(sym => tickerQuotes[sym] && !hiddenSymbols.has(sym))
+        .filter(sym => isPricedQuote(tickerQuotes[sym]) && !hiddenSymbols.has(sym))
         .map(sym => {
           const q = tickerQuotes[sym]
           return { symbol: TICKER_DISPLAY[sym] || sym, price: q.current, change: q.changePct, isReal: q.source !== 'mock', raw: sym, isCustom: false }
@@ -45,7 +46,7 @@ export default function TickerBar({
         : []
 
   const customItems = customSymbols
-    .filter(sym => tickerQuotes[sym])
+    .filter(sym => isPricedQuote(tickerQuotes[sym]))
     .map(sym => {
       const q = tickerQuotes[sym]
       return { symbol: sym, price: q.current, change: q.changePct, isReal: q.source !== 'mock', raw: sym, isCustom: true }

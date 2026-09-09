@@ -29,6 +29,7 @@ const router  = express.Router();
 const finnhub = require('../services/finnhub');
 const alpaca  = require('../services/alpaca');
 const cache   = require('../services/cache');
+const { normalizeQuote } = require('../lib/quoteNormalize');
 
 // ─── Constants ───────────────────────────────────────────────────────────────
 
@@ -59,6 +60,20 @@ function staticDataHeaders(res) {
 
 // ─── Smart shared-cache batch fetch ──────────────────────────────────────────
 
+/** Alpaca static helper — some test mocks omit constructor.isStockSymbol. */
+function isAlpacaStockSymbol(sym) {
+  const fn = alpaca?.constructor?.isStockSymbol;
+  return typeof fn === 'function' ? Boolean(fn(sym)) : true;
+}
+
+async function dropUnpricedCache(sym) {
+  try {
+    if (typeof cache.del === 'function') {
+      await cache.del(`${QUOTE_CACHE_PREFIX}${sym}`);
+    }
+  } catch (_) { /* eviction is best-effort */ }
+}
+
 /**
  * Batch-fetches quotes for `symbols` with a two-phase strategy:
  *
@@ -85,27 +100,34 @@ async function batchQuotesSharedCache(symbols, concurrency = BATCH_CONCURRENCY) 
     })
   );
 
-  const hits   = cacheChecks.filter(c => c.hit !== null);
-  const misses = cacheChecks.filter(c => c.hit === null).map(c => c.sym);
+  const hits = cacheChecks.filter(c => c.hit !== null);
+  let misses = cacheChecks.filter(c => c.hit === null).map(c => c.sym);
 
-  // Populate cache hits immediately
+  // Populate cache hits immediately. Unpriced stubs (current/c null) are
+  // treated as misses so a later Alpaca/Finnhub success can replace them.
   for (const { sym, hit } of hits) {
-    results[sym] = hit;
+    const priced = normalizeQuote(hit, sym);
+    if (priced) {
+      results[sym] = priced;
+    } else {
+      misses.push(sym);
+      await dropUnpricedCache(sym);
+    }
   }
 
   // ── Phase 2: fetch only cache misses ─────────────────────────────────────
   if (misses.length > 0) {
     // Split misses: stock symbols go to Alpaca (one batch call), forex/crypto go to Finnhub
-    const stockMisses = misses.filter(s => alpaca.constructor.isStockSymbol(s));
-    const otherMisses = misses.filter(s => !alpaca.constructor.isStockSymbol(s));
+    const stockMisses = misses.filter(s => isAlpacaStockSymbol(s));
 
     // ── Phase 2a: Alpaca batch fetch for stock symbols (1 API call) ──────
-    if (stockMisses.length > 0) {
+    if (stockMisses.length > 0 && typeof alpaca.getBatchQuotes === 'function') {
       try {
-        const alpacaQuotes = await alpaca.getBatchQuotes(stockMisses);
+        const alpacaQuotes = await alpaca.getBatchQuotes(stockMisses) || {};
         for (const sym of stockMisses) {
-          if (alpacaQuotes[sym]) {
-            results[sym] = alpacaQuotes[sym];
+          const priced = normalizeQuote(alpacaQuotes[sym], sym);
+          if (priced) {
+            results[sym] = priced;
             // alpaca.getBatchQuotes() already cached under finnhub:quote:SYM
           }
         }
@@ -128,27 +150,22 @@ async function batchQuotesSharedCache(symbols, concurrency = BATCH_CONCURRENCY) 
         );
         settled.forEach((r, idx) => {
           const sym = chunk[idx];
-          if (r.status === 'fulfilled' && r.value) {
-            results[sym] = r.value;
-            // Note: finnhub.getQuote() already calls cache.set() internally via
-            // cache.cacheAPICall(), so we don't need to cache here again.
-          } else {
-            // Symbol unavailable — return a graceful stub so the UI shows "—"
-            results[sym] = {
-              symbol:    sym,
-              current:   null,
-              change:    null,
-              changePct: null,
-              source:    'unavailable',
-              error:     r.reason?.message || 'no data',
-            };
+          if (r.status === 'fulfilled') {
+            const priced = normalizeQuote(r.value, sym);
+            if (priced) {
+              results[sym] = priced;
+              // finnhub.getQuote() already cache.set()s priced quotes via cacheAPICall.
+              return;
+            }
           }
+          // Omit unpriced stubs. Sending { current: null } makes the FE treat
+          // the row as "loaded" (green "—") and can poison WL localStorage.
         });
       }
     }
   }
 
-  const alpacaCallsMade = misses.filter(s => alpaca.constructor.isStockSymbol(s)).length > 0 ? 1 : 0;
+  const alpacaCallsMade = misses.filter(s => isAlpacaStockSymbol(s)).length > 0 ? 1 : 0;
 
   return {
     quotes:      results,
@@ -160,14 +177,30 @@ async function batchQuotesSharedCache(symbols, concurrency = BATCH_CONCURRENCY) 
 
 // ─── Routes ──────────────────────────────────────────────────────────────────
 
+async function sendQuote(req, res, symbolRaw) {
+  const symbol = String(symbolRaw || '').toUpperCase().trim();
+  if (!symbol) {
+    return res.status(400).json({ success: false, error: 'Symbol is required' });
+  }
+  const quote = normalizeQuote(await finnhub.getQuote(symbol), symbol);
+  marketDataHeaders(res);
+  res.json({ success: true, data: quote, timestamp: new Date().toISOString() });
+}
+
+// GET /api/market-data/quote?symbol=SPY  (FE fallback historically used this)
+router.get('/quote', async (req, res) => {
+  try {
+    await sendQuote(req, res, req.query.symbol);
+  } catch (err) {
+    console.error('[MarketData] /quote error:', err.message);
+    res.status(500).json({ success: false, error: 'Failed to fetch quote' });
+  }
+});
+
 // GET /api/market-data/quote/:symbol
 router.get('/quote/:symbol', async (req, res) => {
   try {
-    const symbol = req.params.symbol.toUpperCase();
-    const quote  = await finnhub.getQuote(symbol);
-
-    marketDataHeaders(res);
-    res.json({ success: true, data: quote, timestamp: new Date().toISOString() });
+    await sendQuote(req, res, req.params.symbol);
   } catch (err) {
     console.error('[MarketData] /quote error:', err.message);
     res.status(500).json({ success: false, error: 'Failed to fetch quote' });

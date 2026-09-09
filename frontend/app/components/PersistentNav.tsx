@@ -46,6 +46,7 @@ interface DropdownItem {
   href: string
   icon?: React.ReactNode
   divider?: boolean
+  onClick?: () => void
 }
 
 interface NavDropdownProps {
@@ -126,7 +127,13 @@ function NavDropdown({ label, items, isActive, align = 'left' }: NavDropdownProp
                   key={item.href}
                   href={item.href}
                   className={`apn-dropdown-item${isItemActive(item.href) ? ' active' : ''}`}
-                  onClick={() => setOpen(false)}
+                  onClick={(e) => {
+                    setOpen(false)
+                    if (item.onClick) {
+                      e.preventDefault()
+                      item.onClick()
+                    }
+                  }}
                 >
                   {item.icon && <span className="apn-dropdown-item-icon">{item.icon}</span>}
                   {item.label}
@@ -423,7 +430,7 @@ function NavInner() {
                     { label: 'Sign Out', href: '#signout', icon: <IconSignOut /> },
                   ]
                 : [
-                    { label: 'Sign In', href: '#signin', icon: <IconAccount /> },
+                    { label: 'Sign In', href: '#signin', icon: <IconAccount />, onClick: () => setShowAuthModal(true) },
                     { label: 'Upgrade to Pro', href: '/pricing', icon: <IconUpgrade /> },
                   ]
             }
@@ -533,6 +540,29 @@ function NavInner() {
                 Sign Out
               </button>
             </>
+          )}
+          {!user && (
+            <button
+              onClick={() => { setShowAuthModal(true); setDrawerOpen(false) }}
+              style={{
+                background: 'var(--accent)',
+                border: 'none',
+                borderRadius: 6,
+                color: '#0a0a0c',
+                cursor: 'pointer',
+                fontSize: 13,
+                fontWeight: 600,
+                padding: '8px 12px',
+                textAlign: 'left',
+                width: '100%',
+                display: 'flex',
+                alignItems: 'center',
+                gap: 8,
+              }}
+            >
+              <IconAccount />
+              Sign In
+            </button>
           )}
         </div>
       </div>

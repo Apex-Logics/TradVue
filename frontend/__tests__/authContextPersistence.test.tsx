@@ -32,6 +32,7 @@ jest.mock('../app/utils/cloudSync', () => ({
 const apiGetMeMock = jest.fn()
 const apiGetMeResultMock = jest.fn()
 const apiRefreshMock = jest.fn()
+const apiLoginMock = jest.fn()
 
 jest.mock('../app/lib/api', () => {
   const actual = jest.requireActual('../app/lib/api')
@@ -40,6 +41,7 @@ jest.mock('../app/lib/api', () => {
     apiGetMe: (...args: unknown[]) => apiGetMeMock(...args),
     apiGetMeResult: (...args: unknown[]) => apiGetMeResultMock(...args),
     apiRefresh: (...args: unknown[]) => apiRefreshMock(...args),
+    apiLogin: (...args: unknown[]) => apiLoginMock(...args),
   }
 })
 
@@ -66,6 +68,7 @@ describe('AuthContext persistence hydration', () => {
     apiGetMeMock.mockReset()
     apiGetMeResultMock.mockReset()
     apiRefreshMock.mockReset()
+    apiLoginMock.mockReset()
     apiRefreshMock.mockResolvedValue({ session: null, user: null, error: 'Invalid or expired refresh token' })
   })
 
@@ -241,5 +244,62 @@ describe('AuthContext persistence hydration', () => {
     expect(screen.getByTestId('token')).toHaveTextContent('stale-token')
     expect(screen.getByTestId('email')).toHaveTextContent('stored@tradvue.com')
     expect(localStorageMock.getItem(AUTH_TOKEN_KEY)).toBe('stale-token')
+  })
+
+  it('does not clear a fresh login when a prior hydrate /me comes back unauthorized', async () => {
+    let releaseMe: (value: { ok: false; reason: 'auth' }) => void = () => {}
+    const meGate = new Promise<{ ok: false; reason: 'auth' }>(resolve => {
+      releaseMe = resolve
+    })
+    apiGetMeResultMock.mockImplementation(() => meGate)
+
+    const freshUser = { ...storedUser, email: 'erick@tradvue.com' }
+    apiLoginMock.mockResolvedValue({
+      session: {
+        access_token: 'fresh-login-token',
+        refresh_token: 'fresh-login-rt',
+        expires_in: 3600,
+        token_type: 'bearer',
+      },
+      user: freshUser,
+    })
+
+    seedStoredSession()
+
+    function LoginProbe() {
+      const { token, user, login } = useAuth()
+      return (
+        <div>
+          <div data-testid="token">{token ?? 'none'}</div>
+          <div data-testid="email">{user?.email ?? 'none'}</div>
+          <button type="button" onClick={() => { void login('erick@tradvue.com', 'password123') }}>
+            do-login
+          </button>
+        </div>
+      )
+    }
+
+    render(
+      <AuthProvider>
+        <LoginProbe />
+      </AuthProvider>
+    )
+
+    await waitFor(() => expect(screen.getByTestId('token')).toHaveTextContent('stale-token'))
+    await act(async () => {
+      screen.getByRole('button', { name: 'do-login' }).click()
+    })
+    await waitFor(() => expect(screen.getByTestId('token')).toHaveTextContent('fresh-login-token'))
+    expect(localStorageMock.getItem(AUTH_TOKEN_KEY)).toBe('fresh-login-token')
+
+    await act(async () => {
+      releaseMe({ ok: false, reason: 'auth' })
+    })
+
+    await waitFor(() => expect(apiGetMeResultMock).toHaveBeenCalled())
+    expect(screen.getByTestId('token')).toHaveTextContent('fresh-login-token')
+    expect(screen.getByTestId('email')).toHaveTextContent('erick@tradvue.com')
+    expect(localStorageMock.getItem(AUTH_TOKEN_KEY)).toBe('fresh-login-token')
+    expect(localStorageMock.getItem(AUTH_REFRESH_TOKEN_KEY)).toBe('fresh-login-rt')
   })
 })
