@@ -24,6 +24,7 @@ import { useAuth } from '../context/AuthContext'
 import { useSettings } from '../context/SettingsContext'
 import { useToast } from '../context/ToastContext'
 import { API_BASE } from '../lib/api'
+import { fetchWithSessionRetry } from '../lib/authSession'
 import { getUserTier, isTrialActive, TRIAL_DAYS, MONTHLY_PRICE, ANNUAL_PRICE } from '../utils/tierAccess'
 import PricingCard from '../components/PricingCard'
 import PersistentNav from '../components/PersistentNav'
@@ -63,6 +64,16 @@ function trialDaysRemaining(createdAt: string | undefined): number {
   const now = new Date()
   const diffDays = Math.floor((now.getTime() - created.getTime()) / (1000 * 60 * 60 * 24))
   return Math.max(0, TRIAL_DAYS - diffDays)
+}
+
+async function fetchNtWebhookTokens(accessToken: string): Promise<{ id: number; is_active: boolean }[]> {
+  const res = await fetchWithSessionRetry(API_BASE + '/api/webhooks/tokens', {
+    headers: { Authorization: 'Bearer ' + accessToken },
+  })
+  if (!res.ok) throw new Error('Failed to load tokens')
+  const data = await res.json()
+  const list = Array.isArray(data) ? data : (data.tokens ?? [])
+  return list as { id: number; is_active: boolean }[]
 }
 
 // ── Reset Password Row ────────────────────────────────────────────────────────
@@ -286,12 +297,8 @@ function AccountPageInner() {
   // Check NinjaTrader connection status
   useEffect(() => {
     if (!token) return
-    fetch(API_BASE + '/api/webhooks/tokens', {
-      headers: { Authorization: 'Bearer ' + token },
-    })
-      .then(r => r.json())
-      .then(data => {
-        const list: { id: number; is_active: boolean }[] = Array.isArray(data) ? data : (data.tokens ?? [])
+    fetchNtWebhookTokens(token)
+      .then(list => {
         setNtTokens(list)
         setNtConnected(list.some((t: { is_active: boolean }) => t.is_active))
       })
@@ -366,7 +373,7 @@ function AccountPageInner() {
       const activeTokens = ntTokens.filter(t => t.is_active)
       await Promise.all(
         activeTokens.map(t =>
-          fetch(`${API_BASE}/api/webhooks/tokens/${t.id}`, {
+          fetchWithSessionRetry(`${API_BASE}/api/webhooks/tokens/${t.id}`, {
             method: 'DELETE',
             headers: { Authorization: `Bearer ${token}` },
           })
@@ -1121,10 +1128,8 @@ Delete My Account
             setShowNTConnect(false)
             // Refresh status
             if (token) {
-              fetch(API_BASE + '/api/webhooks/tokens', { headers: { Authorization: 'Bearer ' + token } })
-                .then(r => r.json())
-                .then(data => {
-                  const list: { id: number; is_active: boolean }[] = Array.isArray(data) ? data : (data.tokens ?? [])
+              fetchNtWebhookTokens(token)
+                .then(list => {
                   setNtTokens(list)
                   setNtConnected(list.some((t: { is_active: boolean }) => t.is_active))
                 })
