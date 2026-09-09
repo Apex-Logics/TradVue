@@ -2,6 +2,7 @@
 
 import Link from 'next/link'
 import { usePathname } from 'next/navigation'
+import { useAuth } from '../context/AuthContext'
 
 // ─── Links ────────────────────────────────────────────────────────────────────
 
@@ -60,9 +61,12 @@ function Dot() {
 
 export default function AppFooter() {
   const pathname = usePathname()
+  const { user, token } = useAuth()
 
   // Don't render on the landing page — it has its own full marketing footer
   if (pathname?.startsWith('/landing')) return null
+  // Signed-in users don't need the guest promo / SEO footer
+  if (user || token) return null
 
   return (
     <footer
