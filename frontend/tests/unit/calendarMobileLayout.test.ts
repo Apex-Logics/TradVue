@@ -35,6 +35,7 @@ describe('Calendar phone-width layout', () => {
     const mobile = css.slice(css.indexOf('MOBILE RESPONSIVE'))
     const phoneBlock = mobile.slice(0, mobile.indexOf('SMALL MOBILE'))
     expect(phoneBlock).toMatch(/\.cal-week-grid[\s\S]{0,80}grid-template-columns:\s*minmax\(0,\s*1fr\)/)
+    expect(phoneBlock).toMatch(/\.cal-period-nav[\s\S]{0,80}flex:\s*1 1 100%/)
   })
 
   test('filter chips and event tables scroll inside the page instead of clipping it', () => {

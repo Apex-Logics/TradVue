@@ -2928,12 +2928,18 @@ html, body { overflow-x: hidden; max-width: 100vw; }
     gap: 8px;
   }
 
+  .cal-period-nav {
+    flex: 1 1 100%;
+    justify-content: space-between;
+  }
+
   .cal-period-label {
     font-size: 12px;
     flex: 1 1 auto;
   }
 
   .cal-filter-scroll {
+    flex: 1 1 100%;
     flex-wrap: nowrap;
     overflow-x: auto;
     width: 100%;
