@@ -46,6 +46,7 @@ import { IconTrendingUp, IconCalendar, IconBell } from './components/Icons'
 import { apiFetchSafe } from './lib/apiFetch'
 import DataError from './components/DataError'
 import PersistentNav from './components/PersistentNav'
+import { mergeQuoteRecords, normalizeQuote, pricedQuoteMap } from './utils/quotes'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -60,7 +61,8 @@ function loadWlCache(): Record<string, Quote> | null {
     if (!raw) return null
     const entry: WlCacheEntry = JSON.parse(raw)
     if (Date.now() - entry.ts > WL_CACHE_TTL) return null
-    return entry.data
+    const priced = pricedQuoteMap(entry.data as Record<string, unknown>)
+    return Object.keys(priced).length > 0 ? priced : null
   } catch { return null }
 }
 
@@ -586,7 +588,7 @@ export default function HomeClient() {
 
       const j = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${stockSymbols.join(',')}`)
       if (j?.success && j.data) {
-        const merged = { ...j.data }
+        const merged = pricedQuoteMap(j.data as Record<string, unknown>)
         try {
           const cj = await apiFetchSafe<{ success: boolean; data: Array<{ symbol: string; price: number; change24h: number }> }>(`${API_BASE}/api/crypto/prices?limit=20`)
           if (cj?.success && cj.data) {
@@ -625,21 +627,21 @@ export default function HomeClient() {
             `${API_BASE}/api/market-data/batch?symbols=${chunk.join(',')}`
           )
           if (j?.success && j.data) {
-            Object.assign(allData, j.data)
-            Object.keys(j.data).forEach(s => watchlistFetchedRef.current.add(s))
+            const priced = pricedQuoteMap(j.data as Record<string, unknown>)
+            Object.assign(allData, priced)
+            Object.keys(priced).forEach(s => watchlistFetchedRef.current.add(s))
           }
         })
       )
       if (Object.keys(allData).length > 0) {
         setQuotes(prev => {
-          const merged = { ...prev, ...allData }
+          const merged = mergeQuoteRecords(prev, allData)
           saveWlCache(merged)
           return merged
         })
       }
     } finally {
       setLoadingQuotes(false)
-      toFetch.forEach(s => watchlistFetchedRef.current.add(s))
     }
   }, [isOffline])
 
@@ -781,17 +783,19 @@ export default function HomeClient() {
     setLoadingStockProfile(true)
 
     try {
-      const cached = tickerQuotes[symbol] || quotes[symbol]
+      const cached = normalizeQuote(tickerQuotes[symbol] || quotes[symbol], symbol)
       if (cached) {
         setStockQuote(cached)
         setLoadingStockQuote(false)
       } else {
         let fetched = false
         const bj = await apiFetchSafe<{ success: boolean; data: Record<string, Quote> }>(`${API_BASE}/api/market-data/batch?symbols=${encodeURIComponent(symbol)}`)
-        if (bj?.success && bj.data?.[symbol]) { setStockQuote(bj.data[symbol]); fetched = true }
+        const batchQuote = normalizeQuote(bj?.data?.[symbol], symbol)
+        if (bj?.success && batchQuote) { setStockQuote(batchQuote); fetched = true }
         if (!fetched) {
-          const qj = await apiFetchSafe<{ success: boolean; data: Quote }>(`${API_BASE}/api/market-data/quote?symbol=${encodeURIComponent(symbol)}`)
-          if (qj?.success && qj.data) setStockQuote(qj.data)
+          const qj = await apiFetchSafe<{ success: boolean; data: Quote }>(`${API_BASE}/api/market-data/quote/${encodeURIComponent(symbol)}`)
+          const single = normalizeQuote(qj?.data, symbol)
+          if (qj?.success && single) setStockQuote(single)
         }
         setLoadingStockQuote(false)
       }
