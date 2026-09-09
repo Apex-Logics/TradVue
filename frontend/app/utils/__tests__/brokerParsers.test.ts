@@ -21,6 +21,7 @@ import {
   parseIBKR,
   parseTradeStation,
   deduplicateTrades,
+  isHighConfidenceIdentity,
 } from '../brokerParsers'
 
 // ── Date Normalization ────────────────────────────────────────────────────────
@@ -590,5 +591,38 @@ AAPL,2024-01-15 09:30:02,10,150.25,1502.50,-1.00
     expect(unique).toHaveLength(2)
     expect(duplicateCount).toBe(0)
     expect(possibleDuplicates).toHaveLength(0)
+  })
+
+  it('generic CSV: orderId + time stays high-confidence and distinct fills stay unique', () => {
+    const csv = `Date,Time,Symbol,Side,Quantity,Price,Order ID
+2024-01-15,09:30:01,AAPL,BUY,10,150.25,ORD-1
+2024-01-15,09:30:02,AAPL,BUY,10,150.25,ORD-1
+`
+    const { trades } = parseBrokerCSV(csv)
+    expect(trades).toHaveLength(2)
+    expect(trades[0].orderId).toBe('ORD-1')
+    expect(trades[0].time).toBe('09:30:01')
+    expect(trades[1].time).toBe('09:30:02')
+    expect(trades.every(isHighConfidenceIdentity)).toBe(true)
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades(trades, new Set())
+    expect(unique).toHaveLength(2)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(0)
+  })
+
+  it('generic CSV: orderId-alone same-order multi-fills are possible duplicates, not silent drops', () => {
+    const csv = `Date,Symbol,Side,Quantity,Price,Order ID
+2024-01-15,AAPL,BUY,10,150.25,ORD-1
+2024-01-15,AAPL,BUY,10,150.25,ORD-1
+`
+    const { trades } = parseBrokerCSV(csv)
+    expect(trades).toHaveLength(2)
+    expect(trades[0].orderId).toBe('ORD-1')
+    expect(trades[0].time).toBeUndefined()
+    expect(trades.every(t => !isHighConfidenceIdentity(t))).toBe(true)
+    const { unique, duplicateCount, possibleDuplicates } = deduplicateTrades(trades, new Set())
+    expect(unique).toHaveLength(1)
+    expect(duplicateCount).toBe(0)
+    expect(possibleDuplicates).toHaveLength(1)
   })
 })
