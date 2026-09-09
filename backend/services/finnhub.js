@@ -298,10 +298,8 @@ class FinnhubService {
 
     const quotes = {};
     results.forEach((result, i) => {
-      if (result.status === 'fulfilled') {
+      if (result.status === 'fulfilled' && result.value && result.value.current != null) {
         quotes[symbols[i].toUpperCase()] = result.value;
-      } else {
-        quotes[symbols[i].toUpperCase()] = this._mockQuote(symbols[i]);
       }
     });
 
@@ -633,12 +631,10 @@ class FinnhubService {
   _mockQuote(symbol) {
     const base = this.mockPrices[symbol];
     if (!base) {
-      // Return null values instead of fake $100 — frontend should show "N/A"
-      return {
-        symbol, current: null, change: null, changePct: null,
-        high: null, low: null, open: null, prevClose: null,
-        timestamp: new Date().toISOString(), source: 'unavailable'
-      };
+      // Do not return/cache an unpriced stub. SPY/QQQ/DIA/IWM are not in
+      // mockPrices; a stub { current: null } was cached for 60s and served
+      // as a batch "hit", which the watchlist renders as "—" / green "—".
+      return null;
     }
     // Add tiny random noise to make it feel live
     const noise = (Math.random() - 0.5) * 0.002;

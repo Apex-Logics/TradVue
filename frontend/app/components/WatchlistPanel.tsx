@@ -7,6 +7,7 @@ import { IconChart, IconSettings } from './Icons'
 import { fmt } from '../utils/formatting'
 import { CRYPTO_SYMBOL_MAP, MAX_TICKER_CUSTOM } from '../constants'
 import type { Quote, CryptoCoin } from '../types'
+import { isPricedQuote } from '../utils/quotes'
 
 interface Props {
   watchlist: string[]
@@ -104,9 +105,9 @@ export default function WatchlistPanel({
 
   // Resolve the best available quote for a watchlist symbol
   const getWatchlistQuote = useCallback((sym: string): Quote | null => {
-    if (quotes[sym])              return quotes[sym]
-    if (tickerQuotes[sym])        return tickerQuotes[sym]
-    if (tickerQuotes[sym + '-USD']) return tickerQuotes[sym + '-USD']
+    if (isPricedQuote(quotes[sym]))              return quotes[sym]
+    if (isPricedQuote(tickerQuotes[sym]))        return tickerQuotes[sym]
+    if (isPricedQuote(tickerQuotes[sym + '-USD'])) return tickerQuotes[sym + '-USD']
     const cryptoSym = CRYPTO_SYMBOL_MAP[sym.toUpperCase()]
     if (cryptoSym) {
       const coin = cryptoCoins.find(c => c.symbol.toUpperCase() === cryptoSym)

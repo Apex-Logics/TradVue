@@ -145,7 +145,7 @@ beforeEach(() => {
     expect(quotes['MSFT'].source).toBe('finnhub');
   });
 
-  test('returns mock quote for failed symbol, still returns others', async () => {
+  test('omits unknown/failed symbols instead of caching an unpriced stub', async () => {
     axios.get
       .mockResolvedValueOnce({
         data: { c: 260, d: -1, dp: -0.4, h: 262, l: 258, o: 261, pc: 261, t: Date.now() / 1000 }
@@ -155,7 +155,7 @@ beforeEach(() => {
     const quotes = await finnhub.getBatchQuotes(['AAPL', 'INVALID']);
     expect(quotes['AAPL']).toBeDefined();
     expect(quotes['AAPL'].source).toBe('finnhub');
-    expect(quotes['INVALID']).toBeDefined(); // Falls back to mock
+    expect(quotes['INVALID']).toBeUndefined();
   });
 
   test('returns empty object for empty input', async () => {
