@@ -5,10 +5,12 @@
  *
  * Shows the FULL page with real navigation working. Content is fully
  * interactive (tabs, nav, scroll). Only write actions are blocked.
- * Sticky bottom banner nudges signup. Dismissible.
+ * Sticky bottom banner nudges signup for signed-out visitors. Dismissible.
+ * Hidden once the user has a session (same useAuth source as the rest of the app).
  */
 
 import { useState } from 'react'
+import { useAuth } from '../context/AuthContext'
 import AuthModal from './AuthModal'
 
 interface AuthGateProps {
@@ -18,6 +20,8 @@ interface AuthGateProps {
 }
 
 export default function AuthGate({ featureName, featureDesc, children }: AuthGateProps) {
+  const { user, token } = useAuth()
+  const signedIn = Boolean(user || token)
   const [modalOpen, setModalOpen] = useState(false)
   const [bannerDismissed, setBannerDismissed] = useState(false)
 
@@ -26,8 +30,8 @@ export default function AuthGate({ featureName, featureDesc, children }: AuthGat
       {/* Full page content — fully interactive, navigation works */}
       {children}
 
-      {/* Sticky bottom CTA banner */}
-      {!bannerDismissed && (
+      {/* Sticky bottom CTA banner — guests only */}
+      {!signedIn && !bannerDismissed && (
         <div
           style={{
             position: 'fixed',

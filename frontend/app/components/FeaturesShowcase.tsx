@@ -1,5 +1,7 @@
 'use client'
 
+import { useAuth } from '../context/AuthContext'
+
 const PLATFORM_FEATURES = [
   {
     icon: (
@@ -109,6 +111,9 @@ const PLATFORM_FEATURES = [
  * Rendered below the main 3-column layout.
  */
 export default function FeaturesShowcase() {
+  const { user, token } = useAuth()
+  if (user || token) return null
+
   return (
     <section
       aria-label="Platform features"
