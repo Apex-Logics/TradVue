@@ -116,6 +116,34 @@ class CacheService {
   }
 
   /**
+   * Delete every key that starts with `prefix` (in-memory + Redis SCAN).
+   * Used to bust aggregated RSS news on manual ↻ without waiting for TTL.
+   * @param {string} prefix - e.g. 'rss:'
+   */
+  async delByPrefix(prefix) {
+    if (!prefix) return;
+    try {
+      if (this.isRedisAvailable) {
+        const keys = [];
+        for await (const key of this.client.scanIterator({ MATCH: `${prefix}*`, COUNT: 100 })) {
+          keys.push(key);
+          if (keys.length >= 100) {
+            await this.client.del(keys);
+            keys.length = 0;
+          }
+        }
+        if (keys.length > 0) await this.client.del(keys);
+      } else {
+        for (const key of [...this.memoryCache.keys()]) {
+          if (key.startsWith(prefix)) this.memoryCache.delete(key);
+        }
+      }
+    } catch (error) {
+      console.error('Cache delByPrefix error:', error);
+    }
+  }
+
+  /**
    * Evict all expired entries from the in-memory fallback cache.
    */
   cleanupMemoryCache() {

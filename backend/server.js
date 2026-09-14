@@ -119,6 +119,7 @@ app.use(generalLimiter);
 // ── Cache-control middleware helpers ─────────────────────────────────────────
 // Applied per route group so each gets the right browser cache duration.
 const cachePublic30s  = (_, res, next) => { res.set('Cache-Control', 'public, max-age=30');   next(); };
+const cachePublic60s  = (_, res, next) => { res.set('Cache-Control', 'public, max-age=60');   next(); };
 const cachePublic2m   = (_, res, next) => { res.set('Cache-Control', 'public, max-age=120');  next(); };
 const cachePublic1h   = (_, res, next) => { res.set('Cache-Control', 'public, max-age=3600'); next(); };
 const cachePrivate    = (_, res, next) => { res.set('Cache-Control', 'private, no-cache');    next(); };
@@ -143,7 +144,7 @@ app.use('/api/watchlist',  cachePrivate, require('./routes/watchlist'));
 // Note: marketData.js sets its own per-endpoint Cache-Control headers (more granular),
 // so we don't add a blanket middleware here.
 app.use('/api/market-data',   require('./routes/marketData'));      // Finnhub-backed real market data
-app.use('/api/feed/news',     cachePublic2m,  require('./routes/aggregatedNews')); // RSS + NewsAPI aggregated feed
+app.use('/api/feed/news',     cachePublic60s, require('./routes/aggregatedNews')); // RSS + Marketaux/Finnhub (60s; FE also sends cache: no-store)
 app.use('/api/calendar',      cachePublic2m,  require('./routes/calendar'));        // Economic calendar (2m to avoid stale date issues)
 app.use('/api/waitlist',      cachePrivate,   require('./routes/waitlist'));        // Landing page waitlist
 app.use('/api/alerts/price',  cachePrivate,   require('./routes/priceAlerts'));    // User price alerts (must be BEFORE /api/alerts)
