@@ -87,7 +87,19 @@ describe('GET /api/feed/news', () => {
       limit: 5,
       category: 'crypto',
       minImpact: 7,
+      force: false,
     });
+  });
+
+  test('refresh=1 busts aggregator cache', async () => {
+    rss.getAggregatedNews.mockResolvedValueOnce([]);
+
+    const res = await request(app).get('/api/feed/news?refresh=1');
+
+    expect(res.headers['cache-control']).toMatch(/no-cache/);
+    expect(rss.getAggregatedNews).toHaveBeenCalledWith(
+      expect.objectContaining({ force: true })
+    );
   });
 
   test('caps limit at 100', async () => {
@@ -135,7 +147,18 @@ describe('GET /api/feed/news/symbol/:symbol', () => {
     expect(res.body.success).toBe(true);
     expect(res.body.symbol).toBe('BTC');
     expect(res.body.count).toBe(1);
-    expect(rss.getNewsBySymbol).toHaveBeenCalledWith('BTC', { limit: 15 });
+    expect(rss.getNewsBySymbol).toHaveBeenCalledWith('BTC', { limit: 15, force: false });
+  });
+
+  test('refresh=1 on symbol route passes force: true', async () => {
+    rss.getNewsBySymbol.mockResolvedValueOnce([]);
+
+    await request(app).get('/api/feed/news/symbol/AAPL?refresh=true');
+
+    expect(rss.getNewsBySymbol).toHaveBeenCalledWith(
+      'AAPL',
+      expect.objectContaining({ force: true })
+    );
   });
 
   test('returns empty array when no articles found for symbol', async () => {
@@ -153,7 +176,7 @@ describe('GET /api/feed/news/symbol/:symbol', () => {
 
     await request(app).get('/api/feed/news/symbol/AAPL?limit=999');
 
-    expect(rss.getNewsBySymbol).toHaveBeenCalledWith('AAPL', { limit: 50 });
+    expect(rss.getNewsBySymbol).toHaveBeenCalledWith('AAPL', { limit: 50, force: false });
   });
 
   test('returns 500 on service failure', async () => {
@@ -253,5 +276,10 @@ describe('RSSFeedAggregator NLP internals', () => {
   test('_detectSymbols detects BTC from bitcoin keyword', () => {
     const symbols = realAggregator._detectSymbols('bitcoin surges to all time high');
     expect(symbols).toContain('BTC');
+  });
+
+  test('aggregator cache TTLs are 60s / 90s (was 10m / 15m)', () => {
+    expect(realAggregator.AGGREGATED_CACHE_TTL_SEC).toBe(60);
+    expect(realAggregator.SYMBOL_CACHE_TTL_SEC).toBe(90);
   });
 });

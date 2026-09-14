@@ -5,6 +5,7 @@ import { NEWS_CATEGORIES, NEWS_ARTICLE_COUNTS } from '../constants'
 import DataError from './DataError'
 import { IconTrendingUp, IconTrendingDown, IconMinus } from './Icons'
 import type { NewsArticle, Quote } from '../types'
+import { formatNewsUpdatedAgo } from '../utils/newsFeedPoll'
 
 // ─── NewsRow ───────────────────────────────────────────────────────────────────
 
@@ -203,18 +204,19 @@ interface Props {
   newsSymbolFilter: string
   showAlerts: boolean
   activeNav: string
-  hasRealTickerData: boolean
+  newsUpdatedAt: number
+  newsLive: boolean
   gainers: Quote[]
   losers: Quote[]
   onNewsCategory: (cat: string) => void
   onArticleCount: (count: number) => void
-  onFetchNews: (cat: string, sym?: string, count?: number) => void
+  onFetchNews: (cat: string, sym?: string, count?: number, opts?: { silent?: boolean; force?: boolean }) => void
   onSymbolFilter: (sym: string) => void
   onOpenStock: (sym: string) => void
 }
 
 /**
- * Center column: news feed with category filters, symbol filter, live/sim badge,
+ * Center column: news feed with category filters, symbol filter, live/paused badge,
  * and an Analysis view (sentiment + top movers + high-impact news).
  */
 export default function NewsFeed({
@@ -226,7 +228,8 @@ export default function NewsFeed({
   newsSymbolFilter,
   showAlerts,
   activeNav,
-  hasRealTickerData,
+  newsUpdatedAt,
+  newsLive,
   gainers,
   losers,
   onNewsCategory,
@@ -235,6 +238,7 @@ export default function NewsFeed({
   onSymbolFilter,
   onOpenStock,
 }: Props) {
+  const newsUpdatedLabel = formatNewsUpdatedAgo(newsUpdatedAt)
   return (
     <div className="col-news" role="main" aria-label="News feed">
       {/* Analysis view */}
@@ -287,12 +291,15 @@ export default function NewsFeed({
       {!showAlerts && activeNav !== 'Analysis' && (
         <div className="feed-header">
           <span className="feed-title">
-            <span className="live-dot" />
+            <span className={newsLive ? 'live-dot' : 'live-dot live-dot-off'} />
             LIVE FEED
           </span>
-          <span style={{ fontSize: 'var(--fs-sm)', color: 'var(--text-3)', marginLeft: 8 }}>
-            {hasRealTickerData ? '● LIVE' : '○ SIM'}
+          <span className="news-live-badge" title={newsLive ? 'Polling while this tab is visible' : 'Paused — tab hidden or feed stale'}>
+            {newsLive ? '● LIVE' : '○ PAUSED'}
           </span>
+          {newsUpdatedLabel && (
+            <span className="news-updated">{newsUpdatedLabel}</span>
+          )}
           <span className="feed-count">{newsArticles.length}</span>
           <input
             type="text"
@@ -307,7 +314,7 @@ export default function NewsFeed({
             Full page →
           </a>
           <button
-            onClick={() => onFetchNews(newsCategory, newsSymbolFilter)}
+            onClick={() => onFetchNews(newsCategory, newsSymbolFilter, undefined, { force: true })}
             className="refresh-btn"
             aria-label="Refresh news feed"
           >
@@ -342,7 +349,7 @@ export default function NewsFeed({
             : newsError
               ? (
                 <DataError
-                  onRetry={() => onFetchNews(newsCategory, newsSymbolFilter)}
+                  onRetry={() => onFetchNews(newsCategory, newsSymbolFilter, undefined, { force: true })}
                   autoRetryAfter={10}
                   message="News feed is temporarily unavailable. Please try again in a moment."
                 />

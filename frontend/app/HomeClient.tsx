@@ -48,6 +48,7 @@ import DataError from './components/DataError'
 import PersistentNav from './components/PersistentNav'
 import { mergeQuoteRecords, normalizeQuote, pricedQuoteMap } from './utils/quotes'
 import { shouldFetchWatchlistQuotes, WL_QUOTE_POLL_MS } from './utils/watchlistQuotePoll'
+import { NEWS_POLL_MS, newsFeedIsLive, shouldFetchNewsFeed } from './utils/newsFeedPoll'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -414,6 +415,9 @@ export default function HomeClient() {
   const [newsArticles, setNewsArticles]         = useState<NewsArticle[]>([])
   const [loadingNews, setLoadingNews]           = useState(true)
   const [newsError, setNewsError]               = useState<string | null>(null)
+  const [newsUpdatedAt, setNewsUpdatedAt]       = useState(0)
+  const newsUpdatedAtRef = useRef(0)
+  const newsInFlightRef = useRef(false)
   const [newsSymbolFilter, setNewsSymbolFilter] = useState('')
   const [newsArticleCount, setNewsArticleCount] = useState<number>(() => {
     if (typeof window !== 'undefined') {
@@ -695,10 +699,21 @@ export default function HomeClient() {
   }, [isOffline])
 
   // ── Fetch news ───────────────────────────────────────────────────────────────
-  const fetchNews = useCallback(async (cat: string, sym?: string, count?: number) => {
+  const fetchNews = useCallback(async (
+    cat: string,
+    sym?: string,
+    count?: number,
+    opts?: { silent?: boolean; force?: boolean },
+  ) => {
     if (isOffline) { setLoadingNews(false); return }
-    setLoadingNews(true)
-    setNewsError(null)
+    const silent = opts?.silent === true
+    const force = opts?.force === true
+    if (newsInFlightRef.current && silent) return
+    newsInFlightRef.current = true
+    if (!silent) {
+      setLoadingNews(true)
+      setNewsError(null)
+    }
     const limit = count ?? newsArticleCount
     try {
       let url: string
@@ -710,6 +725,7 @@ export default function HomeClient() {
         if (apiCat !== 'all') p.set('category', apiCat)
         url = `${API_BASE}/api/feed/news?${p.toString()}`
       }
+      if (force) url += (url.includes('?') ? '&' : '?') + 'refresh=1'
       const j = await apiFetchSafe<{ success: boolean; data: NewsArticle[]; error?: string }>(url)
       if (j?.success) {
         // Deduplicate by id + guard against malformed articles
@@ -724,16 +740,23 @@ export default function HomeClient() {
           seen.add(key)
           return true
         })
+        const ts = Date.now()
+        newsUpdatedAtRef.current = ts
+        setNewsUpdatedAt(ts)
         setNewsArticles(deduped)
-      } else {
+        setNewsError(null)
+      } else if (!silent) {
         setNewsError('unavailable')
         setNewsArticles([])
       }
     } catch {
-      setNewsError('unavailable')
-      setNewsArticles([])
+      if (!silent) {
+        setNewsError('unavailable')
+        setNewsArticles([])
+      }
     } finally {
-      setLoadingNews(false)
+      newsInFlightRef.current = false
+      if (!silent) setLoadingNews(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [isOffline, newsArticleCount])
@@ -787,6 +810,38 @@ export default function HomeClient() {
       document.removeEventListener('visibilitychange', onVisibility)
     }
   }, [fetchQuotes, watchlist])
+
+  // ── News feed: poll every 60s while the tab is visible ───────────────────────
+  // Same visibility pattern as watchlist #56. Uses GET /api/feed/news (not
+  // legacy /api/news). apiFetch already sends cache: 'no-store'. Pause when
+  // document.hidden; on visible, refetch if the 60s aggregator cache is stale.
+  useEffect(() => {
+    let t: ReturnType<typeof setInterval> | null = null
+    const refresh = () => fetchNews(newsCategory, newsSymbolFilter, newsArticleCount, { silent: true })
+    const start = () => {
+      if (t != null) return
+      t = setInterval(refresh, NEWS_POLL_MS)
+    }
+    const stop = () => {
+      if (t == null) return
+      clearInterval(t)
+      t = null
+    }
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop()
+        return
+      }
+      start()
+      if (shouldFetchNewsFeed(false, newsUpdatedAtRef.current)) refresh()
+    }
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [fetchNews, newsCategory, newsSymbolFilter, newsArticleCount])
 
   // ── Re-fetch on new watchlist symbols ────────────────────────────────────────
   const prevWatchlistRef = useRef<string[]>(DEFAULT_WATCHLIST)
@@ -969,7 +1024,10 @@ export default function HomeClient() {
   const quoteList   = Object.values(quotes)
   const gainers     = [...quoteList].sort((a, b) => b.changePct - a.changePct).slice(0, 4)
   const losers      = [...quoteList].sort((a, b) => a.changePct - b.changePct).slice(0, 4)
-  const hasRealTickerData = Object.values(tickerQuotes).some(q => q.source === 'finnhub')
+  const newsLive = newsFeedIsLive(
+    typeof document !== 'undefined' && document.hidden,
+    newsUpdatedAt,
+  )
 
   // ── Render ───────────────────────────────────────────────────────────────────
   return (
@@ -1143,7 +1201,8 @@ export default function HomeClient() {
                 newsSymbolFilter={newsSymbolFilter}
                 showAlerts={false}
                 activeNav={activeNav}
-                hasRealTickerData={hasRealTickerData}
+                newsUpdatedAt={newsUpdatedAt}
+                newsLive={newsLive}
                 gainers={gainers}
                 losers={losers}
                 onNewsCategory={handleNewsCategory}

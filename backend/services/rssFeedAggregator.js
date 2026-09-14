@@ -27,6 +27,14 @@ const parser = new RSSParser({
   }
 });
 
+// Aggregated result TTL. Was 600s (10 min) — that froze the dashboard feed
+// even when the UI polled. RSS sources are public (no API quota). Marketaux
+// (~100 req/day) and Finnhub (fallback / company news) keep their own longer
+// caches (1h / 10–15 min), so shortening this only increases RSS pull frequency
+// on a shared server cache — one fetch per TTL for all clients.
+const AGGREGATED_CACHE_TTL_SEC = 60;
+const SYMBOL_CACHE_TTL_SEC = 90; // wraps aggregated + Finnhub company news (Finnhub still ~900s internally)
+
 // ─────────────────────────────────────────────
 // RSS Feed Registry (Expanded 2026-03-08)
 // All feeds are publicly available RSS - legal to consume
@@ -326,8 +334,9 @@ class RSSFeedAggregator {
   /**
    * Fetch and aggregate news from all RSS sources
    */
-  async getAggregatedNews({ limit = 30, category = null, minImpact = 0 } = {}) {
+  async getAggregatedNews({ limit = 30, category = null, minImpact = 0, force = false } = {}) {
     const cacheKey = `rss:aggregated:${category || 'all'}:${minImpact}:${limit}`;
+    if (force) await this._bustRssCache();
 
     return await cache.cacheAPICall(cacheKey, async () => {
       const feedsToFetch = category
@@ -433,14 +442,23 @@ class RSSFeedAggregator {
       const sorted = [...recentHigh, ...rest];
 
       return sorted.slice(0, limit);
-    }, 600); // Cache 10 minutes
+    }, AGGREGATED_CACHE_TTL_SEC);
+  }
+
+  /**
+   * Drop rss:* aggregator keys so the next cacheAPICall refetches RSS.
+   * Does not touch marketaux:* / finnhub:* (those have their own rate limits).
+   */
+  async _bustRssCache() {
+    await cache.delByPrefix('rss:');
   }
 
   /**
    * Get news relevant to a specific symbol
    */
-  async getNewsBySymbol(symbol, { limit = 15 } = {}) {
+  async getNewsBySymbol(symbol, { limit = 15, force = false } = {}) {
     const cacheKey = `rss:symbol:${symbol.toUpperCase()}:${limit}`;
+    if (force) await this._bustRssCache();
 
     return await cache.cacheAPICall(cacheKey, async () => {
       const allNews = await this.getAggregatedNews({ limit: 200 });
@@ -485,7 +503,7 @@ class RSSFeedAggregator {
       }
 
       return relevant.slice(0, limit);
-    }, 900);
+    }, SYMBOL_CACHE_TTL_SEC);
   }
 
   /**
@@ -589,4 +607,7 @@ class RSSFeedAggregator {
 
 }
 
-module.exports = new RSSFeedAggregator();
+const aggregator = new RSSFeedAggregator();
+aggregator.AGGREGATED_CACHE_TTL_SEC = AGGREGATED_CACHE_TTL_SEC;
+aggregator.SYMBOL_CACHE_TTL_SEC = SYMBOL_CACHE_TTL_SEC;
+module.exports = aggregator;

@@ -6,6 +6,12 @@ import PersistentNav from '../components/PersistentNav'
 import { apiFetchSafe } from '../lib/apiFetch'
 import { formatRelativeTime } from '../lib/timezone'
 import MarketIntel from '../components/MarketIntel'
+import {
+  NEWS_POLL_MS,
+  formatNewsUpdatedAgo,
+  newsFeedIsLive,
+  shouldFetchNewsFeed,
+} from '../utils/newsFeedPoll'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -149,11 +155,27 @@ export default function NewsPage() {
     }
     return 25
   })
+  const [newsUpdatedAt, setNewsUpdatedAt] = useState(0)
+  const newsUpdatedAtRef = useRef(0)
+  const newsInFlightRef = useRef(false)
   const loadMoreRef = useRef<HTMLDivElement>(null)
 
-  const fetchNews = useCallback(async (cat: string, sym: string, pg: number, append = false, size?: number) => {
-    setLoading(true)
-    setError(false)
+  const fetchNews = useCallback(async (
+    cat: string,
+    sym: string,
+    pg: number,
+    append = false,
+    size?: number,
+    opts?: { silent?: boolean; force?: boolean },
+  ) => {
+    const silent = opts?.silent === true
+    const force = opts?.force === true
+    if (newsInFlightRef.current && silent) return
+    newsInFlightRef.current = true
+    if (!silent) {
+      setLoading(true)
+      setError(false)
+    }
     const limit = size ?? pageSize
     try {
       let url: string
@@ -165,18 +187,24 @@ export default function NewsPage() {
         if (apiCat !== 'all') p.set('category', apiCat)
         url = `${API_BASE}/api/feed/news?${p.toString()}`
       }
+      if (force) url += (url.includes('?') ? '&' : '?') + 'refresh=1'
       const j = await apiFetchSafe<{ success: boolean; data: NewsArticle[] }>(url)
       if (j?.success) {
         const data = j.data || []
+        const ts = Date.now()
+        newsUpdatedAtRef.current = ts
+        setNewsUpdatedAt(ts)
         setArticles(prev => append ? [...prev, ...data] : data)
         setHasMore(data.length >= limit)
-      } else {
+        setError(false)
+      } else if (!silent) {
         setError(true)
       }
     } catch {
-      setError(true)
+      if (!silent) setError(true)
     } finally {
-      setLoading(false)
+      newsInFlightRef.current = false
+      if (!silent) setLoading(false)
     }
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [pageSize])
@@ -188,6 +216,36 @@ export default function NewsPage() {
     fetchNews(category, symbolFilter, 1, false)
   // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [category, symbolFilter])
+
+  // Visible-tab poll — skip Market Intel (that tab does not use /api/feed/news)
+  useEffect(() => {
+    if (category === 'Market Intel') return
+    let t: ReturnType<typeof setInterval> | null = null
+    const refresh = () => fetchNews(category, symbolFilter, 1, false, undefined, { silent: true })
+    const start = () => {
+      if (t != null) return
+      t = setInterval(refresh, NEWS_POLL_MS)
+    }
+    const stop = () => {
+      if (t == null) return
+      clearInterval(t)
+      t = null
+    }
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop()
+        return
+      }
+      start()
+      if (shouldFetchNewsFeed(false, newsUpdatedAtRef.current)) refresh()
+    }
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
+  }, [fetchNews, category, symbolFilter])
 
   // Debounced symbol filter
   const searchTimeoutRef = useRef<ReturnType<typeof setTimeout> | null>(null)
@@ -214,6 +272,12 @@ export default function NewsPage() {
       )
     : articles
 
+  const newsUpdatedLabel = formatNewsUpdatedAgo(newsUpdatedAt)
+  const newsLive = newsFeedIsLive(
+    typeof document !== 'undefined' && document.hidden,
+    newsUpdatedAt,
+  )
+
   return (
     <div className="news-page" style={{ minHeight: '100vh', background: 'var(--bg-0)', color: 'var(--text-0)' }}>
       {/* Persistent Navigation */}
@@ -226,9 +290,15 @@ export default function NewsPage() {
         </Link>
         <span style={{ color: 'var(--border)' }}>|</span>
         <div className="page-header-title">
-          <span className="live-dot" style={{ width: 7, height: 7, flexShrink: 0 }} />
+          <span className={newsLive ? 'live-dot' : 'live-dot live-dot-off'} style={{ width: 7, height: 7, flexShrink: 0 }} />
           News Feed
         </div>
+        <span className="news-live-badge" title={newsLive ? 'Polling while this tab is visible' : 'Paused — tab hidden or feed stale'}>
+          {newsLive ? '● LIVE' : '○ PAUSED'}
+        </span>
+        {newsUpdatedLabel && (
+          <span className="news-updated">{newsUpdatedLabel}</span>
+        )}
         <div className="page-header-desc">{filtered.length} articles</div>
         <div className="page-header-actions">
           <input
@@ -241,7 +311,7 @@ export default function NewsPage() {
           />
           <button
             className="btn btn-secondary btn-sm"
-            onClick={() => { setPage(1); setArticles([]); fetchNews(category, symbolFilter, 1) }}
+            onClick={() => { setPage(1); setArticles([]); fetchNews(category, symbolFilter, 1, false, undefined, { force: true }) }}
           >
             ↻ Refresh
           </button>
@@ -297,7 +367,7 @@ export default function NewsPage() {
             <div style={{ fontSize: 14, marginBottom: 16 }}>News feed temporarily unavailable</div>
             <button
               className="btn btn-secondary"
-              onClick={() => fetchNews(category, symbolFilter, 1)}
+              onClick={() => fetchNews(category, symbolFilter, 1, false, undefined, { force: true })}
             >
               ↻ Try Again
             </button>
