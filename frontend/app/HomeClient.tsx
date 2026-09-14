@@ -47,6 +47,7 @@ import { apiFetchSafe } from './lib/apiFetch'
 import DataError from './components/DataError'
 import PersistentNav from './components/PersistentNav'
 import { mergeQuoteRecords, normalizeQuote, pricedQuoteMap } from './utils/quotes'
+import { shouldFetchWatchlistQuotes, WL_QUOTE_POLL_MS } from './utils/watchlistQuotePoll'
 
 const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
@@ -54,7 +55,7 @@ const API_BASE = process.env.NEXT_PUBLIC_API_URL || 'http://localhost:3001'
 
 interface WlCacheEntry { data: Record<string, Quote>; ts: number }
 
-function loadWlCache(): Record<string, Quote> | null {
+function loadWlCacheEntry(): WlCacheEntry | null {
   if (typeof window === 'undefined') return null
   try {
     const raw = localStorage.getItem(WL_CACHE_KEY)
@@ -62,8 +63,12 @@ function loadWlCache(): Record<string, Quote> | null {
     const entry: WlCacheEntry = JSON.parse(raw)
     if (Date.now() - entry.ts > WL_CACHE_TTL) return null
     const priced = pricedQuoteMap(entry.data as Record<string, unknown>)
-    return Object.keys(priced).length > 0 ? priced : null
+    return Object.keys(priced).length > 0 ? { data: priced, ts: entry.ts } : null
   } catch { return null }
+}
+
+function loadWlCache(): Record<string, Quote> | null {
+  return loadWlCacheEntry()?.data ?? null
 }
 
 function saveWlCache(data: Record<string, Quote>): void {
@@ -389,9 +394,12 @@ export default function HomeClient() {
   // Sidebar quotes
   const [quotes, setQuotes]             = useState<Record<string, Quote>>(() => loadWlCache() || {})
   const [loadingQuotes, setLoadingQuotes] = useState(() => !loadWlCache())
+  const [quotesUpdatedAt, setQuotesUpdatedAt] = useState(() => loadWlCacheEntry()?.ts || 0)
   const [marketStatus, setMarketStatus] = useState<MarketStatus | null>(null)
   const watchlistFetchedRef   = useRef<Set<string>>(new Set())
   const watchlistFetchStartRef = useRef<number>(0)
+  const quotesUpdatedAtRef = useRef(quotesUpdatedAt)
+  const quotesInFlightRef = useRef(false)
 
   // Watchlist
   const [watchlist, setWatchlist]             = useState<string[]>(DEFAULT_WATCHLIST)
@@ -612,9 +620,11 @@ export default function HomeClient() {
   // ── Fetch watchlist quotes (batch, with cache) ───────────────────────────────
   const fetchQuotes = useCallback(async (symbols?: string[]) => {
     if (isOffline) return
+    if (quotesInFlightRef.current) return
     const toFetch = symbols
       ? [...new Set([...SIDEBAR_SYMBOLS, ...symbols])]
       : SIDEBAR_SYMBOLS
+    quotesInFlightRef.current = true
     watchlistFetchStartRef.current = Date.now()
     watchlistFetchedRef.current = new Set()
     try {
@@ -634,6 +644,9 @@ export default function HomeClient() {
         })
       )
       if (Object.keys(allData).length > 0) {
+        const ts = Date.now()
+        quotesUpdatedAtRef.current = ts
+        setQuotesUpdatedAt(ts)
         setQuotes(prev => {
           const merged = mergeQuoteRecords(prev, allData)
           saveWlCache(merged)
@@ -641,6 +654,7 @@ export default function HomeClient() {
         })
       }
     } finally {
+      quotesInFlightRef.current = false
       setLoadingQuotes(false)
     }
   }, [isOffline])
@@ -741,9 +755,37 @@ export default function HomeClient() {
     return () => clearInterval(t)
   }, [fetchTickerQuotes, customTickerSymbols])
 
+  // ── Watchlist quotes: poll every 60s while the tab is visible ────────────────
+  // Root cause of "stuck until hard refresh": interval ran, but (1) apiFetch used
+  // the default HTTP cache for Cache-Control: max-age=30 batch URLs, and (2) there
+  // was no visibility resume — Chrome throttles background timers, so coming back
+  // to the tab did not refetch. Pause when document.hidden; refetch if cache expired.
   useEffect(() => {
-    const t = setInterval(() => fetchQuotes(stockSymbolsFromWatchlist(watchlist)), 30_000)
-    return () => clearInterval(t)
+    let t: ReturnType<typeof setInterval> | null = null
+    const refresh = () => fetchQuotes(stockSymbolsFromWatchlist(watchlist))
+    const start = () => {
+      if (t != null) return
+      t = setInterval(refresh, WL_QUOTE_POLL_MS)
+    }
+    const stop = () => {
+      if (t == null) return
+      clearInterval(t)
+      t = null
+    }
+    const onVisibility = () => {
+      if (document.hidden) {
+        stop()
+        return
+      }
+      start()
+      if (shouldFetchWatchlistQuotes(false, quotesUpdatedAtRef.current)) refresh()
+    }
+    if (!document.hidden) start()
+    document.addEventListener('visibilitychange', onVisibility)
+    return () => {
+      stop()
+      document.removeEventListener('visibilitychange', onVisibility)
+    }
   }, [fetchQuotes, watchlist])
 
   // ── Re-fetch on new watchlist symbols ────────────────────────────────────────
@@ -1058,6 +1100,7 @@ export default function HomeClient() {
             tickerQuotes={tickerQuotes}
             cryptoCoins={cryptoCoins}
             loadingQuotes={loadingQuotes}
+            quotesUpdatedAt={quotesUpdatedAt}
             watchlistFetchStartRef={watchlistFetchStartRef}
             watchlistFetchedRef={watchlistFetchedRef}
             mobileSidebarOpen={mobileSidebarOpen}
