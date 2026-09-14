@@ -2,17 +2,26 @@
  * apiFetch — Robust fetch wrapper for TradVue
  *
  * Features:
+ * - Always hits the network on the success path (`cache: 'no-store'`). The
+ *   in-memory map is NOT a read-through cache — it is stale fallback only.
  * - Retries 429 with exponential backoff (1s → 2s → 4s, up to 3x)
  * - Retries 5xx once after 2s
  * - Serves stale cache when API is unreachable
  * - Throws ApiError with clean user-facing messages (never raw stack traces)
  * - apiFetchSafe() variant returns null instead of throwing
+ *
+ * Browser HTTP cache used to freeze dashboard quotes: GET /market-data/batch
+ * is sent with Cache-Control: public, max-age=30, and fetch() defaults to
+ * using that cache. Hard refresh bypasses it, which matched "prices sit still
+ * until I refresh the page."
  */
 
-// ─── In-memory response cache ─────────────────────────────────────────────────
+import { WL_CACHE_TTL } from '../constants'
+
+// ─── In-memory response cache (error fallback only) ───────────────────────────
 
 const cache = new Map<string, { data: unknown; ts: number }>()
-const DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes
+const DEFAULT_TTL = 5 * 60 * 1000 // 5 minutes — non-quote endpoints
 
 export function getCachedData<T>(key: string, ttl = DEFAULT_TTL): T | null {
   const entry = cache.get(key)
@@ -23,6 +32,15 @@ export function getCachedData<T>(key: string, ttl = DEFAULT_TTL): T | null {
 
 export function setCachedData(key: string, data: unknown): void {
   cache.set(key, { data, ts: Date.now() })
+}
+
+export function clearApiFetchCache(): void {
+  cache.clear()
+}
+
+/** Quote/batch URLs share the 60s server cache — don't serve 5-min stale as "fresh". */
+function staleTtlMs(url: string): number {
+  return url.includes('/market-data/') ? WL_CACHE_TTL : DEFAULT_TTL
 }
 
 // ─── Error type ───────────────────────────────────────────────────────────────
@@ -59,13 +77,14 @@ export async function apiFetch<T = unknown>(
 
   for (let attempt = 0; attempt <= MAX_429_RETRIES; attempt++) {
     try {
-      const res = await fetch(url, init)
+      // Bypass browser/CDN HTTP cache. Success must not read the in-memory map.
+      const res = await fetch(url, { cache: 'no-store', ...init })
 
       // ── 429 Rate Limited ──────────────────────────────────────────────────
       if (res.status === 429) {
         if (attempt >= MAX_429_RETRIES) {
           console.warn(`[apiFetch] 429 after ${MAX_429_RETRIES} retries:`, url)
-          const stale = getCachedData<T>(url)
+          const stale = getCachedData<T>(url, staleTtlMs(url))
           if (stale !== null) {
             console.info('[apiFetch] serving stale cache after 429 exhaustion')
             return stale
@@ -90,7 +109,7 @@ export async function apiFetch<T = unknown>(
           continue
         }
         console.error(`[apiFetch] ${res.status} persists:`, url)
-        const stale = getCachedData<T>(url)
+        const stale = getCachedData<T>(url, staleTtlMs(url))
         if (stale !== null) {
           console.info('[apiFetch] serving stale cache after server error')
           return stale
@@ -99,6 +118,17 @@ export async function apiFetch<T = unknown>(
           'Market data is currently unavailable. Please try again in a moment.',
           res.status,
           `HTTP ${res.status}: ${url}`,
+        )
+      }
+
+      // ── 304: fetch() should hide this behind cache:'default'; handle if it surfaces
+      if (res.status === 304) {
+        const stale = getCachedData<T>(url, staleTtlMs(url))
+        if (stale !== null) return stale
+        throw new ApiError(
+          'Data temporarily unavailable.',
+          304,
+          `HTTP 304: ${url}`,
         )
       }
 
@@ -123,7 +153,7 @@ export async function apiFetch<T = unknown>(
       const msg = err instanceof Error ? err.message : String(err)
       console.error('[apiFetch] network error:', msg, url)
 
-      const stale = getCachedData<T>(url)
+      const stale = getCachedData<T>(url, staleTtlMs(url))
       if (stale !== null) {
         console.info('[apiFetch] serving stale cache after network error:', url)
         return stale

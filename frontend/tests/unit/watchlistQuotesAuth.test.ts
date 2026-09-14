@@ -24,6 +24,38 @@ describe('Watchlist quote fetch wiring', () => {
     expect(body).toContain('watchlistFetchedRef.current.add(s)')
     expect(body).not.toMatch(/finally \{[\s\S]*toFetch\.forEach\(s => watchlistFetchedRef/)
   })
+
+  test('watchlist quotes poll at 60s, pause when hidden, and resume if cache expired', () => {
+    const src = read('HomeClient.tsx')
+    expect(src).toContain('visibilitychange')
+    expect(src).toContain('document.hidden')
+    expect(src).toContain('WL_QUOTE_POLL_MS')
+    expect(src).toContain('shouldFetchWatchlistQuotes')
+    const start = src.indexOf('Watchlist quotes: poll')
+    expect(start).toBeGreaterThan(-1)
+    const body = src.slice(start, start + 1600)
+    expect(body).not.toContain('30_000')
+    expect(body).toContain('setInterval(refresh, WL_QUOTE_POLL_MS)')
+  })
+
+  test('apiFetch success path bypasses HTTP cache instead of 5-min read-through', () => {
+    const src = read('lib/apiFetch.ts')
+    expect(src).toContain("cache: 'no-store'")
+    expect(src).toContain('staleTtlMs')
+    expect(src).toContain("url.includes('/market-data/')")
+    const marker = src.indexOf('// ── Success')
+    expect(marker).toBeGreaterThan(-1)
+    const success = src.slice(marker, marker + 250)
+    expect(success).not.toContain('getCachedData')
+    expect(src).toContain('cache.set(url')
+  })
+
+  test('watchlist header shows a minimal Updated … ago label', () => {
+    const src = read('components/WatchlistPanel.tsx')
+    expect(src).toContain('formatQuotesUpdatedAgo')
+    expect(src).toContain('watchlist-updated')
+    expect(src).toContain('quotesUpdatedAt')
+  })
 })
 
 describe('PersistentNav sign-in', () => {

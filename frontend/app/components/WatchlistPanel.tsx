@@ -8,6 +8,7 @@ import { fmt } from '../utils/formatting'
 import { CRYPTO_SYMBOL_MAP, MAX_TICKER_CUSTOM } from '../constants'
 import type { Quote, CryptoCoin } from '../types'
 import { isPricedQuote } from '../utils/quotes'
+import { formatQuotesUpdatedAgo } from '../utils/watchlistQuotePoll'
 
 interface Props {
   watchlist: string[]
@@ -18,6 +19,7 @@ interface Props {
   tickerQuotes: Record<string, Quote>
   cryptoCoins: CryptoCoin[]
   loadingQuotes: boolean
+  quotesUpdatedAt?: number
   watchlistFetchStartRef: React.MutableRefObject<number>
   watchlistFetchedRef: React.MutableRefObject<Set<string>>
   mobileSidebarOpen: boolean
@@ -46,6 +48,7 @@ export default function WatchlistPanel({
   tickerQuotes,
   cryptoCoins,
   loadingQuotes,
+  quotesUpdatedAt = 0,
   watchlistFetchStartRef,
   watchlistFetchedRef,
   mobileSidebarOpen,
@@ -129,6 +132,8 @@ export default function WatchlistPanel({
     return null
   }, [quotes, tickerQuotes, cryptoCoins])
 
+  const quotesUpdatedLabel = formatQuotesUpdatedAgo(quotesUpdatedAt)
+
   return (
     <div className={`col-watchlist${mobileSidebarOpen ? ' mobile-sidebar-open' : ''}`}>
 
@@ -142,7 +147,12 @@ export default function WatchlistPanel({
 
       {/* Watchlist header */}
       <div className="watchlist-header">
-        <span className="watchlist-header-title">★ WATCHLIST</span>
+        <div className="watchlist-header-left">
+          <span className="watchlist-header-title">★ WATCHLIST</span>
+          {quotesUpdatedLabel && (
+            <span className="watchlist-updated">{quotesUpdatedLabel}</span>
+          )}
+        </div>
         <div className="watchlist-header-right">
           {/* Gear settings button + dropdown */}
           <div className="wl-settings-wrap" ref={wlSettingsRef} style={{ position: 'relative' }}>
