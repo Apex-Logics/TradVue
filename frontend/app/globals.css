@@ -5108,6 +5108,20 @@ a.alert-row-title:hover {
   color: var(--text-2);
   text-transform: uppercase;
 }
+.watchlist-header-left {
+  display: flex;
+  align-items: baseline;
+  gap: 8px;
+  min-width: 0;
+}
+.watchlist-updated {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-3);
+  text-transform: none;
+  white-space: nowrap;
+}
 .watchlist-header-right {
   display: flex;
   align-items: center;
