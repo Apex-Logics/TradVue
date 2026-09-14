@@ -1,5 +1,5 @@
 /**
- * Aggregated News Routes (RSS + NewsAPI backed)
+ * Aggregated News Routes (RSS + Marketaux/Finnhub supplement)
  * 
  * GET /api/feed/news                     - Aggregated feed from all RSS sources
  * GET /api/feed/news/symbol/:symbol      - Symbol-specific news
@@ -11,15 +11,23 @@ const express = require('express');
 const router = express.Router();
 const rssFeedAggregator = require('../services/rssFeedAggregator');
 
-// GET /api/feed/news?limit=30&category=crypto&minImpact=4
+function isForceRefresh(query) {
+  const v = query?.refresh ?? query?.force;
+  return v === '1' || v === 'true';
+}
+
+// GET /api/feed/news?limit=30&category=crypto&minImpact=4&refresh=1
 router.get('/', async (req, res) => {
   try {
     const { limit = 30, category, minImpact = 0 } = req.query;
+    const force = isForceRefresh(req.query);
+    if (force) res.set('Cache-Control', 'private, no-cache');
 
     const articles = await rssFeedAggregator.getAggregatedNews({
       limit: Math.min(parseInt(limit) || 30, 100),
       category: category || null,
-      minImpact: parseFloat(minImpact) || 0
+      minImpact: parseFloat(minImpact) || 0,
+      force,
     });
 
     res.json({
@@ -48,9 +56,12 @@ router.get('/symbol/:symbol', async (req, res) => {
   try {
     const { symbol } = req.params;
     const { limit = 15 } = req.query;
+    const force = isForceRefresh(req.query);
+    if (force) res.set('Cache-Control', 'private, no-cache');
 
     const articles = await rssFeedAggregator.getNewsBySymbol(symbol, {
-      limit: Math.min(parseInt(limit) || 15, 50)
+      limit: Math.min(parseInt(limit) || 15, 50),
+      force,
     });
 
     res.json({

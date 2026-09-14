@@ -927,6 +927,20 @@ button { font-family: inherit; cursor: pointer; border: none; background: none; 
   margin-left: auto;
 }
 
+.news-live-badge {
+  font-size: var(--fs-sm);
+  color: var(--text-3);
+}
+
+.news-updated {
+  font-size: var(--fs-xs);
+  font-weight: 500;
+  letter-spacing: 0;
+  color: var(--text-3);
+  text-transform: none;
+  white-space: nowrap;
+}
+
 .refresh-btn {
   font-size: var(--fs-sm);
   font-weight: 500;
